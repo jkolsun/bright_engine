@@ -11,12 +11,9 @@ export async function POST(request: NextRequest) {
       data: {
         companyName: data.companyName,
         siteUrl: data.websiteUrl || data.siteUrl,
-        industry: data.industry,
+        industry: data.industry || 'GENERAL_CONTRACTING',
         hostingStatus: 'ACTIVE',
-        billingStatus: 'TRIAL',
-        planType: data.planType || 'BASIC',
-        monthlyPrice: data.monthlyPrice || 39,
-        setupFee: data.setupFee || 0,
+        monthlyRevenue: data.monthlyRevenue || 39,
         leadId: data.leadId, // Optional - if converting from lead
       }
     })
@@ -28,18 +25,29 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Log to revenue if setup fee
-    if (data.setupFee && data.setupFee > 0) {
-      await prisma.revenue.create({
-        data: {
-          clientId: client.id,
-          amount: data.setupFee,
-          type: 'SETUP',
-          status: 'PENDING',
-          description: 'Website setup fee',
-        }
-      })
-    }
+    // Log site build payment to revenue
+    await prisma.revenue.create({
+      data: {
+        clientId: client.id,
+        amount: data.siteBuildFee || 149,
+        type: 'SITE_BUILD',
+        product: 'Website Setup',
+        status: 'PENDING',
+        recurring: false,
+      }
+    })
+
+    // Log monthly hosting to revenue
+    await prisma.revenue.create({
+      data: {
+        clientId: client.id,
+        amount: data.monthlyRevenue || 39,
+        type: 'HOSTING_MONTHLY',
+        product: 'Monthly Hosting',
+        status: 'PENDING',
+        recurring: true,
+      }
+    })
 
     return NextResponse.json({ client })
   } catch (error) {

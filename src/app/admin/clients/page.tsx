@@ -25,12 +25,11 @@ export default function ClientsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
     companyName: '',
-    websiteUrl: '',
-    industry: '',
-    planType: 'BASIC',
-    monthlyPrice: 39,
-    setupFee: 0,
-    chargeSetupFee: false
+    siteUrl: '',
+    industry: 'GENERAL_CONTRACTING',
+    monthlyRevenue: 39,
+    siteBuildFee: 0,
+    chargeSiteBuildFee: false
   })
 
   // Load clients from API
@@ -59,7 +58,7 @@ export default function ClientsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          setupFee: formData.chargeSetupFee ? 149 : 0
+          siteBuildFee: formData.chargeSiteBuildFee ? 149 : 0
         })
       })
 
@@ -67,12 +66,11 @@ export default function ClientsPage() {
         setDialogOpen(false)
         setFormData({
           companyName: '',
-          websiteUrl: '',
-          industry: '',
-          planType: 'BASIC',
-          monthlyPrice: 39,
-          setupFee: 0,
-          chargeSetupFee: false
+          siteUrl: '',
+          industry: 'GENERAL_CONTRACTING',
+          monthlyRevenue: 39,
+          siteBuildFee: 0,
+          chargeSiteBuildFee: false
         })
         fetchClients() // Reload list
       } else {
@@ -86,10 +84,10 @@ export default function ClientsPage() {
 
   const handlePackageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value
-    const packages: Record<string, { planType: string; monthlyPrice: number }> = {
-      basic: { planType: 'BASIC', monthlyPrice: 39 },
-      premium: { planType: 'PREMIUM', monthlyPrice: 138 },
-      enterprise: { planType: 'ENTERPRISE', monthlyPrice: 237 }
+    const packages: Record<string, { monthlyRevenue: number }> = {
+      basic: { monthlyRevenue: 39 },
+      premium: { monthlyRevenue: 138 },
+      enterprise: { monthlyRevenue: 237 }
     }
     const selected = packages[value]
     setFormData(prev => ({ ...prev, ...selected }))
@@ -98,12 +96,12 @@ export default function ClientsPage() {
   const filteredClients = clients.filter(client => {
     const matchesSearch = 
       client.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.websiteUrl.toLowerCase().includes(searchTerm.toLowerCase())
+      (client.siteUrl && client.siteUrl.toLowerCase().includes(searchTerm.toLowerCase()))
     
     const matchesStatus = 
       statusFilter === 'all' || 
       (statusFilter === 'ACTIVE' && client.hostingStatus === 'ACTIVE') ||
-      (statusFilter === 'PAUSED' && client.hostingStatus === 'PAUSED')
+      (statusFilter === 'CANCELLED' && client.hostingStatus === 'CANCELLED')
 
     return matchesSearch && matchesStatus
   })
@@ -111,8 +109,8 @@ export default function ClientsPage() {
   const stats = {
     total: clients.length,
     active: clients.filter(c => c.hostingStatus === 'ACTIVE').length,
-    paused: clients.filter(c => c.hostingStatus === 'PAUSED').length,
-    totalMRR: clients.reduce((sum, c) => sum + (c.monthlyPrice || 0), 0)
+    cancelled: clients.filter(c => c.hostingStatus === 'CANCELLED').length,
+    totalMRR: clients.reduce((sum, c) => sum + (c.monthlyRevenue || 0), 0)
   }
 
   return (
@@ -160,26 +158,37 @@ export default function ClientsPage() {
                   </div>
                   <div className="space-y-2">
                     <label htmlFor="website" className="text-sm font-medium">
-                      Website URL *
+                      Site URL
                     </label>
                     <Input
                       id="website"
-                      value={formData.websiteUrl}
-                      onChange={(e) => setFormData(prev => ({ ...prev, websiteUrl: e.target.value }))}
+                      value={formData.siteUrl}
+                      onChange={(e) => setFormData(prev => ({ ...prev, siteUrl: e.target.value }))}
                       placeholder="abcroofing.com"
-                      required
                     />
                   </div>
                   <div className="space-y-2">
                     <label htmlFor="industry" className="text-sm font-medium">
-                      Industry
+                      Industry *
                     </label>
-                    <Input
+                    <select 
                       id="industry"
                       value={formData.industry}
                       onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))}
-                      placeholder="Roofing"
-                    />
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      required
+                    >
+                      <option value="GENERAL_CONTRACTING">General Contracting</option>
+                      <option value="ROOFING">Roofing</option>
+                      <option value="PLUMBING">Plumbing</option>
+                      <option value="HVAC">HVAC</option>
+                      <option value="PAINTING">Painting</option>
+                      <option value="LANDSCAPING">Landscaping</option>
+                      <option value="ELECTRICAL">Electrical</option>
+                      <option value="RESTORATION">Restoration</option>
+                      <option value="CLEANING">Cleaning</option>
+                      <option value="PEST_CONTROL">Pest Control</option>
+                    </select>
                   </div>
                   <div className="space-y-2">
                     <label htmlFor="package" className="text-sm font-medium">
@@ -200,11 +209,11 @@ export default function ClientsPage() {
                       type="checkbox" 
                       id="setup" 
                       className="rounded"
-                      checked={formData.chargeSetupFee}
-                      onChange={(e) => setFormData(prev => ({ ...prev, chargeSetupFee: e.target.checked }))}
+                      checked={formData.chargeSiteBuildFee}
+                      onChange={(e) => setFormData(prev => ({ ...prev, chargeSiteBuildFee: e.target.checked }))}
                     />
                     <label htmlFor="setup" className="text-sm">
-                      Charge $149 setup fee
+                      Charge $149 site build fee
                     </label>
                   </div>
                 </div>
@@ -233,7 +242,7 @@ export default function ClientsPage() {
           label="Active Clients" 
           value={stats.active} 
           variant="success"
-          subtitle={`${stats.paused} paused`}
+          subtitle={`${stats.cancelled} cancelled`}
         />
         <StatCard 
           label="Total Clients" 
@@ -266,7 +275,9 @@ export default function ClientsPage() {
           >
             <option value="all">All Status</option>
             <option value="ACTIVE">Active</option>
-            <option value="PAUSED">Paused</option>
+            <option value="CANCELLED">Cancelled</option>
+            <option value="FAILED_PAYMENT">Failed Payment</option>
+            <option value="GRACE_PERIOD">Grace Period</option>
           </select>
         </div>
       </Card>
@@ -293,9 +304,9 @@ export default function ClientsPage() {
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Company</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Website</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Site URL</th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Status</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Plan</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Industry</th>
                   <th className="text-right p-4 text-sm font-semibold text-gray-700">MRR</th>
                   <th className="text-right p-4 text-sm font-semibold text-gray-700">Actions</th>
                 </tr>
@@ -305,27 +316,35 @@ export default function ClientsPage() {
                   <tr key={client.id} className="hover:bg-gray-50">
                     <td className="p-4">
                       <div className="font-medium text-gray-900">{client.companyName}</div>
-                      {client.industry && <div className="text-sm text-gray-500">{client.industry}</div>}
+                      {client.siteLiveDate && (
+                        <div className="text-sm text-gray-500">
+                          Live: {new Date(client.siteLiveDate).toLocaleDateString()}
+                        </div>
+                      )}
                     </td>
                     <td className="p-4">
-                      <a 
-                        href={`https://${client.websiteUrl}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline flex items-center gap-1"
-                      >
-                        {client.websiteUrl}
-                        <ExternalLink size={14} />
-                      </a>
+                      {client.siteUrl ? (
+                        <a 
+                          href={`https://${client.siteUrl}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline flex items-center gap-1"
+                        >
+                          {client.siteUrl}
+                          <ExternalLink size={14} />
+                        </a>
+                      ) : (
+                        <span className="text-gray-400">In progress</span>
+                      )}
                     </td>
                     <td className="p-4">
                       <Badge variant={client.hostingStatus === 'ACTIVE' ? 'default' : 'secondary'}>
                         {client.hostingStatus}
                       </Badge>
                     </td>
-                    <td className="p-4 text-gray-700">{client.planType}</td>
+                    <td className="p-4 text-gray-700">{client.industry.replace(/_/g, ' ')}</td>
                     <td className="p-4 text-right font-semibold text-gray-900">
-                      {formatCurrency(client.monthlyPrice)}
+                      {formatCurrency(client.monthlyRevenue)}
                     </td>
                     <td className="p-4 text-right">
                       <Button variant="ghost" size="sm">View</Button>
