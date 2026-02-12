@@ -1,6 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
+// POST /api/clients - Create new client
+export async function POST(request: NextRequest) {
+  try {
+    const data = await request.json()
+
+    // Create client
+    const client = await prisma.client.create({
+      data: {
+        companyName: data.companyName,
+        websiteUrl: data.websiteUrl,
+        industry: data.industry,
+        hostingStatus: 'ACTIVE',
+        billingStatus: 'TRIAL',
+        planType: data.planType || 'BASIC',
+        monthlyPrice: data.monthlyPrice || 39,
+        setupFee: data.setupFee || 0,
+        leadId: data.leadId, // Optional - if converting from lead
+      }
+    })
+
+    // Create analytics record
+    await prisma.clientAnalytics.create({
+      data: {
+        clientId: client.id,
+      }
+    })
+
+    // Log to revenue if setup fee
+    if (data.setupFee && data.setupFee > 0) {
+      await prisma.revenue.create({
+        data: {
+          clientId: client.id,
+          amount: data.setupFee,
+          type: 'SETUP',
+          status: 'PENDING',
+          description: 'Website setup fee',
+        }
+      })
+    }
+
+    return NextResponse.json({ client })
+  } catch (error) {
+    console.error('Error creating client:', error)
+    return NextResponse.json(
+      { error: 'Failed to create client' },
+      { status: 500 }
+    )
+  }
+}
+
 // GET /api/clients - List clients with filters
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
