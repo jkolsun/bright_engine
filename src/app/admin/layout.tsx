@@ -8,7 +8,8 @@ import {
   Settings,
   LogOut,
   Upload,
-  Target
+  Target,
+  Zap
 } from 'lucide-react'
 
 export default function AdminLayout({
@@ -50,6 +51,9 @@ export default function AdminLayout({
           </NavLink>
           <NavLink href="/admin/outbound" icon={<Target size={20} />}>
             Outbound Tracker
+          </NavLink>
+          <NavLink href="/admin/clawdbot-monitor" icon={<Zap size={20} />}>
+            Clawdbot Monitor
           </NavLink>
           <NavLink href="/admin/import" icon={<Upload size={20} />}>
             Lead Import
