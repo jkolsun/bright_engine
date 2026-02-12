@@ -36,15 +36,6 @@ export default function DashboardLayout({
           <NavLink href="/revenue" icon={<DollarSign size={20} />}>
             Revenue
           </NavLink>
-          <NavLink href="/messages" icon={<MessageSquare size={20} />}>
-            Messages
-          </NavLink>
-          <NavLink href="/reps" icon={<Users size={20} />}>
-            Rep Portal
-          </NavLink>
-          <NavLink href="/import" icon={<Users size={20} />}>
-            Import
-          </NavLink>
           <NavLink href="/settings" icon={<Settings size={20} />}>
             Settings
           </NavLink>
