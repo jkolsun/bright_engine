@@ -56,7 +56,7 @@ const MOCK_STATS = {
   totalMRR: 2088
 }
 
-export default async function ClientsPage() {
+export default function ClientsPage() {
   const clients = MOCK_CLIENTS
   const stats = MOCK_STATS
 

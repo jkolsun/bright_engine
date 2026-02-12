@@ -51,7 +51,7 @@ const MOCK_DATA = {
   }
 }
 
-export default async function RevenuePage() {
+export default function RevenuePage() {
   const {
     mrr,
     arr,

@@ -46,7 +46,7 @@ const MOCK_DATA = {
   ]
 }
 
-export default async function AdminDashboard() {
+export default function AdminDashboard() {
   const {
     totalLeads,
     hotLeads,

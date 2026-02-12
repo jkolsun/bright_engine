@@ -90,7 +90,7 @@ const MOCK_STATS = {
   building: 8,
 }
 
-export default async function LeadsPage() {
+export default function LeadsPage() {
   const leads = MOCK_LEADS
   const stats = MOCK_STATS
 
