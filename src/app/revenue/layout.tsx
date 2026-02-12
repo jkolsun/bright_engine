@@ -39,6 +39,9 @@ export default function DashboardLayout({
           <NavLink href="/messages" icon={<MessageSquare size={20} />}>
             Messages
           </NavLink>
+          <NavLink href="/outbound" icon={<Users size={20} />}>
+            Outbound
+          </NavLink>
           <NavLink href="/reps" icon={<Users size={20} />}>
             Rep Portal
           </NavLink>
