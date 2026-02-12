@@ -33,7 +33,7 @@ export default function LeadsPage() {
     city: '',
     state: '',
     industry: '',
-    source: 'MANUAL'
+    source: 'COLD_EMAIL'
   })
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export default function LeadsPage() {
           city: '',
           state: '',
           industry: '',
-          source: 'MANUAL'
+          source: 'COLD_EMAIL'
         })
         fetchLeads()
       } else {
