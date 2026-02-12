@@ -73,9 +73,14 @@ export async function POST(request: NextRequest) {
           }
         })
 
-        // Queue enrichment and personalization
-        await addEnrichmentJob(lead.id)
-        await addPersonalizationJob(lead.id)
+        // Queue enrichment and personalization (non-blocking)
+        try {
+          await addEnrichmentJob(lead.id)
+          await addPersonalizationJob(lead.id)
+        } catch (queueError) {
+          console.warn(`Queue job failed for ${lead.id} (non-blocking):`, queueError)
+          // Don't fail import if queue jobs fail
+        }
 
         results.imported++
       } catch (error) {

@@ -56,10 +56,21 @@ export default function LeadsPage() {
     e.preventDefault()
     
     try {
+      // Clean up form data - remove empty strings, use defaults
+      const cleanData = {
+        ...formData,
+        industry: formData.industry || 'GENERAL_CONTRACTING',
+        source: formData.source || 'COLD_EMAIL',
+        lastName: formData.lastName || undefined,
+        email: formData.email || undefined,
+        city: formData.city || undefined,
+        state: formData.state || undefined,
+      }
+
       const res = await fetch('/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(cleanData)
       })
 
       if (res.ok) {
