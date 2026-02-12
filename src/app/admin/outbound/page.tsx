@@ -17,15 +17,18 @@ export default function OutboundTrackerPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterView, setFilterView] = useState('all')
 
+  const [engagementScores, setEngagementScores] = useState<Record<string, any>>({})
+
   useEffect(() => {
     loadData()
   }, [])
 
   const loadData = async () => {
     try {
-      const [leadsRes, eventsRes] = await Promise.all([
+      const [leadsRes, eventsRes, scoresRes] = await Promise.all([
         fetch('/api/leads?limit=100'),
-        fetch('/api/dashboard/stats')
+        fetch('/api/dashboard/stats'),
+        fetch('/api/engagement-score?all=true')
       ])
 
       if (leadsRes.ok) {
@@ -35,6 +38,16 @@ export default function OutboundTrackerPage() {
       if (eventsRes.ok) {
         const data = await eventsRes.json()
         setStats(data)
+      }
+      if (scoresRes.ok) {
+        const data = await scoresRes.json()
+        const scoresMap: Record<string, any> = {}
+        if (data.scores) {
+          data.scores.forEach((score: any) => {
+            scoresMap[score.leadId] = score
+          })
+        }
+        setEngagementScores(scoresMap)
       }
     } catch (error) {
       console.error('Failed to load outbound data:', error)
@@ -57,17 +70,23 @@ export default function OutboundTrackerPage() {
     return matchesSearch
   })
 
-  // Calculate engagement scores from lead events
+  // Get real engagement score from API cache
   const getEngagementScore = (lead: any) => {
-    // This would be calculated from lead_events table
-    // For now, return 0 until we fetch events
-    return 0
+    const scoreData = engagementScores[lead.id]
+    return scoreData?.score || 0
   }
 
-  const getTemperature = (score: number) => {
-    if (score >= 20) return { label: 'HOT', color: 'bg-red-100 text-red-800' }
-    if (score >= 10) return { label: 'WARM', color: 'bg-amber-100 text-amber-800' }
-    return { label: 'COLD', color: 'bg-blue-100 text-blue-800' }
+  const getTemperature = (leadId: string) => {
+    const scoreData = engagementScores[leadId]
+    const temperature = scoreData?.temperature || 'COLD'
+    
+    const colorMap: Record<string, string> = {
+      'COLD': 'bg-blue-100 text-blue-800',
+      'WARM': 'bg-amber-100 text-amber-800',
+      'HOT': 'bg-red-100 text-red-800',
+    }
+    
+    return { label: temperature, color: colorMap[temperature] }
   }
 
   if (loading) {
@@ -212,7 +231,7 @@ export default function OutboundTrackerPage() {
               <tbody className="divide-y divide-gray-200">
                 {filteredLeads.map((lead) => {
                   const score = getEngagementScore(lead)
-                  const temp = getTemperature(score)
+                  const temp = getTemperature(lead.id)
                   
                   return (
                     <tr key={lead.id} className="hover:bg-gray-50">
@@ -261,12 +280,27 @@ export default function OutboundTrackerPage() {
 
       {/* Info Card */}
       <Card className="p-6 bg-blue-50 border-blue-200">
-        <h3 className="font-semibold text-gray-900 mb-2">📊 Engagement Scoring</h3>
-        <p className="text-sm text-gray-700">
-          Engagement scores are calculated from lead activity: email opens (+2), preview views (+3), 
-          CTA clicks (+5), call connects (+7), text responses (+4). Scores update in real-time as 
-          leads interact with your outreach.
-        </p>
+        <h3 className="font-semibold text-gray-900 mb-3">📊 Engagement Scoring</h3>
+        <div className="space-y-2 text-sm text-gray-700">
+          <p className="font-medium">Score Calculation:</p>
+          <div className="grid grid-cols-2 gap-4 ml-2">
+            <div>
+              <div>📧 Email opened: <span className="font-semibold">+2</span></div>
+              <div>👀 Preview viewed: <span className="font-semibold">+3</span></div>
+              <div>🖱️ CTA clicked: <span className="font-semibold">+5</span></div>
+            </div>
+            <div>
+              <div>☎️ Call connected: <span className="font-semibold">+7</span></div>
+              <div>💬 Text responded: <span className="font-semibold">+4</span></div>
+            </div>
+          </div>
+          <p className="font-medium mt-3">Temperature Ranges:</p>
+          <div className="ml-2 space-y-1">
+            <div><span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">COLD</span> 0-5 points</div>
+            <div><span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">WARM</span> 6-15 points</div>
+            <div><span className="px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">HOT</span> 16+ points</div>
+          </div>
+        </div>
       </Card>
     </div>
   )
