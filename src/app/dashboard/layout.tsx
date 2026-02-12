@@ -15,12 +15,19 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Sidebar */}
-      <aside className="w-64 bg-gradient-to-b from-slate-900 to-slate-800 text-white flex flex-col shadow-xl">
-        <div className="p-6 border-b border-slate-700">
-          <h1 className="text-xl font-bold text-white">Bright Automations</h1>
-          <p className="text-sm text-slate-300 mt-1">Control Center</p>
+      <aside className="w-72 gradient-dark text-white flex flex-col shadow-large border-r border-slate-700/50">
+        <div className="p-6 border-b border-white/10">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center shadow-medium">
+              <span className="text-white font-bold text-lg">B</span>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-white tracking-tight">Bright Automations</h1>
+              <p className="text-xs text-blue-300">Control Center</p>
+            </div>
+          </div>
         </div>
         
         <nav className="flex-1 p-4 space-y-1">
