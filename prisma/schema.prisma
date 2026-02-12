@@ -37,6 +37,8 @@ model User {
   commissions        Commission[]
   messages           Message[]
   clawdbotActivities ClawdbotActivity[]
+  outboundEvents     OutboundEvent[]     @relation("RepOutboundEvents")
+  channelPerformance ChannelPerformance[]
 
   @@map("users")
 }
@@ -135,6 +137,8 @@ model Lead {
   messages           Message[]
   client             Client?             // One-to-one after payment
   clawdbotActivities ClawdbotActivity[]
+  outboundEvents     OutboundEvent[]
+  touchRecommendations TouchRecommendation[]
 
   @@index([status])
   @@index([assignedToId])
@@ -575,4 +579,138 @@ model ClawdbotActivity {
   @@index([leadId])
   @@index([clientId])
   @@map("clawdbot_activity")
+}
+
+// ============================================
+// OUTBOUND EVENT MODEL (Multi-channel tracking)
+// ============================================
+enum OutboundChannel {
+  EMAIL
+  SMS
+  PHONE
+  LINKEDIN
+  INSTANTLY
+}
+
+enum OutboundEventStatus {
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  REPLIED
+  BOUNCED
+  UNSUBSCRIBED
+  FAILED
+}
+
+model OutboundEvent {
+  id            String              @id @default(cuid())
+  leadId        String              @map("lead_id")
+  channel       OutboundChannel
+  status        OutboundEventStatus @default(SENT)
+  messageId     String?             @map("message_id") // Instantly/provider ID
+  content       String?             @db.Text
+  subject       String?
+  recipientEmail String?            @map("recipient_email")
+  recipientPhone String?            @map("recipient_phone")
+  sentAt        DateTime            @map("sent_at")
+  openedAt      DateTime?           @map("opened_at")
+  clickedAt     DateTime?           @map("clicked_at")
+  repliedAt     DateTime?           @map("replied_at")
+  metadata      Json?               // Provider-specific data
+  repId         String?             @map("rep_id")
+  campaignId    String?             @map("campaign_id")
+  createdAt     DateTime            @default(now()) @map("created_at")
+
+  // Relations
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  rep  User? @relation("RepOutboundEvents", fields: [repId], references: [id], onDelete: SetNull)
+
+  @@index([leadId])
+  @@index([channel])
+  @@index([status])
+  @@index([createdAt])
+  @@index([repId])
+  @@index([campaignId])
+  @@map("outbound_events")
+}
+
+// ============================================
+// TOUCH RECOMMENDATION MODEL (AI next-best-action)
+// ============================================
+enum RecommendationPriority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum RecommendationType {
+  SEND_EMAIL
+  SEND_SMS
+  PHONE_CALL
+  LINKEDIN_MESSAGE
+  FOLLOW_UP
+  URGENCY_PITCH
+  ANNUAL_PITCH
+  UPSELL
+  NURTURE
+  RE_ENGAGEMENT
+  ESCALATION
+}
+
+model TouchRecommendation {
+  id          String                 @id @default(cuid())
+  leadId      String                 @map("lead_id")
+  type        RecommendationType
+  priority    RecommendationPriority @default(MEDIUM)
+  reason      String                 @db.Text // Why this recommendation
+  suggestedAt DateTime               @map("suggested_at")
+  actionTakenAt DateTime?            @map("action_taken_at")
+  actionType  String?                @map("action_type") // EMAIL, SMS, etc.
+  metadata    Json?                  // Hook, script, timing data
+  confidence  Float?                 // 0.0 - 1.0 confidence score
+  createdAt   DateTime               @default(now()) @map("created_at")
+
+  // Relations
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([type])
+  @@index([priority])
+  @@index([actionTakenAt])
+  @@map("touch_recommendations")
+}
+
+// ============================================
+// CHANNEL PERFORMANCE MODEL (Analytics)
+// ============================================
+model ChannelPerformance {
+  id               String   @id @default(cuid())
+  channel          OutboundChannel
+  campaignId       String?  @map("campaign_id")
+  repId            String?  @map("rep_id")
+  period           String   @db.VarChar(10) // YYYY-MM-DD
+  totalSent        Int      @default(0) @map("total_sent")
+  totalDelivered   Int      @default(0) @map("total_delivered")
+  totalOpened      Int      @default(0) @map("total_opened")
+  totalClicked     Int      @default(0) @map("total_clicked")
+  totalReplied     Int      @default(0) @map("total_replied")
+  totalBounced     Int      @default(0) @map("total_bounced")
+  openRate         Float    @default(0) @map("open_rate") // 0.0 - 1.0
+  clickRate        Float    @default(0) @map("click_rate")
+  replyRate        Float    @default(0) @map("reply_rate")
+  conversionCount  Int      @default(0) @map("conversion_count") // Leads → Clients
+  revenue          Float    @default(0)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  rep User? @relation(fields: [repId], references: [id], onDelete: SetNull)
+
+  @@unique([channel, campaignId, repId, period])
+  @@index([channel])
+  @@index([repId])
+  @@index([period])
+  @@map("channel_performance")
 }

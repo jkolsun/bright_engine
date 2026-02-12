@@ -1,82 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
+import {
+  calculateEngagementScore,
+  getEngagementStats,
+  recalculateAllEngagementScores,
+} from '@/lib/engagement-scoring'
 
 /**
- * Engagement Score Calculation
- * Score breakdown:
- * - Email opened: +2 points
- * - Preview viewed: +3 points
- * - CTA clicked: +5 points
- * - Call connected: +7 points
- * - Text responded: +4 points
+ * Engagement Score API
+ * 
+ * Improved scoring engine with better weighting:
+ * - Preview Engagement: max 25 points
+ * - Email/Response: max 25 points  
+ * - Outbound Recency: max 25 points (fresh outreach = more points)
+ * - Conversion Signals: max 25 points
  * 
  * Temperature scale:
- * 0-5: COLD (blue)
- * 6-15: WARM (amber)
- * 16+: HOT (red)
+ * COLD: 0-30 points
+ * WARM: 31-70 points
+ * HOT: 71-100 points
  */
 
-// Map EventType enum to engagement scores
-const EVENT_SCORES: Record<string, number> = {
-  'EMAIL_OPENED': 2,
-  'PREVIEW_VIEWED': 3,
-  'PREVIEW_CTA_CLICKED': 5,
-  'CALL_MADE': 7,
-  'TEXT_RECEIVED': 4,
-}
-
-interface EngagementScore {
-  leadId: string
-  score: number
-  temperature: 'COLD' | 'WARM' | 'HOT'
-  breakdown: Record<string, number>
-}
-
-function getTemperature(score: number): 'COLD' | 'WARM' | 'HOT' {
-  if (score >= 16) return 'HOT'
-  if (score >= 6) return 'WARM'
-  return 'COLD'
-}
-
-async function calculateEngagementScore(leadId: string): Promise<EngagementScore> {
-  // Fetch all events for this lead
-  const events = await prisma.leadEvent.findMany({
-    where: { leadId },
-  })
-
-  // Group events by type and count
-  const breakdown: Record<string, number> = {}
-  let totalScore = 0
-
-  for (const event of events) {
-    const eventType = event.eventType // Already uppercase from enum
-    const points = EVENT_SCORES[eventType] || 0
-    
-    if (points > 0) {
-      breakdown[eventType] = (breakdown[eventType] || 0) + points
-      totalScore += points
-    }
-  }
-
-  const score = totalScore
-  const temperature = getTemperature(score)
-
-  return {
-    leadId,
-    score,
-    temperature,
-    breakdown,
-  }
-}
-
 // GET /api/engagement-score
-// ?leadId=<id> - Get score for a specific lead
+// ?leadId=<id> - Get score for specific lead
 // ?all=true - Get scores for all leads
+// ?stats=true - Get aggregate stats
+// ?recalculate=true - Recalculate all (heavy operation)
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const leadId = searchParams.get('leadId')
     const all = searchParams.get('all') === 'true'
+    const stats = searchParams.get('stats') === 'true'
+    const recalculate = searchParams.get('recalculate') === 'true'
+
+    if (recalculate) {
+      // Admin operation: recalculate all scores
+      const scores = await recalculateAllEngagementScores()
+      return NextResponse.json({
+        message: 'Recalculated scores',
+        count: scores.length,
+        scores,
+      })
+    }
 
     if (leadId) {
       // Single lead
@@ -84,26 +49,39 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(score)
     }
 
+    if (stats) {
+      // Aggregate statistics
+      const stats_data = await getEngagementStats()
+      return NextResponse.json(stats_data)
+    }
+
     if (all) {
-      // All leads
-      const leads = await prisma.lead.findMany({
-        select: { id: true },
+      // All leads (careful: can be heavy)
+      const allScores = await recalculateAllEngagementScores()
+      return NextResponse.json({
+        count: allScores.length,
+        scores: allScores,
       })
-
-      const scores: EngagementScore[] = await Promise.all(
-        leads.map(lead => calculateEngagementScore(lead.id))
-      )
-
-      return NextResponse.json({ scores })
     }
 
     // Default: return scoring rules
     return NextResponse.json({
-      eventScores: EVENT_SCORES,
+      scoringRules: {
+        previewEngagement: 'max 25 points (views, clicks, returns)',
+        emailResponse: 'max 25 points (opens, replies)',
+        outboundRecency: 'max 25 points (1 day=25, decays over time)',
+        conversionSignals: 'max 25 points (replies, payments)',
+      },
       temperatureScale: {
-        COLD: '0-5 points (blue)',
-        WARM: '6-15 points (amber)',
-        HOT: '16+ points (red)',
+        COLD: '0-30 points',
+        WARM: '31-70 points',
+        HOT: '71-100 points',
+      },
+      endpoints: {
+        single: '?leadId=<id>',
+        all: '?all=true',
+        stats: '?stats=true',
+        recalculate: '?recalculate=true (admin)',
       },
     })
   } catch (error) {
