@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/utils'
 import { useState, useEffect } from 'react'
-import { Phone, Target, TrendingUp, DollarSign, Users, Award } from 'lucide-react'
+import { Phone, Target, TrendingUp, DollarSign, Users, Award, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 
 export default function RepsPage() {
