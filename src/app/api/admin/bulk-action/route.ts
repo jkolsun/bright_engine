@@ -28,7 +28,8 @@ export async function POST(request: NextRequest) {
           await prisma.leadEvent.create({
             data: {
               leadId,
-              eventType: 'STATUS_CHANGE',
+              eventType: 'STAGE_CHANGE',
+              toStage: 'REASSIGNED',
               metadata: { bulkAction: true, newRep: payload.repId },
               actor: 'admin'
             }
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
           await prisma.leadEvent.create({
             data: {
               leadId,
-              eventType: 'STATUS_CHANGE',
+              eventType: 'STAGE_CHANGE',
               toStage: payload.status,
               metadata: { bulkAction: true },
               actor: 'admin'

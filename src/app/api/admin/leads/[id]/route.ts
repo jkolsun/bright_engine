@@ -24,7 +24,7 @@ export async function PATCH(
     await prisma.leadEvent.create({
       data: {
         leadId: lead.id,
-        eventType: 'STATUS_CHANGE',
+        eventType: 'STAGE_CHANGE',
         toStage: data.status || lead.status,
         metadata: {
           changedBy: 'admin',

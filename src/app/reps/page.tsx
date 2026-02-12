@@ -176,7 +176,3 @@ export default function RepsPage() {
     </div>
   )
 }
-
-function CheckCircle({ size, className }: { size: number; className: string }) {
-  return <TrendingUp size={size} className={className} />
-}

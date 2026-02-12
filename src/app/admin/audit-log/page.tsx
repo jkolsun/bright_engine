@@ -32,7 +32,7 @@ export default function AuditLogPage() {
 
   const eventTypeColor = (type: string) => {
     switch (type) {
-      case 'STATUS_CHANGE':
+      case 'STAGE_CHANGE':
         return 'bg-blue-100 text-blue-800'
       case 'EMAIL_SENT':
         return 'bg-green-100 text-green-800'
@@ -80,7 +80,7 @@ export default function AuditLogPage() {
             className="px-4 py-2 border border-gray-300 rounded-md"
           >
             <option value="all">All Events</option>
-            <option value="STATUS_CHANGE">Status Changes</option>
+            <option value="STAGE_CHANGE">Status Changes</option>
             <option value="EMAIL_SENT">Emails</option>
             <option value="PREVIEW_VIEWED">Preview Views</option>
             <option value="CALL_MADE">Calls</option>
