@@ -16,12 +16,13 @@ import { prisma } from '@/lib/db'
  * 16+: HOT (red)
  */
 
+// Map EventType enum to engagement scores
 const EVENT_SCORES: Record<string, number> = {
-  'email_opened': 2,
-  'preview_viewed': 3,
-  'cta_clicked': 5,
-  'call_connected': 7,
-  'text_responded': 4,
+  'EMAIL_OPENED': 2,
+  'PREVIEW_VIEWED': 3,
+  'PREVIEW_CTA_CLICKED': 5,
+  'CALL_MADE': 7,
+  'TEXT_RECEIVED': 4,
 }
 
 interface EngagementScore {
@@ -48,7 +49,7 @@ async function calculateEngagementScore(leadId: string): Promise<EngagementScore
   let totalScore = 0
 
   for (const event of events) {
-    const eventType = event.eventType.toLowerCase()
+    const eventType = event.eventType // Already uppercase from enum
     const points = EVENT_SCORES[eventType] || 0
     
     if (points > 0) {

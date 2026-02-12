@@ -43,19 +43,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Map to actual enum values from schema
     const eventTypes = [
-      'email_opened',
-      'preview_viewed',
-      'cta_clicked',
-      'call_connected',
-      'text_responded',
-    ]
+      'EMAIL_OPENED',
+      'PREVIEW_VIEWED',
+      'PREVIEW_CTA_CLICKED',
+      'CALL_MADE',
+      'TEXT_RECEIVED',
+    ] as const
 
     const events = []
 
     // Create random events
     for (let i = 0; i < eventCount; i++) {
-      const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)]
+      const eventTypeIdx = Math.floor(Math.random() * eventTypes.length)
+      const eventType = eventTypes[eventTypeIdx] as any
       const minutesAgo = Math.floor(Math.random() * 60 * 24) // Last 24 hours
 
       const event = await prisma.leadEvent.create({
@@ -79,16 +81,16 @@ export async function POST(request: NextRequest) {
     })
 
     const EVENT_SCORES: Record<string, number> = {
-      'email_opened': 2,
-      'preview_viewed': 3,
-      'cta_clicked': 5,
-      'call_connected': 7,
-      'text_responded': 4,
+      'EMAIL_OPENED': 2,
+      'PREVIEW_VIEWED': 3,
+      'PREVIEW_CTA_CLICKED': 5,
+      'CALL_MADE': 7,
+      'TEXT_RECEIVED': 4,
     }
 
     let totalScore = 0
     for (const evt of allEvents) {
-      const points = EVENT_SCORES[evt.eventType.toLowerCase()] || 0
+      const points = EVENT_SCORES[evt.eventType] || 0
       totalScore += points
     }
 
