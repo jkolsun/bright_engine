@@ -19,7 +19,7 @@ export default function AdminLayout({
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Sidebar */}
-      <aside className="w-72 gradient-dark text-white flex flex-col shadow-large border-r border-slate-700/50">
+      <aside className="hidden md:flex w-72 gradient-dark text-white flex flex-col shadow-large border-r border-slate-700/50">
         <div className="p-6 border-b border-white/10">
           <div className="flex items-center gap-3 mb-1">
             <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center shadow-medium">

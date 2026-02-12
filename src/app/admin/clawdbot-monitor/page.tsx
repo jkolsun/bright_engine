@@ -126,7 +126,7 @@ export default function ClawdbotMonitorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 pb-20">
+    <div className="min-h-screen bg-black text-white p-4 pb-20 md:p-8 max-w-full w-full">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
