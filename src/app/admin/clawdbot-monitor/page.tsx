@@ -44,6 +44,11 @@ export default function ClawdbotMonitorPage() {
   const [queues, setQueues] = useState<QueueInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [autoRefresh, setAutoRefresh] = useState(true)
+  const [expandedSections, setExpandedSections] = useState({
+    queues: false,
+    activity: true,
+    stats: false,
+  })
 
   useEffect(() => {
     const fetchData = async () => {
@@ -63,10 +68,17 @@ export default function ClawdbotMonitorPage() {
     fetchData()
 
     if (autoRefresh) {
-      const interval = setInterval(fetchData, 5000) // Refresh every 5 seconds
+      const interval = setInterval(fetchData, 5000)
       return () => clearInterval(interval)
     }
   }, [autoRefresh])
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section],
+    }))
+  }
 
   const getActionEmoji = (action: string) => {
     const emojis: Record<string, string> = {
@@ -95,159 +107,176 @@ export default function ClawdbotMonitorPage() {
   }
 
   const getActionColor = (action: string) => {
-    if (action.includes('ERROR')) return 'text-red-600'
-    if (action.includes('ALERT') || action.includes('ESCALATION')) return 'text-orange-600'
-    if (action.includes('PAYMENT')) return 'text-green-600'
-    if (action.includes('UPSELL') || action.includes('REFERRAL')) return 'text-blue-600'
-    return 'text-gray-600'
+    if (action.includes('ERROR')) return 'text-red-400'
+    if (action.includes('ALERT') || action.includes('ESCALATION')) return 'text-orange-400'
+    if (action.includes('PAYMENT')) return 'text-green-400'
+    if (action.includes('UPSELL') || action.includes('REFERRAL')) return 'text-blue-400'
+    return 'text-gray-300'
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen bg-black">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading Clawdbot Monitor...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+          <p className="text-green-500 text-sm">Loading Clawdbot...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">🤖 CLAWDBOT TASK MONITOR</h1>
-            <div className="flex items-center mt-2 gap-2">
-              <div className="h-3 w-3 bg-green-500 rounded-full animate-pulse"></div>
-              <p className="text-sm text-gray-600">🟢 ONLINE</p>
-            </div>
+    <div className="min-h-screen bg-black text-white p-4 pb-20">
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="h-3 w-3 bg-green-500 rounded-full animate-pulse"></div>
+            <h1 className="text-lg font-bold">🤖 CLAWDBOT</h1>
           </div>
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={e => setAutoRefresh(e.target.checked)}
-                className="rounded"
-              />
-              Auto-refresh (5s)
-            </label>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Refresh Now
-            </button>
+          <button
+            onClick={() => window.location.reload()}
+            className="text-xs bg-green-600 text-black px-3 py-1 rounded font-semibold active:opacity-70"
+          >
+            ↻
+          </button>
+        </div>
+        <label className="flex items-center gap-2 text-xs text-gray-400">
+          <input
+            type="checkbox"
+            checked={autoRefresh}
+            onChange={e => setAutoRefresh(e.target.checked)}
+            className="rounded"
+          />
+          Auto-refresh (5s)
+        </label>
+      </div>
+
+      {/* Top Stats Bar - Show only key metrics */}
+      {stats && (
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="bg-gray-900 p-3 rounded border border-gray-800">
+            <p className="text-xs text-gray-400">Actions</p>
+            <p className="text-2xl font-bold text-green-400">{stats.totalActions}</p>
+          </div>
+          <div className="bg-gray-900 p-3 rounded border border-gray-800">
+            <p className="text-xs text-gray-400">📱 Texts</p>
+            <p className="text-2xl font-bold text-blue-400">{stats.textsSent}</p>
+          </div>
+          <div className="bg-gray-900 p-3 rounded border border-gray-800">
+            <p className="text-xs text-gray-400">🔗 Previews</p>
+            <p className="text-2xl font-bold">{stats.previewsGenerated}</p>
+          </div>
+          <div className="bg-gray-900 p-3 rounded border border-gray-800">
+            <p className="text-xs text-gray-400">💰 Upsells</p>
+            <p className="text-2xl font-bold text-green-400">{stats.upsellsPitched}</p>
           </div>
         </div>
+      )}
 
-        {/* Top Stats Bar */}
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-600">Total Actions</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalActions}</p>
+      {/* Queues - Collapsible */}
+      <div className="bg-gray-900 rounded border border-gray-800 mb-4 overflow-hidden">
+        <button
+          onClick={() => toggleSection('queues')}
+          className="w-full flex items-center justify-between p-4 font-semibold text-sm hover:bg-gray-800 active:bg-gray-700"
+        >
+          <span>QUEUES</span>
+          <span>{expandedSections.queues ? '▼' : '▶'}</span>
+        </button>
+        {expandedSections.queues && queues && (
+          <div className="border-t border-gray-800 p-4 space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-400">Nurture active</span>
+              <span className="font-bold text-cyan-400">{queues.nurture_active}</span>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-600">📱 Texts Sent</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.textsSent}</p>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Preview urgency</span>
+              <span className="font-bold text-yellow-400">{queues.preview_urgency}</span>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-600">📱 Received</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.textsReceived}</p>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Upsells pending</span>
+              <span className="font-bold text-green-400">{queues.upsell_pending}</span>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-600">🔗 Previews</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.previewsGenerated}</p>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Referrals pending</span>
+              <span className="font-bold text-purple-400">{queues.referral_pending}</span>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-600">💰 Upsells</p>
-              <p className="text-2xl font-bold text-green-600">{stats.upsellsPitched}</p>
-            </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-600">👥 Referrals</p>
-              <p className="text-2xl font-bold text-green-600">{stats.referralsAsked}</p>
-            </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-600">🔥 Alerts</p>
-              <p className="text-2xl font-bold text-orange-600">{stats.alertsSent}</p>
-            </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-600">❌ Errors</p>
-              <p className="text-2xl font-bold text-red-600">{stats.errors}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Queues */}
-        {queues && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">QUEUES</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Nurture sequences active</p>
-                <p className="text-2xl font-bold">{queues.nurture_active}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Preview urgency sequences</p>
-                <p className="text-2xl font-bold">{queues.preview_urgency}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Upsell pitches pending</p>
-                <p className="text-2xl font-bold">{queues.upsell_pending}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Referral asks pending</p>
-                <p className="text-2xl font-bold">{queues.referral_pending}</p>
-              </div>
-            </div>
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-sm text-gray-600 mb-2">Hot leads requiring attention: {queues.total_hot}</p>
-              {queues.leads.slice(0, 5).map(lead => (
-                <div key={lead.id} className="text-sm text-gray-700">
-                  • {lead.companyName} ({lead.priority.toUpperCase()})
+            {queues.total_hot > 0 && (
+              <div className="border-t border-gray-700 pt-3 mt-3">
+                <p className="text-xs text-gray-400 mb-2">🔥 Hot leads ({queues.total_hot})</p>
+                <div className="space-y-1">
+                  {queues.leads.slice(0, 3).map(lead => (
+                    <div key={lead.id} className="text-xs text-gray-300 truncate">
+                      {lead.companyName}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Stats Detail - Collapsible */}
+      <div className="bg-gray-900 rounded border border-gray-800 mb-4 overflow-hidden">
+        <button
+          onClick={() => toggleSection('stats')}
+          className="w-full flex items-center justify-between p-4 font-semibold text-sm hover:bg-gray-800 active:bg-gray-700"
+        >
+          <span>TODAY'S STATS</span>
+          <span>{expandedSections.stats ? '▼' : '▶'}</span>
+        </button>
+        {expandedSections.stats && stats && (
+          <div className="border-t border-gray-800 p-4 space-y-2 text-xs">
+            <div className="flex justify-between">
+              <span className="text-gray-400">Texts received</span>
+              <span className="text-blue-400">{stats.textsReceived}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Alerts sent</span>
+              <span className="text-orange-400">{stats.alertsSent}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Referrals asked</span>
+              <span className="text-purple-400">{stats.referralsAsked}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-400">Errors</span>
+              <span className="text-red-400">{stats.errors}</span>
             </div>
           </div>
         )}
+      </div>
 
-        {/* Activity Log */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">TODAY'S ACTIVITY LOG</h2>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {activity.length === 0 ? (
-              <p className="text-gray-500 text-sm">No activity yet</p>
-            ) : (
-              activity.map(item => (
-                <div
-                  key={item.id}
-                  className="flex gap-4 pb-3 border-b border-gray-100 hover:bg-gray-50 -mx-2 px-2 py-1"
-                >
-                  <div className="text-xl">{getActionEmoji(item.actionType)}</div>
-                  <div className="flex-1">
-                    <p className={`text-sm font-medium ${getActionColor(item.actionType)}`}>
+      {/* Activity Log - Always expanded, top 10 only */}
+      <div className="bg-gray-900 rounded border border-gray-800 overflow-hidden">
+        <div className="p-4 font-semibold text-sm border-b border-gray-800">ACTIVITY</div>
+        <div className="divide-y divide-gray-800 max-h-96 overflow-y-auto">
+          {activity.length === 0 ? (
+            <div className="p-4 text-xs text-gray-500">No activity yet</div>
+          ) : (
+            activity.slice(0, 10).map(item => (
+              <div key={item.id} className="p-3 hover:bg-gray-800 active:bg-gray-700 text-xs">
+                <div className="flex gap-2 items-start">
+                  <span className="text-lg flex-shrink-0">{getActionEmoji(item.actionType)}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-semibold text-xs ${getActionColor(item.actionType)}`}>
                       {item.actionType.replace(/_/g, ' ')}
                     </p>
-                    <p className="text-sm text-gray-700">{item.description}</p>
-                    {(item.lead || item.client || item.rep) && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        {item.lead && `${item.lead.firstName} @ ${item.lead.companyName}`}
-                        {item.client && `${item.client.companyName}`}
-                        {item.rep && ` • ${item.rep.name}`}
+                    <p className="text-gray-300 text-xs truncate">{item.description}</p>
+                    {(item.lead || item.client) && (
+                      <p className="text-gray-500 text-xs mt-1 truncate">
+                        {item.lead?.companyName || item.client?.companyName}
                       </p>
                     )}
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {new Date(item.createdAt).toLocaleTimeString()}
+                  <div className="text-gray-500 text-xs flex-shrink-0 whitespace-nowrap">
+                    {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>
