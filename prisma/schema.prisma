@@ -196,7 +196,7 @@ enum HostingStatus {
 
 model Client {
   id                   String        @id @default(cuid())
-  leadId               String        @unique @map("lead_id")
+  leadId               String?       @unique @map("lead_id")
   companyName          String        @map("company_name")
   industry             Industry
   siteUrl              String?       @map("site_url")
@@ -223,7 +223,7 @@ model Client {
   updatedAt            DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  lead       Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead       Lead?       @relation(fields: [leadId], references: [id], onDelete: Cascade)
   messages   Message[]
   commissions Commission[]
   revenue    Revenue[]
