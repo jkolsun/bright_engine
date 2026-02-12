@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { formatCurrency } from '@/lib/utils'
 import { useState, useEffect } from 'react'
-import { Search, Filter, Download, Plus, TrendingUp, TrendingDown, ExternalLink } from 'lucide-react'
+import { Search, Filter, Download, Plus, TrendingUp, TrendingDown, ExternalLink, Users } from 'lucide-react'
 
 export default function ClientsPage() {
   const [searchTerm, setSearchTerm] = useState('')
