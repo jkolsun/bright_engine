@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     const client = await prisma.client.create({
       data: {
         companyName: data.companyName,
-        websiteUrl: data.websiteUrl,
+        siteUrl: data.websiteUrl || data.siteUrl,
         industry: data.industry,
         hostingStatus: 'ACTIVE',
         billingStatus: 'TRIAL',
