@@ -1,0 +1,524 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MODEL (Andrew, Jared, Reps)
+// ============================================
+enum UserRole {
+  ADMIN
+  REP
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String
+  role      UserRole   @default(REP)
+  phone     String?
+  status    UserStatus @default(ACTIVE)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  assignedLeads Lead[]       @relation("AssignedLeads")
+  activities    Activity[]
+  commissions   Commission[]
+  messages      Message[]
+
+  @@map("users")
+}
+
+// ============================================
+// LEAD MODEL (Pre-payment prospects)
+// ============================================
+enum Industry {
+  RESTORATION
+  ROOFING
+  PLUMBING
+  HVAC
+  PAINTING
+  LANDSCAPING
+  ELECTRICAL
+  GENERAL_CONTRACTING
+  CLEANING
+  PEST_CONTROL
+}
+
+enum LeadStatus {
+  NEW
+  HOT_LEAD
+  QUALIFIED
+  INFO_COLLECTED
+  BUILDING
+  QA
+  CLIENT_REVIEW
+  APPROVED
+  PAID
+  CLOSED_LOST
+  DO_NOT_CONTACT
+}
+
+enum LeadSource {
+  COLD_EMAIL
+  COLD_CALL
+  META_AD
+  REFERRAL
+  PARTNER
+  ORGANIC
+}
+
+enum LeadPriority {
+  HOT
+  WARM
+  COLD
+}
+
+model Lead {
+  id               String       @id @default(cuid())
+  firstName        String       @map("first_name")
+  lastName         String?      @map("last_name")
+  email            String?
+  phone            String
+  companyName      String       @map("company_name")
+  industry         Industry
+  city             String?
+  state            String?
+  timezone         String?      @default("America/New_York")
+  website          String?
+  status           LeadStatus   @default(NEW)
+  priority         LeadPriority @default(COLD)
+  assignedToId     String?      @map("assigned_to_id")
+  source           LeadSource
+  sourceDetail     String?      @map("source_detail") // Rep name, campaign name, ad variant
+  previewId        String?      @unique @map("preview_id")
+  previewUrl       String?      @map("preview_url")
+  previewExpiresAt DateTime?    @map("preview_expires_at")
+  personalization  String?      @db.Text // AI-generated first line
+  
+  // Enriched data from SerpAPI
+  enrichedAddress  String?      @map("enriched_address")
+  enrichedHours    Json?        @map("enriched_hours")
+  enrichedServices Json?        @map("enriched_services") // Array of services
+  enrichedRating   Float?       @map("enriched_rating")
+  enrichedReviews  Int?         @map("enriched_reviews")
+  enrichedPhotos   Json?        @map("enriched_photos") // Array of photo URLs
+  
+  // Client-provided data
+  logo             String?
+  photos           Json?        // Array of uploaded photo URLs
+  services         Json?        // Client's service list
+  hours            Json?        // Business hours
+  colorPrefs       Json?        @map("color_prefs")
+  
+  notes            String?      @db.Text
+  churnRiskScore   Int          @default(0) @map("churn_risk_score")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  assignedTo  User?        @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  activities  Activity[]
+  events      LeadEvent[]
+  messages    Message[]
+  client      Client?      // One-to-one after payment
+
+  @@index([status])
+  @@index([assignedToId])
+  @@index([industry])
+  @@index([phone])
+  @@index([email])
+  @@index([previewId])
+  @@index([createdAt])
+  @@map("leads")
+}
+
+// ============================================
+// LEAD EVENT MODEL (Activity timeline)
+// ============================================
+enum EventType {
+  STAGE_CHANGE
+  EMAIL_SENT
+  EMAIL_OPENED
+  EMAIL_REPLIED
+  PREVIEW_VIEWED
+  PREVIEW_CTA_CLICKED
+  PREVIEW_CALL_CLICKED
+  PREVIEW_RETURN_VISIT
+  CALL_MADE
+  TEXT_SENT
+  TEXT_RECEIVED
+  INFO_RECEIVED
+  PAYMENT_RECEIVED
+  SITE_LIVE
+  ESCALATED
+}
+
+model LeadEvent {
+  id         String    @id @default(cuid())
+  leadId     String    @map("lead_id")
+  eventType  EventType @map("event_type")
+  fromStage  String?   @map("from_stage")
+  toStage    String?   @map("to_stage")
+  metadata   Json?     // Flexible data per event type
+  actor      String?   // 'system', 'andrew', 'clawdbot', 'rep:name', 'client'
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("lead_events")
+}
+
+// ============================================
+// CLIENT MODEL (Post-payment)
+// ============================================
+enum HostingStatus {
+  ACTIVE
+  CANCELLED
+  FAILED_PAYMENT
+  GRACE_PERIOD
+}
+
+model Client {
+  id                   String        @id @default(cuid())
+  leadId               String        @unique @map("lead_id")
+  companyName          String        @map("company_name")
+  industry             Industry
+  siteUrl              String?       @map("site_url")
+  stagingUrl           String?       @map("staging_url")
+  domainStatus         String?       @map("domain_status") // 'none', 'client_owned', 'registered_by_us'
+  hostingStatus        HostingStatus @default(ACTIVE)
+  
+  // Stripe data
+  stripeCustomerId     String?       @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?       @unique @map("stripe_subscription_id")
+  
+  // Revenue tracking
+  monthlyRevenue       Float         @default(39) @map("monthly_revenue")
+  upsells              Json?         // Array of active upsell products with prices
+  
+  // Lifecycle
+  siteLiveDate         DateTime?     @map("site_live_date")
+  lastInteraction      DateTime?     @map("last_interaction")
+  nextTouchpoint       String?       @map("next_touchpoint") // 'day_3_tip', 'day_7_stats', etc.
+  nextTouchpointDate   DateTime?     @map("next_touchpoint_date")
+  churnRiskScore       Int           @default(0) @map("churn_risk_score")
+  
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  lead       Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  messages   Message[]
+  commissions Commission[]
+  revenue    Revenue[]
+  analytics  ClientAnalytics?
+
+  @@index([hostingStatus])
+  @@index([churnRiskScore])
+  @@index([nextTouchpointDate])
+  @@map("clients")
+}
+
+// ============================================
+// CLIENT ANALYTICS MODEL
+// ============================================
+model ClientAnalytics {
+  id                String   @id @default(cuid())
+  clientId          String   @unique @map("client_id")
+  
+  // Traffic
+  totalVisits       Int      @default(0) @map("total_visits")
+  uniqueVisitors    Int      @default(0) @map("unique_visitors")
+  
+  // Conversions
+  totalForms        Int      @default(0) @map("total_forms")
+  totalCalls        Int      @default(0) @map("total_calls")
+  
+  // Engagement
+  avgTimeOnSite     Float?   @map("avg_time_on_site")
+  bounceRate        Float?   @map("bounce_rate")
+  topTrafficSource  String?  @map("top_traffic_source")
+  
+  // Lead response (for upsell triggers)
+  avgResponseTime   Int?     @map("avg_response_time") // In minutes
+  missedCalls       Int      @default(0) @map("missed_calls")
+  
+  // Last updated
+  lastCalculated    DateTime @default(now()) @map("last_calculated")
+  
+  // Relations
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("client_analytics")
+}
+
+// ============================================
+// MESSAGE MODEL (All SMS communication)
+// ============================================
+enum MessageDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum MessageChannel {
+  SMS
+  EMAIL
+}
+
+model Message {
+  id         String           @id @default(cuid())
+  leadId     String?          @map("lead_id")
+  clientId   String?          @map("client_id")
+  direction  MessageDirection
+  channel    MessageChannel   @default(SMS)
+  sender     String           // 'clawdbot', 'andrew', 'jared', 'client', 'rep:name'
+  recipient  String?          // Phone or email
+  content    String           @db.Text
+  trigger    String?          // 'qualification', 'nudge', 'sequence_day_7', etc.
+  escalated  Boolean          @default(false)
+  escalationReason String?     @map("escalation_reason")
+  
+  // Twilio data
+  twilioSid  String?          @unique @map("twilio_sid")
+  twilioStatus String?        @map("twilio_status")
+  
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  lead     Lead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  sentBy   User?   @relation(fields: [sender], references: [id])
+
+  @@index([leadId])
+  @@index([clientId])
+  @@index([createdAt])
+  @@index([escalated])
+  @@map("messages")
+}
+
+// ============================================
+// ACTIVITY MODEL (Rep actions)
+// ============================================
+enum ActivityType {
+  CALL
+  VOICEMAIL
+  EMAIL
+  NOTE
+  STATUS_CHANGE
+  PREVIEW_SENT
+}
+
+enum CallDisposition {
+  CONNECTED
+  NO_ANSWER
+  VOICEMAIL
+  WRONG_NUMBER
+  GATEKEEPER
+  NOT_INTERESTED
+  CALLBACK
+  INTERESTED
+}
+
+model Activity {
+  id              String           @id @default(cuid())
+  leadId          String           @map("lead_id")
+  repId           String           @map("rep_id")
+  activityType    ActivityType     @map("activity_type")
+  callDisposition CallDisposition? @map("call_disposition")
+  durationSeconds Int?             @map("duration_seconds")
+  notes           String?          @db.Text
+  callbackDate    DateTime?        @map("callback_date")
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  rep  User @relation(fields: [repId], references: [id])
+
+  @@index([leadId])
+  @@index([repId])
+  @@index([createdAt])
+  @@map("activities")
+}
+
+// ============================================
+// REP ACTIVITY MODEL (Daily tracking)
+// ============================================
+model RepActivity {
+  id               String   @id @default(cuid())
+  repId            String   @map("rep_id")
+  date             DateTime @db.Date
+  dials            Int      @default(0)
+  conversations    Int      @default(0)
+  previewLinksSent Int      @default(0) @map("preview_links_sent")
+  closes           Int      @default(0)
+  commissionEarned Float    @default(0) @map("commission_earned")
+  notes            String?  @db.Text
+
+  @@unique([repId, date])
+  @@index([repId])
+  @@index([date])
+  @@map("rep_activity")
+}
+
+// ============================================
+// COMMISSION MODEL
+// ============================================
+enum CommissionType {
+  SITE_BUILD
+  MONTHLY_RESIDUAL
+  BONUS
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
+}
+
+model Commission {
+  id        String           @id @default(cuid())
+  repId     String           @map("rep_id")
+  clientId  String           @map("client_id")
+  type      CommissionType
+  amount    Float
+  status    CommissionStatus @default(PENDING)
+  period    String?          // For residuals: "2026-02"
+  notes     String?
+  createdAt DateTime         @default(now()) @map("created_at")
+  paidAt    DateTime?        @map("paid_at")
+
+  // Relations
+  rep    User   @relation(fields: [repId], references: [id])
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([repId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("commissions")
+}
+
+// ============================================
+// REVENUE MODEL (All payments)
+// ============================================
+enum RevenueType {
+  SITE_BUILD
+  HOSTING_MONTHLY
+  HOSTING_ANNUAL
+  UPSELL
+  ADD_ON
+}
+
+enum PaymentStatus {
+  PAID
+  FAILED
+  REFUNDED
+  PENDING
+}
+
+model Revenue {
+  id               String        @id @default(cuid())
+  clientId         String        @map("client_id")
+  type             RevenueType
+  product          String?       // Specific product name
+  amount           Float
+  recurring        Boolean       @default(false)
+  stripePaymentId  String?       @unique @map("stripe_payment_id")
+  status           PaymentStatus @default(PENDING)
+  createdAt        DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("revenue")
+}
+
+// ============================================
+// NOTIFICATION MODEL
+// ============================================
+enum NotificationType {
+  HOT_LEAD
+  PAYMENT_RECEIVED
+  PAYMENT_FAILED
+  EMAIL_REPLY
+  CLIENT_TEXT
+  ESCALATION
+  DAILY_AUDIT
+  SITE_QA_READY
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  title     String
+  message   String           @db.Text
+  metadata  Json?            // leadId, clientId, etc.
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ============================================
+// FAILED WEBHOOK MODEL (Retry queue)
+// ============================================
+model FailedWebhook {
+  id         String   @id @default(cuid())
+  source     String   // 'stripe', 'instantly', 'twilio', 'preview'
+  payload    Json
+  error      String?  @db.Text
+  retryCount Int      @default(0) @map("retry_count")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([source])
+  @@index([retryCount])
+  @@map("failed_webhooks")
+}
+
+// ============================================
+// API COST TRACKING MODEL
+// ============================================
+model ApiCost {
+  id        String   @id @default(cuid())
+  service   String   // 'serpapi', 'serper', 'twilio'
+  operation String   // 'enrichment', 'personalization', 'sms'
+  cost      Float
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([service])
+  @@index([createdAt])
+  @@map("api_costs")
+}
+
+// ============================================
+// SETTINGS MODEL
+// ============================================
+model Settings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
