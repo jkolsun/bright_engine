@@ -86,6 +86,28 @@ export default function RepsPage() {
     }
   }
 
+  const handleDeleteRep = async (repId: string, repName: string) => {
+    if (!confirm(`Are you sure you want to delete ${repName}? This marks them as INACTIVE.`)) {
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/users/${repId}`, {
+        method: 'DELETE'
+      })
+
+      if (res.ok) {
+        alert('Rep deleted successfully')
+        loadReps()
+      } else {
+        alert('Failed to delete rep')
+      }
+    } catch (error) {
+      console.error('Error deleting rep:', error)
+      alert('Failed to delete rep')
+    }
+  }
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
@@ -236,7 +258,7 @@ export default function RepsPage() {
                         {rep.status}
                       </Badge>
                     </td>
-                    <td className="p-4 text-right">
+                    <td className="p-4 text-right space-x-2 flex justify-end">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -244,6 +266,14 @@ export default function RepsPage() {
                       >
                         {rep.status === 'ACTIVE' ? <UserX size={16} /> : <UserCheck size={16} />}
                         {rep.status === 'ACTIVE' ? ' Deactivate' : ' Activate'}
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDeleteRep(rep.id, rep.name)}
+                      >
+                        Delete
                       </Button>
                     </td>
                   </tr>

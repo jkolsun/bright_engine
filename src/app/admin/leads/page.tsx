@@ -96,6 +96,28 @@ export default function LeadsPage() {
     }
   }
 
+  const handleDeleteLead = async (leadId: string, firstName: string) => {
+    if (!confirm(`Are you sure you want to delete ${firstName}? This marks them as CLOSED_LOST.`)) {
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, {
+        method: 'DELETE'
+      })
+
+      if (res.ok) {
+        alert('Lead deleted successfully')
+        fetchLeads()
+      } else {
+        alert('Failed to delete lead')
+      }
+    } catch (error) {
+      console.error('Error deleting lead:', error)
+      alert('Failed to delete lead')
+    }
+  }
+
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = 
       lead.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -335,10 +357,18 @@ export default function LeadsPage() {
                         {lead.status}
                       </Badge>
                     </td>
-                    <td className="p-4 text-right">
+                    <td className="p-4 text-right space-x-2 flex justify-end">
                       <Link href={`/admin/leads/${lead.id}`}>
                         <Button variant="ghost" size="sm">View</Button>
                       </Link>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDeleteLead(lead.id, lead.firstName)}
+                      >
+                        Delete
+                      </Button>
                     </td>
                   </tr>
                 ))}

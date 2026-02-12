@@ -29,3 +29,44 @@ export async function PATCH(
     )
   }
 }
+
+// DELETE /api/users/[id] - Soft delete (mark as INACTIVE)
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const userId = params.id
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    // Soft delete: mark as INACTIVE
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        status: 'INACTIVE'
+      }
+    })
+
+    return NextResponse.json({
+      success: true,
+      message: 'User deleted successfully',
+      user: updated
+    })
+  } catch (error) {
+    console.error('Error deleting user:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete user' },
+      { status: 500 }
+    )
+  }
+}

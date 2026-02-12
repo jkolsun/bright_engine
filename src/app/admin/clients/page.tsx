@@ -93,6 +93,28 @@ export default function ClientsPage() {
     setFormData(prev => ({ ...prev, ...selected }))
   }
 
+  const handleDeleteClient = async (clientId: string, companyName: string) => {
+    if (!confirm(`Are you sure you want to delete ${companyName}? This marks them as CANCELLED.`)) {
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/clients/${clientId}`, {
+        method: 'DELETE'
+      })
+
+      if (res.ok) {
+        alert('Client deleted successfully')
+        fetchClients()
+      } else {
+        alert('Failed to delete client')
+      }
+    } catch (error) {
+      console.error('Error deleting client:', error)
+      alert('Failed to delete client')
+    }
+  }
+
   const filteredClients = clients.filter(client => {
     const matchesSearch = 
       client.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -346,8 +368,16 @@ export default function ClientsPage() {
                     <td className="p-4 text-right font-semibold text-gray-900">
                       {formatCurrency(client.monthlyRevenue)}
                     </td>
-                    <td className="p-4 text-right">
+                    <td className="p-4 text-right space-x-2 flex justify-end">
                       <Button variant="ghost" size="sm">View</Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDeleteClient(client.id, client.companyName)}
+                      >
+                        Delete
+                      </Button>
                     </td>
                   </tr>
                 ))}
