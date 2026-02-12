@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       from,
       body,
       sid,
-      leadId: lead?.id || client?.leadId,
+      leadId: lead?.id || client?.leadId || undefined,
       clientId: client?.id
     })
 
