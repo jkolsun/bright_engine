@@ -1,14 +1,17 @@
 import Link from 'next/link'
 import { 
   LayoutDashboard, 
-  Phone,
-  DollarSign,
-  Target,
+  Users, 
+  UserCircle, 
+  DollarSign, 
+  MessageSquare,
+  Settings,
   LogOut,
-  Award
+  Upload,
+  Target
 } from 'lucide-react'
 
-export default function RepsLayout({
+export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode
@@ -24,30 +27,46 @@ export default function RepsLayout({
             </div>
             <div>
               <h1 className="text-xl font-bold text-white tracking-tight">Bright Automations</h1>
-              <p className="text-xs text-blue-300">Sales Rep Portal</p>
+              <p className="text-xs text-blue-300">Admin Control Center</p>
             </div>
           </div>
         </div>
         
         <nav className="flex-1 p-4 space-y-1">
-          <NavLink href="/reps" icon={<LayoutDashboard size={20} />}>
+          <NavLink href="/admin/dashboard" icon={<LayoutDashboard size={20} />}>
             Dashboard
           </NavLink>
-          <NavLink href="/reps/dialer" icon={<Phone size={20} />}>
-            Dialer
+          <NavLink href="/admin/leads" icon={<Users size={20} />}>
+            Leads
           </NavLink>
-          <NavLink href="/reps/earnings" icon={<DollarSign size={20} />}>
-            Earnings
+          <NavLink href="/admin/clients" icon={<UserCircle size={20} />}>
+            Clients
           </NavLink>
-          <NavLink href="/reps/tasks" icon={<Target size={20} />}>
-            Tasks
+          <NavLink href="/admin/revenue" icon={<DollarSign size={20} />}>
+            Revenue
           </NavLink>
-          <NavLink href="/reps/leaderboard" icon={<Award size={20} />}>
-            Leaderboard
+          <NavLink href="/admin/messages" icon={<MessageSquare size={20} />}>
+            Messages
+          </NavLink>
+          <NavLink href="/admin/outbound" icon={<Target size={20} />}>
+            Outbound Tracker
+          </NavLink>
+          <NavLink href="/admin/import" icon={<Upload size={20} />}>
+            Lead Import
+          </NavLink>
+          <NavLink href="/admin/settings" icon={<Settings size={20} />}>
+            Settings
           </NavLink>
         </nav>
 
-        <div className="p-4 border-t border-slate-700">
+        <div className="p-4 border-t border-slate-700 space-y-2">
+          <Link 
+            href="/reps"
+            className="flex items-center gap-2 text-sm text-slate-300 hover:text-white w-full transition-colors px-3 py-2 rounded-lg hover:bg-slate-700/50"
+          >
+            <Users size={18} />
+            Rep Portal
+          </Link>
           <button className="flex items-center gap-2 text-sm text-slate-300 hover:text-white w-full transition-colors px-3 py-2 rounded-lg hover:bg-slate-700/50">
             <LogOut size={18} />
             Sign Out
