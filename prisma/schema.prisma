@@ -32,10 +32,11 @@ model User {
   updatedAt DateTime   @updatedAt @map("updated_at")
 
   // Relations
-  assignedLeads Lead[]       @relation("AssignedLeads")
-  activities    Activity[]
-  commissions   Commission[]
-  messages      Message[]
+  assignedLeads      Lead[]              @relation("AssignedLeads")
+  activities         Activity[]
+  commissions        Commission[]
+  messages           Message[]
+  clawdbotActivities ClawdbotActivity[]
 
   @@map("users")
 }
@@ -128,11 +129,12 @@ model Lead {
   updatedAt        DateTime     @updatedAt @map("updated_at")
 
   // Relations
-  assignedTo  User?        @relation("AssignedLeads", fields: [assignedToId], references: [id])
-  activities  Activity[]
-  events      LeadEvent[]
-  messages    Message[]
-  client      Client?      // One-to-one after payment
+  assignedTo         User?               @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  activities         Activity[]
+  events             LeadEvent[]
+  messages           Message[]
+  client             Client?             // One-to-one after payment
+  clawdbotActivities ClawdbotActivity[]
 
   @@index([status])
   @@index([assignedToId])
@@ -223,11 +225,12 @@ model Client {
   updatedAt            DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  lead       Lead?       @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  messages   Message[]
-  commissions Commission[]
-  revenue    Revenue[]
-  analytics  ClientAnalytics?
+  lead               Lead?               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  messages           Message[]
+  commissions        Commission[]
+  revenue            Revenue[]
+  analytics          ClientAnalytics?
+  clawdbotActivities ClawdbotActivity[]
 
   @@index([hostingStatus])
   @@index([churnRiskScore])
@@ -521,4 +524,55 @@ model Settings {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("settings")
+}
+
+// ============================================
+// CLAWDBOT ACTIVITY MODEL (Audit Trail)
+// ============================================
+enum ClawdbotActionType {
+  TEXT_SENT
+  TEXT_RECEIVED
+  ALERT
+  HEARTBEAT
+  IMPORT
+  ENRICHMENT
+  PREVIEW_GENERATED
+  NURTURE_ACTION
+  URGENCY_ACTION
+  UPSELL_PITCH
+  REFERRAL_ASK
+  ANNUAL_PITCH
+  ESCALATION
+  SCORE_UPDATE
+  QUEUE_UPDATE
+  PAYMENT_RECEIVED
+  LESSON_SAVED
+  PATTERN_SAVED
+  ERROR
+  NIGHTLY_DIGEST
+  MORNING_REPORT
+  WEEKLY_REPORT
+}
+
+model ClawdbotActivity {
+  id          String               @id @default(cuid())
+  actionType  ClawdbotActionType
+  description String               @db.Text
+  leadId      String?              @map("lead_id")
+  clientId    String?              @map("client_id")
+  repId       String?              @map("rep_id")
+  metadata    Json?
+  tokenCost   Float?               @map("token_cost")
+  createdAt   DateTime             @default(now()) @map("created_at")
+
+  // Relations
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  rep    User?   @relation(fields: [repId], references: [id], onDelete: SetNull)
+
+  @@index([actionType])
+  @@index([createdAt])
+  @@index([leadId])
+  @@index([clientId])
+  @@map("clawdbot_activity")
 }
