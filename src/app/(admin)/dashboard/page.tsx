@@ -1,21 +1,53 @@
-import { prisma } from '@/lib/db'
 import { formatCurrency } from '@/lib/utils'
 import { 
   TrendingUp, 
   Users, 
-  DollarSign, 
+  DollarSign,
   Mail,
   Phone,
   AlertCircle,
   CheckCircle
 } from 'lucide-react'
 
-export default async function AdminDashboard() {
-  // Fetch today's stats
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+// Mock data for UI preview (no database required)
+const MOCK_DATA = {
+  totalLeads: 156,
+  hotLeads: 12,
+  qualifiedToday: 8,
+  closedToday: 3,
+  totalClients: 45,
+  activeClients: 42,
+  todayRevenue: 897,
+  hostingMRR: 42 * 39,
+  upsellsMRR: 450,
+  notifications: [
+    {
+      id: 1,
+      type: 'HOT_LEAD',
+      title: 'New Hot Lead',
+      message: 'John Smith opened preview 3 times',
+      createdAt: new Date()
+    },
+    {
+      id: 2,
+      type: 'PAYMENT_RECEIVED',
+      title: 'Payment Received',
+      message: '$299 from ABC Roofing',
+      createdAt: new Date()
+    }
+  ],
+  pipeline: [
+    { name: 'New', count: 23, color: 'bg-gray-400' },
+    { name: 'Hot Lead', count: 12, color: 'bg-red-500' },
+    { name: 'Qualified', count: 18, color: 'bg-blue-500' },
+    { name: 'Building', count: 9, color: 'bg-yellow-500' },
+    { name: 'Review', count: 5, color: 'bg-purple-500' },
+    { name: 'Paid', count: 89, color: 'bg-green-500' },
+  ]
+}
 
-  const [
+export default async function AdminDashboard() {
+  const {
     totalLeads,
     hotLeads,
     qualifiedToday,
@@ -23,45 +55,13 @@ export default async function AdminDashboard() {
     totalClients,
     activeClients,
     todayRevenue,
-    notifications
-  ] = await Promise.all([
-    prisma.lead.count(),
-    prisma.lead.count({ where: { priority: 'HOT' } }),
-    prisma.lead.count({ 
-      where: { 
-        status: 'QUALIFIED',
-        updatedAt: { gte: today }
-      }
-    }),
-    prisma.lead.count({
-      where: {
-        status: 'PAID',
-        updatedAt: { gte: today }
-      }
-    }),
-    prisma.client.count(),
-    prisma.client.count({ where: { hostingStatus: 'ACTIVE' } }),
-    prisma.revenue.aggregate({
-      where: {
-        createdAt: { gte: today },
-        status: 'PAID'
-      },
-      _sum: { amount: true }
-    }),
-    prisma.notification.findMany({
-      where: { read: false },
-      orderBy: { createdAt: 'desc' },
-      take: 10
-    })
-  ])
+    hostingMRR,
+    upsellsMRR,
+    notifications,
+    pipeline
+  } = MOCK_DATA
 
-  // Calculate MRR
-  const hostingMRR = activeClients * 39
-  const upsellsMRR = await calculateUpsellsMRR()
   const totalMRR = hostingMRR + upsellsMRR
-
-  // Get pipeline stats
-  const pipeline = await getPipelineStats()
 
   return (
     <div className="p-8 space-y-8">
@@ -69,6 +69,13 @@ export default async function AdminDashboard() {
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-500 mt-1">Welcome back, Andrew</p>
+      </div>
+
+      {/* UI Preview Banner */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <p className="text-sm text-blue-800">
+          <strong>UI Preview Mode</strong> - Showing mock data. Connect to database for real data.
+        </p>
       </div>
 
       {/* Today's Numbers */}
@@ -87,7 +94,7 @@ export default async function AdminDashboard() {
         />
         <StatCard
           title="Revenue Today"
-          value={formatCurrency(todayRevenue._sum.amount || 0)}
+          value={formatCurrency(todayRevenue)}
           icon={<DollarSign className="text-purple-600" />}
           trend="+15%"
         />
@@ -226,42 +233,4 @@ function NotificationItem({ notification }: { notification: any }) {
       </span>
     </div>
   )
-}
-
-async function getPipelineStats() {
-  const stages = [
-    { name: 'New', status: 'NEW', color: 'bg-gray-400' },
-    { name: 'Hot Lead', status: 'HOT_LEAD', color: 'bg-red-500' },
-    { name: 'Qualified', status: 'QUALIFIED', color: 'bg-blue-500' },
-    { name: 'Building', status: 'BUILDING', color: 'bg-yellow-500' },
-    { name: 'Review', status: 'CLIENT_REVIEW', color: 'bg-purple-500' },
-    { name: 'Paid', status: 'PAID', color: 'bg-green-500' },
-  ]
-
-  const counts = await Promise.all(
-    stages.map(async (stage) => ({
-      ...stage,
-      count: await prisma.lead.count({ where: { status: stage.status as any } })
-    }))
-  )
-
-  return counts
-}
-
-async function calculateUpsellsMRR() {
-  const clients = await prisma.client.findMany({
-    where: { hostingStatus: 'ACTIVE' },
-    select: { upsells: true }
-  })
-
-  let total = 0
-  clients.forEach((client) => {
-    if (client.upsells && Array.isArray(client.upsells)) {
-      client.upsells.forEach((upsell: any) => {
-        total += upsell.price || 0
-      })
-    }
-  })
-
-  return total
 }

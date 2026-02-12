@@ -1,27 +1,98 @@
-import { prisma } from '@/lib/db'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import Link from 'next/link'
 import { formatPhone } from '@/lib/utils'
 
-export default async function LeadsPage() {
-  const leads = await prisma.lead.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 100,
-    include: {
-      assignedTo: {
-        select: { name: true }
-      }
-    }
-  })
-
-  const stats = {
-    total: await prisma.lead.count(),
-    hot: await prisma.lead.count({ where: { priority: 'HOT' } }),
-    qualified: await prisma.lead.count({ where: { status: 'QUALIFIED' } }),
-    building: await prisma.lead.count({ where: { status: 'BUILDING' } }),
+// Mock leads data for UI preview
+const MOCK_LEADS = [
+  {
+    id: 1,
+    firstName: 'John',
+    lastName: 'Smith',
+    phone: '5551234567',
+    email: 'john@abcroofing.com',
+    companyName: 'ABC Roofing',
+    city: 'Dallas',
+    state: 'TX',
+    status: 'HOT_LEAD',
+    priority: 'HOT',
+    source: 'Google Ads',
+    assignedTo: { name: 'Sarah Johnson' },
+    createdAt: new Date('2026-02-11')
+  },
+  {
+    id: 2,
+    firstName: 'Mike',
+    lastName: 'Johnson',
+    phone: '5559876543',
+    email: null,
+    companyName: 'Elite Plumbing',
+    city: 'Austin',
+    state: 'TX',
+    status: 'QUALIFIED',
+    priority: 'NORMAL',
+    source: 'Facebook',
+    assignedTo: { name: 'Andrew Tesauro' },
+    createdAt: new Date('2026-02-10')
+  },
+  {
+    id: 3,
+    firstName: 'Sarah',
+    lastName: 'Davis',
+    phone: '5554567890',
+    email: 'sarah@propainting.com',
+    companyName: 'Pro Painting',
+    city: 'Houston',
+    state: 'TX',
+    status: 'BUILDING',
+    priority: 'HIGH',
+    source: 'Referral',
+    assignedTo: { name: 'Jared Kolsun' },
+    createdAt: new Date('2026-02-09')
+  },
+  {
+    id: 4,
+    firstName: 'Tom',
+    lastName: 'Wilson',
+    phone: '5552223333',
+    email: 'tom@quickhvac.com',
+    companyName: 'Quick HVAC',
+    city: 'San Antonio',
+    state: 'TX',
+    status: 'PAID',
+    priority: 'NORMAL',
+    source: 'Google Ads',
+    assignedTo: null,
+    createdAt: new Date('2026-02-01')
+  },
+  {
+    id: 5,
+    firstName: 'Lisa',
+    lastName: 'Brown',
+    phone: '5557778888',
+    email: 'lisa@cleanteam.com',
+    companyName: 'Clean Team',
+    city: 'Fort Worth',
+    state: 'TX',
+    status: 'NEW',
+    priority: 'NORMAL',
+    source: 'Website',
+    assignedTo: null,
+    createdAt: new Date('2026-02-12')
   }
+]
+
+const MOCK_STATS = {
+  total: 156,
+  hot: 12,
+  qualified: 23,
+  building: 8,
+}
+
+export default async function LeadsPage() {
+  const leads = MOCK_LEADS
+  const stats = MOCK_STATS
 
   return (
     <div className="p-8 space-y-6">
@@ -35,6 +106,13 @@ export default async function LeadsPage() {
           <Button variant="outline">Import CSV</Button>
           <Button>Add Lead</Button>
         </div>
+      </div>
+
+      {/* UI Preview Banner */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <p className="text-sm text-blue-800">
+          <strong>UI Preview Mode</strong> - Showing sample leads. Connect to database for real data.
+        </p>
       </div>
 
       {/* Stats */}
@@ -108,7 +186,7 @@ export default async function LeadsPage() {
                     {new Date(lead.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link href={`/admin/leads/${lead.id}`}>
+                    <Link href={`/leads/${lead.id}`}>
                       <Button variant="ghost" size="sm">View</Button>
                     </Link>
                   </td>
