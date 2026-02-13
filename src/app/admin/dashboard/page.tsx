@@ -1,7 +1,6 @@
 'use client'
 
 export const dynamic = 'force-dynamic'
-
 import { formatCurrency } from '@/lib/utils'
 import { 
   TrendingUp, 
