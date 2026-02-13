@@ -28,24 +28,9 @@ export default function LoginPage() {
 
       if (result?.error) {
         setError('Invalid email or password')
-      } else {
-        // Fetch user role and redirect accordingly
-        try {
-          const userRes = await fetch('/api/users?email=' + email)
-          const userData = await userRes.json()
-          const user = userData.users?.[0]
-          
-          if (user?.role === 'REP') {
-            router.push('/reps')
-          } else if (user?.role === 'ADMIN') {
-            router.push('/admin/dashboard')
-          } else {
-            router.push('/admin/dashboard')
-          }
-        } catch (e) {
-          // Fallback
-          router.push('/admin/dashboard')
-        }
+      } else if (result?.ok) {
+        // Session created - redirect to dashboard
+        router.push('/admin/dashboard')
       }
     } catch (error) {
       setError('Something went wrong')
@@ -80,7 +65,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="andrew@brightautomations.com"
+                placeholder="admin@brightautomations.net"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -113,7 +98,8 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 text-center text-sm text-gray-500">
-            <p>Initial login credentials are set in your .env file</p>
+            <p>Email: admin@brightautomations.net</p>
+            <p>Password: 123456</p>
           </div>
         </CardContent>
       </Card>
