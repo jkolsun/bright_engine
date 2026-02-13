@@ -24,7 +24,16 @@ export default async function PreviewPage({ params }: { params: { id: string } }
       )
     }
 
-    const personalization = lead.personalization as any || {}
+    let personalization: any = {}
+    try {
+      if (typeof lead.personalization === 'string') {
+        personalization = JSON.parse(lead.personalization)
+      } else if (lead.personalization) {
+        personalization = lead.personalization
+      }
+    } catch {
+      personalization = { firstLine: String(lead.personalization || '') }
+    }
 
     return (
       <html lang="en">
