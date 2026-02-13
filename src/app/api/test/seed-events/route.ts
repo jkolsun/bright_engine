@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       'TEXT_RECEIVED',
     ] as const
 
-    const events = []
+    const events: any[] = []
 
     // Create random events
     for (let i = 0; i < eventCount; i++) {

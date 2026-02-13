@@ -57,8 +57,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create leads in database
-    const createdLeads = []
-    const failedRows = []
+    const createdLeads: any[] = []
+    const failedRows: any[] = []
 
     for (let i = 0; i < parsedLeads.length; i++) {
       const parsed = parsedLeads[i]

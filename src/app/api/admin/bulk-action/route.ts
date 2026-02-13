@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const updated = []
+    const updated: any[] = []
 
     switch (action) {
       case 'reassign':
