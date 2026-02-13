@@ -102,9 +102,9 @@ export default function RepsPage() {
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Your Assigned Leads</h3>
-          <Link href="/admin/leads">
-            <Button variant="outline" size="sm">View All Leads</Button>
-          </Link>
+          <Button variant="outline" size="sm" disabled>
+            View All Leads
+          </Button>
         </div>
 
         {assignedLeads.length === 0 ? (
@@ -137,9 +137,7 @@ export default function RepsPage() {
                     </td>
                     <td className="p-4 text-gray-700">$299</td>
                     <td className="p-4 text-right">
-                      <Link href={`/admin/leads/${lead.id}`}>
-                        <Button variant="ghost" size="sm">View</Button>
-                      </Link>
+                      <Button variant="ghost" size="sm" disabled>Details</Button>
                     </td>
                   </tr>
                 ))}
