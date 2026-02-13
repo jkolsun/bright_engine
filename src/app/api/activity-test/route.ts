@@ -5,7 +5,7 @@ export async function GET() {
     // Create a test clawdbot_activity record
     const activity = await prisma.clawdbotActivity.create({
       data: {
-        actionType: 'SYSTEM_STARTUP',
+        actionType: 'HEARTBEAT',
         description: 'Test activity from STEP 3',
       },
     })
