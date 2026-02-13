@@ -14,7 +14,14 @@ export async function GET(request: NextRequest) {
   const offset = parseInt(searchParams.get('offset') || '0')
 
   const where: any = {}
-  if (status) where.status = status
+  
+  // Default: hide CLOSED_LOST (soft deleted) leads unless explicitly requested
+  if (status) {
+    where.status = status
+  } else {
+    where.NOT = { status: 'CLOSED_LOST' }
+  }
+  
   if (source) where.source = source
   if (priority) where.priority = priority
   if (assignedTo) where.assignedToId = assignedTo
