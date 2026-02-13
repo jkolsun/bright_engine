@@ -3,27 +3,81 @@
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Upload, Download, Check, X, AlertCircle, Loader2,
   CheckCircle, Pause, XCircle, DollarSign, Clock
 } from 'lucide-react'
 
-// Mock pipeline progress data
-const MOCK_PIPELINE_STATE = {
-  step1: { status: 'complete', valid: 2418, removed: 7, duplicates: 3, invalid: 4 },
-  step2: { status: 'complete', campaignA: 2390, campaignB: 28, campaignC: 2281 },
-  step3: { status: 'running', processed: 1847, total: 2418, matched: 1702, partial: 112, noMatch: 33 },
-  step4: { status: 'waiting' },
-  step5: { status: 'waiting' },
-  step6: { status: 'waiting' },
-  estimatedTime: '12 minutes',
-  apiCost: 18.42
-}
-
 export default function ImportPage() {
   const [step, setStep] = useState<'upload' | 'processing' | 'complete'>('upload')
-  const [pipelineState, setPipelineState] = useState(MOCK_PIPELINE_STATE)
+  const [pipelineState, setPipelineState] = useState<any>(null)
+  const [uploading, setUploading] = useState(false)
+  const [importResult, setImportResult] = useState<any>(null)
+
+  // Poll for pipeline status every 2 seconds while processing
+  useEffect(() => {
+    if (step !== 'processing') return
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/clawdbot-monitor')
+        const data = await res.json()
+        
+        // Extract pipeline state from activity log
+        const activities = data.activities || []
+        const importActivities = activities.filter((a: any) => 
+          ['IMPORT', 'ENRICHMENT', 'PREVIEW_GENERATED', 'PERSONALIZATION', 'SCORE_UPDATE', 'TEXT_SENT'].includes(a.actionType)
+        )
+
+        setPipelineState({
+          totalActivities: activities.length,
+          importActivities: importActivities.length,
+          lastActivity: activities[0]?.description || 'Starting...',
+          timestamp: new Date().toLocaleTimeString()
+        })
+
+        // Check if import complete (all major stages done)
+        const hasPreview = activities.some((a: any) => a.actionType === 'PREVIEW_GENERATED')
+        const hasPersonalization = activities.some((a: any) => a.actionType === 'PERSONALIZATION')
+        
+        if (hasPreview && hasPersonalization) {
+          setStep('complete')
+        }
+      } catch (error) {
+        console.error('Failed to poll pipeline:', error)
+      }
+    }, 2000)
+
+    return () => clearInterval(interval)
+  }, [step])
+
+  const handleFileUpload = async (file: File) => {
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/leads/import', {
+        method: 'POST',
+        body: formData
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        setImportResult(data)
+        setStep('processing')
+      } else {
+        alert(`Import failed: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('Upload error:', error)
+      alert('Failed to upload file')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   return (
     <div className="p-8 space-y-6">
@@ -65,12 +119,16 @@ export default function ImportPage() {
                 <input
                   type="file"
                   accept=".csv"
-                  onChange={() => setStep('processing')}
+                  onChange={(e) => {
+                    const file = e.currentTarget.files?.[0]
+                    if (file) handleFileUpload(file)
+                  }}
+                  disabled={uploading}
                   className="hidden"
                 />
-                <span className="cursor-pointer inline-flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-lg font-semibold">
-                  <Upload size={24} />
-                  Choose CSV File
+                <span className="cursor-pointer inline-flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-lg font-semibold disabled:opacity-50">
+                  {uploading ? <Loader2 size={24} className="animate-spin" /> : <Upload size={24} />}
+                  {uploading ? 'Uploading...' : 'Choose CSV File'}
                 </span>
               </label>
 
