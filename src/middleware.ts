@@ -4,13 +4,19 @@ import { NextRequest, NextResponse } from 'next/server'
  * Middleware to enforce role-based access control
  * - Admins can access /admin/*
  * - Reps can only access /reps/* and /preview/*
- * - Public routes: /login, /preview/*, /health
+ * - Public routes: /login, /preview/*, /api/health, /api/bootstrap/*, /api/auth/*
  */
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  // Public routes - allow all
-  if (pathname === '/login' || pathname.startsWith('/preview/') || pathname.startsWith('/api/health')) {
+  // Public routes - allow all (no auth required)
+  if (
+    pathname === '/login' ||
+    pathname.startsWith('/preview/') ||
+    pathname.startsWith('/api/health') ||
+    pathname.startsWith('/api/bootstrap/') ||
+    pathname.startsWith('/api/auth/')
+  ) {
     return NextResponse.next()
   }
 
@@ -28,6 +34,14 @@ export function middleware(request: NextRequest) {
   // Rep routes - only REP role
   if (pathname.startsWith('/reps')) {
     if (userRole !== 'REP' && userRole !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    return NextResponse.next()
+  }
+
+  // API routes require auth (except public ones handled above)
+  if (pathname.startsWith('/api/')) {
+    if (userRole === 'guest') {
       return NextResponse.redirect(new URL('/login', request.url))
     }
     return NextResponse.next()
