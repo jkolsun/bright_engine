@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,17 +19,17 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
+      const res = await fetch('/api/auth/simple-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       })
 
-      if (result?.error) {
+      if (res.ok) {
+        const data = await res.json()
+        router.push(data.redirectUrl)
+      } else {
         setError('Invalid email or password')
-      } else if (result?.ok) {
-        // Session created - redirect to dashboard
-        router.push('/admin/dashboard')
       }
     } catch (error) {
       setError('Something went wrong')
