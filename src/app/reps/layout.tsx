@@ -1,6 +1,10 @@
-export const dynamic = 'force-dynamic'
+'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+
+export const dynamic = 'force-dynamic'
 import { 
   LayoutDashboard, 
   Phone,
@@ -15,6 +19,27 @@ export default function RepsLayout({
 }: {
   children: React.ReactNode
 }) {
+  const router = useRouter()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        router.push(data.redirectUrl)
+      }
+    } catch (error) {
+      console.error('Logout failed:', error)
+      setIsLoggingOut(false)
+    }
+  }
+
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Sidebar */}
@@ -50,9 +75,13 @@ export default function RepsLayout({
         </nav>
 
         <div className="p-4 border-t border-slate-700">
-          <button className="flex items-center gap-2 text-sm text-slate-300 hover:text-white w-full transition-colors px-3 py-2 rounded-lg hover:bg-slate-700/50">
+          <button 
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="flex items-center gap-2 text-sm text-slate-300 hover:text-white w-full transition-colors px-3 py-2 rounded-lg hover:bg-slate-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <LogOut size={18} />
-            Sign Out
+            {isLoggingOut ? 'Signing out...' : 'Sign Out'}
           </button>
         </div>
       </aside>

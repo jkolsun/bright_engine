@@ -10,7 +10,6 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/api/health') ||
     pathname.startsWith('/api/bootstrap/') ||
     pathname.startsWith('/api/auth/') ||
-    pathname.startsWith('/api/db-test') ||
     pathname.startsWith('/api/webhooks/')
   ) {
     return NextResponse.next()
