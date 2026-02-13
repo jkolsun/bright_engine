@@ -115,6 +115,17 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
         
         {/* Quick Actions */}
         <div className="px-6 pb-4 flex items-center gap-3">
+          {lead.previewUrl && (
+            <Button 
+              size="sm" 
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => window.open(lead.previewUrl, '_blank')}
+              title="View the personalized preview website"
+            >
+              <Eye size={16} className="mr-2" />
+              Preview Website
+            </Button>
+          )}
           <Button size="sm">
             <Phone size={16} className="mr-2" />
             Call Now
