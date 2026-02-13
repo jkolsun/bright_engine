@@ -4,6 +4,8 @@ const nextConfig = {
   images: {
     domains: ['res.cloudinary.com', 'localhost'],
   },
+  // Use standalone output (server-side rendering) - don't statically export pages
+  output: 'standalone',
 }
 
 module.exports = nextConfig
