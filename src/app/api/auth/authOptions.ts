@@ -1,7 +1,8 @@
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from '@/lib/db'
+import type { NextAuthOptions } from 'next-auth'
 
-export const authOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -60,7 +61,7 @@ export const authOptions = {
     error: '/login'
   },
   session: {
-    strategy: 'jwt',
+    strategy: 'jwt' as const,
     maxAge: 24 * 60 * 60
   }
 }
