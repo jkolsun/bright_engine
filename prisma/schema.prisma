@@ -32,6 +32,11 @@ model User {
   createdAt DateTime   @default(now()) @map("created_at")
   updatedAt DateTime   @updatedAt @map("updated_at")
 
+  // Rep portal fields
+  portalType  String    @default("FULL")
+  dailyLeadCap Int     @default(25)
+  totalCloses  Int     @default(0)
+
   // Relations
   assignedLeads      Lead[]              @relation("AssignedLeads")
   activities         Activity[]
@@ -40,6 +45,7 @@ model User {
   clawdbotActivities ClawdbotActivity[]
   outboundEvents     OutboundEvent[]     @relation("RepOutboundEvents")
   channelPerformance ChannelPerformance[]
+  repTasks           RepTask[]           @relation("RepTasks")
 
   @@map("users")
 }
@@ -140,6 +146,7 @@ model Lead {
   clawdbotActivities ClawdbotActivity[]
   outboundEvents     OutboundEvent[]
   touchRecommendations TouchRecommendation[]
+  repTasks           RepTask[]
 
   @@index([status])
   @@index([assignedToId])
@@ -714,4 +721,27 @@ model ChannelPerformance {
   @@index([repId])
   @@index([period])
   @@map("channel_performance")
+}
+
+// ============================================
+// REP TASK MODEL (Rep task management)
+// ============================================
+model RepTask {
+  id          String    @id @default(cuid())
+  leadId      String
+  lead        Lead      @relation(fields: [leadId], references: [id])
+  repId       String?
+  rep         User?     @relation("RepTasks", fields: [repId], references: [id])
+  priority    String    @default("MEDIUM")
+  taskType    String    @default("INITIAL_CALL")
+  status      String    @default("PENDING")
+  dueAt       DateTime  @default(now())
+  completedAt DateTime?
+  outcome     String?
+  notes       String?
+  callDuration Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("rep_tasks")
 }
