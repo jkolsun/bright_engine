@@ -16,6 +16,7 @@ export async function GET(request: Request) {
         phone: '5551234567',
         companyName: 'Test Company',
         industry: 'ROOFING',
+        source: 'COLD_EMAIL',
       },
     })
 
