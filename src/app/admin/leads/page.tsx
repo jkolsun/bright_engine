@@ -358,6 +358,18 @@ export default function LeadsPage() {
                       </Badge>
                     </td>
                     <td className="p-4 text-right space-x-2 flex justify-end">
+                      {lead.previewUrl && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          onClick={() => window.open(lead.previewUrl, '_blank')}
+                          title="Preview the personalized website"
+                        >
+                          <Eye size={16} className="mr-1" />
+                          Preview
+                        </Button>
+                      )}
                       <Link href={`/admin/leads/${lead.id}`}>
                         <Button variant="ghost" size="sm">View</Button>
                       </Link>
