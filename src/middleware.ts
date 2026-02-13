@@ -1,29 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-/**
- * Middleware to enforce role-based access control
- * - Admins can access /admin/*
- * - Reps can only access /reps/* and /preview/*
- * - Public routes: /login, /preview/*, /api/health, /api/bootstrap/*, /api/auth/*
- */
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  // Public routes - allow all (no auth required)
+  // Public routes — no auth needed
   if (
     pathname === '/login' ||
     pathname.startsWith('/preview/') ||
     pathname.startsWith('/api/health') ||
     pathname.startsWith('/api/bootstrap/') ||
-    pathname.startsWith('/api/auth/')
+    pathname.startsWith('/api/auth/') ||
+    pathname.startsWith('/api/db-test') ||
+    pathname.startsWith('/api/webhooks/')
   ) {
     return NextResponse.next()
   }
 
-  // Get user role from cookie/session (simplified - check headers)
-  const userRole = request.headers.get('x-user-role') || 'guest'
+  // Read session cookie
+  const sessionCookie = request.cookies.get('session')?.value
 
-  // Admin routes - only ADMIN role
+  if (!sessionCookie) {
+    // No session — redirect to login (but not for API routes, return 401 instead)
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  // Decode session
+  let userRole = 'guest'
+  try {
+    const decoded = JSON.parse(Buffer.from(sessionCookie, 'base64').toString())
+    userRole = decoded.role || 'guest'
+  } catch {
+    // Invalid cookie — clear it and redirect to login
+    const response = NextResponse.redirect(new URL('/login', request.url))
+    response.cookies.delete('session')
+    return response
+  }
+
+  // Admin routes — only ADMIN role
   if (pathname.startsWith('/admin')) {
     if (userRole !== 'ADMIN') {
       return NextResponse.redirect(new URL('/login', request.url))
@@ -31,7 +47,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Rep routes - only REP role
+  // Rep routes — REP or ADMIN
   if (pathname.startsWith('/reps')) {
     if (userRole !== 'REP' && userRole !== 'ADMIN') {
       return NextResponse.redirect(new URL('/login', request.url))
@@ -39,27 +55,17 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // API routes require auth (except public ones handled above)
+  // API routes — any authenticated user
   if (pathname.startsWith('/api/')) {
-    if (userRole === 'guest') {
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
     return NextResponse.next()
   }
 
-  // Default - redirect to login
-  return NextResponse.redirect(new URL('/login', request.url))
+  // Default — allow authenticated users through
+  return NextResponse.next()
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     '/((?!_next/static|_next/image|favicon.ico|public).*)',
   ],
 }
