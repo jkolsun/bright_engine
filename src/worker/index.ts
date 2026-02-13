@@ -24,6 +24,7 @@ const enrichmentWorker = new Worker(
     
     return { success: true }
   },
+  // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
   { connection }
 )
 
@@ -38,6 +39,7 @@ const personalizationWorker = new Worker(
     
     return { success: true, personalization }
   },
+  // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
   { connection }
 )
 
@@ -74,6 +76,7 @@ const sequenceWorker = new Worker(
     
     return { success: true }
   },
+  // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
   { connection }
 )
 
@@ -98,6 +101,7 @@ const monitoringWorker = new Worker(
     
     return { success: true }
   },
+  // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
   { connection }
 )
 

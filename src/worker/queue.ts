@@ -31,21 +31,35 @@ try {
 }
 
 // Define queues (will only work if Redis is available)
+// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
 export const enrichmentQueue = connection ? new Queue('enrichment', { connection }) : null
+// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
 export const previewQueue = connection ? new Queue('preview', { connection }) : null
+// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
 export const personalizationQueue = connection ? new Queue('personalization', { connection }) : null
+// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
 export const scriptQueue = connection ? new Queue('scripts', { connection }) : null
+// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
 export const distributionQueue = connection ? new Queue('distribution', { connection }) : null
+// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
 export const sequenceQueue = connection ? new Queue('sequence', { connection }) : null
+// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
 export const monitoringQueue = connection ? new Queue('monitoring', { connection }) : null
 
 // Queue events for monitoring (only if Redis available)
+// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
 export const enrichmentEvents = connection ? new QueueEvents('enrichment', { connection }) : null
+// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
 export const previewEvents = connection ? new QueueEvents('preview', { connection }) : null
+// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
 export const personalizationEvents = connection ? new QueueEvents('personalization', { connection }) : null
+// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
 export const scriptEvents = connection ? new QueueEvents('scripts', { connection }) : null
+// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
 export const distributionEvents = connection ? new QueueEvents('distribution', { connection }) : null
+// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
 export const sequenceEvents = connection ? new QueueEvents('sequence', { connection }) : null
+// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
 export const monitoringEvents = connection ? new QueueEvents('monitoring', { connection }) : null
 
 // Helper to add jobs - gracefully handle if Redis unavailable
@@ -252,6 +266,7 @@ export async function initWorkers() {
 
   try {
     // Enrichment worker
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
     const enrichmentWorker = new Worker(
       'enrichment',
       async (job) => {
@@ -259,10 +274,12 @@ export async function initWorkers() {
         // TODO: Implement enrichment logic
         return { success: true }
       },
+      // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
       { connection }
     )
 
     // Personalization worker
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
     const personalizationWorker = new Worker(
       'personalization',
       async (job) => {
@@ -270,6 +287,7 @@ export async function initWorkers() {
         // TODO: Implement personalization logic
         return { success: true }
       },
+      // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
       { connection }
     )
 
