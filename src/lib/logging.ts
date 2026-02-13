@@ -1,11 +1,12 @@
 import { prisma } from './db'
+import { ClawdbotActionType } from '@prisma/client'
 
 /**
  * Log any action Clawdbot takes to the activity feed
  * This is the core audit trail for governance + learning
  */
 export async function logActivity(
-  actionType: string,
+  actionType: ClawdbotActionType,
   description: string,
   options?: {
     leadId?: string
@@ -16,21 +17,17 @@ export async function logActivity(
   }
 ) {
   try {
-    // Use any type for now until prisma client is regenerated after migration
-    const prismaAny = prisma as any
-    if (prismaAny.clawdbotActivity) {
-      await prismaAny.clawdbotActivity.create({
-        data: {
-          actionType,
-          description,
-          leadId: options?.leadId,
-          clientId: options?.clientId,
+    await prisma.clawdbotActivity.create({
+      data: {
+        actionType,
+        description,
+        leadId: options?.leadId,
+        clientId: options?.clientId,
           repId: options?.repId,
           metadata: options?.metadata,
           tokenCost: options?.tokenCost,
         },
       })
-    }
   } catch (error) {
     // If logging fails, log to console but don't break the operation
     console.error('Failed to log activity:', {
@@ -46,10 +43,7 @@ export async function logActivity(
  */
 export async function getRecentActivity(limit = 50) {
   try {
-    const prismaAny = prisma as any
-    if (!prismaAny.clawdbotActivity) return []
-    
-    return await prismaAny.clawdbotActivity.findMany({
+    return await prisma.clawdbotActivity.findMany({
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
@@ -84,24 +78,10 @@ export async function getRecentActivity(limit = 50) {
  */
 export async function getTodayStats() {
   try {
-    const prismaAny = prisma as any
-    if (!prismaAny.clawdbotActivity) {
-      return {
-        totalActions: 0,
-        textsSent: 0,
-        textsReceived: 0,
-        alertsSent: 0,
-        previewsGenerated: 0,
-        upsellsPitched: 0,
-        referralsAsked: 0,
-        errors: 0,
-      }
-    }
-
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    const activities = await prismaAny.clawdbotActivity.findMany({
+    const activities = await prisma.clawdbotActivity.findMany({
       where: {
         createdAt: {
           gte: today,
