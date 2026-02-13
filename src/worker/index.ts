@@ -11,182 +11,249 @@ import { sendSMS } from '../lib/twilio'
 import { canSendMessage } from '../lib/utils'
 import { addPreviewGenerationJob, addPersonalizationJob, addScriptGenerationJob, addDistributionJob } from './queue'
 
-// Initialize Redis connection (supports both Railway internal URL and localhost fallback)
-let connection: Redis | null = null
-try {
-  if (process.env.REDIS_URL) {
-    // Use Railway's internal Redis URL
-    connection = new Redis(process.env.REDIS_URL)
-  } else {
-    // Fallback to localhost (for local development)
-    connection = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD || undefined,
-      maxRetriesPerRequest: null,
+async function startWorkers() {
+  try {
+    // Test Redis connection
+    const testConnection = new Redis(process.env.REDIS_URL || process.env.REDIS_HOST || 'redis://localhost:6379', { maxRetriesPerRequest: 3 })
+    await testConnection.ping()
+    await testConnection.quit()
+    console.log('Redis connected. Starting workers...')
+
+    // Initialize Redis connection (supports both Railway internal URL and localhost fallback)
+    let connection: Redis | null = null
+    if (process.env.REDIS_URL) {
+      // Use Railway's internal Redis URL
+      connection = new Redis(process.env.REDIS_URL)
+    } else {
+      // Fallback to localhost (for local development)
+      connection = new Redis({
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        password: process.env.REDIS_PASSWORD || undefined,
+        maxRetriesPerRequest: null,
+      })
+    }
+    
+    connection.on('error', (err) => {
+      console.warn('Redis connection failed, continuing without Redis:', err.message)
+      connection = null
     })
+    
+    connection.on('connect', () => {
+      console.log('Redis connected successfully')
+    })
+
+    // Enrichment worker
+    const enrichmentWorker = new Worker(
+      'enrichment',
+      async (job) => {
+        console.log(`Processing enrichment job: ${job.id}`)
+        const { leadId } = job.data
+        
+        await enrichLead(leadId)
+        
+        return { success: true }
+      },
+      // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+      { connection }
+    )
+
+    // Preview worker
+    const previewWorker = new Worker(
+      'preview',
+      async (job) => {
+        console.log(`Processing preview job: ${job.id}`)
+        const { leadId } = job.data
+        return await generatePreview({ leadId })
+      },
+      // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+      { connection }
+    )
+
+    // Personalization worker
+    const personalizationWorker = new Worker(
+      'personalization',
+      async (job) => {
+        console.log(`Processing personalization job: ${job.id}`)
+        const { leadId } = job.data
+        // Step 1: Serper web research (enhances quality, non-fatal if fails)
+        try { await fetchSerperResearch(leadId) } catch (e) { console.warn('Serper research failed, continuing:', e) }
+        // Step 2: AI personalization (required)
+        const result = await generatePersonalization(leadId)
+        return { success: true, result }
+      },
+      // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+      { connection }
+    )
+
+    // Script worker
+    const scriptWorker = new Worker(
+      'scripts',
+      async (job) => {
+        console.log(`Processing script job: ${job.id}`)
+        const { leadId } = job.data
+        const script = await generateRepScript(leadId)
+        return { success: !!script }
+      },
+      // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+      { connection }
+    )
+
+    // Distribution worker
+    const distributionWorker = new Worker(
+      'distribution',
+      async (job) => {
+        console.log(`Processing distribution job: ${job.id}`)
+        const { leadId, channel } = job.data
+        return await distributeLead({ leadId, channel: channel || 'BOTH' })
+      },
+      // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+      { connection }
+    )
+
+    // Chain: enrichment → preview → personalization → scripts → distribution
+    enrichmentWorker.on('completed', async (job) => {
+      if (job?.data?.leadId) await addPreviewGenerationJob({ leadId: job.data.leadId })
+    })
+
+    previewWorker.on('completed', async (job) => {
+      if (job?.data?.leadId) await addPersonalizationJob({ leadId: job.data.leadId })
+    })
+
+    personalizationWorker.on('completed', async (job) => {
+      if (job?.data?.leadId) await addScriptGenerationJob({ leadId: job.data.leadId })
+    })
+
+    scriptWorker.on('completed', async (job) => {
+      if (job?.data?.leadId) await addDistributionJob({ leadId: job.data.leadId, channel: 'BOTH' })
+    })
+
+    // Sequence worker (handles all automated messages)
+    const sequenceWorker = new Worker(
+      'sequence',
+      async (job) => {
+        console.log(`Processing sequence job: ${job.name} - ${job.id}`)
+        
+        switch (job.name) {
+          case 'post-launch-day-3':
+            await sendPostLaunchDay3(job.data.clientId)
+            break
+            
+          case 'post-launch-day-7':
+            await sendPostLaunchDay7(job.data.clientId)
+            break
+            
+          case 'post-launch-day-28':
+            await sendPostLaunchDay28(job.data.clientId)
+            break
+            
+          case 'win-back-day-7':
+            await sendWinBackDay7(job.data.clientId)
+            break
+            
+          case 'referral-day-45':
+            await sendReferralDay45(job.data.clientId)
+            break
+            
+          default:
+            console.log(`Unknown sequence: ${job.name}`)
+        }
+        
+        return { success: true }
+      },
+      // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+      { connection }
+    )
+
+    // Monitoring worker (hot leads + daily audit)
+    const monitoringWorker = new Worker(
+      'monitoring',
+      async (job) => {
+        console.log(`Processing monitoring job: ${job.name}`)
+        
+        switch (job.name) {
+          case 'hot-leads-check':
+            await checkHotLeads()
+            break
+            
+          case 'daily-audit':
+            await runDailyAudit()
+            break
+            
+          default:
+            console.log(`Unknown monitoring job: ${job.name}`)
+        }
+        
+        return { success: true }
+      },
+      // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+      { connection }
+    )
+
+    // Error handlers
+    enrichmentWorker.on('failed', (job, err) => {
+      console.error(`Enrichment job ${job?.id} failed:`, err)
+    })
+
+    previewWorker.on('failed', (job, err) => {
+      console.error(`Preview job ${job?.id} failed:`, err)
+    })
+
+    personalizationWorker.on('failed', (job, err) => {
+      console.error(`Personalization job ${job?.id} failed:`, err)
+    })
+
+    scriptWorker.on('failed', (job, err) => {
+      console.error(`Script job ${job?.id} failed:`, err)
+    })
+
+    distributionWorker.on('failed', (job, err) => {
+      console.error(`Distribution job ${job?.id} failed:`, err)
+    })
+
+    sequenceWorker.on('failed', (job, err) => {
+      console.error(`Sequence job ${job?.id} failed:`, err)
+    })
+
+    monitoringWorker.on('failed', (job, err) => {
+      console.error(`Monitoring job ${job?.id} failed:`, err)
+    })
+
+    console.log('Workers started successfully')
+    console.log('- Enrichment worker')
+    console.log('- Preview worker')
+    console.log('- Personalization worker')
+    console.log('- Script worker')
+    console.log('- Distribution worker')
+    console.log('- Sequence worker')
+    console.log('- Monitoring worker')
+
+    // Graceful shutdown
+    const gracefulShutdown = async () => {
+      console.log('Shutting down workers gracefully...')
+      
+      await enrichmentWorker.close()
+      await previewWorker.close()
+      await personalizationWorker.close()
+      await scriptWorker.close()
+      await distributionWorker.close()
+      await sequenceWorker.close()
+      await monitoringWorker.close()
+      await connection?.quit()
+      
+      console.log('Workers shut down successfully')
+      process.exit(0)
+    }
+
+    process.on('SIGTERM', gracefulShutdown)
+    process.on('SIGINT', gracefulShutdown)
+
+    console.log('All workers started successfully')
+  } catch (error) {
+    console.warn('Redis not available. Workers not started. Pipeline runs synchronously.', error)
+    process.exit(0)
   }
-  
-  // Test connection
-  connection.on('error', (err) => {
-    console.warn('Redis connection failed, continuing without Redis:', err.message)
-    connection = null
-  })
-  
-  connection.on('connect', () => {
-    console.log('Redis connected successfully')
-  })
-} catch (err) {
-  console.warn('Failed to initialize Redis connection:', err)
-  connection = null
 }
-
-// Enrichment worker
-const enrichmentWorker = new Worker(
-  'enrichment',
-  async (job) => {
-    console.log(`Processing enrichment job: ${job.id}`)
-    const { leadId } = job.data
-    
-    await enrichLead(leadId)
-    
-    return { success: true }
-  },
-  // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-  { connection }
-)
-
-// Preview worker
-const previewWorker = new Worker(
-  'preview',
-  async (job) => {
-    console.log(`Processing preview job: ${job.id}`)
-    const { leadId } = job.data
-    return await generatePreview({ leadId })
-  },
-  // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-  { connection }
-)
-
-// Personalization worker
-const personalizationWorker = new Worker(
-  'personalization',
-  async (job) => {
-    console.log(`Processing personalization job: ${job.id}`)
-    const { leadId } = job.data
-    // Step 1: Serper web research (enhances quality, non-fatal if fails)
-    try { await fetchSerperResearch(leadId) } catch (e) { console.warn('Serper research failed, continuing:', e) }
-    // Step 2: AI personalization (required)
-    const result = await generatePersonalization(leadId)
-    return { success: true, result }
-  },
-  // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-  { connection }
-)
-
-// Script worker
-const scriptWorker = new Worker(
-  'scripts',
-  async (job) => {
-    console.log(`Processing script job: ${job.id}`)
-    const { leadId } = job.data
-    const script = await generateRepScript(leadId)
-    return { success: !!script }
-  },
-  // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-  { connection }
-)
-
-// Distribution worker
-const distributionWorker = new Worker(
-  'distribution',
-  async (job) => {
-    console.log(`Processing distribution job: ${job.id}`)
-    const { leadId, channel } = job.data
-    return await distributeLead({ leadId, channel: channel || 'BOTH' })
-  },
-  // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-  { connection }
-)
-
-// Chain: enrichment → preview → personalization → scripts → distribution
-enrichmentWorker.on('completed', async (job) => {
-  if (job?.data?.leadId) await addPreviewGenerationJob({ leadId: job.data.leadId })
-})
-
-previewWorker.on('completed', async (job) => {
-  if (job?.data?.leadId) await addPersonalizationJob({ leadId: job.data.leadId })
-})
-
-personalizationWorker.on('completed', async (job) => {
-  if (job?.data?.leadId) await addScriptGenerationJob({ leadId: job.data.leadId })
-})
-
-scriptWorker.on('completed', async (job) => {
-  if (job?.data?.leadId) await addDistributionJob({ leadId: job.data.leadId, channel: 'BOTH' })
-})
-
-// Sequence worker (handles all automated messages)
-const sequenceWorker = new Worker(
-  'sequence',
-  async (job) => {
-    console.log(`Processing sequence job: ${job.name} - ${job.id}`)
-    
-    switch (job.name) {
-      case 'post-launch-day-3':
-        await sendPostLaunchDay3(job.data.clientId)
-        break
-        
-      case 'post-launch-day-7':
-        await sendPostLaunchDay7(job.data.clientId)
-        break
-        
-      case 'post-launch-day-28':
-        await sendPostLaunchDay28(job.data.clientId)
-        break
-        
-      case 'win-back-day-7':
-        await sendWinBackDay7(job.data.clientId)
-        break
-        
-      case 'referral-day-45':
-        await sendReferralDay45(job.data.clientId)
-        break
-        
-      default:
-        console.log(`Unknown sequence: ${job.name}`)
-    }
-    
-    return { success: true }
-  },
-  // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-  { connection }
-)
-
-// Monitoring worker (hot leads + daily audit)
-const monitoringWorker = new Worker(
-  'monitoring',
-  async (job) => {
-    console.log(`Processing monitoring job: ${job.name}`)
-    
-    switch (job.name) {
-      case 'hot-leads-check':
-        await checkHotLeads()
-        break
-        
-      case 'daily-audit':
-        await runDailyAudit()
-        break
-        
-      default:
-        console.log(`Unknown monitoring job: ${job.name}`)
-    }
-    
-    return { success: true }
-  },
-  // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-  { connection }
-)
 
 // ============================================
 // SEQUENCE FUNCTIONS
@@ -371,60 +438,4 @@ async function runDailyAudit() {
   })
 }
 
-// Error handlers
-enrichmentWorker.on('failed', (job, err) => {
-  console.error(`Enrichment job ${job?.id} failed:`, err)
-})
-
-previewWorker.on('failed', (job, err) => {
-  console.error(`Preview job ${job?.id} failed:`, err)
-})
-
-personalizationWorker.on('failed', (job, err) => {
-  console.error(`Personalization job ${job?.id} failed:`, err)
-})
-
-scriptWorker.on('failed', (job, err) => {
-  console.error(`Script job ${job?.id} failed:`, err)
-})
-
-distributionWorker.on('failed', (job, err) => {
-  console.error(`Distribution job ${job?.id} failed:`, err)
-})
-
-sequenceWorker.on('failed', (job, err) => {
-  console.error(`Sequence job ${job?.id} failed:`, err)
-})
-
-monitoringWorker.on('failed', (job, err) => {
-  console.error(`Monitoring job ${job?.id} failed:`, err)
-})
-
-console.log('Workers started successfully')
-console.log('- Enrichment worker')
-console.log('- Preview worker')
-console.log('- Personalization worker')
-console.log('- Script worker')
-console.log('- Distribution worker')
-console.log('- Sequence worker')
-console.log('- Monitoring worker')
-
-// Graceful shutdown
-const gracefulShutdown = async () => {
-  console.log('Shutting down workers gracefully...')
-  
-  await enrichmentWorker.close()
-  await previewWorker.close()
-  await personalizationWorker.close()
-  await scriptWorker.close()
-  await distributionWorker.close()
-  await sequenceWorker.close()
-  await monitoringWorker.close()
-  await connection?.quit()
-  
-  console.log('Workers shut down successfully')
-  process.exit(0)
-}
-
-process.on('SIGTERM', gracefulShutdown)
-process.on('SIGINT', gracefulShutdown)
+startWorkers()
