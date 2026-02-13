@@ -57,6 +57,8 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
 
+    const previewId = generatePreviewId()
+
     const lead = await prisma.lead.create({
       data: {
         firstName: data.firstName,
@@ -71,8 +73,8 @@ export async function POST(request: NextRequest) {
         website: data.website || undefined,
         source: (data.source || 'COLD_EMAIL') as any,
         sourceDetail: data.sourceDetail || undefined,
-        previewId: generatePreviewId(),
-        previewUrl: `${process.env.BASE_URL}/preview/${generatePreviewId()}`,
+        previewId: previewId,
+        previewUrl: `${process.env.BASE_URL}/preview/${previewId}`,
         previewExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       }
     })
