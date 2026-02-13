@@ -10,27 +10,20 @@ export default function DialerPage() {
         <p className="text-gray-500 mt-1">Call leads and track conversations</p>
       </div>
 
-      <Card className="p-8 text-center">
-        <div className="max-w-md mx-auto space-y-6">
-          <div className="w-24 h-24 gradient-primary rounded-full flex items-center justify-center mx-auto">
-            <Phone size={48} className="text-white" />
+      <Card className="p-12">
+        <div className="max-w-md mx-auto space-y-6 text-center">
+          <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+            <Phone size={48} className="text-blue-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Dialer Feature</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Power Dialer</h2>
             <p className="text-gray-600 mt-2">
-              Power dialer integration coming soon. Make calls directly from the platform with automatic logging and follow-up scheduling.
+              The dialer feature is not yet configured. Contact your administrator to set up phone integration.
             </p>
           </div>
-          <div className="flex gap-3 justify-center">
-            <Button>
-              <Phone size={18} className="mr-2" />
-              Start Calling
-            </Button>
-            <Button variant="outline">
-              <PhoneOff size={18} className="mr-2" />
-              View Call Log
-            </Button>
-          </div>
+          <p className="text-sm text-gray-500">
+            Once configured, you'll be able to make calls directly from this platform with automatic call logging and lead updates.
+          </p>
         </div>
       </Card>
     </div>

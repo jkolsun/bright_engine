@@ -92,11 +92,11 @@ export default function AdminLayout({
 
         <div className="p-4 border-t border-slate-700 space-y-2">
           <Link 
-            href="/reps"
+            href="/admin/reps/performance"
             className="flex items-center gap-2 text-sm text-slate-300 hover:text-white w-full transition-colors px-3 py-2 rounded-lg hover:bg-slate-700/50"
           >
             <Users size={18} />
-            Rep Portal
+            Rep Management
           </Link>
           <button 
             onClick={handleLogout}

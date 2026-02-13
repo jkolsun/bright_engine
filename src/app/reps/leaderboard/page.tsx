@@ -1,60 +1,155 @@
+'use client'
+
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
 import { Trophy, Medal, Award } from 'lucide-react'
+import { useState, useEffect } from 'react'
+
+interface RepRanking {
+  rank: number
+  rep: any
+  closedLeads: number
+  totalRevenue: number
+  icon?: any
+  color?: string
+}
 
 export default function LeaderboardPage() {
-  const leaderboard = [
-    { rank: 1, name: 'Andrew Tesauro', closes: 32, revenue: 9568, trend: '+15%', icon: Trophy, color: 'text-yellow-500' },
-    { rank: 2, name: 'Sarah Johnson', closes: 28, revenue: 8372, trend: '+12%', icon: Medal, color: 'text-gray-400' },
-    { rank: 3, name: 'Jared Kolsun', closes: 24, revenue: 7176, trend: '+8%', icon: Award, color: 'text-amber-600' },
-    { rank: 4, name: 'Mike Davis', closes: 18, revenue: 5382, trend: '+5%' },
-    { rank: 5, name: 'Lisa Chen', closes: 15, revenue: 4485, trend: '+3%' },
-  ]
+  const [leaderboard, setLeaderboard] = useState<RepRanking[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadLeaderboard()
+  }, [])
+
+  const loadLeaderboard = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Get all reps
+      const repsRes = await fetch('/api/users?role=REP')
+      if (!repsRes.ok) {
+        setError('Failed to load reps')
+        return
+      }
+
+      const repsData = await repsRes.json()
+      const reps = repsData.users || []
+
+      // Get all leads to count per rep
+      const leadsRes = await fetch('/api/leads?limit=1000')
+      const leadsData = leadsRes.ok ? await leadsRes.json() : { leads: [] }
+      const allLeads = leadsData.leads || []
+
+      // Build rankings
+      const rankings: RepRanking[] = reps
+        .map((rep: any) => {
+          const repLeads = allLeads.filter(
+            (l: any) => l.assignedToId === rep.id && l.status === 'PAID'
+          )
+          const closedLeads = repLeads.length
+          const totalRevenue = closedLeads * 299 // Assuming $299 per closed lead
+
+          return {
+            rep,
+            closedLeads,
+            totalRevenue,
+          }
+        })
+        .sort((a: any, b: any) => b.totalRevenue - a.totalRevenue)
+        .map((item: any, idx: number) => ({
+          ...item,
+          rank: idx + 1,
+          icon: idx === 0 ? Trophy : idx === 1 ? Medal : idx === 2 ? Award : undefined,
+          color:
+            idx === 0
+              ? 'text-yellow-500'
+              : idx === 1
+                ? 'text-gray-400'
+                : idx === 2
+                  ? 'text-amber-600'
+                  : 'text-gray-400',
+        }))
+
+      setLeaderboard(rankings)
+    } catch (error) {
+      console.error('Failed to load leaderboard:', error)
+      setError('Failed to load leaderboard data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <h1 className="text-3xl font-bold text-gray-900">Leaderboard</h1>
+        <p className="text-gray-500 mt-1">Loading rankings...</p>
+      </div>
+    )
+  }
+
+  if (error || leaderboard.length === 0) {
+    return (
+      <div className="p-8 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Leaderboard</h1>
+          <p className="text-gray-500 mt-1">Leaderboard rankings</p>
+        </div>
+        <Card className="p-12">
+          <div className="text-center">
+            <p className="text-gray-600">
+              {error || 'No reps available yet. Once reps are created, rankings will appear here.'}
+            </p>
+          </div>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="p-8 space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Leaderboard</h1>
-        <p className="text-gray-500 mt-1">This month's top performers</p>
+        <p className="text-gray-500 mt-1">Current rankings based on closed deals</p>
       </div>
 
       <div className="grid gap-4">
-        {leaderboard.map((rep) => {
-          const Icon = rep.icon || Award
-          const isTopThree = rep.rank <= 3
-          
+        {leaderboard.map((item) => {
+          const Icon = item.icon || Award
+          const isTopThree = item.rank <= 3
+
           return (
-            <Card 
-              key={rep.rank} 
+            <Card
+              key={item.rep.id}
               className={`p-6 ${isTopThree ? 'border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-white' : ''}`}
             >
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-3">
-                  <div className={`text-2xl font-bold ${rep.color || 'text-gray-400'}`}>
-                    #{rep.rank}
+                  <div className={`text-2xl font-bold ${item.color || 'text-gray-400'}`}>
+                    #{item.rank}
                   </div>
-                  {isTopThree && <Icon size={24} className={rep.color} />}
+                  {isTopThree && <Icon size={24} className={item.color} />}
                 </div>
-                
+
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">{rep.name}</h3>
+                  <h3 className="font-semibold text-gray-900">{item.rep.name}</h3>
                   <div className="flex items-center gap-4 mt-1">
                     <span className="text-sm text-gray-600">
-                      <span className="font-semibold">{rep.closes}</span> closes
+                      <span className="font-semibold">{item.closedLeads}</span> closed
                     </span>
                     <span className="text-sm text-gray-600">
-                      <span className="font-semibold">{formatCurrency(rep.revenue)}</span> revenue
+                      <span className="font-semibold">{formatCurrency(item.totalRevenue)}</span> revenue
                     </span>
-                    <Badge variant={rep.rank <= 3 ? 'default' : 'secondary'} className="text-xs">
-                      {rep.trend}
-                    </Badge>
                   </div>
                 </div>
 
                 {isTopThree && (
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-blue-600">{formatCurrency(rep.revenue)}</div>
+                    <div className="text-2xl font-bold text-blue-600">{formatCurrency(item.totalRevenue)}</div>
                     <div className="text-xs text-gray-500">Total Revenue</div>
                   </div>
                 )}

@@ -19,26 +19,30 @@ export default function RepsPage() {
 
   const loadRepData = async () => {
     try {
-      // Get current rep (would be from auth in production)
-      const [repRes, leadsRes, commRes] = await Promise.all([
-        fetch('/api/users?role=REP'),
-        fetch('/api/leads?limit=100'),
-        fetch('/api/commissions?status=PENDING')
-      ])
-
-      if (repRes.ok) {
-        const data = await repRes.json()
-        const rep = data.users?.[0]
-        if (rep) {
-          setRepData(rep)
-        }
+      // Get currently logged-in user from session
+      const meRes = await fetch('/api/auth/me')
+      
+      if (!meRes.ok) {
+        console.error('Not authenticated')
+        setLoading(false)
+        return
       }
 
+      const meData = await meRes.json()
+      const currentUser = meData.user
+      setRepData(currentUser)
+
+      // Get all leads and filter to those assigned to current user
+      const leadsRes = await fetch('/api/leads?limit=100')
       if (leadsRes.ok) {
         const data = await leadsRes.json()
-        const myLeads = data.leads?.filter((l: any) => l.assignedToId === repData?.id) || []
+        const myLeads = data.leads?.filter((l: any) => l.assignedToId === currentUser.id) || []
         setAssignedLeads(myLeads)
       }
+
+      // Get commission data (optional)
+      const commRes = await fetch('/api/commissions?status=PENDING')
+      // Commission data can be used if needed
     } catch (error) {
       console.error('Failed to load rep data:', error)
     } finally {
