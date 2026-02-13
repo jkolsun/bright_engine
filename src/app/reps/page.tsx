@@ -106,7 +106,7 @@ export default function RepsPage() {
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Your Assigned Leads</h3>
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="outline" size="sm">
             View All Leads
           </Button>
         </div>
@@ -141,7 +141,7 @@ export default function RepsPage() {
                     </td>
                     <td className="p-4 text-gray-700">$299</td>
                     <td className="p-4 text-right">
-                      <Button variant="ghost" size="sm" disabled>Details</Button>
+                      <Button variant="ghost" size="sm">Details</Button>
                     </td>
                   </tr>
                 ))}
@@ -165,12 +165,6 @@ export default function RepsPage() {
             <Button variant="outline" className="w-full">
               <DollarSign size={18} className="mr-2" />
               Earnings
-            </Button>
-          </Link>
-          <Link href="/admin/messages">
-            <Button variant="outline" className="w-full">
-              <Target size={18} className="mr-2" />
-              Messages
             </Button>
           </Link>
         </div>

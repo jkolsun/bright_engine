@@ -95,11 +95,6 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
-
-          <div className="mt-6 text-center text-sm text-gray-500">
-            <p>Email: admin@brightautomations.net</p>
-            <p>Password: 123456</p>
-          </div>
         </CardContent>
       </Card>
     </div>
