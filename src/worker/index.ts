@@ -3,6 +3,9 @@ import Redis from 'ioredis'
 import { enrichLead } from '../lib/serpapi'
 import { fetchSerperResearch } from '../lib/serper'
 import { generatePersonalization } from '../lib/personalization'
+import { generatePreview } from '../lib/preview-generator'
+import { generateRepScript } from '../lib/rep-scripts'
+import { distributeLead } from '../lib/distribution'
 import { prisma } from '../lib/db'
 import { sendSMS } from '../lib/twilio'
 import { canSendMessage } from '../lib/utils'
@@ -52,6 +55,18 @@ const enrichmentWorker = new Worker(
   { connection }
 )
 
+// Preview worker
+const previewWorker = new Worker(
+  'preview',
+  async (job) => {
+    console.log(`Processing preview job: ${job.id}`)
+    const { leadId } = job.data
+    return await generatePreview({ leadId })
+  },
+  // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+  { connection }
+)
+
 // Personalization worker
 const personalizationWorker = new Worker(
   'personalization',
@@ -63,6 +78,31 @@ const personalizationWorker = new Worker(
     // Step 2: AI personalization (required)
     const result = await generatePersonalization(leadId)
     return { success: true, result }
+  },
+  // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+  { connection }
+)
+
+// Script worker
+const scriptWorker = new Worker(
+  'scripts',
+  async (job) => {
+    console.log(`Processing script job: ${job.id}`)
+    const { leadId } = job.data
+    const script = await generateRepScript(leadId)
+    return { success: !!script }
+  },
+  // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+  { connection }
+)
+
+// Distribution worker
+const distributionWorker = new Worker(
+  'distribution',
+  async (job) => {
+    console.log(`Processing distribution job: ${job.id}`)
+    const { leadId, channel } = job.data
+    return await distributeLead({ leadId, channel: channel || 'BOTH' })
   },
   // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
   { connection }
@@ -318,8 +358,20 @@ enrichmentWorker.on('failed', (job, err) => {
   console.error(`Enrichment job ${job?.id} failed:`, err)
 })
 
+previewWorker.on('failed', (job, err) => {
+  console.error(`Preview job ${job?.id} failed:`, err)
+})
+
 personalizationWorker.on('failed', (job, err) => {
   console.error(`Personalization job ${job?.id} failed:`, err)
+})
+
+scriptWorker.on('failed', (job, err) => {
+  console.error(`Script job ${job?.id} failed:`, err)
+})
+
+distributionWorker.on('failed', (job, err) => {
+  console.error(`Distribution job ${job?.id} failed:`, err)
 })
 
 sequenceWorker.on('failed', (job, err) => {
@@ -332,7 +384,10 @@ monitoringWorker.on('failed', (job, err) => {
 
 console.log('Workers started successfully')
 console.log('- Enrichment worker')
+console.log('- Preview worker')
 console.log('- Personalization worker')
+console.log('- Script worker')
+console.log('- Distribution worker')
 console.log('- Sequence worker')
 console.log('- Monitoring worker')
 
@@ -341,7 +396,10 @@ const gracefulShutdown = async () => {
   console.log('Shutting down workers gracefully...')
   
   await enrichmentWorker.close()
+  await previewWorker.close()
   await personalizationWorker.close()
+  await scriptWorker.close()
+  await distributionWorker.close()
   await sequenceWorker.close()
   await monitoringWorker.close()
   await connection?.quit()
