@@ -302,7 +302,9 @@ model Message {
   clientId   String?          @map("client_id")
   direction  MessageDirection
   channel    MessageChannel   @default(SMS)
-  sender     String           // 'clawdbot', 'andrew', 'jared', 'client', 'rep:name'
+  senderType String           @default("SYSTEM") @map("sender_type") // SYSTEM, ADMIN, REP, CLAWDBOT, LEAD
+  senderName String           @default("clawdbot") @map("sender_name")
+  senderId   String?          @map("sender_id")
   recipient  String?          // Phone or email
   content    String           @db.Text
   trigger    String?          // 'qualification', 'nudge', 'sequence_day_7', etc.
@@ -318,7 +320,7 @@ model Message {
   // Relations
   lead     Lead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
   client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  sentBy   User?   @relation(fields: [sender], references: [id])
+  sentBy   User?   @relation(fields: [senderId], references: [id])
 
   @@index([leadId])
   @@index([clientId])
