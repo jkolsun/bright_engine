@@ -3,8 +3,6 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-
-export const dynamic = 'force-dynamic'
 import { 
   LayoutDashboard, 
   Phone,
@@ -13,6 +11,8 @@ import {
   LogOut,
   Award
 } from 'lucide-react'
+
+export const dynamic = 'force-dynamic'
 
 export default function RepsLayout({
   children,
