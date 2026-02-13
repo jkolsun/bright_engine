@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifySession } from '@/lib/session'
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
+
+  // Clawdbot API uses API key auth, not cookies
+  if (pathname.startsWith('/api/clawdbot/')) {
+    const apiKey = request.headers.get('x-clawdbot-key')
+    if (!apiKey || apiKey !== process.env.CLAWDBOT_API_KEY) {
+      return NextResponse.json({ error: 'Invalid API key' }, { status: 401 })
+    }
+    return NextResponse.next()
+  }
 
   // Public routes — no auth needed
   if (
@@ -26,16 +36,26 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Decode session
-  let userRole = 'guest'
-  try {
-    const decoded = JSON.parse(Buffer.from(sessionCookie, 'base64').toString())
-    userRole = decoded.role || 'guest'
-  } catch {
-    // Invalid cookie — clear it and redirect to login
+  // Verify signed session
+  const decoded = verifySession(sessionCookie)
+  if (!decoded) {
+    // Invalid session — clear it and redirect to login
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
+    }
     const response = NextResponse.redirect(new URL('/login', request.url))
     response.cookies.delete('session')
     return response
+  }
+
+  const userRole = decoded.role || 'guest'
+
+  // Admin-only API routes
+  const adminOnlyPaths = ['/api/admin/', '/api/users', '/api/cleanup', '/api/clients/delete', '/api/leads/delete', '/api/activity/delete']
+  if (adminOnlyPaths.some(p => pathname.startsWith(p))) {
+    if (userRole !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    }
   }
 
   // Admin routes — only ADMIN role
