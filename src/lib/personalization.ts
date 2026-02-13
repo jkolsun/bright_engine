@@ -120,7 +120,11 @@ Where:
     const updated = await prisma.lead.update({
       where: { id: leadId },
       data: {
-        personalization: result.firstLine,
+        personalization: JSON.stringify({
+          firstLine: result.firstLine,
+          hook: result.hook,
+          angle: result.angle,
+        }),
       },
     })
 
