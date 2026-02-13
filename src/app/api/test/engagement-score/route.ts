@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db'
 import { calculateEngagementScore } from '@/lib/engagement-scoring'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * TEST ENDPOINT: Engagement Scoring System
  * Creates a test lead and calculates its engagement score

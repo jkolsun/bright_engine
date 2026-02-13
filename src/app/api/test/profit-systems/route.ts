@@ -6,6 +6,8 @@ import {
 } from '@/lib/profit-systems'
 import { prisma } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * TEST ENDPOINT: Profit Systems (4 revenue engines)
  */
