@@ -6,12 +6,35 @@ import { prisma } from '../lib/db'
 import { sendSMS } from '../lib/twilio'
 import { canSendMessage } from '../lib/utils'
 
-const connection = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD || undefined,
-  maxRetriesPerRequest: null,
-})
+// Initialize Redis connection (supports both Railway internal URL and localhost fallback)
+let connection: Redis | null = null
+try {
+  if (process.env.REDIS_URL) {
+    // Use Railway's internal Redis URL
+    connection = new Redis(process.env.REDIS_URL)
+  } else {
+    // Fallback to localhost (for local development)
+    connection = new Redis({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+      password: process.env.REDIS_PASSWORD || undefined,
+      maxRetriesPerRequest: null,
+    })
+  }
+  
+  // Test connection
+  connection.on('error', (err) => {
+    console.warn('Redis connection failed, continuing without Redis:', err.message)
+    connection = null
+  })
+  
+  connection.on('connect', () => {
+    console.log('Redis connected successfully')
+  })
+} catch (err) {
+  console.warn('Failed to initialize Redis connection:', err)
+  connection = null
+}
 
 // Enrichment worker
 const enrichmentWorker = new Worker(
