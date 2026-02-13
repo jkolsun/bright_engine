@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { signSession } from '@/lib/session'
+import bcrypt from 'bcryptjs'
 
 /**
  * POST /api/auth/simple-login
@@ -31,15 +33,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // TODO: Replace with proper password hash comparison using bcrypt
-    // For now, use environment variable or hardcoded temporary password
+    // Validate password (with bcrypt if hash exists, else default password + auto-migrate)
     const defaultPassword = process.env.DEFAULT_LOGIN_PASSWORD || '123456'
-    
-    if (password !== defaultPassword) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid credentials' },
-        { status: 401 }
-      )
+    if (user.passwordHash) {
+      const valid = await bcrypt.compare(password, user.passwordHash)
+      if (!valid) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid credentials' },
+          { status: 401 }
+        )
+      }
+    } else {
+      // No hash yet - check against default password
+      if (password !== defaultPassword) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid credentials' },
+          { status: 401 }
+        )
+      }
+      // Auto-migrate: hash the password for next login
+      const hash = await bcrypt.hash(password, 10)
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: hash }
+      })
     }
 
     // Determine redirect URL based on user role
@@ -51,19 +68,18 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     )
 
-    // Set session cookie (simple JWT)
-    const sessionData = JSON.stringify({ 
+    // Set session cookie (HMAC signed)
+    const sessionData = signSession({
       userId: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
       iat: Date.now()
     })
-    const sessionB64 = Buffer.from(sessionData).toString('base64')
     
     response.cookies.set({
       name: 'session',
-      value: sessionB64,
+      value: sessionData,
       httpOnly: true,
       secure: true,
       sameSite: 'lax',
