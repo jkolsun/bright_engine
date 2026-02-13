@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
 
 /**
  * GET /api/auth/me
@@ -17,10 +18,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Decode session cookie
-    const decoded = JSON.parse(
-      Buffer.from(sessionCookie, 'base64').toString()
-    )
+    // Verify signed session cookie
+    const decoded = verifySession(sessionCookie)
+    if (!decoded) {
+      return NextResponse.json(
+        { error: 'Invalid session' },
+        { status: 401 }
+      )
+    }
 
     // Get user from database
     const user = await prisma.user.findUnique({
