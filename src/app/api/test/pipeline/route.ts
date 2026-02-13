@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { enrichLead } from '@/lib/enrichment'
+import { enrichLead } from '@/lib/serpapi'
 import { generatePreview } from '@/lib/preview-generator'
 import { generatePersonalization } from '@/lib/personalization'
 
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     // Step 1: Enrich
     console.log(`[Pipeline] Step 1: Enriching lead ${leadId}...`)
     try {
-      const enrichResult = await enrichLead(leadId, companyName, city, state)
+      const enrichResult = await enrichLead(leadId)
       results.steps.enrich = {
         status: 'success',
         data: enrichResult,
