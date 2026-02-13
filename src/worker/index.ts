@@ -342,7 +342,7 @@ const gracefulShutdown = async () => {
   await personalizationWorker.close()
   await sequenceWorker.close()
   await monitoringWorker.close()
-  await connection.quit()
+  await connection?.quit()
   
   console.log('Workers shut down successfully')
   process.exit(0)
