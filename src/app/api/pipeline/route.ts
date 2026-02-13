@@ -4,10 +4,11 @@ import { generatePersonalization } from '@/lib/personalization'
 import { prisma } from '@/lib/db'
 
 /**
- * POST /api/pipeline?leadId=xxx
+ * GET /api/pipeline?leadId=xxx
+ * GET /api/pipeline?leadId=xxx (POST equivalent)
  * Executes enrichment → personalization pipeline synchronously
  */
-export async function POST(request: NextRequest) {
+async function runPipeline(request: NextRequest) {
   const leadId = request.nextUrl.searchParams.get('leadId')
   if (!leadId) {
     return NextResponse.json({ error: 'leadId required' }, { status: 400 })
@@ -64,4 +65,12 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+export async function POST(request: NextRequest) {
+  return runPipeline(request)
+}
+
+export async function GET(request: NextRequest) {
+  return runPipeline(request)
 }
