@@ -82,8 +82,13 @@ export async function POST(request: NextRequest) {
 
     // Queue enrichment and personalization (non-blocking)
     try {
-      await addEnrichmentJob(lead.id)
-      await addPersonalizationJob(lead.id)
+      await addEnrichmentJob({
+        leadId: lead.id,
+        companyName: lead.companyName,
+        city: lead.city || undefined,
+        state: lead.state || undefined,
+      })
+      await addPersonalizationJob({ leadId: lead.id })
     } catch (queueError) {
       console.warn('Queue job failed (non-blocking):', queueError)
       // Don't fail lead creation if queue jobs fail

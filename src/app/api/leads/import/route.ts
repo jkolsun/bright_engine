@@ -1,99 +1,186 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { addEnrichmentJob, addPersonalizationJob } from '@/worker/queue'
-import { generatePreviewId, getTimezoneFromState } from '@/lib/utils'
+import { parseCSV } from '@/lib/csv-parser'
+import {
+  addEnrichmentJob,
+  addPreviewGenerationJob,
+  addPersonalizationJob,
+  addScriptGenerationJob,
+  addDistributionJob,
+} from '@/worker/queue'
+import { logActivity } from '@/lib/logging'
 
-// POST /api/leads/import - Bulk CSV import
+/**
+ * POST /api/leads/import
+ * Bulk import leads from CSV file
+ * 
+ * Form data:
+ * - file: CSV file
+ * - assignTo?: rep user ID
+ * - campaign?: campaign name
+ */
 export async function POST(request: NextRequest) {
   try {
-    const { leads } = await request.json()
+    const formData = await request.formData()
+    const file = formData.get('file') as File | null
+    const assignTo = formData.get('assignTo') as string | null
+    const campaign = formData.get('campaign') as string | null
 
-    if (!Array.isArray(leads) || leads.length === 0) {
+    if (!file) {
       return NextResponse.json(
-        { error: 'Invalid leads array' },
+        { error: 'No file provided' },
         { status: 400 }
       )
     }
 
-    const results = {
-      imported: 0,
-      skipped: 0,
-      errors: [] as string[]
+    // Read file
+    const csvContent = await file.text()
+
+    // Parse CSV
+    const { leads: parsedLeads, validCount, invalidCount, errors } = parseCSV(
+      csvContent
+    )
+
+    if (validCount === 0) {
+      return NextResponse.json(
+        {
+          error: 'No valid leads found in CSV',
+          totalRows: parsedLeads.length,
+          invalidCount,
+          rowErrors: Array.from(errors.entries()).map(([row, errs]) => ({
+            row,
+            errors: errs,
+          })),
+        },
+        { status: 400 }
+      )
     }
 
-    for (const leadData of leads) {
-      try {
-        // Validate required fields
-        if (!leadData.firstName || !leadData.phone || !leadData.companyName) {
-          results.skipped++
-          results.errors.push(`Missing required fields for ${leadData.companyName}`)
-          continue
-        }
+    // Create leads in database
+    const createdLeads = []
+    const failedRows = []
 
-        // Check for duplicate by phone
-        const existing = await prisma.lead.findFirst({
-          where: { phone: leadData.phone }
+    for (let i = 0; i < parsedLeads.length; i++) {
+      const parsed = parsedLeads[i]
+
+      if (!parsed.isValid) {
+        failedRows.push({
+          index: i + 2, // +2 because header is row 1
+          errors: parsed.errors,
         })
+        continue
+      }
 
-        if (existing) {
-          results.skipped++
-          results.errors.push(`Duplicate phone: ${leadData.phone}`)
-          continue
-        }
-
-        const previewId = generatePreviewId()
-
+      try {
         const lead = await prisma.lead.create({
           data: {
-            firstName: leadData.firstName,
-            lastName: leadData.lastName || undefined,
-            email: leadData.email || undefined,
-            phone: leadData.phone,
-            companyName: leadData.companyName,
-            industry: (leadData.industry || 'GENERAL_CONTRACTING') as any,
-            city: leadData.city || undefined,
-            state: leadData.state || undefined,
-            timezone: leadData.timezone || getTimezoneFromState(leadData.state) || 'America/New_York',
-            website: leadData.website || undefined,
-            source: (leadData.source || 'COLD_EMAIL') as any,
-            sourceDetail: leadData.sourceDetail || undefined,
-            previewId,
-            previewUrl: `${process.env.BASE_URL}/preview/${previewId}`,
-            previewExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          }
+            firstName: parsed.firstName,
+            lastName: parsed.lastName,
+            email: parsed.email,
+            phone: parsed.phone,
+            companyName: parsed.companyName,
+            industry: parsed.industry as any,
+            city: parsed.city,
+            state: parsed.state,
+            website: parsed.website,
+            status: 'NEW',
+            source: 'COLD_EMAIL',
+            sourceDetail: campaign || 'CSV Import',
+            assignedToId: assignTo,
+            priority: 'COLD',
+            timezone: 'America/New_York', // TODO: infer from state
+          },
         })
 
-        // Log event
-        await prisma.leadEvent.create({
-          data: {
-            leadId: lead.id,
-            eventType: 'STAGE_CHANGE',
-            toStage: 'NEW',
-            actor: 'system',
-          }
-        })
+        createdLeads.push(lead)
 
-        // Queue enrichment and personalization (non-blocking)
+        // Queue Phase 2 import pipeline (non-blocking, chained)
+        // Order: Enrichment → Preview → Personalization → Scripts → Distribution
         try {
-          await addEnrichmentJob(lead.id)
-          await addPersonalizationJob(lead.id)
-        } catch (queueError) {
-          console.warn(`Queue job failed for ${lead.id} (non-blocking):`, queueError)
-          // Don't fail import if queue jobs fail
-        }
+          // 1. Enrichment (SerpAPI)
+          await addEnrichmentJob({
+            leadId: lead.id,
+            companyName: lead.companyName,
+            city: lead.city || undefined,
+            state: lead.state || undefined,
+          })
 
-        results.imported++
-      } catch (error) {
-        results.skipped++
-        results.errors.push(`Error importing ${leadData.companyName}: ${(error as Error).message}`)
+          // 2. Preview Generation (must be live)
+          await addPreviewGenerationJob({
+            leadId: lead.id,
+          })
+
+          // 3. AI Personalization (after preview)
+          await addPersonalizationJob({
+            leadId: lead.id,
+          })
+
+          // 4. Rep Script Generation (after personalization)
+          await addScriptGenerationJob({
+            leadId: lead.id,
+          })
+
+          // 5. Auto-Distribution to Instantly + Rep Queue
+          await addDistributionJob({
+            leadId: lead.id,
+            channel: 'BOTH',
+          })
+        } catch (err) {
+          console.error(`Pipeline job queueing failed for lead ${lead.id}:`, err)
+        }
+      } catch (err) {
+        failedRows.push({
+          index: i + 2,
+          errors: [
+            `Database error: ${err instanceof Error ? err.message : 'Unknown error'}`,
+          ],
+        })
       }
     }
 
-    return NextResponse.json({ results })
-  } catch (error) {
-    console.error('Error importing leads:', error)
+    // Log activity
+    await logActivity(
+      'IMPORT',
+      `Imported ${createdLeads.length} leads from CSV (${campaign || 'unknown campaign'})`,
+      {
+        metadata: {
+          totalProcessed: parsedLeads.length,
+          validCount,
+          invalidCount,
+          createdCount: createdLeads.length,
+          campaign,
+        },
+      }
+    )
+
     return NextResponse.json(
-      { error: 'Failed to import leads' },
+      {
+        success: true,
+        message: `Successfully imported ${createdLeads.length} leads`,
+        summary: {
+          totalProcessed: parsedLeads.length,
+          validCount,
+          invalidCount,
+          createdCount: createdLeads.length,
+          failedRows,
+        },
+        leads: createdLeads.map((l) => ({
+          id: l.id,
+          firstName: l.firstName,
+          companyName: l.companyName,
+          email: l.email,
+          phone: l.phone,
+        })),
+      },
+      { status: 201 }
+    )
+  } catch (error) {
+    console.error('Import error:', error)
+    return NextResponse.json(
+      {
+        error: 'Import failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     )
   }

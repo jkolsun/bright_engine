@@ -32,32 +32,49 @@ try {
 
 // Define queues (will only work if Redis is available)
 export const enrichmentQueue = connection ? new Queue('enrichment', { connection }) : null
+export const previewQueue = connection ? new Queue('preview', { connection }) : null
 export const personalizationQueue = connection ? new Queue('personalization', { connection }) : null
+export const scriptQueue = connection ? new Queue('scripts', { connection }) : null
+export const distributionQueue = connection ? new Queue('distribution', { connection }) : null
 export const sequenceQueue = connection ? new Queue('sequence', { connection }) : null
 export const monitoringQueue = connection ? new Queue('monitoring', { connection }) : null
 
 // Queue events for monitoring (only if Redis available)
 export const enrichmentEvents = connection ? new QueueEvents('enrichment', { connection }) : null
+export const previewEvents = connection ? new QueueEvents('preview', { connection }) : null
 export const personalizationEvents = connection ? new QueueEvents('personalization', { connection }) : null
+export const scriptEvents = connection ? new QueueEvents('scripts', { connection }) : null
+export const distributionEvents = connection ? new QueueEvents('distribution', { connection }) : null
 export const sequenceEvents = connection ? new QueueEvents('sequence', { connection }) : null
 export const monitoringEvents = connection ? new QueueEvents('monitoring', { connection }) : null
 
 // Helper to add jobs - gracefully handle if Redis unavailable
-export async function addEnrichmentJob(leadId: string) {
+
+/**
+ * Phase 2 Import Pipeline Job Functions
+ * Order: Enrichment → Preview → Personalization → Scripts → Distribution
+ */
+
+export async function addEnrichmentJob(data: {
+  leadId: string
+  companyName: string
+  city?: string
+  state?: string
+}) {
   if (!enrichmentQueue || !isRedisAvailable) {
-    console.warn('Enrichment queue unavailable, skipping job for lead:', leadId)
+    console.warn('Enrichment queue unavailable, skipping job for lead:', data.leadId)
     return null
   }
   
   try {
     return await enrichmentQueue.add(
       'enrich-lead',
-      { leadId },
+      data,
       {
-        attempts: 3,
+        attempts: 2,
         backoff: {
           type: 'exponential',
-          delay: 2000,
+          delay: 1000,
         },
       }
     )
@@ -67,18 +84,104 @@ export async function addEnrichmentJob(leadId: string) {
   }
 }
 
-export async function addPersonalizationJob(leadId: string) {
-  if (!personalizationQueue || !isRedisAvailable) {
-    console.warn('Personalization queue unavailable, skipping job for lead:', leadId)
+export async function addPreviewGenerationJob(data: {
+  leadId: string
+  clientId?: string
+}) {
+  if (!previewQueue || !isRedisAvailable) {
+    console.warn('Preview queue unavailable, skipping job for lead:', data.leadId)
     return null
   }
   
   try {
+    // Delay by 5 seconds to allow enrichment to complete
+    return await previewQueue.add(
+      'generate-preview',
+      data,
+      {
+        delay: 5000,
+        attempts: 2,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+      }
+    )
+  } catch (err) {
+    console.warn('Failed to add preview generation job:', err)
+    return null
+  }
+}
+
+export async function addPersonalizationJob(data: { leadId: string }) {
+  if (!personalizationQueue || !isRedisAvailable) {
+    console.warn('Personalization queue unavailable, skipping job for lead:', data.leadId)
+    return null
+  }
+  
+  try {
+    // Delay by 10 seconds to allow preview generation to complete
     return await personalizationQueue.add(
       'personalize-lead',
-      { leadId },
+      data,
       {
-        attempts: 3,
+        delay: 10000,
+        attempts: 2,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+      }
+    )
+  } catch (err) {
+    console.warn('Failed to add personalization job:', err)
+    return null
+  }
+}
+
+export async function addScriptGenerationJob(data: { leadId: string }) {
+  if (!scriptQueue || !isRedisAvailable) {
+    console.warn('Script queue unavailable, skipping job for lead:', data.leadId)
+    return null
+  }
+  
+  try {
+    // Delay by 15 seconds to allow personalization to complete
+    return await scriptQueue.add(
+      'generate-script',
+      data,
+      {
+        delay: 15000,
+        attempts: 2,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+      }
+    )
+  } catch (err) {
+    console.warn('Failed to add script generation job:', err)
+    return null
+  }
+}
+
+export async function addDistributionJob(data: {
+  leadId: string
+  channel: 'INSTANTLY' | 'REP_QUEUE' | 'BOTH'
+}) {
+  if (!distributionQueue || !isRedisAvailable) {
+    console.warn('Distribution queue unavailable, skipping job for lead:', data.leadId)
+    return null
+  }
+  
+  try {
+    // Delay by 20 seconds to allow all prep to complete
+    return await distributionQueue.add(
+      'distribute-lead',
+      data,
+      {
+        delay: 20000,
+        attempts: 2,
         backoff: {
           type: 'exponential',
           delay: 2000,
@@ -86,7 +189,7 @@ export async function addPersonalizationJob(leadId: string) {
       }
     )
   } catch (err) {
-    console.warn('Failed to add personalization job:', err)
+    console.warn('Failed to add distribution job:', err)
     return null
   }
 }
