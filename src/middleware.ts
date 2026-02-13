@@ -1,66 +1,51 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-// Simple in-memory rate limiting (use Redis in production for multi-instance)
-const rateLimit = new Map<string, { count: number; resetAt: number }>()
-
-const RATE_LIMIT = {
-  '/api/messages': { requests: 20, window: 60000 }, // 20 per minute
-  '/api/leads/import': { requests: 5, window: 60000 }, // 5 per minute
-  '/login': { requests: 5, window: 300000 }, // 5 per 5 minutes
-}
-
+/**
+ * Middleware to enforce role-based access control
+ * - Admins can access /admin/*
+ * - Reps can only access /reps/* and /preview/*
+ * - Public routes: /login, /preview/*, /health
+ */
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
-  const ip = request.ip || request.headers.get('x-forwarded-for') || 'anonymous'
 
-  // Check if path needs rate limiting
-  const limitConfig = Object.entries(RATE_LIMIT).find(([path]) => 
-    pathname.startsWith(path)
-  )
-
-  if (limitConfig) {
-    const [path, config] = limitConfig
-    const key = `${ip}:${path}`
-    const now = Date.now()
-    const record = rateLimit.get(key)
-
-    if (record) {
-      if (now < record.resetAt) {
-        // Within window
-        if (record.count >= config.requests) {
-          return NextResponse.json(
-            { error: 'Too many requests. Please try again later.' },
-            { status: 429 }
-          )
-        }
-        record.count++
-      } else {
-        // Window expired, reset
-        rateLimit.set(key, { count: 1, resetAt: now + config.window })
-      }
-    } else {
-      // First request
-      rateLimit.set(key, { count: 1, resetAt: now + config.window })
-    }
+  // Public routes - allow all
+  if (pathname === '/login' || pathname.startsWith('/preview/') || pathname.startsWith('/api/health')) {
+    return NextResponse.next()
   }
 
-  // Cleanup old entries (every 100 requests)
-  if (Math.random() < 0.01) {
-    const now = Date.now()
-    for (const [key, record] of rateLimit.entries()) {
-      if (now > record.resetAt + 60000) {
-        rateLimit.delete(key)
-      }
+  // Get user role from cookie/session (simplified - check headers)
+  const userRole = request.headers.get('x-user-role') || 'guest'
+
+  // Admin routes - only ADMIN role
+  if (pathname.startsWith('/admin')) {
+    if (userRole !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/login', request.url))
     }
+    return NextResponse.next()
   }
 
-  return NextResponse.next()
+  // Rep routes - only REP role
+  if (pathname.startsWith('/reps')) {
+    if (userRole !== 'REP' && userRole !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    return NextResponse.next()
+  }
+
+  // Default - redirect to login
+  return NextResponse.redirect(new URL('/login', request.url))
 }
 
 export const config = {
   matcher: [
-    '/api/:path*',
-    '/login',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    '/((?!_next/static|_next/image|favicon.ico|public).*)',
   ],
 }
