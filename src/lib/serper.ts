@@ -2,7 +2,7 @@ import { prisma } from './db'
 
 const SERPER_API_KEY = process.env.SERPER_API_KEY!
 
-export async function generatePersonalization(leadId: string): Promise<string> {
+export async function fetchSerperResearch(leadId: string): Promise<string> {
   const lead = await prisma.lead.findUnique({
     where: { id: leadId },
   })
@@ -82,4 +82,4 @@ export async function generatePersonalization(leadId: string): Promise<string> {
   }
 }
 
-export default { generatePersonalization }
+export default { fetchSerperResearch }

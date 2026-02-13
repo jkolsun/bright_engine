@@ -1,7 +1,8 @@
 import { Worker } from 'bullmq'
 import Redis from 'ioredis'
 import { enrichLead } from '../lib/serpapi'
-import { generatePersonalization } from '../lib/serper'
+import { fetchSerperResearch } from '../lib/serper'
+import { generatePersonalization } from '../lib/personalization'
 import { prisma } from '../lib/db'
 import { sendSMS } from '../lib/twilio'
 import { canSendMessage } from '../lib/utils'
@@ -57,10 +58,11 @@ const personalizationWorker = new Worker(
   async (job) => {
     console.log(`Processing personalization job: ${job.id}`)
     const { leadId } = job.data
-    
-    const personalization = await generatePersonalization(leadId)
-    
-    return { success: true, personalization }
+    // Step 1: Serper web research (enhances quality, non-fatal if fails)
+    try { await fetchSerperResearch(leadId) } catch (e) { console.warn('Serper research failed, continuing:', e) }
+    // Step 2: AI personalization (required)
+    const result = await generatePersonalization(leadId)
+    return { success: true, result }
   },
   // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
   { connection }
