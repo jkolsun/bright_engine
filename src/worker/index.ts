@@ -9,6 +9,7 @@ import { distributeLead } from '../lib/distribution'
 import { prisma } from '../lib/db'
 import { sendSMS } from '../lib/twilio'
 import { canSendMessage } from '../lib/utils'
+import { addPreviewGenerationJob, addPersonalizationJob, addScriptGenerationJob, addDistributionJob } from './queue'
 
 // Initialize Redis connection (supports both Railway internal URL and localhost fallback)
 let connection: Redis | null = null
@@ -107,6 +108,23 @@ const distributionWorker = new Worker(
   // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
   { connection }
 )
+
+// Chain: enrichment → preview → personalization → scripts → distribution
+enrichmentWorker.on('completed', async (job) => {
+  if (job?.data?.leadId) await addPreviewGenerationJob({ leadId: job.data.leadId })
+})
+
+previewWorker.on('completed', async (job) => {
+  if (job?.data?.leadId) await addPersonalizationJob({ leadId: job.data.leadId })
+})
+
+personalizationWorker.on('completed', async (job) => {
+  if (job?.data?.leadId) await addScriptGenerationJob({ leadId: job.data.leadId })
+})
+
+scriptWorker.on('completed', async (job) => {
+  if (job?.data?.leadId) await addDistributionJob({ leadId: job.data.leadId, channel: 'BOTH' })
+})
 
 // Sequence worker (handles all automated messages)
 const sequenceWorker = new Worker(

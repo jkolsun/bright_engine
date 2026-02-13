@@ -94,8 +94,8 @@ export default function ImportPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-700">Last Import</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">2,418 leads</p>
-                <p className="text-sm text-gray-600 mt-1">February 10, 2026 at 3:42 PM</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{importResult?.createdCount || '—'} leads</p>
+                <p className="text-sm text-gray-600 mt-1">{new Date().toLocaleDateString()}</p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-600">API Cost</p>
@@ -211,129 +211,34 @@ export default function ImportPage() {
       )}
 
       {step === 'processing' && (
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <Card className="p-8">
             <h3 className="text-2xl font-bold text-gray-900 mb-6">Processing Pipeline</h3>
-            
-            {/* Progress Steps */}
-            <div className="space-y-6">
-              {/* Step 1 */}
-              <PipelineStep
-                number={1}
-                title="Validated"
-                status={pipelineState.step1.status}
-                details={
-                  <div className="text-sm space-y-1">
-                    <p className="text-green-600 font-medium">{pipelineState.step1.valid} clean</p>
-                    <p className="text-red-600">{pipelineState.step1.removed} removed ({pipelineState.step1.duplicates} duplicate, {pipelineState.step1.invalid} invalid)</p>
-                  </div>
-                }
-              />
-
-              {/* Step 2 */}
-              <PipelineStep
-                number={2}
-                title="Split"
-                status={pipelineState.step2.status}
-                details={
-                  <div className="text-sm space-y-1">
-                    <p>Campaign A: {pipelineState.step2.campaignA}</p>
-                    <p>Campaign B: {pipelineState.step2.campaignB}</p>
-                    <p>Campaign C (Reps): {pipelineState.step2.campaignC}</p>
-                  </div>
-                }
-              />
-
-              {/* Step 3 */}
-              <PipelineStep
-                number={3}
-                title="Enriching"
-                status={pipelineState.step3.status}
-                details={
-                  <div className="space-y-3">
-                    <div className="text-sm">
-                      <p className="font-medium mb-2">{pipelineState.step3.processed} / {pipelineState.step3.total} ({Math.round(pipelineState.step3.processed / pipelineState.step3.total * 100)}%)</p>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all"
-                          style={{ width: `${Math.round(pipelineState.step3.processed / pipelineState.step3.total * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="text-sm space-y-1">
-                      <p>├── Matched: {pipelineState.step3.matched}</p>
-                      <p>├── Partial: {pipelineState.step3.partial}</p>
-                      <p>└── No match: {pipelineState.step3.noMatch}</p>
-                    </div>
-                  </div>
-                }
-              />
-
-              {/* Step 4 */}
-              <PipelineStep
-                number={4}
-                title="Preview generation"
-                status={pipelineState.step4.status}
-                details={<p className="text-sm text-gray-500">Waiting for enrichment...</p>}
-              />
-
-              {/* Step 5 */}
-              <PipelineStep
-                number={5}
-                title="Personalization"
-                status={pipelineState.step5.status}
-                details={<p className="text-sm text-gray-500">Waiting for previews...</p>}
-              />
-
-              {/* Step 6 */}
-              <PipelineStep
-                number={6}
-                title="Assembly"
-                status={pipelineState.step6.status}
-                details={<p className="text-sm text-gray-500">Waiting for personalization...</p>}
-              />
-            </div>
-
-            {/* Footer Stats */}
-            <div className="mt-8 pt-6 border-t border-gray-200 flex items-center justify-between">
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <Clock size={18} className="text-gray-600" />
-                  <span className="text-sm text-gray-700">
-                    Estimated time remaining: <strong>{pipelineState.estimatedTime}</strong>
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <DollarSign size={18} className="text-gray-600" />
-                  <span className="text-sm text-gray-700">
-                    API costs this batch: <strong>${pipelineState.apiCost}</strong>
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Button variant="outline" size="sm">
-                  <Pause size={14} className="mr-2" />
-                  Pause
-                </Button>
-                <Button variant="destructive" size="sm">
-                  <XCircle size={14} className="mr-2" />
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </Card>
-
-          {/* Instructions */}
-          <Card className="p-6 mt-6 bg-yellow-50 border-yellow-200">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="text-yellow-600 flex-shrink-0" size={20} />
+            <div className="flex items-center gap-4 mb-6">
+              <Loader2 size={32} className="text-blue-600 animate-spin" />
               <div>
-                <p className="font-semibold text-gray-900 mb-1">Pipeline Order is Critical</p>
-                <p className="text-sm text-gray-700">
-                  Each lead must complete steps 3→4→5 in order. Enrichment data feeds previews, previews feed personalization. 
-                  Leads process in parallel, but each one follows the strict sequence.
+                <p className="font-semibold text-gray-900">
+                  {importResult?.createdCount || importResult?.summary?.createdCount || 0} leads queued for processing
+                </p>
+                <p className="text-sm text-gray-600">
+                  Running: Enrichment → Preview → Personalization → Scripts → Distribution
                 </p>
               </div>
+            </div>
+            {pipelineState && (
+              <div className="space-y-3">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm font-medium text-gray-700">Latest activity:</p>
+                  <p className="text-sm text-gray-600 mt-1">{pipelineState.lastActivity}</p>
+                  <p className="text-xs text-gray-400 mt-2">Total pipeline actions: {pipelineState.totalActivities}</p>
+                </div>
+                <p className="text-xs text-gray-500">Last checked: {pipelineState.timestamp}</p>
+              </div>
+            )}
+            <div className="mt-6 flex gap-3">
+              <Button variant="outline" size="sm" onClick={() => setStep('upload')}>
+                ← Back to Upload
+              </Button>
             </div>
           </Card>
         </div>
@@ -348,7 +253,7 @@ export default function ImportPage() {
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2">Pipeline Complete!</h3>
               <p className="text-gray-600 mb-8">
-                Successfully processed 2,418 leads through full enrichment pipeline
+                Successfully processed {importResult?.createdCount || '—'} leads through full enrichment pipeline
               </p>
 
               {/* Stats Grid */}

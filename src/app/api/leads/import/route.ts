@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { parseCSV } from '@/lib/csv-parser'
-import {
-  addEnrichmentJob,
-  addPreviewGenerationJob,
-  addPersonalizationJob,
-  addScriptGenerationJob,
-  addDistributionJob,
-} from '@/worker/queue'
+import { addEnrichmentJob } from '@/worker/queue'
 import { logActivity } from '@/lib/logging'
 
 /**
@@ -97,33 +91,12 @@ export async function POST(request: NextRequest) {
         // Queue Phase 2 import pipeline (non-blocking, chained)
         // Order: Enrichment → Preview → Personalization → Scripts → Distribution
         try {
-          // 1. Enrichment (SerpAPI)
+          // 1. Enrichment (SerpAPI) - triggers the entire pipeline via event chaining
           await addEnrichmentJob({
             leadId: lead.id,
             companyName: lead.companyName,
             city: lead.city || undefined,
             state: lead.state || undefined,
-          })
-
-          // 2. Preview Generation (must be live)
-          await addPreviewGenerationJob({
-            leadId: lead.id,
-          })
-
-          // 3. AI Personalization (after preview)
-          await addPersonalizationJob({
-            leadId: lead.id,
-          })
-
-          // 4. Rep Script Generation (after personalization)
-          await addScriptGenerationJob({
-            leadId: lead.id,
-          })
-
-          // 5. Auto-Distribution to Instantly + Rep Queue
-          await addDistributionJob({
-            leadId: lead.id,
-            channel: 'BOTH',
           })
         } catch (err) {
           console.error(`Pipeline job queueing failed for lead ${lead.id}:`, err)

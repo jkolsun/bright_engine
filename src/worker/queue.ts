@@ -118,12 +118,10 @@ export async function addPreviewGenerationJob(data: {
   }
   
   try {
-    // Delay by 5 seconds to allow enrichment to complete
     return await previewQueue.add(
       'generate-preview',
       data,
       {
-        delay: 5000,
         attempts: 2,
         backoff: {
           type: 'exponential',
@@ -144,12 +142,10 @@ export async function addPersonalizationJob(data: { leadId: string }) {
   }
   
   try {
-    // Delay by 10 seconds to allow preview generation to complete
     return await personalizationQueue.add(
       'personalize-lead',
       data,
       {
-        delay: 10000,
         attempts: 2,
         backoff: {
           type: 'exponential',
@@ -170,12 +166,10 @@ export async function addScriptGenerationJob(data: { leadId: string }) {
   }
   
   try {
-    // Delay by 15 seconds to allow personalization to complete
     return await scriptQueue.add(
       'generate-script',
       data,
       {
-        delay: 15000,
         attempts: 2,
         backoff: {
           type: 'exponential',
@@ -199,12 +193,10 @@ export async function addDistributionJob(data: {
   }
   
   try {
-    // Delay by 20 seconds to allow all prep to complete
     return await distributionQueue.add(
       'distribute-lead',
       data,
       {
-        delay: 20000,
         attempts: 2,
         backoff: {
           type: 'exponential',
