@@ -23,9 +23,11 @@ export async function dispatchWebhook(event: WebhookEvent): Promise<boolean> {
 
     console.log('🚀 Dispatching webhook:', event.type)
 
-    // In development, just log the event
+    // Always log events for debugging
+    console.log('🤖 [WEBHOOK]', JSON.stringify(event, null, 2))
+    
+    // In development, just log the event and return success
     if (process.env.NODE_ENV === 'development') {
-      console.log('🤖 [WEBHOOK DEV MODE]', JSON.stringify(event, null, 2))
       return true
     }
 

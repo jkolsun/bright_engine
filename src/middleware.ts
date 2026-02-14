@@ -13,11 +13,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Webhook trigger has its own auth
-  if (pathname === '/api/webhook-trigger') {
-    return NextResponse.next()
-  }
-
   // Public routes — no auth needed
   if (
     pathname === '/login' ||
@@ -28,7 +23,10 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/api/health') ||
     pathname.startsWith('/api/bootstrap/') ||
     pathname.startsWith('/api/auth/') ||
-    pathname.startsWith('/api/webhooks/')
+    pathname.startsWith('/api/webhooks/') ||
+    pathname === '/api/webhook-trigger' ||
+    pathname === '/api/webhook-trigger-simple' ||
+    pathname === '/api/health-simple'
   ) {
     return NextResponse.next()
   }
