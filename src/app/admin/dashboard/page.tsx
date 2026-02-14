@@ -133,7 +133,7 @@ export default function DashboardPage() {
                 <span className="font-semibold">{data.previewViews}</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-blue-600 h-2 rounded-full" style={{ width: '75%' }} />
+                <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${data.totalLeads > 0 ? Math.min(100, Math.round((data.previewViews || 0) / data.totalLeads * 100)) : 0}%` }} />
               </div>
             </div>
             <div>
@@ -142,7 +142,7 @@ export default function DashboardPage() {
                 <span className="font-semibold">{data.previewClicks}</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-green-600 h-2 rounded-full" style={{ width: '45%' }} />
+                <div className="bg-green-600 h-2 rounded-full" style={{ width: `${(data.previewViews || 0) > 0 ? Math.min(100, Math.round((data.previewClicks || 0) / data.previewViews * 100)) : 0}%` }} />
               </div>
             </div>
           </div>
