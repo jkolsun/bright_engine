@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
 
 // GET /api/messages - List messages
 export async function GET(request: NextRequest) {
@@ -8,6 +9,12 @@ export async function GET(request: NextRequest) {
   const offset = parseInt(searchParams.get('offset') || '0')
 
   try {
+    // Authentication check - admin or rep access
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? verifySession(sessionCookie) : null
+    if (!session || !['ADMIN', 'REP'].includes(session.role)) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
     const [messages, total] = await Promise.all([
       prisma.message.findMany({
         include: {
@@ -47,6 +54,13 @@ export async function GET(request: NextRequest) {
 // POST /api/messages - Send a message
 export async function POST(request: NextRequest) {
   try {
+    // Authentication check - admin or rep access
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? verifySession(sessionCookie) : null
+    if (!session || !['ADMIN', 'REP'].includes(session.role)) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
     const { leadId, clientId, to, content, channel, senderType, senderName } = await request.json()
     
     if (!content) {

@@ -37,9 +37,8 @@ export async function GET(request: NextRequest) {
   
   if (source) where.source = source
   if (priority) where.priority = priority
-  if (assignedTo) where.assignedToId = assignedTo
+    if (assignedTo) where.assignedToId = assignedTo
 
-  try {
     const [leads, total] = await Promise.all([
       prisma.lead.findMany({
         where,

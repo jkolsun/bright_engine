@@ -57,7 +57,17 @@ export function middleware(request: NextRequest) {
   const userRole = decoded.role || 'guest'
 
   // Admin-only API routes
-  const adminOnlyPaths = ['/api/admin/', '/api/users', '/api/cleanup', '/api/clients/delete', '/api/leads/delete', '/api/activity/delete']
+  const adminOnlyPaths = [
+    '/api/admin/',
+    '/api/users',
+    '/api/cleanup', 
+    '/api/clients/delete',
+    '/api/leads/delete',
+    '/api/activity/delete',
+    '/api/revenue',
+    '/api/clients',
+    '/api/dashboard/stats'
+  ]
   if (adminOnlyPaths.some(p => pathname.startsWith(p))) {
     if (userRole !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })

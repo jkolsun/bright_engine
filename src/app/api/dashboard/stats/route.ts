@@ -1,8 +1,16 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Authentication check - admin or rep access
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? verifySession(sessionCookie) : null
+    if (!session || !['ADMIN', 'REP'].includes(session.role)) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
     // Get pipeline counts
     const pipeline = {
       new: await prisma.lead.count({ where: { status: 'NEW' } }),

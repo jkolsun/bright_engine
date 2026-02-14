@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
 
 // POST /api/clients - Create new client
 export async function POST(request: NextRequest) {
   try {
+    // Admin-only access check
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
     const data = await request.json()
 
     // Create client
