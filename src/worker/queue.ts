@@ -12,28 +12,39 @@ function initializeRedisConnection() {
   }
   connectionAttempted = true
 
-  // Only attempt connection in runtime environments, not during build
-  if (process.env.NODE_ENV === 'production' || process.env.REDIS_URL || process.env.REDIS_HOST) {
-    try {
-      if (process.env.REDIS_URL) {
-        // Use Railway's internal Redis URL
-        connection = new Redis(process.env.REDIS_URL, {
-          maxRetriesPerRequest: null,
-          retryStrategy: () => null, // Don't retry, just fail fast
-          connectTimeout: 1000,
-        })
-      } else {
-        // Fallback to localhost (for local development)
-        connection = new Redis({
-          host: process.env.REDIS_HOST || 'localhost',
-          port: parseInt(process.env.REDIS_PORT || '6379'),
-          password: process.env.REDIS_PASSWORD || undefined,
-          maxRetriesPerRequest: null,
-          retryStrategy: () => null, // Don't retry, just fail fast
-          connectTimeout: 1000,
-        })
-      }
-      
+  // Only attempt connection if Redis is explicitly configured
+  // Don't connect if we're just using defaults (which happen during build)
+  const hasRedisUrl = !!process.env.REDIS_URL
+  const hasExplicitRedisHost = !!process.env.REDIS_HOST
+  const hasExplicitRedisPort = !!process.env.REDIS_PORT
+
+  // Skip connection during build/development unless explicitly configured
+  if (!hasRedisUrl && !hasExplicitRedisHost && !hasExplicitRedisPort) {
+    // No Redis configured - queuing will be unavailable but won't error
+    return
+  }
+
+  try {
+    if (hasRedisUrl) {
+      // Use Railway's internal Redis URL
+      connection = new Redis(process.env.REDIS_URL!, {
+        maxRetriesPerRequest: null,
+        retryStrategy: () => null, // Don't retry, just fail fast
+        connectTimeout: 1000,
+      })
+    } else if (hasExplicitRedisHost || hasExplicitRedisPort) {
+      // Only connect if host or port are explicitly set
+      connection = new Redis({
+        host: process.env.REDIS_HOST!,
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        password: process.env.REDIS_PASSWORD || undefined,
+        maxRetriesPerRequest: null,
+        retryStrategy: () => null, // Don't retry, just fail fast
+        connectTimeout: 1000,
+      })
+    }
+
+    if (connection) {
       connection.on('error', (err) => {
         console.warn('Redis connection error (non-blocking):', err.message)
         isRedisAvailable = false
@@ -43,11 +54,11 @@ function initializeRedisConnection() {
         console.log('Redis connected')
         isRedisAvailable = true
       })
-    } catch (err) {
-      console.warn('Redis initialization failed (non-blocking):', err)
-      connection = null
-      isRedisAvailable = false
     }
+  } catch (err) {
+    console.warn('Redis initialization failed (non-blocking):', err)
+    connection = null
+    isRedisAvailable = false
   }
 }
 
