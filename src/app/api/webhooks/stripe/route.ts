@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { dispatchWebhook, WebhookEvents } from '@/lib/webhook-dispatcher'
 import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { prisma } from '@/lib/db'
@@ -107,6 +108,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           },
         },
       })
+
+      // 🚀 Dispatch webhook for immediate payment processing
+      await dispatchWebhook(WebhookEvents.PAYMENT_RECEIVED(
+        lead.id,
+        client.id,
+        amountTotal / 100,
+        'stripe'
+      ))
     }
   }
 

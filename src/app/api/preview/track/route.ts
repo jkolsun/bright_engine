@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { calculateEngagementScore } from '@/lib/engagement-scoring'
+import { dispatchWebhook, WebhookEvents } from '@/lib/webhook-dispatcher'
 
 // POST /api/preview/track - Track preview analytics events
 export async function POST(request: NextRequest) {
@@ -58,8 +59,10 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // If high engagement, mark as HOT
+    // If high engagement, mark as HOT and dispatch webhook
     if (duration && duration > 60 || event === 'cta_click' || event === 'call_click') {
+      const urgencyScore = event === 'call_click' ? 90 : event === 'cta_click' ? 80 : duration > 120 ? 75 : 65
+
       if (lead.priority !== 'HOT') {
         await prisma.lead.update({
           where: { id: lead.id },
@@ -76,6 +79,14 @@ export async function POST(request: NextRequest) {
           }
         })
       }
+
+      // 🚀 Dispatch immediate webhook for hot engagement
+      await dispatchWebhook(WebhookEvents.HOT_ENGAGEMENT(
+        lead.id, 
+        event, 
+        urgencyScore,
+        { duration, company: lead.companyName, firstName: lead.firstName }
+      ))
     }
 
     // After logging the event, recalculate engagement:

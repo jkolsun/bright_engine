@@ -4,6 +4,7 @@ import { parseCSV } from '@/lib/csv-parser'
 import { addEnrichmentJob } from '@/worker/queue'
 import { logActivity } from '@/lib/logging'
 import { getTimezoneFromState } from '@/lib/utils'
+import { dispatchWebhook, WebhookEvents } from '@/lib/webhook-dispatcher'
 
 /**
  * POST /api/leads/import
@@ -126,6 +127,15 @@ export async function POST(request: NextRequest) {
         },
       }
     )
+
+    // 🚀 Dispatch webhook for immediate lead import processing
+    if (createdLeads.length > 0) {
+      await dispatchWebhook(WebhookEvents.LEAD_IMPORTED(
+        createdLeads.map(l => l.id),
+        campaign || 'CSV Import',
+        { totalProcessed: parsedLeads.length, validCount }
+      ))
+    }
 
     return NextResponse.json(
       {
