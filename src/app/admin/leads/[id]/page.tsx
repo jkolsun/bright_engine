@@ -20,6 +20,8 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
   const [lead, setLead] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [smsText, setSmsText] = useState('')
+  const [sendingSms, setSendingSms] = useState(false)
 
   useEffect(() => {
     const fetchLead = async () => {
@@ -44,6 +46,30 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
 
     fetchLead()
   }, [params.id])
+
+  const handleSendSms = async () => {
+    if (!smsText.trim() || sendingSms) return
+    setSendingSms(true)
+    try {
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: params.id,
+          to: lead.phone,
+          content: smsText,
+          channel: 'SMS',
+          senderType: 'ADMIN',
+          senderName: 'admin'
+        })
+      })
+      setSmsText('')
+      // Refresh lead to show new message
+      const res = await fetch(`/api/leads/${params.id}`)
+      if (res.ok) { const data = await res.json(); setLead(data.lead) }
+    } catch (err) { console.error('SMS send failed:', err) }
+    finally { setSendingSms(false) }
+  }
 
   if (loading) {
     return (
@@ -260,11 +286,14 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
                     <input
                       type="text"
                       placeholder="Type a message..."
+                      value={smsText}
+                      onChange={(e) => setSmsText(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSendSms()}
                       className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                    <Button>
+                    <Button onClick={handleSendSms} disabled={sendingSms || !smsText.trim()}>
                       <Send size={16} className="mr-2" />
-                      Send
+                      {sendingSms ? 'Sending...' : 'Send'}
                     </Button>
                   </div>
                 </div>
