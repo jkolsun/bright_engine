@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 // POST /api/webhook-trigger - Main webhook testing endpoint
 export async function POST(request: NextRequest) {
   try {

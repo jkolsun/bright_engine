@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { logInboundSMS } from '@/lib/twilio'
 import twilio from 'twilio'
 
+export const dynamic = 'force-dynamic'
+
 // POST /api/webhooks/twilio - Handle inbound SMS
 export async function POST(request: NextRequest) {
   try {

@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { signSession } from '@/lib/session'
 import bcrypt from 'bcryptjs'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * POST /api/auth/simple-login
  * Simple login: email + password

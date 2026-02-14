@@ -3,6 +3,8 @@ import { enrichLead } from '@/lib/serpapi'
 import { generatePreview } from '@/lib/preview-generator'
 import { generatePersonalization } from '@/lib/personalization'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * POST /api/test/pipeline
  * Test the full personalization pipeline in sequence

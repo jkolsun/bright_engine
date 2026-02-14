@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { calculateEngagementScore } from '@/lib/engagement-scoring'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   const leadId = request.nextUrl.searchParams.get('leadId')
 

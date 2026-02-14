@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 // POST /api/webhooks/clawdbot - Receive events from the platform
 export async function POST(request: NextRequest) {
   try {

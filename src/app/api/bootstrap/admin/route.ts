@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * POST /api/bootstrap/admin
  * Create admin user (one-time setup)

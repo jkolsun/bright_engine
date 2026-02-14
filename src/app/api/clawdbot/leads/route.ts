@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { generatePreviewId, getTimezoneFromState } from '@/lib/utils'
 import { addEnrichmentJob, addPersonalizationJob } from '@/worker/queue'
 
+export const dynamic = 'force-dynamic'
+
 // GET /api/clawdbot/leads - List leads for Clawdbot
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams

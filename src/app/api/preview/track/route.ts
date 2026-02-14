@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db'
 import { calculateEngagementScore } from '@/lib/engagement-scoring'
 import { dispatchWebhook, WebhookEvents } from '@/lib/webhook-dispatcher'
 
+export const dynamic = 'force-dynamic'
+
 // POST /api/preview/track - Track preview analytics events
 export async function POST(request: NextRequest) {
   try {

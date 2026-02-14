@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 // POST /api/webhook-trigger-simple - Ultra simple test
 export async function POST(request: NextRequest) {
   try {

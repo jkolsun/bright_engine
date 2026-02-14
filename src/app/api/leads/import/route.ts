@@ -6,6 +6,8 @@ import { logActivity } from '@/lib/logging'
 import { getTimezoneFromState } from '@/lib/utils'
 import { dispatchWebhook, WebhookEvents } from '@/lib/webhook-dispatcher'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * POST /api/leads/import
  * Bulk import leads from CSV file

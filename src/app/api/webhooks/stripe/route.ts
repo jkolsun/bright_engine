@@ -4,6 +4,8 @@ import Stripe from 'stripe'
 import { prisma } from '@/lib/db'
 import { processRevenueCommission } from '@/lib/commissions'
 
+export const dynamic = 'force-dynamic'
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
 })
