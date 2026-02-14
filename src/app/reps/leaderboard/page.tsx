@@ -51,7 +51,7 @@ export default function LeaderboardPage() {
             (l: any) => l.assignedToId === rep.id && l.status === 'PAID'
           )
           const closedLeads = repLeads.length
-          const totalRevenue = closedLeads * 299 // Assuming $299 per closed lead
+          const totalRevenue = closedLeads * 149 // Assuming $149 per closed lead
 
           return {
             rep,

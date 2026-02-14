@@ -97,7 +97,7 @@ export default function RepsPage() {
             <DollarSign size={20} className="text-purple-600" />
           </div>
           <div className="text-3xl font-bold text-gray-900">
-            {formatCurrency(assignedLeads.length * 299)}
+            {formatCurrency(assignedLeads.length * 149)}
           </div>
         </Card>
       </div>
@@ -139,7 +139,7 @@ export default function RepsPage() {
                         {lead.status}
                       </Badge>
                     </td>
-                    <td className="p-4 text-gray-700">$299</td>
+                    <td className="p-4 text-gray-700">$149</td>
                     <td className="p-4 text-right">
                       <Button variant="ghost" size="sm">Details</Button>
                     </td>

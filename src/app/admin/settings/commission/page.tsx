@@ -66,7 +66,7 @@ export default function CommissionSettingsPage() {
       <Card className="p-6 bg-blue-50 border-blue-200">
         <p className="text-sm text-blue-800">
           <strong>How it works:</strong> Set the percentage of each closed deal that goes to the rep.
-          For example, 50% means the rep gets $149.50 on a $299 site build.
+          For example, 50% means the rep gets $74.50 on a $149 site build.
         </p>
       </Card>
 
