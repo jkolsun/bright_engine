@@ -84,11 +84,11 @@ export async function enrichLead(leadId: string): Promise<EnrichmentResult> {
       where: { id: leadId },
       data: {
         enrichedAddress: enrichment.address,
-        enrichedHours: enrichment.hours as any,
-        enrichedServices: enrichment.services as any,
+        enrichedHours: enrichment.hours,
+        enrichedServices: enrichment.services,
         enrichedRating: enrichment.rating,
         enrichedReviews: enrichment.reviews,
-        enrichedPhotos: enrichment.photos as any,
+        enrichedPhotos: enrichment.photos,
       },
     })
 

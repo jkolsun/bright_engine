@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
 
 // POST /api/admin/bulk-action - Bulk operations on leads
 export async function POST(request: NextRequest) {
   try {
+    // Admin-only access check
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const data = await request.json()
     const { action, leadIds, payload } = data
 
@@ -18,58 +26,91 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'reassign':
-        // Bulk reassign leads to different rep
-        for (const leadId of leadIds) {
-          const lead = await prisma.lead.update({
-            where: { id: leadId },
-            data: { assignedToId: payload.repId }
+        // Bulk reassign leads to different rep - use transaction for data consistency
+        const reassignResults = await Promise.allSettled(
+          leadIds.map(async (leadId: string) => {
+            return await prisma.$transaction(async (tx) => {
+              const lead = await tx.lead.update({
+                where: { id: leadId },
+                data: { assignedToId: payload.repId }
+              })
+              
+              await tx.leadEvent.create({
+                data: {
+                  leadId,
+                  eventType: 'STAGE_CHANGE',
+                  toStage: 'REASSIGNED',
+                  metadata: { bulkAction: true, newRep: payload.repId },
+                  actor: 'admin'
+                }
+              })
+              
+              return lead
+            })
           })
-          
-          await prisma.leadEvent.create({
-            data: {
-              leadId,
-              eventType: 'STAGE_CHANGE',
-              toStage: 'REASSIGNED',
-              metadata: { bulkAction: true, newRep: payload.repId },
-              actor: 'admin'
-            }
-          })
-          
-          updated.push(lead)
-        }
+        )
+        
+        reassignResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            updated.push(result.value)
+          } else {
+            console.error(`Failed to reassign lead ${leadIds[index]}:`, result.reason)
+          }
+        })
         break
 
       case 'status':
-        // Bulk change status
-        for (const leadId of leadIds) {
-          const lead = await prisma.lead.update({
-            where: { id: leadId },
-            data: { status: payload.status, priority: payload.priority }
+        // Bulk change status - use transaction for data consistency
+        const statusResults = await Promise.allSettled(
+          leadIds.map(async (leadId: string) => {
+            return await prisma.$transaction(async (tx) => {
+              const lead = await tx.lead.update({
+                where: { id: leadId },
+                data: { status: payload.status, priority: payload.priority }
+              })
+              
+              await tx.leadEvent.create({
+                data: {
+                  leadId,
+                  eventType: 'STAGE_CHANGE',
+                  toStage: payload.status,
+                  metadata: { bulkAction: true },
+                  actor: 'admin'
+                }
+              })
+              
+              return lead
+            })
           })
-          
-          await prisma.leadEvent.create({
-            data: {
-              leadId,
-              eventType: 'STAGE_CHANGE',
-              toStage: payload.status,
-              metadata: { bulkAction: true },
-              actor: 'admin'
-            }
-          })
-          
-          updated.push(lead)
-        }
+        )
+        
+        statusResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            updated.push(result.value)
+          } else {
+            console.error(`Failed to update status for lead ${leadIds[index]}:`, result.reason)
+          }
+        })
         break
 
       case 'delete':
         // Soft delete (mark as DO_NOT_CONTACT)
-        for (const leadId of leadIds) {
-          const lead = await prisma.lead.update({
-            where: { id: leadId },
-            data: { status: 'DO_NOT_CONTACT' }
+        const deleteResults = await Promise.allSettled(
+          leadIds.map(async (leadId: string) => {
+            return await prisma.lead.update({
+              where: { id: leadId },
+              data: { status: 'DO_NOT_CONTACT' }
+            })
           })
-          updated.push(lead)
-        }
+        )
+        
+        deleteResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            updated.push(result.value)
+          } else {
+            console.error(`Failed to delete lead ${leadIds[index]}:`, result.reason)
+          }
+        })
         break
     }
 

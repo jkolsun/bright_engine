@@ -161,7 +161,7 @@ export async function generateReferralReward(
     // Create reward record (store as UPSELL type with product identifier)
     const reward = await prisma.revenue.create({
       data: {
-        clientId: referredByUserId as any, // Assign reward to referrer
+        clientId: referredByUserId, // Assign reward to referrer
         type: 'UPSELL',
         amount: rewardAmount,
         product: `referral_reward_${client.id}`,

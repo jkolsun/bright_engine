@@ -29,35 +29,48 @@ export async function POST(request: NextRequest) {
     const adminEmail = 'admin@brightautomations.net'
     const andrewEmail = 'andrew@brightautomations.net'
 
-    // Get preserved user IDs
-    const preservedUsers = await prisma.user.findMany({
-      where: {
-        email: { in: [adminEmail, andrewEmail] }
-      }
-    })
-    const preservedIds = preservedUsers.map(u => u.id)
+    // Use transaction to ensure all-or-nothing cleanup
+    const results = await prisma.$transaction(async (tx) => {
+      // Get preserved user IDs
+      const preservedUsers = await tx.user.findMany({
+        where: {
+          email: { in: [adminEmail, andrewEmail] }
+        }
+      })
+      const preservedIds = preservedUsers.map(u => u.id)
 
-    // Delete all leads (soft delete via CLOSED_LOST)
-    const leadResult = await prisma.lead.updateMany({
-      data: { status: 'CLOSED_LOST' }
-    })
+      // Delete all leads (soft delete via CLOSED_LOST)
+      const leadResult = await tx.lead.updateMany({
+        data: { status: 'CLOSED_LOST' }
+      })
 
-    // Delete all clients
-    const clientResult = await prisma.client.deleteMany({})
+      // Delete all clients
+      const clientResult = await tx.client.deleteMany({})
 
-    // Delete all activities
-    const activityResult = await prisma.clawdbotActivity.deleteMany({})
+      // Delete all activities
+      const activityResult = await tx.clawdbotActivity.deleteMany({})
 
-    // Delete all lead events
-    const eventResult = await prisma.leadEvent.deleteMany({})
+      // Delete all lead events
+      const eventResult = await tx.leadEvent.deleteMany({})
 
-    // Delete all messages
-    const messageResult = await prisma.message.deleteMany({})
+      // Delete all messages
+      const messageResult = await tx.message.deleteMany({})
 
-    // Delete all non-admin users (except admin + andrew)
-    const userResult = await prisma.user.deleteMany({
-      where: {
-        id: { notIn: preservedIds }
+      // Delete all non-admin users (except admin + andrew)
+      const userResult = await tx.user.deleteMany({
+        where: {
+          id: { notIn: preservedIds }
+        }
+      })
+
+      return {
+        preservedUsers,
+        leadResult,
+        clientResult,
+        activityResult,
+        eventResult,
+        messageResult,
+        userResult
       }
     })
 
@@ -65,15 +78,15 @@ export async function POST(request: NextRequest) {
       status: 'ok',
       message: 'Database cleaned successfully',
       cleared: {
-        leads: leadResult.count,
-        clients: clientResult.count,
-        activities: activityResult.count,
-        events: eventResult.count,
-        messages: messageResult.count,
-        users: userResult.count,
+        leads: results.leadResult.count,
+        clients: results.clientResult.count,
+        activities: results.activityResult.count,
+        events: results.eventResult.count,
+        messages: results.messageResult.count,
+        users: results.userResult.count,
       },
       preserved: {
-        users: preservedUsers.map(u => ({ id: u.id, email: u.email, name: u.name }))
+        users: results.preservedUsers.map(u => ({ id: u.id, email: u.email, name: u.name }))
       }
     })
   } catch (error) {

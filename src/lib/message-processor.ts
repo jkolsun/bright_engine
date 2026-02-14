@@ -1,5 +1,6 @@
 import { prisma } from './db'
 import { dispatchWebhook, WebhookEvents } from './webhook-dispatcher'
+import { MessageChannel } from '@prisma/client'
 
 /**
  * Process incoming messages and detect if they're client questions
@@ -7,7 +8,7 @@ import { dispatchWebhook, WebhookEvents } from './webhook-dispatcher'
 export async function processIncomingMessage(
   phone: string, 
   content: string, 
-  channel: string = 'SMS'
+  channel: MessageChannel = 'SMS'
 ): Promise<void> {
   try {
     // Find client by phone number
@@ -28,7 +29,7 @@ export async function processIncomingMessage(
         clientId: lead.client?.id,
         content,
         direction: 'INBOUND',
-        channel: channel as any,
+        channel,
         senderType: lead.client ? 'CLIENT' : 'LEAD',
         senderName: lead.firstName || 'Unknown',
         recipient: phone,

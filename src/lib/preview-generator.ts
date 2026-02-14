@@ -1,5 +1,4 @@
 import { prisma } from './db'
-import { v4 as uuidv4 } from 'uuid'
 
 /**
  * Preview Generation Service
@@ -26,8 +25,46 @@ export async function generatePreview(
 }> {
   const { leadId, clientId } = options
 
-  // Generate unique preview ID
-  const previewId = uuidv4()
+  // Check if lead already has a previewId
+  const existingLead = await prisma.lead.findUnique({
+    where: { id: leadId }
+  })
+  if (!existingLead) throw new Error(`Lead not found: ${leadId}`)
+
+  // If lead already has a previewId, don't overwrite it
+  if (existingLead.previewId && existingLead.previewUrl) {
+    // Just ensure expiration is set
+    if (!existingLead.previewExpiresAt) {
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      await prisma.lead.update({
+        where: { id: leadId },
+        data: { previewExpiresAt: expiresAt }
+      })
+    }
+    try {
+      await prisma.clawdbotActivity.create({
+        data: {
+          actionType: 'PREVIEW_GENERATED',
+          description: `Preview already exists for ${existingLead.companyName}`,
+          leadId,
+          metadata: {
+            previewId: existingLead.previewId,
+            existing: true
+          },
+        },
+      })
+    } catch (err) {
+      console.error('Failed to log:', err)
+    }
+    return {
+      previewId: existingLead.previewId,
+      previewUrl: existingLead.previewUrl,
+      expiresAt: existingLead.previewExpiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    }
+  }
+
+  // Generate new preview ID only if none exists
+  const previewId = `prv_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
 
   // Build preview URL (must be live and accessible)
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://brightengine-production.up.railway.app'

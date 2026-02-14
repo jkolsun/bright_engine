@@ -13,7 +13,7 @@ export default function SuccessPage() {
           to collect your business information and start building your website.
         </p>
         <p className="text-sm text-gray-500">
-          Questions? Text us at (XXX) XXX-XXXX
+          Questions? Email us at admin@brightautomations.net
         </p>
       </Card>
     </div>

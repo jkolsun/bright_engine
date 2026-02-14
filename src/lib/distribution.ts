@@ -166,7 +166,7 @@ export async function distributeLeadsBatch(
     .filter(
       (item) =>
         item.result.status === 'fulfilled' &&
-        (item.result.value as any).success
+        item.result.value.success
     )
 
   const failed = results
@@ -177,7 +177,7 @@ export async function distributeLeadsBatch(
     .filter(
       (item) =>
         item.result.status === 'rejected' ||
-        !(item.result.value as any).success
+        (item.result.status === 'fulfilled' && !item.result.value.success)
     )
 
   return {

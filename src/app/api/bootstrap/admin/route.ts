@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import bcrypt from 'bcryptjs'
 
 /**
  * POST /api/bootstrap/admin
@@ -19,23 +20,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if admin already exists
-    const existing = await prisma.user.findUnique({
-      where: { email }
-    })
-
-    if (existing) {
+    // Block if ANY admin already exists
+    const existingAdmin = await prisma.user.findFirst({ where: { role: 'ADMIN' } })
+    if (existingAdmin) {
       return NextResponse.json(
-        {
-          error: 'Admin already exists',
-          email: existing.email,
-          name: existing.name,
-          message: 'Delete user and re-run if you need to recreate'
+        { 
+          error: 'Admin already exists. Bootstrap disabled.', 
+          email: existingAdmin.email 
         },
-        { status: 409 }
+        { status: 403 }
       )
     }
 
+    // Hash password
+    const hash = await bcrypt.hash(password, 10)
+    
     // Create admin user
     const admin = await prisma.user.create({
       data: {
@@ -43,9 +42,8 @@ export async function POST(request: NextRequest) {
         name,
         role: 'ADMIN',
         status: 'ACTIVE',
-        phone: '+17322283794', // Your phone for alerts
-        // Note: Password stored as plaintext for now (TODO: add bcrypt)
-        // In production, hash passwords with bcrypt
+        passwordHash: hash,
+        phone: process.env.ANDREW_PHONE || '+17322283794',
       }
     })
 

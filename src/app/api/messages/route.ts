@@ -43,3 +43,45 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
+// POST /api/messages - Send a message
+export async function POST(request: NextRequest) {
+  try {
+    const { leadId, clientId, to, content, channel, senderType, senderName } = await request.json()
+    
+    if (!content) {
+      return NextResponse.json({ error: 'Content required' }, { status: 400 })
+    }
+
+    // Create message record
+    const message = await prisma.message.create({
+      data: {
+        leadId: leadId || undefined,
+        clientId: clientId || undefined,
+        content,
+        direction: 'OUTBOUND',
+        channel: channel || 'SMS',
+        senderType: senderType || 'ADMIN',
+        senderName: senderName || 'admin',
+        recipient: to || undefined,
+      }
+    })
+
+    // Log event if lead
+    if (leadId) {
+      await prisma.leadEvent.create({
+        data: {
+          leadId,
+          eventType: 'TEXT_SENT',
+          actor: senderName || 'admin',
+          metadata: { channel, messageId: message.id },
+        }
+      })
+    }
+
+    return NextResponse.json({ message })
+  } catch (error) {
+    console.error('Error creating message:', error)
+    return NextResponse.json({ error: 'Failed to send message' }, { status: 500 })
+  }
+}

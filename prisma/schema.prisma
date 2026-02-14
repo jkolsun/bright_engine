@@ -133,6 +133,7 @@ model Lead {
   colorPrefs       Json?        @map("color_prefs")
   
   notes            String?      @db.Text
+  callScript       String?      @db.Text @map("call_script")
   churnRiskScore   Int          @default(0) @map("churn_risk_score")
   createdAt        DateTime     @default(now()) @map("created_at")
   updatedAt        DateTime     @updatedAt @map("updated_at")

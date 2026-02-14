@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { addEnrichmentJob, addPersonalizationJob } from '@/worker/queue'
+import { addEnrichmentJob } from '@/worker/queue'
 import { generatePreviewId, getTimezoneFromState } from '@/lib/utils'
+import { verifySession } from '@/lib/session'
 
 // GET /api/leads - List leads with filters
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams
+  try {
+    // Authentication check - admin or rep access
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? verifySession(sessionCookie) : null
+    if (!session || !['ADMIN', 'REP'].includes(session.role)) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    const searchParams = request.nextUrl.searchParams
   const status = searchParams.get('status')
   const source = searchParams.get('source')
   const priority = searchParams.get('priority')
@@ -17,7 +26,11 @@ export async function GET(request: NextRequest) {
   
   // Default: hide CLOSED_LOST (soft deleted) leads unless explicitly requested
   if (status) {
-    where.status = status
+    if (status.includes(',')) {
+      where.status = { in: status.split(',') }
+    } else {
+      where.status = status
+    }
   } else {
     where.NOT = { status: 'CLOSED_LOST' }
   }
@@ -55,6 +68,13 @@ export async function GET(request: NextRequest) {
 // POST /api/leads - Create single lead
 export async function POST(request: NextRequest) {
   try {
+    // Authentication check - admin or rep access
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? verifySession(sessionCookie) : null
+    if (!session || !['ADMIN', 'REP'].includes(session.role)) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
     const data = await request.json()
 
     const previewId = generatePreviewId()
@@ -89,7 +109,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Queue enrichment and personalization (non-blocking)
+    // Queue enrichment (non-blocking) - pipeline chaining handles the rest
     try {
       await addEnrichmentJob({
         leadId: lead.id,
@@ -97,7 +117,7 @@ export async function POST(request: NextRequest) {
         city: lead.city || undefined,
         state: lead.state || undefined,
       })
-      await addPersonalizationJob({ leadId: lead.id })
+      // Pipeline chaining in worker/index.ts handles: enrichment → preview → personalization → scripts → distribution
     } catch (queueError) {
       console.warn('Queue job failed (non-blocking):', queueError)
       // Don't fail lead creation if queue jobs fail
