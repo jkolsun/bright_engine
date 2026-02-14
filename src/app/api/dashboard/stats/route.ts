@@ -62,6 +62,23 @@ export async function GET() {
     const totalMRR = upsellRevenue.reduce((sum, client) => sum + client.monthlyRevenue, 0)
     const upsellMRR = totalMRR - hostingMRR
 
+    // Add today's numbers
+    const [todayLeads, todayHot, todayPaid, pipelineCounts] = await Promise.all([
+      prisma.lead.count({ where: { createdAt: { gte: today } } }),
+      prisma.lead.count({ where: { status: 'HOT_LEAD', updatedAt: { gte: today } } }),
+      prisma.lead.count({ where: { status: 'PAID', updatedAt: { gte: today } } }),
+      prisma.lead.groupBy({ by: ['status'], _count: { _all: true } }),
+    ])
+
+    // Calculate preview engagement metrics
+    const totalLeads = await prisma.lead.count()
+    const previewViews = await prisma.leadEvent.count({
+      where: { eventType: 'PREVIEW_VIEWED' }
+    })
+    const previewClicks = await prisma.leadEvent.count({
+      where: { eventType: { in: ['PREVIEW_CTA_CLICKED', 'PREVIEW_CALL_CLICKED'] } }
+    })
+
     return NextResponse.json({
       pipeline,
       today: todayStats,
@@ -70,6 +87,13 @@ export async function GET() {
         upsells: upsellMRR,
         total: totalMRR,
       },
+      todayLeads,
+      todayHot,
+      todayPaid,
+      pipelineDetailed: Object.fromEntries(pipelineCounts.map(p => [p.status, p._count._all])),
+      totalLeads,
+      previewViews,
+      previewClicks,
     })
   } catch (error) {
     console.error('Dashboard stats error:', error)
