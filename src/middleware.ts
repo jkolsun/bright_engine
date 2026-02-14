@@ -16,6 +16,8 @@ export function middleware(request: NextRequest) {
   // Public routes — no auth needed
   if (
     pathname === '/login' ||
+    pathname === '/success' || 
+    pathname === '/terms' ||
     pathname.startsWith('/preview/') ||
     pathname.startsWith('/api/preview/track') ||
     pathname.startsWith('/api/health') ||
