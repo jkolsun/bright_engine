@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
 
 // PATCH /api/users/[id] - Update user
 export async function PATCH(
@@ -7,6 +8,13 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Admin-only access check - managing user accounts
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const data = await request.json()
 
     const user = await prisma.user.update({
@@ -36,6 +44,13 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Admin-only access check
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const userId = params.id
 
     const user = await prisma.user.findUnique({

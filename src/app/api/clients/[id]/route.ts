@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
 
 // GET /api/clients/[id] - Get client detail
 export async function GET(
@@ -7,6 +8,13 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Admin-only access check - sensitive client/financial data
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const client = await prisma.client.findUnique({
       where: { id: params.id },
       include: {
@@ -55,6 +63,13 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Admin-only access check
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const data = await request.json()
 
     const client = await prisma.client.update({
@@ -81,6 +96,13 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Admin-only access check
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const clientId = params.id
 
     const client = await prisma.client.findUnique({
