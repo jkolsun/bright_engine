@@ -1,24 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// POST /api/webhook-trigger-simple - Simple webhook test without dependencies
+// POST /api/webhook-trigger-simple - Ultra simple test
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    console.log('🚀 Simple webhook test received:', body)
-    
     return NextResponse.json({ 
-      success: true, 
+      success: true,
+      message: "Simple webhook working perfectly",
       received: body,
-      timestamp: new Date().toISOString(),
-      message: 'Webhook test successful'
+      timestamp: new Date().toISOString()
     })
   } catch (error) {
     console.error('Simple webhook error:', error)
     return NextResponse.json({ 
-      success: false, 
-      error: 'Failed to process webhook',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      success: false,
+      error: String(error),
+      timestamp: new Date().toISOString()
     }, { status: 500 })
   }
+}
+
+// GET /api/webhook-trigger-simple - Health check
+export async function GET() {
+  return NextResponse.json({ 
+    status: "ok",
+    message: "Simple webhook endpoint is working",
+    timestamp: new Date().toISOString()
+  })
 }

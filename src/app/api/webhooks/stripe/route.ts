@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { dispatchWebhook, WebhookEvents } from '@/lib/webhook-dispatcher'
-import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { prisma } from '@/lib/db'
 import { processRevenueCommission } from '@/lib/commissions'
@@ -11,7 +10,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
-  const signature = headers().get('stripe-signature')
+  const signature = request.headers.get('stripe-signature')
 
   if (!signature) {
     return NextResponse.json({ error: 'No signature' }, { status: 400 })

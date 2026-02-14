@@ -1,6 +1,5 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import moment from 'moment-timezone'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -24,9 +23,10 @@ export function formatPhone(phone: string): string {
 }
 
 export function canSendMessage(timezone: string = 'America/New_York'): boolean {
-  // Check if current time in client's timezone is between 8 AM - 9 PM
-  const clientTime = moment().tz(timezone)
-  const hour = clientTime.hour()
+  // Simplified timezone checking - use system time for now
+  // TODO: Implement proper timezone conversion without moment.js
+  const now = new Date()
+  const hour = now.getHours()
   return hour >= 8 && hour < 21
 }
 
