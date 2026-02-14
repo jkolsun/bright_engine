@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
 
+export const dynamic = 'force-dynamic'
+
 // POST /api/admin/bulk-action - Bulk operations on leads
 export async function POST(request: NextRequest) {
   try {

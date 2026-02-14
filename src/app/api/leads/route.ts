@@ -4,6 +4,8 @@ import { addEnrichmentJob } from '@/worker/queue'
 import { generatePreviewId, getTimezoneFromState } from '@/lib/utils'
 import { verifySession } from '@/lib/session'
 
+export const dynamic = 'force-dynamic'
+
 // GET /api/leads - List leads with filters
 export async function GET(request: NextRequest) {
   try {

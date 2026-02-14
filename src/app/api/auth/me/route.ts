@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/auth/me
  * Returns the currently authenticated user from the session cookie

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
 
+export const dynamic = 'force-dynamic'
+
 // GET /api/revenue - List revenue transactions
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams

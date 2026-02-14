@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * DELETE /api/clients/delete
  * Soft delete clients (mark deleted, preserve audit trail)
