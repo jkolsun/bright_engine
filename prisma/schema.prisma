@@ -112,6 +112,7 @@ model Lead {
   assignedToId     String?      @map("assigned_to_id")
   source           LeadSource
   sourceDetail     String?      @map("source_detail") // Rep name, campaign name, ad variant
+  campaign         String?
   previewId        String?      @unique @map("preview_id")
   previewUrl       String?      @map("preview_url")
   previewExpiresAt DateTime?    @map("preview_expires_at")

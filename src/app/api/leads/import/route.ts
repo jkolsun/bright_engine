@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
             status: 'NEW',
             source: 'COLD_EMAIL',
             sourceDetail: campaign || 'CSV Import',
+            campaign: campaign || undefined,
             assignedToId: assignTo,
             priority: 'COLD',
             timezone: getTimezoneFromState(parsed.state || '') || 'America/New_York',

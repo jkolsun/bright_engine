@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db'
 export async function GET(request: NextRequest) {
   const campaign = request.nextUrl.searchParams.get('campaign')
   const leads = await prisma.lead.findMany({
-    where: campaign ? { sourceDetail: campaign } : {},
+    where: campaign ? { campaign } : {},
     orderBy: { createdAt: 'desc' },
   })
 

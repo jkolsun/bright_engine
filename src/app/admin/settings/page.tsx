@@ -50,25 +50,58 @@ export default function SettingsPage() {
       </Card>
 
       {/* Content */}
-      <Card className="p-12">
-        <div className="text-center space-y-4">
-          <div className="inline-block p-4 bg-blue-100 rounded-full">
-            <Clock size={32} className="text-blue-600" />
+      {activeTab === 'team' && (
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold">Team Management</h3>
+            <Button onClick={() => window.location.href = '/admin/settings/reps'}>
+              Manage Reps →
+            </Button>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            {tabs.find(t => t.id === activeTab)?.label} Settings
-          </h2>
-          <p className="text-gray-600 max-w-md mx-auto">
-            Settings management is coming soon. This feature is currently in development.
-          </p>
-          <p className="text-sm text-gray-500">
-            Please contact your administrator for configuration changes.
-          </p>
-          <Button variant="outline" className="mt-6">
-            Contact Support
-          </Button>
-        </div>
-      </Card>
+          <p className="text-gray-600">Add, edit, and manage your sales reps from the Reps page.</p>
+        </Card>
+      )}
+
+      {activeTab === 'api' && (
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">API Configuration</h3>
+          <div className="space-y-3">
+            <div className="flex justify-between p-3 bg-gray-50 rounded text-sm">
+              <span className="text-gray-600">Stripe</span>
+              <span className="text-gray-900">Configured via Railway env vars</span>
+            </div>
+            <div className="flex justify-between p-3 bg-gray-50 rounded text-sm">
+              <span className="text-gray-600">Twilio</span>
+              <span className="text-gray-900">Configured via Railway env vars</span>
+            </div>
+            <div className="flex justify-between p-3 bg-gray-50 rounded text-sm">
+              <span className="text-gray-600">SerpAPI</span>
+              <span className="text-gray-900">Used during import enrichment</span>
+            </div>
+            <div className="flex justify-between p-3 bg-gray-50 rounded text-sm">
+              <span className="text-gray-600">Anthropic</span>
+              <span className="text-gray-900">Used for personalization + scripts</span>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-4">All API keys are managed via Railway environment variables for security.</p>
+        </Card>
+      )}
+
+      {activeTab !== 'team' && activeTab !== 'api' && (
+        <Card className="p-12">
+          <div className="text-center space-y-4">
+            <div className="inline-block p-4 bg-blue-100 rounded-full">
+              <Clock size={32} className="text-blue-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              {tabs.find(t => t.id === activeTab)?.label} Settings
+            </h2>
+            <p className="text-gray-600 max-w-md mx-auto">
+              This section is in development. Contact Andrew for configuration changes.
+            </p>
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

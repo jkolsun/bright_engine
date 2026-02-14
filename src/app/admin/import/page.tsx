@@ -99,7 +99,7 @@ export default function ImportPage() {
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-600">API Cost</p>
-                <p className="text-xl font-bold text-gray-900">$18.42</p>
+                <p className="text-xl font-bold text-gray-900">{importResult?.summary ? `$${((importResult.summary.createdCount || 0) * 0.004).toFixed(2)}` : '—'}</p>
               </div>
             </div>
           </Card>
@@ -259,7 +259,7 @@ export default function ImportPage() {
               {/* Stats Grid */}
               <div className="grid grid-cols-3 gap-6 mb-8">
                 <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-4xl font-bold text-blue-600">2,390</p>
+                  <p className="text-4xl font-bold text-blue-600">{importResult?.summary?.createdCount || importResult?.createdCount || '—'}</p>
                   <p className="text-sm text-gray-700 mt-2">Campaign A<br/>(Bad Website)</p>
                 </div>
                 <div className="p-6 bg-purple-50 rounded-lg border border-purple-200">
@@ -291,22 +291,13 @@ export default function ImportPage() {
               {/* Cost Breakdown */}
               <Card className="p-6 bg-gray-50">
                 <h4 className="font-semibold text-gray-900 mb-4">API Cost Breakdown</h4>
-                <div className="space-y-2 text-sm text-left">
+                <div className="space-y-2 text-sm">
+                  <p className="text-gray-600">Estimated API costs calculated at ~$0.004 per lead</p>
                   <div className="flex justify-between">
-                    <span className="text-gray-700">SerpAPI (enrichment)</span>
-                    <span className="font-semibold text-gray-900">$12.09</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-700">Serper (research)</span>
-                    <span className="font-semibold text-gray-900">$4.84</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-700">AI (personalization)</span>
-                    <span className="font-semibold text-gray-900">$1.49</span>
-                  </div>
-                  <div className="flex justify-between pt-2 border-t border-gray-300">
-                    <span className="font-semibold text-gray-900">Total</span>
-                    <span className="font-bold text-gray-900">$18.42</span>
+                    <span className="text-gray-600">Total estimated cost</span>
+                    <span className="font-bold text-gray-900">
+                      ${((importResult?.summary?.createdCount || importResult?.createdCount || 0) * 0.004).toFixed(2)}
+                    </span>
                   </div>
                 </div>
               </Card>
