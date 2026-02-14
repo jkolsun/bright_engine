@@ -6,6 +6,21 @@ import { Phone, Mail, MapPin, Star, Clock } from 'lucide-react'
 export default function PreviewTemplate({ lead }: { lead: any }) {
   const [showBanner] = useState(true)
 
+  const industryConfig: Record<string, { gradient: string, tagline: string, ctaText: string }> = {
+    PLUMBING: { gradient: 'from-blue-700 to-blue-900', tagline: 'Professional Plumbing Solutions You Can Trust', ctaText: 'Schedule Service' },
+    HVAC: { gradient: 'from-orange-600 to-red-800', tagline: 'Keep Your Home Comfortable Year-Round', ctaText: 'Get Free Estimate' },
+    ROOFING: { gradient: 'from-slate-700 to-slate-900', tagline: 'Protecting What Matters Most', ctaText: 'Free Roof Inspection' },
+    RESTORATION: { gradient: 'from-emerald-700 to-teal-900', tagline: '24/7 Emergency Restoration Services', ctaText: 'Call Now' },
+    ELECTRICAL: { gradient: 'from-yellow-600 to-amber-800', tagline: 'Safe & Reliable Electrical Services', ctaText: 'Book Electrician' },
+    PAINTING: { gradient: 'from-purple-600 to-indigo-800', tagline: 'Transform Your Space with Expert Painting', ctaText: 'Get Quote' },
+    LANDSCAPING: { gradient: 'from-green-600 to-emerald-800', tagline: 'Beautiful Landscapes, Expert Care', ctaText: 'Free Consultation' },
+    CLEANING: { gradient: 'from-cyan-600 to-blue-800', tagline: 'Spotless Results, Every Time', ctaText: 'Book Cleaning' },
+    GENERAL_CONTRACTING: { gradient: 'from-gray-700 to-gray-900', tagline: 'Quality Construction & Renovation', ctaText: 'Request Estimate' },
+    PEST_CONTROL: { gradient: 'from-red-700 to-rose-900', tagline: 'Protect Your Home from Unwanted Guests', ctaText: 'Schedule Inspection' },
+  }
+
+  const config = industryConfig[lead.industry] || industryConfig.GENERAL_CONTRACTING
+
   const handleCTAClick = async () => {
     await fetch('/api/preview/track', {
       method: 'POST',
@@ -44,13 +59,13 @@ export default function PreviewTemplate({ lead }: { lead: any }) {
       )}
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-600 to-blue-800 text-white py-20 px-4">
+      <section className={`relative bg-gradient-to-br ${config.gradient} text-white py-20 px-4`}>
         <div className="max-w-6xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             {lead.companyName}
           </h1>
           <p className="text-xl md:text-2xl text-blue-100 mb-8">
-            Professional {lead.industry.toLowerCase().replace('_', ' ')} services in {lead.city}, {lead.state}
+            {config.tagline}
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <a
@@ -65,7 +80,7 @@ export default function PreviewTemplate({ lead }: { lead: any }) {
               onClick={handleCTAClick}
               className="inline-flex items-center justify-center gap-2 border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-blue-600 transition-colors"
             >
-              Get Free Quote
+              {config.ctaText}
             </button>
           </div>
         </div>
@@ -154,7 +169,7 @@ export default function PreviewTemplate({ lead }: { lead: any }) {
       )}
 
       {/* Contact Section */}
-      <section className="py-16 px-4 bg-blue-600 text-white">
+      <section className={`py-16 px-4 bg-gradient-to-br ${config.gradient} text-white`}>
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
           <p className="text-xl text-blue-100 mb-8">
