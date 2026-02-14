@@ -27,9 +27,9 @@ export default function ClientsPage() {
     companyName: '',
     siteUrl: '',
     industry: 'GENERAL_CONTRACTING',
-    monthlyRevenue: 39,
-    siteBuildFee: 0,
-    chargeSiteBuildFee: false
+    monthlyRevenue: 39,    // Keep — this IS the hosting rate
+    siteBuildFee: 149,     // FIX — was 0
+    chargeSiteBuildFee: true,  // FIX — was false
   })
 
   // Load clients from API
@@ -68,9 +68,9 @@ export default function ClientsPage() {
           companyName: '',
           siteUrl: '',
           industry: 'GENERAL_CONTRACTING',
-          monthlyRevenue: 39,
-          siteBuildFee: 0,
-          chargeSiteBuildFee: false
+          monthlyRevenue: 39,    // Keep — this IS the hosting rate
+          siteBuildFee: 149,     // FIX — was 0
+          chargeSiteBuildFee: true,  // FIX — was false
         })
         fetchClients() // Reload list
       } else {
