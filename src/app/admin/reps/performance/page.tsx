@@ -12,6 +12,8 @@ export default function RepPerformancePage() {
   const [reps, setReps] = useState<any[]>([])
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [allLeads, setAllLeads] = useState<any[]>([])
+  const [allCommissions, setAllCommissions] = useState<any[]>([])
 
   useEffect(() => {
     loadRepPerformance()
@@ -19,33 +21,34 @@ export default function RepPerformancePage() {
 
   const loadRepPerformance = async () => {
     try {
-      const [repsRes, leadsRes] = await Promise.all([
+      const [repsRes, leadsRes, commRes] = await Promise.all([
         fetch('/api/users?role=REP'),
         fetch('/api/leads?limit=500'),
         fetch('/api/commissions')
       ])
 
-      if (repsRes.ok) {
-        const data = await repsRes.json()
-        setReps(data.users || [])
-      }
+      const repsData = repsRes.ok ? await repsRes.json() : { users: [] }
+      const leadsData = leadsRes.ok ? await leadsRes.json() : { leads: [] }
+      const commData = commRes.ok ? await commRes.json() : { commissions: [] }
+
+      setReps(repsData.users || [])
+      setAllLeads(leadsData.leads || [])
+      setAllCommissions(commData.commissions || [])
     } catch (error) {
-      console.error('Failed to load rep performance:', error)
-    } finally {
-      setLoading(false)
-    }
+      console.error('Failed to load:', error)
+    } finally { setLoading(false) }
   }
 
   // Calculate rep stats
   const repStats = (rep: any) => {
-    return {
-      assignedLeads: 0, // Would fetch from leads assigned to rep
-      hotLeads: 0,
-      qualifiedLeads: 0,
-      closedDeals: 0,
-      totalRevenue: 0,
-      commission: 0
-    }
+    const assigned = allLeads.filter((l: any) => l.assignedToId === rep.id)
+    const closed = assigned.filter((l: any) => l.status === 'PAID')
+    const hot = assigned.filter((l: any) => l.status === 'HOT_LEAD')
+    const revenue = closed.length * 149
+    const commission = allCommissions
+      .filter((c: any) => c.repId === rep.id)
+      .reduce((sum: number, c: any) => sum + (c.amount || 0), 0)
+    return { assignedLeads: assigned.length, hotLeads: hot.length, closedDeals: closed.length, totalRevenue: revenue, commission }
   }
 
   if (loading) {
@@ -130,21 +133,24 @@ export default function RepPerformancePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {reps.map((rep) => (
-                  <tr key={rep.id} className="hover:bg-gray-50">
-                    <td className="p-4 font-medium text-gray-900">{rep.name}</td>
-                    <td className="p-4 text-gray-700">{rep.email}</td>
-                    <td className="p-4 text-center text-gray-700">0</td>
-                    <td className="p-4 text-center text-gray-700">0</td>
-                    <td className="p-4 text-center text-gray-700">0</td>
-                    <td className="p-4 text-right font-semibold text-gray-900">$0</td>
-                    <td className="p-4 text-right">
-                      <Link href={`/admin/reps/${rep.id}`}>
-                        <Button variant="ghost" size="sm">View</Button>
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                {reps.map((rep) => {
+                  const stats = repStats(rep)
+                  return (
+                    <tr key={rep.id} className="hover:bg-gray-50">
+                      <td className="p-4 font-medium text-gray-900">{rep.name}</td>
+                      <td className="p-4 text-gray-700">{rep.email}</td>
+                      <td className="p-4 text-center text-gray-700">{stats.assignedLeads}</td>
+                      <td className="p-4 text-center text-gray-700">{stats.hotLeads}</td>
+                      <td className="p-4 text-center text-gray-700">{stats.closedDeals}</td>
+                      <td className="p-4 text-right font-semibold text-gray-900">{formatCurrency(stats.commission)}</td>
+                      <td className="p-4 text-right">
+                        <Link href={`/admin/reps/${rep.id}`}>
+                          <Button variant="ghost" size="sm">View</Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
