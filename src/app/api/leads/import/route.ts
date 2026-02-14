@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { parseCSV } from '@/lib/csv-parser'
 import { addEnrichmentJob } from '@/worker/queue'
 import { logActivity } from '@/lib/logging'
+import { getTimezoneFromState } from '@/lib/utils'
 
 /**
  * POST /api/leads/import
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
             sourceDetail: campaign || 'CSV Import',
             assignedToId: assignTo,
             priority: 'COLD',
-            timezone: 'America/New_York', // TODO: infer from state
+            timezone: getTimezoneFromState(parsed.state || '') || 'America/New_York',
           },
         })
 

@@ -29,49 +29,23 @@ export default function LeaderboardPage() {
       setLoading(true)
       setError(null)
 
-      // Get all reps
       const repsRes = await fetch('/api/users?role=REP')
-      if (!repsRes.ok) {
-        setError('Failed to load reps')
-        return
-      }
-
-      const repsData = await repsRes.json()
+      const repsData = repsRes.ok ? await repsRes.json() : { users: [] }
       const reps = repsData.users || []
 
-      // Get all leads to count per rep
-      const leadsRes = await fetch('/api/leads?limit=1000')
-      const leadsData = leadsRes.ok ? await leadsRes.json() : { leads: [] }
-      const allLeads = leadsData.leads || []
-
-      // Build rankings
-      const rankings: RepRanking[] = reps
-        .map((rep: any) => {
-          const repLeads = allLeads.filter(
-            (l: any) => l.assignedToId === rep.id && l.status === 'PAID'
-          )
-          const closedLeads = repLeads.length
-          const totalRevenue = closedLeads * 149 // Assuming $149 per closed lead
-
-          return {
-            rep,
-            closedLeads,
-            totalRevenue,
-          }
-        })
+      // Use totalCloses field from User model (added in Step 14)
+      const rankings = reps
+        .map((rep: any) => ({
+          rep,
+          closedLeads: rep.totalCloses || 0,
+          totalRevenue: (rep.totalCloses || 0) * 149,
+        }))
         .sort((a: any, b: any) => b.totalRevenue - a.totalRevenue)
         .map((item: any, idx: number) => ({
           ...item,
           rank: idx + 1,
           icon: idx === 0 ? Trophy : idx === 1 ? Medal : idx === 2 ? Award : undefined,
-          color:
-            idx === 0
-              ? 'text-yellow-500'
-              : idx === 1
-                ? 'text-gray-400'
-                : idx === 2
-                  ? 'text-amber-600'
-                  : 'text-gray-400',
+          color: idx === 0 ? 'text-yellow-500' : idx === 1 ? 'text-gray-400' : idx === 2 ? 'text-amber-600' : 'text-gray-400',
         }))
 
       setLeaderboard(rankings)
