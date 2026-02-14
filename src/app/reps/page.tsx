@@ -32,12 +32,11 @@ export default function RepsPage() {
       const currentUser = meData.user
       setRepData(currentUser)
 
-      // Get all leads and filter to those assigned to current user
-      const leadsRes = await fetch('/api/leads?limit=100')
+      // Get leads assigned to current user (server-side filtering)
+      const leadsRes = await fetch(`/api/leads?assignedTo=${currentUser.id}&limit=200`)
       if (leadsRes.ok) {
         const data = await leadsRes.json()
-        const myLeads = data.leads?.filter((l: any) => l.assignedToId === currentUser.id) || []
-        setAssignedLeads(myLeads)
+        setAssignedLeads(data.leads || [])
       }
 
       // Get commission data (optional)
