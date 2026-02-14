@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { dispatchWebhook, WebhookEvents } from '@/lib/webhook-dispatcher'
 
-// POST /api/admin/webhook-trigger - Manual webhook testing/triggering
+// POST /api/webhook-trigger - Manual webhook testing/triggering (API key auth)
 export async function POST(request: NextRequest) {
+  // Require API key authentication
+  const apiKey = request.headers.get('x-api-key') || request.headers.get('authorization')?.replace('Bearer ', '')
+  if (!apiKey || apiKey !== process.env.CLAWDBOT_API_KEY) {
+    return NextResponse.json({ error: 'Invalid API key - use CLAWDBOT_API_KEY' }, { status: 401 })
+  }
   try {
     const { eventType, data } = await request.json()
 

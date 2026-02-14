@@ -13,6 +13,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Webhook trigger has its own auth
+  if (pathname === '/api/webhook-trigger') {
+    return NextResponse.next()
+  }
+
   // Public routes — no auth needed
   if (
     pathname === '/login' ||
