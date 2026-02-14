@@ -3,74 +3,198 @@ import Redis from 'ioredis'
 
 let connection: Redis | null = null
 let isRedisAvailable = false
+let connectionAttempted = false
 
-// Try to connect to Redis, but don't fail if it's not available
-try {
-  if (process.env.REDIS_URL) {
-    // Use Railway's internal Redis URL
-    connection = new Redis(process.env.REDIS_URL, {
-      maxRetriesPerRequest: null,
-      retryStrategy: () => null, // Don't retry, just fail fast
-      connectTimeout: 1000,
-    })
-  } else {
-    // Fallback to localhost (for local development)
-    connection = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD || undefined,
-      maxRetriesPerRequest: null,
-      retryStrategy: () => null, // Don't retry, just fail fast
-      connectTimeout: 1000,
-    })
+// Lazy initialization - only connect when first needed
+function initializeRedisConnection() {
+  if (connectionAttempted) {
+    return // Already tried to initialize
   }
-  
-  connection.on('error', (err) => {
-    console.warn('Redis connection error (non-blocking):', err.message)
-    isRedisAvailable = false
-  })
+  connectionAttempted = true
 
-  connection.on('connect', () => {
-    console.log('Redis connected')
-    isRedisAvailable = true
-  })
-} catch (err) {
-  console.warn('Redis initialization failed (non-blocking):', err)
-  connection = null
-  isRedisAvailable = false
+  // Only attempt connection in runtime environments, not during build
+  if (process.env.NODE_ENV === 'production' || process.env.REDIS_URL || process.env.REDIS_HOST) {
+    try {
+      if (process.env.REDIS_URL) {
+        // Use Railway's internal Redis URL
+        connection = new Redis(process.env.REDIS_URL, {
+          maxRetriesPerRequest: null,
+          retryStrategy: () => null, // Don't retry, just fail fast
+          connectTimeout: 1000,
+        })
+      } else {
+        // Fallback to localhost (for local development)
+        connection = new Redis({
+          host: process.env.REDIS_HOST || 'localhost',
+          port: parseInt(process.env.REDIS_PORT || '6379'),
+          password: process.env.REDIS_PASSWORD || undefined,
+          maxRetriesPerRequest: null,
+          retryStrategy: () => null, // Don't retry, just fail fast
+          connectTimeout: 1000,
+        })
+      }
+      
+      connection.on('error', (err) => {
+        console.warn('Redis connection error (non-blocking):', err.message)
+        isRedisAvailable = false
+      })
+
+      connection.on('connect', () => {
+        console.log('Redis connected')
+        isRedisAvailable = true
+      })
+    } catch (err) {
+      console.warn('Redis initialization failed (non-blocking):', err)
+      connection = null
+      isRedisAvailable = false
+    }
+  }
 }
 
-// Define queues (will only work if Redis is available)
-// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-export const enrichmentQueue = connection ? new Queue('enrichment', { connection }) : null
-// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-export const previewQueue = connection ? new Queue('preview', { connection }) : null
-// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-export const personalizationQueue = connection ? new Queue('personalization', { connection }) : null
-// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-export const scriptQueue = connection ? new Queue('scripts', { connection }) : null
-// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-export const distributionQueue = connection ? new Queue('distribution', { connection }) : null
-// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-export const sequenceQueue = connection ? new Queue('sequence', { connection }) : null
-// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-export const monitoringQueue = connection ? new Queue('monitoring', { connection }) : null
+// Lazy queue getters - initialize Redis connection on first use
+let enrichmentQueue: Queue | null = null
+let previewQueue: Queue | null = null
+let personalizationQueue: Queue | null = null
+let scriptQueue: Queue | null = null
+let distributionQueue: Queue | null = null
+let sequenceQueue: Queue | null = null
+let monitoringQueue: Queue | null = null
 
-// Queue events for monitoring (only if Redis available)
-// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-export const enrichmentEvents = connection ? new QueueEvents('enrichment', { connection }) : null
-// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-export const previewEvents = connection ? new QueueEvents('preview', { connection }) : null
-// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-export const personalizationEvents = connection ? new QueueEvents('personalization', { connection }) : null
-// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-export const scriptEvents = connection ? new QueueEvents('scripts', { connection }) : null
-// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-export const distributionEvents = connection ? new QueueEvents('distribution', { connection }) : null
-// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-export const sequenceEvents = connection ? new QueueEvents('sequence', { connection }) : null
-// @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-export const monitoringEvents = connection ? new QueueEvents('monitoring', { connection }) : null
+let enrichmentEvents: QueueEvents | null = null
+let previewEvents: QueueEvents | null = null
+let personalizationEvents: QueueEvents | null = null
+let scriptEvents: QueueEvents | null = null
+let distributionEvents: QueueEvents | null = null
+let sequenceEvents: QueueEvents | null = null
+let monitoringEvents: QueueEvents | null = null
+
+// Get or create queues (with lazy Redis initialization)
+function getQueues() {
+  initializeRedisConnection()
+  
+  if (!enrichmentQueue && connection) {
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    enrichmentQueue = new Queue('enrichment', { connection })
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    enrichmentEvents = new QueueEvents('enrichment', { connection })
+  }
+  if (!previewQueue && connection) {
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    previewQueue = new Queue('preview', { connection })
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    previewEvents = new QueueEvents('preview', { connection })
+  }
+  if (!personalizationQueue && connection) {
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    personalizationQueue = new Queue('personalization', { connection })
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    personalizationEvents = new QueueEvents('personalization', { connection })
+  }
+  if (!scriptQueue && connection) {
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    scriptQueue = new Queue('scripts', { connection })
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    scriptEvents = new QueueEvents('scripts', { connection })
+  }
+  if (!distributionQueue && connection) {
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    distributionQueue = new Queue('distribution', { connection })
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    distributionEvents = new QueueEvents('distribution', { connection })
+  }
+  if (!sequenceQueue && connection) {
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    sequenceQueue = new Queue('sequence', { connection })
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    sequenceEvents = new QueueEvents('sequence', { connection })
+  }
+  if (!monitoringQueue && connection) {
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    monitoringQueue = new Queue('monitoring', { connection })
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    monitoringEvents = new QueueEvents('monitoring', { connection })
+  }
+}
+
+// Export getters instead of direct references
+export function getEnrichmentQueue() {
+  getQueues()
+  return enrichmentQueue
+}
+
+export function getPreviewQueue() {
+  getQueues()
+  return previewQueue
+}
+
+export function getPersonalizationQueue() {
+  getQueues()
+  return personalizationQueue
+}
+
+export function getScriptQueue() {
+  getQueues()
+  return scriptQueue
+}
+
+export function getDistributionQueue() {
+  getQueues()
+  return distributionQueue
+}
+
+export function getSequenceQueue() {
+  getQueues()
+  return sequenceQueue
+}
+
+export function getMonitoringQueue() {
+  getQueues()
+  return monitoringQueue
+}
+
+export function getEnrichmentEvents() {
+  getQueues()
+  return enrichmentEvents
+}
+
+export function getPreviewEvents() {
+  getQueues()
+  return previewEvents
+}
+
+export function getPersonalizationEvents() {
+  getQueues()
+  return personalizationEvents
+}
+
+export function getScriptEvents() {
+  getQueues()
+  return scriptEvents
+}
+
+export function getDistributionEvents() {
+  getQueues()
+  return distributionEvents
+}
+
+export function getSequenceEvents() {
+  getQueues()
+  return sequenceEvents
+}
+
+export function getMonitoringEvents() {
+  getQueues()
+  return monitoringEvents
+}
+
+// Backward compatibility - legacy direct exports (now getters)
+export const getEnrichmentQueueRef = () => enrichmentQueue
+export const getPreviewQueueRef = () => previewQueue
+export const getPersonalizationQueueRef = () => personalizationQueue
+export const getScriptQueueRef = () => scriptQueue
+export const getDistributionQueueRef = () => distributionQueue
+export const getSequenceQueueRef = () => sequenceQueue
+export const getMonitoringQueueRef = () => monitoringQueue
 
 // Helper to add jobs - gracefully handle if Redis unavailable
 
@@ -85,13 +209,14 @@ export async function addEnrichmentJob(data: {
   city?: string
   state?: string
 }) {
-  if (!enrichmentQueue || !isRedisAvailable) {
+  const queue = getEnrichmentQueue()
+  if (!queue || !isRedisAvailable) {
     console.warn('Enrichment queue unavailable, skipping job for lead:', data.leadId)
     return null
   }
   
   try {
-    return await enrichmentQueue.add(
+    return await queue.add(
       'enrich-lead',
       data,
       {
@@ -112,13 +237,14 @@ export async function addPreviewGenerationJob(data: {
   leadId: string
   clientId?: string
 }) {
-  if (!previewQueue || !isRedisAvailable) {
+  const queue = getPreviewQueue()
+  if (!queue || !isRedisAvailable) {
     console.warn('Preview queue unavailable, skipping job for lead:', data.leadId)
     return null
   }
   
   try {
-    return await previewQueue.add(
+    return await queue.add(
       'generate-preview',
       data,
       {
@@ -136,13 +262,14 @@ export async function addPreviewGenerationJob(data: {
 }
 
 export async function addPersonalizationJob(data: { leadId: string }) {
-  if (!personalizationQueue || !isRedisAvailable) {
+  const queue = getPersonalizationQueue()
+  if (!queue || !isRedisAvailable) {
     console.warn('Personalization queue unavailable, skipping job for lead:', data.leadId)
     return null
   }
   
   try {
-    return await personalizationQueue.add(
+    return await queue.add(
       'personalize-lead',
       data,
       {
@@ -160,13 +287,14 @@ export async function addPersonalizationJob(data: { leadId: string }) {
 }
 
 export async function addScriptGenerationJob(data: { leadId: string }) {
-  if (!scriptQueue || !isRedisAvailable) {
+  const queue = getScriptQueue()
+  if (!queue || !isRedisAvailable) {
     console.warn('Script queue unavailable, skipping job for lead:', data.leadId)
     return null
   }
   
   try {
-    return await scriptQueue.add(
+    return await queue.add(
       'generate-script',
       data,
       {
@@ -187,13 +315,14 @@ export async function addDistributionJob(data: {
   leadId: string
   channel: 'INSTANTLY' | 'REP_QUEUE' | 'BOTH'
 }) {
-  if (!distributionQueue || !isRedisAvailable) {
+  const queue = getDistributionQueue()
+  if (!queue || !isRedisAvailable) {
     console.warn('Distribution queue unavailable, skipping job for lead:', data.leadId)
     return null
   }
   
   try {
-    return await distributionQueue.add(
+    return await queue.add(
       'distribute-lead',
       data,
       {
@@ -215,13 +344,14 @@ export async function addSequenceJob(
   data: any,
   delayMs?: number
 ) {
-  if (!sequenceQueue || !isRedisAvailable) {
+  const queue = getSequenceQueue()
+  if (!queue || !isRedisAvailable) {
     console.warn('Sequence queue unavailable, skipping job:', type)
     return null
   }
   
   try {
-    return await sequenceQueue.add(
+    return await queue.add(
       type,
       data,
       {
@@ -237,14 +367,15 @@ export async function addSequenceJob(
 }
 
 export async function scheduleHotLeadMonitoring() {
-  if (!monitoringQueue || !isRedisAvailable) {
+  const queue = getMonitoringQueue()
+  if (!queue || !isRedisAvailable) {
     console.warn('Monitoring queue unavailable, skipping hot leads check')
     return null
   }
   
   try {
     // Run every 15 minutes
-    return await monitoringQueue.add(
+    return await queue.add(
       'hot-leads-check',
       {},
       {
