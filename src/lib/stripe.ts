@@ -5,6 +5,31 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
 })
 
+// Pre-created Stripe Payment Links
+// Andrew: Create these in Stripe Dashboard → Payment Links
+// Then paste the URLs here or add to env vars
+const PAYMENT_LINKS = {
+  SITE_BUILD: process.env.STRIPE_LINK_SITE_BUILD || '', // $149 one-time
+  HOSTING_MONTHLY: process.env.STRIPE_LINK_HOSTING_39 || '', // $39/month
+  HOSTING_ANNUAL: process.env.STRIPE_LINK_HOSTING_ANNUAL || '', // $399/year
+  GBP_SETUP: process.env.STRIPE_LINK_GBP || '', // $49 one-time
+  REVIEW_WIDGET: process.env.STRIPE_LINK_REVIEW_WIDGET || '', // $29/month
+  SEO_MONTHLY: process.env.STRIPE_LINK_SEO || '', // $59/month
+  SOCIAL_MONTHLY: process.env.STRIPE_LINK_SOCIAL || '', // $99/month
+}
+
+export function getPaymentLink(product: keyof typeof PAYMENT_LINKS, metadata?: { leadId?: string, clientId?: string }): string {
+  const baseUrl = PAYMENT_LINKS[product]
+  if (!baseUrl) return ''
+  // Append client reference as URL param for tracking
+  const url = new URL(baseUrl)
+  if (metadata?.leadId) url.searchParams.set('client_reference_id', metadata.leadId)
+  if (metadata?.clientId) url.searchParams.set('client_reference_id', metadata.clientId)
+  return url.toString()
+}
+
+export { PAYMENT_LINKS }
+
 export async function createCustomer(options: {
   email?: string
   name: string
