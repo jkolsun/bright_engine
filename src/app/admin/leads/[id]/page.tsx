@@ -126,7 +126,7 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
               Preview Website
             </Button>
           )}
-          <Button size="sm">
+          <Button size="sm" onClick={() => window.open(`tel:${lead.phone}`)}>
             <Phone size={16} className="mr-2" />
             Call Now
           </Button>
