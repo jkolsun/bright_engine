@@ -139,12 +139,34 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
             Send Email
           </Button>
           <div className="flex-1" />
-          <select className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium">
-            <option value={lead.status}>Change Status</option>
-            <option value="QUALIFIED">Mark as Qualified</option>
-            <option value="BUILDING">Move to Building</option>
-            <option value="CLIENT_REVIEW">Send for Review</option>
-            <option value="PAID">Mark as Paid</option>
+          <select
+            className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium"
+            value={lead.status}
+            onChange={async (e) => {
+              const newStatus = e.target.value
+              if (newStatus === lead.status) return
+              try {
+                const res = await fetch(`/api/leads/${params.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ status: newStatus })
+                })
+                if (res.ok) {
+                  const data = await res.json()
+                  setLead(data.lead)
+                } else {
+                  alert('Failed to update status')
+                }
+              } catch (err) { console.error('Status update failed:', err) }
+            }}
+          >
+            <option value="NEW">New</option>
+            <option value="HOT_LEAD">Hot Lead</option>
+            <option value="QUALIFIED">Qualified</option>
+            <option value="BUILDING">Building</option>
+            <option value="CLIENT_REVIEW">Client Review</option>
+            <option value="PAID">Paid</option>
+            <option value="CLOSED_LOST">Closed Lost</option>
           </select>
         </div>
       </div>
