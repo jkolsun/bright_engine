@@ -17,6 +17,7 @@ export function middleware(request: NextRequest) {
   if (
     pathname === '/login' ||
     pathname.startsWith('/preview/') ||
+    pathname.startsWith('/api/preview/track') ||
     pathname.startsWith('/api/health') ||
     pathname.startsWith('/api/bootstrap/') ||
     pathname.startsWith('/api/auth/') ||
