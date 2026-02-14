@@ -6,6 +6,7 @@ import { generatePersonalization } from '../lib/personalization'
 import { generatePreview } from '../lib/preview-generator'
 import { generateRepScript } from '../lib/rep-scripts'
 import { distributeLead } from '../lib/distribution'
+import { calculateEngagementScore } from '../lib/engagement-scoring'
 import { prisma } from '../lib/db'
 import { sendSMS } from '../lib/twilio'
 import { canSendMessage } from '../lib/utils'
@@ -126,6 +127,13 @@ async function startWorkers() {
 
     scriptWorker.on('completed', async (job) => {
       if (job?.data?.leadId) await addDistributionJob({ leadId: job.data.leadId, channel: 'BOTH' })
+    })
+
+    // After distribution completes, calculate engagement score
+    distributionWorker.on('completed', async (job) => {
+      if (job?.data?.leadId) {
+        try { await calculateEngagementScore(job.data.leadId) } catch (e) { console.warn('Engagement calc failed:', e) }
+      }
     })
 
     // Sequence worker (handles all automated messages)

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { calculateEngagementScore } from '@/lib/engagement-scoring'
 
 // POST /api/preview/track - Track preview analytics events
 export async function POST(request: NextRequest) {
@@ -76,6 +77,9 @@ export async function POST(request: NextRequest) {
         })
       }
     }
+
+    // After logging the event, recalculate engagement:
+    try { await calculateEngagementScore(lead.id) } catch (e) { console.warn('Engagement recalc failed:', e) }
 
     return NextResponse.json({ success: true })
   } catch (error) {
