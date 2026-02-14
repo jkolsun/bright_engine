@@ -54,65 +54,79 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create leads in database
+    // Create leads in database with transaction for consistency
     const createdLeads: any[] = []
     const failedRows: any[] = []
+    const jobsToQueue: Array<{ leadId: string; companyName: string; city?: string; state?: string }> = []
 
-    for (let i = 0; i < parsedLeads.length; i++) {
-      const parsed = parsedLeads[i]
-
-      if (!parsed.isValid) {
+    // Separate valid and invalid rows
+    const validRows = parsedLeads.map((parsed, i) => ({
+      parsed,
+      index: i + 2, // +2 because header is row 1
+    })).filter(row => {
+      if (!row.parsed.isValid) {
         failedRows.push({
-          index: i + 2, // +2 because header is row 1
-          errors: parsed.errors,
+          index: row.index,
+          errors: row.parsed.errors,
         })
-        continue
+        return false
       }
+      return true
+    })
 
+    // Use transaction for all valid lead creation to ensure consistency
+    if (validRows.length > 0) {
       try {
-        const lead = await prisma.lead.create({
-          data: {
-            firstName: parsed.firstName,
-            lastName: parsed.lastName,
-            email: parsed.email,
-            phone: parsed.phone,
-            companyName: parsed.companyName,
-            industry: parsed.industry as any,
-            city: parsed.city,
-            state: parsed.state,
-            website: parsed.website,
-            status: 'NEW',
-            source: 'COLD_EMAIL',
-            sourceDetail: campaign || 'CSV Import',
-            campaign: campaign || undefined,
-            assignedToId: assignTo,
-            priority: 'COLD',
-            timezone: getTimezoneFromState(parsed.state || '') || 'America/New_York',
-          },
-        })
+        const transactionResults = await prisma.$transaction(
+          validRows.map((row) =>
+            prisma.lead.create({
+              data: {
+                firstName: row.parsed.firstName,
+                lastName: row.parsed.lastName,
+                email: row.parsed.email,
+                phone: row.parsed.phone,
+                companyName: row.parsed.companyName,
+                industry: row.parsed.industry as any,
+                city: row.parsed.city,
+                state: row.parsed.state,
+                website: row.parsed.website,
+                status: 'NEW',
+                source: 'COLD_EMAIL',
+                sourceDetail: campaign || 'CSV Import',
+                campaign: campaign || undefined,
+                assignedToId: assignTo,
+                priority: 'COLD',
+                timezone: getTimezoneFromState(row.parsed.state || '') || 'America/New_York',
+              },
+            })
+          )
+        )
 
-        createdLeads.push(lead)
-
-        // Queue Phase 2 import pipeline (non-blocking, chained)
-        // Order: Enrichment → Preview → Personalization → Scripts → Distribution
-        try {
-          // 1. Enrichment (SerpAPI) - triggers the entire pipeline via event chaining
-          await addEnrichmentJob({
+        // Collect jobs to queue
+        transactionResults.forEach((lead) => {
+          createdLeads.push(lead)
+          jobsToQueue.push({
             leadId: lead.id,
             companyName: lead.companyName,
             city: lead.city || undefined,
             state: lead.state || undefined,
           })
-        } catch (err) {
-          console.error(`Pipeline job queueing failed for lead ${lead.id}:`, err)
-        }
-      } catch (err) {
-        failedRows.push({
-          index: i + 2,
-          errors: [
-            `Database error: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          ],
         })
+      } catch (err) {
+        throw new Error(
+          `Transaction failed during lead creation: ${err instanceof Error ? err.message : 'Unknown error'}`
+        )
+      }
+
+      // Queue enrichment jobs after successful transaction (non-blocking)
+      // Order: Enrichment → Preview → Personalization → Scripts → Distribution
+      for (const job of jobsToQueue) {
+        try {
+          // 1. Enrichment (SerpAPI) - triggers the entire pipeline via event chaining
+          await addEnrichmentJob(job)
+        } catch (err) {
+          console.error(`Pipeline job queueing failed for lead ${job.leadId}:`, err)
+        }
       }
     }
 

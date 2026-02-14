@@ -53,12 +53,23 @@ export async function POST(request: NextRequest) {
           { status: 401 }
         )
       }
-      // Auto-migrate: hash the password for next login
-      const hash = await bcrypt.hash(password, 10)
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { passwordHash: hash }
-      })
+      // Auto-migrate: hash the password for next login (non-blocking, background task)
+      // Fire-and-forget: don't block login on migration failure
+      const migratePassword = async () => {
+        try {
+          const hash = await bcrypt.hash(password, 10)
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { passwordHash: hash }
+          })
+          console.log(`Password hash migrated for user ${user.email}`)
+        } catch (err) {
+          console.error(`Failed to migrate password hash for user ${user.id}:`, err)
+          // Silently fail - login already succeeded, migration can happen on next login
+        }
+      }
+      // Start migration without awaiting
+      void migratePassword()
     }
 
     // Determine redirect URL based on user role

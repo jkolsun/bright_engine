@@ -70,15 +70,22 @@ export async function POST(request: NextRequest) {
 
 // GET /api/clients - List clients with filters
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams
-  const status = searchParams.get('status')
-  const limit = parseInt(searchParams.get('limit') || '50')
-  const offset = parseInt(searchParams.get('offset') || '0')
-
-  const where: any = {}
-  if (status) where.hostingStatus = status
-
   try {
+    // Admin-only access check - financial/client data
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
+    const searchParams = request.nextUrl.searchParams
+    const status = searchParams.get('status')
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const offset = parseInt(searchParams.get('offset') || '0')
+
+    const where: any = {}
+    if (status) where.hostingStatus = status
+
     const [clients, total] = await Promise.all([
       prisma.client.findMany({
         where,
