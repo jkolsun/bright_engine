@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * POST /api/auth/logout
  * Clears the session cookie and logs out the user
