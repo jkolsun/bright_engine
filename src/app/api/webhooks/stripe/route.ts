@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { prisma } from '@/lib/db'
+import { processRevenueCommission } from '@/lib/commissions'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
@@ -111,7 +112,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   // Create revenue record (only if we have a client)
   if (clientId) {
-    await prisma.revenue.create({
+    const revenue = await prisma.revenue.create({
       data: {
         clientId,
         type: amountTotal === 14900 ? 'SITE_BUILD' : 'HOSTING_MONTHLY', // $149 = site build
@@ -119,6 +120,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         status: 'PAID',
       },
     })
+
+    // Process commission automatically
+    try {
+      await processRevenueCommission(revenue.id)
+    } catch (err) {
+      console.error('Commission processing failed:', err)
+      // Don't fail the webhook if commission fails
+    }
   }
 
   // Generic payment notification
@@ -150,7 +159,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 
   if (client) {
     // Record monthly hosting payment
-    await prisma.revenue.create({
+    const revenue = await prisma.revenue.create({
       data: {
         clientId: client.id,
         type: 'HOSTING_MONTHLY',
@@ -159,6 +168,13 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
         status: 'PAID',
       },
     })
+
+    // Process commission automatically  
+    try {
+      await processRevenueCommission(revenue.id)
+    } catch (err) {
+      console.error('Commission processing failed:', err)
+    }
 
     // Ensure client stays active
     await prisma.client.update({
