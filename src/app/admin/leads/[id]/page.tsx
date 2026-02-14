@@ -302,8 +302,8 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
 
             {activeTab === 'analytics' && (
               <Card className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Analytics</h3>
-                <p className="text-gray-600">Analytics dashboard coming soon</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Engagement Analytics</h3>
+                <EngagementPanel leadId={params.id} />
               </Card>
             )}
           </div>
@@ -357,4 +357,44 @@ function StatusBadge({ status }: { status: string }) {
   }
   const { label, variant } = config[status] || { label: status, variant: 'default' }
   return <Badge variant={variant}>{label}</Badge>
+}
+
+function EngagementPanel({ leadId }: { leadId: string }) {
+  const [score, setScore] = useState<any>(null)
+
+  useEffect(() => {
+    fetch(`/api/engagement-score?leadId=${leadId}`)
+      .then(r => r.json())
+      .then(setScore)
+      .catch(console.error)
+  }, [leadId])
+
+  if (!score) return <p className="text-gray-500">Loading engagement data...</p>
+
+  const tempColors: Record<string, string> = { COLD: 'text-blue-600', WARM: 'text-amber-600', HOT: 'text-red-600' }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-gray-50 p-4 rounded-lg text-center">
+          <p className="text-3xl font-bold text-gray-900">{score.score}</p>
+          <p className="text-sm text-gray-600">Score</p>
+        </div>
+        <div className="bg-gray-50 p-4 rounded-lg text-center">
+          <p className={`text-3xl font-bold ${tempColors[score.temperature] || ''}`}>{score.temperature}</p>
+          <p className="text-sm text-gray-600">Temperature</p>
+        </div>
+        <div className="bg-gray-50 p-4 rounded-lg text-center">
+          <p className="text-3xl font-bold text-gray-900">{score.trend === 'up' ? '📈' : score.trend === 'down' ? '📉' : '➡️'}</p>
+          <p className="text-sm text-gray-600">Trend</p>
+        </div>
+      </div>
+      <div className="text-sm text-gray-600 space-y-1">
+        <p>Preview engagement: {score.components?.previewEngagement || 0}/25</p>
+        <p>Email engagement: {score.components?.emailEngagement || 0}/25</p>
+        <p>Outbound recency: {score.components?.outboundRecency || 0}/25</p>
+        <p>Conversion signals: {score.components?.conversionSignals || 0}/25</p>
+      </div>
+    </div>
+  )
 }
