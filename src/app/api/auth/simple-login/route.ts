@@ -7,9 +7,8 @@ export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/auth/simple-login
- * Simple login: email + password
- * Queries database for user, validates against hardcoded password for now
- * TODO: Implement proper password hashing (bcrypt) and store in database
+ * Login with email + password
+ * Validates against bcrypt passwordHash with auto-migration for legacy passwords
  * Returns: { success, redirectUrl }
  */
 export async function POST(request: NextRequest) {
