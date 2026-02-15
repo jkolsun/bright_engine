@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
+import bcrypt from 'bcryptjs'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,14 +48,19 @@ export async function POST(request: NextRequest) {
 
     const data = await request.json()
 
+    // Hash password if provided, otherwise use default
+    const password = data.password || process.env.DEFAULT_LOGIN_PASSWORD || '123456'
+    const passwordHash = await bcrypt.hash(password, 10)
+
     const user = await prisma.user.create({
       data: {
         name: data.name,
         email: data.email,
         phone: data.phone,
         role: data.role || 'REP',
-        status: 'ACTIVE'
-      }
+        status: 'ACTIVE',
+        passwordHash,
+      },
     })
 
     return NextResponse.json({ user })
