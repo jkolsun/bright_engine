@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
 
 // PATCH /api/admin/leads/[id] - Admin edit lead (reassign, change status, etc)
 export async function PATCH(
@@ -7,6 +8,13 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Admin-only access check
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const data = await request.json()
 
     const lead = await prisma.lead.update({
@@ -50,6 +58,13 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Admin-only access check
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const lead = await prisma.lead.findUnique({
       where: { id: params.id },
       include: {
