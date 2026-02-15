@@ -301,7 +301,7 @@ export default function ImportPage() {
                 <Button variant="outline" onClick={() => setStep('upload')}>
                   Import More Leads
                 </Button>
-                <Button onClick={() => window.location.href = '/outbound'}>
+                <Button onClick={() => window.location.href = '/admin/outbound'}>
                   View in Outbound Tracker
                 </Button>
               </div>
