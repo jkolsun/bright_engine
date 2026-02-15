@@ -268,16 +268,39 @@ export default function ImportPage() {
 
               {/* Download Buttons */}
               <div className="space-y-3 mb-8">
-                <Button className="w-full justify-between" size="lg">
+                <Button
+                  className="w-full justify-between"
+                  size="lg"
+                  onClick={() => window.open('/api/leads/export?campaign=A', '_blank')}
+                >
                   <span>Campaign A CSV (Bad Website)</span>
                   <Download size={20} />
                 </Button>
-                <Button className="w-full justify-between" size="lg" variant="outline">
+                <Button
+                  className="w-full justify-between"
+                  size="lg"
+                  variant="outline"
+                  onClick={() => window.open('/api/leads/export?campaign=B', '_blank')}
+                >
                   <span>Campaign B CSV (No Website)</span>
                   <Download size={20} />
                 </Button>
-                <Button className="w-full justify-between" size="lg" variant="outline">
+                <Button
+                  className="w-full justify-between"
+                  size="lg"
+                  variant="outline"
+                  onClick={() => window.open('/api/leads/export?campaign=C', '_blank')}
+                >
                   <span>Campaign C CSV (Reps w/ Phone)</span>
+                  <Download size={20} />
+                </Button>
+                <Button
+                  className="w-full justify-between"
+                  size="lg"
+                  variant="outline"
+                  onClick={() => window.open('/api/leads/export', '_blank')}
+                >
+                  <span>All Leads CSV</span>
                   <Download size={20} />
                 </Button>
               </div>
