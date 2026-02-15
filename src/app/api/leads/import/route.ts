@@ -5,12 +5,14 @@ import { addEnrichmentJob } from '@/worker/queue'
 import { logActivity } from '@/lib/logging'
 import { getTimezoneFromState } from '@/lib/utils'
 import { dispatchWebhook, WebhookEvents } from '@/lib/webhook-dispatcher'
+import { verifySession } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/leads/import
  * Bulk import leads from CSV file
+ * Admin-only access (sensitive data operation)
  * 
  * Form data:
  * - file: CSV file
@@ -19,6 +21,13 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
+    // Admin-only access check
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const formData = await request.formData()
     const file = formData.get('file') as File | null
     const assignTo = formData.get('assignTo') as string | null
