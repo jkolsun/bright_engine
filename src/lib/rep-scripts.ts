@@ -122,11 +122,11 @@ Be conversational, not robotic. Assume the rep is experienced but needs structur
         (response.usage.input_tokens + response.usage.output_tokens) * 0.0000008,
     }
 
-    // Store script in metadata (could also create a separate RepScript table)
+    // Store script in callScript field (used by dialer)
     await prisma.lead.update({
       where: { id: leadId },
       data: {
-        notes: `[REP SCRIPT]\n${JSON.stringify(result, null, 2)}`,
+        callScript: JSON.stringify(result, null, 2),
       },
     })
 
