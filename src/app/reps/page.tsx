@@ -140,7 +140,13 @@ export default function RepsPage() {
                     </td>
                     <td className="p-4 text-gray-700">$149</td>
                     <td className="p-4 text-right">
-                      <Button variant="ghost" size="sm">Details</Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.location.href = `/reps/dialer?leadId=${lead.id}`}
+                      >
+                        Details
+                      </Button>
                     </td>
                   </tr>
                 ))}
