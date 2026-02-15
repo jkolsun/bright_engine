@@ -92,7 +92,7 @@ export default function DashboardPage() {
           icon={<Users size={24} className="text-blue-600" />}
           label="Total Leads"
           value={data.totalLeads}
-          change="+12% this week"
+          change={`+${data.todayLeads || 0} today`}
           href="/admin/leads"
         />
         <MetricCard
