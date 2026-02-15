@@ -146,7 +146,24 @@ export default function ClientsPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline">
+          <Button
+            variant="outline"
+            onClick={() => {
+              const csv = [
+                'Company,Site URL,Status,Industry,MRR',
+                ...clients.map(
+                  c =>
+                    `"${c.companyName}","${c.siteUrl || ''}","${c.hostingStatus}","${c.industry}","${c.monthlyRevenue}"`
+                ),
+              ].join('\n')
+              const blob = new Blob([csv], { type: 'text/csv' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = 'clients.csv'
+              a.click()
+            }}
+          >
             <Download size={18} className="mr-2" />
             Export
           </Button>
@@ -369,7 +386,16 @@ export default function ClientsPage() {
                       {formatCurrency(client.monthlyRevenue)}
                     </td>
                     <td className="p-4 text-right space-x-2 flex justify-end">
-                      <Button variant="ghost" size="sm">View</Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (client.siteUrl) window.open(`https://${client.siteUrl}`, '_blank')
+                          else alert('No site URL set for this client')
+                        }}
+                      >
+                        View Site
+                      </Button>
                       <Button 
                         variant="ghost" 
                         size="sm" 
