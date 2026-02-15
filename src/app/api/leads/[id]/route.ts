@@ -59,12 +59,33 @@ export async function PUT(
   try {
     const data = await request.json()
 
+    // Whitelist allowed fields to prevent injection
+    const allowed: Record<string, any> = {}
+    const safeFields = [
+      'status',
+      'priority',
+      'notes',
+      'firstName',
+      'lastName',
+      'email',
+      'phone',
+      'companyName',
+      'city',
+      'state',
+      'website',
+      'industry',
+    ]
+
+    for (const key of safeFields) {
+      if (data[key] !== undefined) allowed[key] = data[key]
+    }
+
     const lead = await prisma.lead.update({
       where: { id: params.id },
       data: {
-        ...data,
-        updatedAt: new Date()
-      }
+        ...allowed,
+        updatedAt: new Date(),
+      },
     })
 
     // Log status change if status was updated
@@ -75,17 +96,14 @@ export async function PUT(
           eventType: 'STAGE_CHANGE',
           toStage: data.status,
           actor: 'admin',
-        }
+        },
       })
     }
 
     return NextResponse.json({ lead })
   } catch (error) {
     console.error('Error updating lead:', error)
-    return NextResponse.json(
-      { error: 'Failed to update lead' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to update lead' }, { status: 500 })
   }
 }
 
