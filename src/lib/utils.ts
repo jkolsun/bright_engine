@@ -23,11 +23,22 @@ export function formatPhone(phone: string): string {
 }
 
 export function canSendMessage(timezone: string = 'America/New_York'): boolean {
-  // Simplified timezone checking - use system time for now
-  // TODO: Implement proper timezone conversion without moment.js
-  const now = new Date()
-  const hour = now.getHours()
-  return hour >= 8 && hour < 21
+  try {
+    // Use Intl API to get the hour in the lead's timezone
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      hour: 'numeric',
+      hour12: false,
+    })
+    const hour = parseInt(formatter.format(new Date()))
+    return hour >= 8 && hour < 21
+  } catch {
+    // Fallback: assume safe to send during typical business hours
+    const hour = new Date().getUTCHours()
+    // Rough EST assumption: UTC-5
+    const estHour = (hour - 5 + 24) % 24
+    return estHour >= 8 && estHour < 21
+  }
 }
 
 export function getTimezoneFromState(state: string): string {
