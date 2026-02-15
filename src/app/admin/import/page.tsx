@@ -257,18 +257,12 @@ export default function ImportPage() {
               </p>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 gap-6 mb-8">
                 <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-4xl font-bold text-blue-600">{importResult?.summary?.createdCount || importResult?.createdCount || '—'}</p>
-                  <p className="text-sm text-gray-700 mt-2">Campaign A<br/>(Bad Website)</p>
-                </div>
-                <div className="p-6 bg-purple-50 rounded-lg border border-purple-200">
-                  <p className="text-4xl font-bold text-purple-600">28</p>
-                  <p className="text-sm text-gray-700 mt-2">Campaign B<br/>(No Website)</p>
-                </div>
-                <div className="p-6 bg-green-50 rounded-lg border border-green-200">
-                  <p className="text-4xl font-bold text-green-600">2,281</p>
-                  <p className="text-sm text-gray-700 mt-2">Campaign C<br/>(Reps)</p>
+                  <p className="text-4xl font-bold text-blue-600">
+                    {importResult?.summary?.createdCount || importResult?.createdCount || '—'}
+                  </p>
+                  <p className="text-sm text-gray-700 mt-2">Total Leads Imported</p>
                 </div>
               </div>
 
@@ -314,15 +308,14 @@ export default function ImportPage() {
             </div>
           </Card>
 
-          {/* Partial Matches Review */}
+          {/* Import Summary */}
           <Card className="p-6 mt-6">
             <div className="flex items-center justify-between mb-4">
-              <h4 className="font-semibold text-gray-900">Partial Matches (112)</h4>
-              <Button variant="outline" size="sm">Review All</Button>
+              <h4 className="font-semibold text-gray-900">Import Summary</h4>
             </div>
             <p className="text-sm text-gray-600">
-              These leads were enriched using Apollo data only. SerpAPI couldn't find a Google Maps match. 
-              They'll still get previews and personalization, but competitor data won't be as strong.
+              Leads were enriched using SerpAPI where possible. Those without Google Maps matches still get
+              previews and personalization from Apollo data.
             </p>
           </Card>
         </div>
