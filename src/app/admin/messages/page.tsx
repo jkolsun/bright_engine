@@ -11,6 +11,9 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [twilioStatus, setTwilioStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking')
+  const [smsPhone, setSmsPhone] = useState('')
+  const [smsMessage, setSmsMessage] = useState('')
+  const [sending, setSending] = useState(false)
 
   useEffect(() => {
     checkTwilioStatus()
@@ -42,6 +45,31 @@ export default function MessagesPage() {
       console.error('Failed to load messages:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSendSms = async () => {
+    if (!smsPhone || !smsMessage) return
+    setSending(true)
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: smsPhone, message: smsMessage }),
+      })
+      if (res.ok) {
+        setSmsMessage('')
+        // Reload messages
+        const messagesRes = await fetch('/api/messages?limit=50')
+        if (messagesRes.ok) {
+          const data = await messagesRes.json()
+          setMessages(data.messages || [])
+        }
+      }
+    } catch (e) {
+      console.error('Failed to send SMS:', e)
+    } finally {
+      setSending(false)
     }
   }
 
@@ -142,11 +170,21 @@ export default function MessagesPage() {
         <Card className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Send SMS</h3>
           <div className="flex gap-3">
-            <Input placeholder="Phone number" className="flex-1" />
-            <Input placeholder="Message..." className="flex-[2]" />
-            <Button>
+            <Input
+              placeholder="Phone number"
+              className="flex-1"
+              value={smsPhone}
+              onChange={(e) => setSmsPhone(e.target.value)}
+            />
+            <Input
+              placeholder="Message..."
+              className="flex-[2]"
+              value={smsMessage}
+              onChange={(e) => setSmsMessage(e.target.value)}
+            />
+            <Button onClick={handleSendSms} disabled={sending || !smsPhone || !smsMessage}>
               <Send size={18} className="mr-2" />
-              Send
+              {sending ? 'Sending...' : 'Send'}
             </Button>
           </div>
         </Card>
