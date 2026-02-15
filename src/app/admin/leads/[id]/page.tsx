@@ -156,7 +156,13 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
             <Phone size={16} className="mr-2" />
             Call Now
           </Button>
-          <Button size="sm" variant="outline">
+          <Button size="sm" variant="outline" onClick={() => {
+            setActiveTab('messages')
+            setTimeout(() => {
+              const input = document.querySelector('input[placeholder="Type a message..."]') as HTMLInputElement
+              if (input) input.focus()
+            }, 100)
+          }}>
             <MessageSquare size={16} className="mr-2" />
             Send SMS
           </Button>
