@@ -140,7 +140,7 @@ export default function AuditLogPage() {
         <Card className="p-6">
           <div className="text-sm text-gray-600 mb-1">Status Changes</div>
           <div className="text-3xl font-bold text-gray-900">
-            {events.filter(e => e.eventType === 'STATUS_CHANGE').length}
+            {events.filter(e => e.eventType === 'STAGE_CHANGE').length}
           </div>
         </Card>
 
