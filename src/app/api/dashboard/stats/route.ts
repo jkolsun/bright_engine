@@ -88,11 +88,24 @@ export async function GET(request: NextRequest) {
     const previewClicks = await prisma.leadEvent.count({
       where: { eventType: { in: ['PREVIEW_CTA_CLICKED', 'PREVIEW_CALL_CLICKED'] } }
     })
+    
+    // Count total clients for dashboard
+    const totalClients = await prisma.client.count()
 
     return NextResponse.json({
+      // Flat keys that the dashboard expects
+      totalLeads,
+      hotLeads: pipeline.hotLead,
+      activeClients,
+      totalClients,
+      mrr: totalMRR,
+      todayRevenue: todayStats.revenue,
+      previewViews,
+      previewClicks,
+      // Keep nested data for other consumers
       pipeline,
       today: todayStats,
-      mrr: {
+      mrrDetail: {
         hosting: hostingMRR,
         upsells: upsellMRR,
         total: totalMRR,
@@ -101,9 +114,6 @@ export async function GET(request: NextRequest) {
       todayHot,
       todayPaid,
       pipelineDetailed: Object.fromEntries(pipelineCounts.map(p => [p.status, p._count._all])),
-      totalLeads,
-      previewViews,
-      previewClicks,
     })
   } catch (error) {
     console.error('Dashboard stats error:', error)
