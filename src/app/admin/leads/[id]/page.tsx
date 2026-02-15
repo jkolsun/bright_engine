@@ -189,10 +189,14 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
             <option value="NEW">New</option>
             <option value="HOT_LEAD">Hot Lead</option>
             <option value="QUALIFIED">Qualified</option>
+            <option value="INFO_COLLECTED">Info Collected</option>
             <option value="BUILDING">Building</option>
+            <option value="QA">QA</option>
             <option value="CLIENT_REVIEW">Client Review</option>
+            <option value="APPROVED">Approved</option>
             <option value="PAID">Paid</option>
             <option value="CLOSED_LOST">Closed Lost</option>
+            <option value="DO_NOT_CONTACT">Do Not Contact</option>
           </select>
         </div>
       </div>
