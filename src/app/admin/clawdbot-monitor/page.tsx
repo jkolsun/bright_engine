@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getRecentActivity, getTodayStats, getQueueStatus } from '@/lib/logging'
 
 interface Activity {
   id: string
