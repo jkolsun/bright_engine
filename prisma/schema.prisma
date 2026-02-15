@@ -33,9 +33,10 @@ model User {
   updatedAt DateTime   @updatedAt @map("updated_at")
 
   // Rep portal fields
-  portalType  String    @default("FULL")
-  dailyLeadCap Int     @default(25)
-  totalCloses  Int     @default(0)
+  portalType     String  @default("FULL")
+  dailyLeadCap   Int     @default(25)
+  totalCloses    Int     @default(0)
+  commissionRate Float   @default(0.5) @map("commission_rate")
 
   // Relations
   assignedLeads      Lead[]              @relation("AssignedLeads")

@@ -24,8 +24,9 @@ export async function PATCH(
         ...(data.name && { name: data.name }),
         ...(data.email && { email: data.email }),
         ...(data.phone && { phone: data.phone }),
-        ...(data.role && { role: data.role })
-      }
+        ...(data.role && { role: data.role }),
+        ...(data.commissionRate !== undefined && { commissionRate: data.commissionRate }),
+      },
     })
 
     return NextResponse.json({ user })
