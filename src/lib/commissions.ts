@@ -43,7 +43,7 @@ export async function calculateCommission(params: {
     }
 
     // Get rep's commission rate (default 50%)
-    const baseRate = 0.5 // TODO: Add commissionRate field to User model
+    const baseRate = (rep as any).commissionRate ?? 0.5
 
     // Calculate performance tier
     const closedDeals = rep._count.assignedLeads
