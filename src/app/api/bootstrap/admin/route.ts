@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         role: 'ADMIN',
         status: 'ACTIVE',
         passwordHash: hash,
-        phone: process.env.ANDREW_PHONE || '+17322283794',
+        phone: process.env.ANDREW_PHONE || '',
       }
     })
 
