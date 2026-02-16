@@ -44,7 +44,7 @@ export default function DialerPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          status: outcome === 'CLOSED' ? 'PAID' :
+          status: outcome === 'CLOSED' ? 'INFO_COLLECTED' :
                   outcome === 'CALLBACK' ? 'QUALIFIED' :
                   outcome === 'NOT_INTERESTED' ? 'CLOSED_LOST' : currentLead.status
         })
