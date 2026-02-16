@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 let workerStarted = false
 let workerError: string | null = null
 
-export async function startWorkersOnce() {
+async function startWorkersOnce() {
   if (workerStarted) return
   
   workerStarted = true
