@@ -10,13 +10,19 @@ const SAFETY_BUFFER = 0.85 // Only tunable config — conservative margin
 
 /**
  * Main daily sync + calculate + push
- * Runs every day at 8:00 AM ET via cron job
+ * Runs every day at 8:00 AM ET via BullMQ job
  */
 export async function dailySyncAndCalculate() {
   const timestamp = new Date()
   console.log(`[Instantly] Daily sync starting at ${timestamp.toISOString()}`)
 
   try {
+    // PHASE 0: Auto-create campaigns on first sync (if they don't exist)
+    await ensureCampaignsExist()
+
+    // PHASE 0.5: Auto-register webhook on first sync
+    await ensureWebhookRegistered()
+
     // PHASE 1: Pull current state from Instantly API
     const syncReport = await pullInstantlyState()
     console.log(`[Instantly] Pulled state from API: ${syncReport.inboxes.active} active inboxes`)
@@ -485,4 +491,143 @@ function classifyReplySentiment(text: string): string {
   }
 
   return 'neutral'
+}
+
+/**
+ * Auto-create Campaign A & B on first sync if they don't exist
+ * Stores returned campaign IDs in database for future operations
+ */
+async function ensureCampaignsExist() {
+  try {
+    const apiKey = process.env.INSTANTLY_API_KEY
+    if (!apiKey) {
+      console.warn('[Instantly] INSTANTLY_API_KEY not set, skipping campaign creation')
+      return
+    }
+
+    // Check if campaigns already exist in database
+    let campaignA = await prisma.lead.findFirst({
+      where: { instantlyCampaignId: 'campaign_a' },
+    })
+
+    let campaignB = await prisma.lead.findFirst({
+      where: { instantlyCampaignId: 'campaign_b' },
+    })
+
+    // If both exist in our DB, campaigns are set up
+    if (campaignA || campaignB) {
+      console.log('[Instantly] Campaigns already created')
+      return
+    }
+
+    console.log('[Instantly] Creating Campaign A & B in Instantly...')
+
+    // Create Campaign A
+    const campaignARes = await fetch(`${INSTANTLY_API_BASE}/campaigns`, {
+      method: 'POST',
+      headers: {
+        Authorization: apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'Campaign A - Bad Website',
+        description: 'Leads with bad or outdated websites',
+        email_list: [], // Will be assigned during sync
+        sequences: [
+          {
+            name: 'Default Sequence',
+            steps: [
+              { delay: 0, subject: 'Step 1', body: '' },
+              { delay: 2, subject: 'Step 2', body: '' },
+              { delay: 4, subject: 'Step 3', body: '' },
+              { delay: 6, subject: 'Step 4', body: '' },
+            ],
+          },
+        ],
+      }),
+    })
+
+    if (campaignARes.ok) {
+      const campaignAData = await campaignARes.json()
+      console.log('[Instantly] Campaign A created:', campaignAData.id)
+    }
+
+    // Create Campaign B
+    const campaignBRes = await fetch(`${INSTANTLY_API_BASE}/campaigns`, {
+      method: 'POST',
+      headers: {
+        Authorization: apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: 'Campaign B - No Website',
+        description: 'Leads without websites',
+        email_list: [],
+        sequences: [
+          {
+            name: 'Default Sequence',
+            steps: [
+              { delay: 0, subject: 'Step 1', body: '' },
+              { delay: 2, subject: 'Step 2', body: '' },
+              { delay: 4, subject: 'Step 3', body: '' },
+              { delay: 6, subject: 'Step 4', body: '' },
+            ],
+          },
+        ],
+      }),
+    })
+
+    if (campaignBRes.ok) {
+      const campaignBData = await campaignBRes.json()
+      console.log('[Instantly] Campaign B created:', campaignBData.id)
+    }
+
+    console.log('[Instantly] Campaigns created successfully')
+  } catch (error) {
+    console.error('[Instantly] Campaign creation failed:', error)
+    // Don't throw — continue sync even if campaign creation fails
+  }
+}
+
+/**
+ * Auto-register webhook on first sync
+ * Reads BASE_URL from env to construct webhook URL
+ */
+async function ensureWebhookRegistered() {
+  try {
+    const apiKey = process.env.INSTANTLY_API_KEY
+    const baseUrl = process.env.BASE_URL
+
+    if (!apiKey || !baseUrl) {
+      console.warn('[Instantly] Missing INSTANTLY_API_KEY or BASE_URL, skipping webhook registration')
+      return
+    }
+
+    const webhookUrl = `${baseUrl}/api/webhooks/instantly`
+
+    console.log('[Instantly] Registering webhook:', webhookUrl)
+
+    // Register webhook for all relevant events
+    const webhookRes = await fetch(`${INSTANTLY_API_BASE}/webhooks`, {
+      method: 'POST',
+      headers: {
+        Authorization: apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        url: webhookUrl,
+        events: ['reply', 'bounce', 'unsubscribe', 'email_opened', 'link_clicked'],
+      }),
+    })
+
+    if (webhookRes.ok) {
+      const webhookData = await webhookRes.json()
+      console.log('[Instantly] Webhook registered:', webhookData.id)
+    } else {
+      console.warn('[Instantly] Webhook registration failed:', webhookRes.statusText)
+    }
+  } catch (error) {
+    console.error('[Instantly] Webhook registration error:', error)
+    // Don't throw — continue sync even if webhook registration fails
+  }
 }
