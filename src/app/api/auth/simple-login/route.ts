@@ -13,12 +13,30 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
-    // Parse request with timeout
-    const parsePromise = request.json()
-    const parseTimeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Request parse timeout')), 5000)
-    )
-    const { email, password } = await Promise.race([parsePromise, parseTimeout]) as { email: string; password: string }
+    // Parse request with timeout - handle both JSON and form data
+    let email: string = ''
+    let password: string = ''
+
+    const contentType = request.headers.get('content-type') || ''
+    
+    if (contentType.includes('application/json')) {
+      const parsePromise = request.json()
+      const parseTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request parse timeout')), 5000)
+      )
+      const body = await Promise.race([parsePromise, parseTimeout]) as any
+      email = body.email
+      password = body.password
+    } else {
+      // Form data
+      const formPromise = request.formData()
+      const formTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Form parse timeout')), 5000)
+      )
+      const formData = await Promise.race([formPromise, formTimeout]) as any
+      email = formData.get('email')
+      password = formData.get('password')
+    }
 
     if (!email || !password) {
       return NextResponse.json(
