@@ -32,11 +32,14 @@ function initializeRedisConnection() {
 
   try {
     if (hasRedisUrl) {
-      // Use Railway's internal Redis URL
+      // Use Railway's internal Redis URL with BullMQ-compatible settings
       connection = new Redis(process.env.REDIS_URL!, {
-        maxRetriesPerRequest: null,
-        retryStrategy: () => null, // Don't retry, just fail fast
-        connectTimeout: 1000,
+        maxRetriesPerRequest: null, // Required for BullMQ
+        connectTimeout: 10000, // 10 seconds for Railway
+        lazyConnect: false, // Connect immediately
+        retryStrategy: (times) => Math.min(times * 50, 2000), // Retry with backoff
+        enableReadyCheck: true,
+        maxLoadingTimeout: 5000,
       })
     } else if (hasExplicitRedisHost || hasExplicitRedisPort) {
       // Only connect if host or port are explicitly set
@@ -52,13 +55,26 @@ function initializeRedisConnection() {
 
     if (connection) {
       connection.on('error', (err) => {
-        console.warn('Redis connection error (non-blocking):', err.message)
-        isRedisAvailable = false
+        console.warn('[QUEUE] Redis connection error:', err.message)
+        // Don't immediately set isRedisAvailable = false, let it retry
       })
 
       connection.on('connect', () => {
-        console.log('Redis connected')
+        console.log('[QUEUE] ✅ Redis connected successfully')
         isRedisAvailable = true
+      })
+      
+      connection.on('ready', () => {
+        console.log('[QUEUE] ✅ Redis connection ready for operations')
+        isRedisAvailable = true
+      })
+      
+      connection.on('close', () => {
+        console.warn('[QUEUE] ⚠️ Redis connection closed')
+      })
+      
+      connection.on('reconnecting', (ms) => {
+        console.log(`[QUEUE] 🔄 Redis reconnecting in ${ms}ms`)
       })
     }
   } catch (err) {
