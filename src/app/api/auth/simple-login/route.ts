@@ -12,6 +12,22 @@ export const dynamic = 'force-dynamic'
  * Returns: { success, redirectUrl }
  */
 export async function POST(request: NextRequest) {
+  // Wrap entire handler with 10-second timeout
+  return Promise.race([
+    handleLogin(request),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Login handler timeout')), 10000)
+    )
+  ]).catch((error) => {
+    console.error('Login error:', error)
+    return NextResponse.json(
+      { success: false, error: 'Login failed' },
+      { status: 500 }
+    )
+  })
+}
+
+async function handleLogin(request: NextRequest) {
   try {
     // Parse JSON request with timeout
     const parsePromise = request.json()
@@ -130,7 +146,7 @@ export async function POST(request: NextRequest) {
 
     return response
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('Login handler error:', error)
     return NextResponse.json(
       { success: false, error: 'Login failed' },
       { status: 500 }
