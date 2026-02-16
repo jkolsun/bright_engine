@@ -138,6 +138,14 @@ model Lead {
   notes            String?      @db.Text
   callScript       String?      @db.Text @map("call_script")
   churnRiskScore   Int          @default(0) @map("churn_risk_score")
+  
+  // Instantly integration fields
+  instantlyStatus  String?      @map("instantly_status") // QUEUED, IN_SEQUENCE, COMPLETED, REPLIED, BOUNCED, UNSUBSCRIBED, PAUSED
+  instantlyAddedDate DateTime?  @map("instantly_added_date") // When lead was pushed to Instantly
+  instantlyCurrentStep Int      @default(0) @map("instantly_current_step") // Which email step they're on (0-4)
+  instantlyCampaignId String?   @map("instantly_campaign_id") // Link to Instantly campaign
+  replySentiment   String?      @map("reply_sentiment") // positive, negative, question, neutral
+  
   createdAt        DateTime     @default(now()) @map("created_at")
   updatedAt        DateTime     @updatedAt @map("updated_at")
 
@@ -751,4 +759,76 @@ model RepTask {
   updatedAt   DateTime  @updatedAt
 
   @@map("rep_tasks")
+}
+
+// ============================================
+// INSTANTLY INTEGRATION MODELS
+// ============================================
+
+model InstantlyDripLog {
+  id                       String    @id @default(cuid())
+  date                     DateTime  @map("date")
+  campaign                 String?   // 'A' or 'B'
+  totalLimit               Int       @map("total_limit") // Total inbox capacity (e.g., 750)
+  usableSends              Int       @map("usable_sends") // After safety buffer (e.g., 637)
+  followupObligations      Int       @map("followup_obligations") // Follow-ups due today
+  availableForNew          Int       @map("available_for_new") // Capacity left for new leads
+  leadsPushed              Int       @map("leads_pushed") // How many new leads actually pushed
+  leadsRemainingInQueue    Int       @map("leads_remaining_in_queue") // Still waiting to push
+  estDaysToClear           Int?      @map("est_days_to_clear") // Estimated days to clear queue
+  createdAt                DateTime  @default(now()) @map("created_at")
+
+  @@map("instantly_drip_log")
+  @@index([date])
+}
+
+model InstantlySyncLog {
+  id              String    @id @default(cuid())
+  timestamp       DateTime  @map("timestamp")
+  fullReport      Json?     @map("full_report") // Complete sync data
+  alerts          Json?     @map("alerts") // Array of alerts
+  totalCapacity   Int?      @map("total_capacity")
+  totalPushed     Int?      @map("total_pushed")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@map("instantly_sync_log")
+  @@index([timestamp])
+}
+
+model InstantlySyncChange {
+  id              String    @id @default(cuid())
+  syncTimestamp   DateTime  @map("sync_timestamp")
+  changeType      String    @map("change_type") // 'inbox_added', 'inbox_removed', 'inbox_limit_changed', etc.
+  entity          String    // inbox email or campaign name
+  fieldChanged    String?   @map("field_changed") // 'daily_limit', 'health_score', etc.
+  oldValue        String?   @map("old_value")
+  newValue        String?   @map("new_value")
+  impact          String?   // 'capacity +21', 'inbox throttled', etc.
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@map("instantly_sync_changes")
+  @@index([syncTimestamp])
+}
+
+model InstantlyDailyReport {
+  id                        String    @id @default(cuid())
+  reportDate                DateTime  @unique @map("report_date")
+  syncTimestamp             DateTime  @map("sync_timestamp")
+  fullReport                String    @db.Text @map("full_report") // Complete formatted report
+  smsReport                 String?   @db.Text @map("sms_report") // Condensed SMS version
+  changes                   Json?     @map("changes") // Structured change data
+  todayPlan                 Json?     @map("today_plan") // What's being pushed + why
+  alerts                    Json?     @map("alerts") // Action items
+  totalCapacity             Int?      @map("total_capacity")
+  totalPushing              Int?      @map("total_pushing")
+  totalFollowups            Int?      @map("total_followups")
+  totalSendsExpected        Int?      @map("total_sends_expected")
+  capacityUtilization       Float?    @map("capacity_utilization") // percentage
+  smsSent                   Boolean   @default(false) @map("sms_sent")
+  smsSentAt                 DateTime? @map("sms_sent_at")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+
+  @@map("instantly_daily_reports")
+  @@index([reportDate])
+  @@index([createdAt])
 }
