@@ -2,12 +2,17 @@ import Stripe from 'stripe'
 
 let _stripe: Stripe | null = null
 
+function validateStripeKey(key: string): void {
+  if (key === 'build-placeholder-do-not-use-in-production') {
+    throw new Error('STRIPE_SECRET_KEY not set — cannot initialize Stripe at runtime')
+  }
+}
+
 export function getStripe(): Stripe {
   if (!_stripe) {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      throw new Error('STRIPE_SECRET_KEY not set — cannot initialize Stripe')
-    }
-    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    const key = process.env.STRIPE_SECRET_KEY || 'build-placeholder-do-not-use-in-production'
+    validateStripeKey(key)
+    _stripe = new Stripe(key, {
       apiVersion: '2023-10-16',
     })
   }

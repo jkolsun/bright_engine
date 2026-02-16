@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { dispatchWebhook, WebhookEvents } from '@/lib/webhook-dispatcher'
-import Stripe from 'stripe'
+import type Stripe from 'stripe'
 import { prisma } from '@/lib/db'
 import { processRevenueCommission } from '@/lib/commissions'
 
 export const dynamic = 'force-dynamic'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-})
+// Lazy stripe initialization (avoid loading Stripe SDK at build time)
+let _stripeInstance: any = null
+function initStripe() {
+  if (!_stripeInstance) {
+    const { default: StripeSdk } = require('stripe')
+    const key = process.env.STRIPE_SECRET_KEY || 'build-placeholder'
+    if (key === 'build-placeholder') {
+      throw new Error('STRIPE_SECRET_KEY not configured')
+    }
+    _stripeInstance = new StripeSdk(key, { apiVersion: '2023-10-16' })
+  }
+  return _stripeInstance
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
@@ -21,6 +31,7 @@ export async function POST(request: NextRequest) {
   let event: Stripe.Event
 
   try {
+    const stripe = initStripe()
     event = stripe.webhooks.constructEvent(
       body,
       signature,
