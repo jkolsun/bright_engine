@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
       'cta_click': 'PREVIEW_CTA_CLICKED',
       'call_click': 'PREVIEW_CALL_CLICKED',
       'return_visit': 'PREVIEW_RETURN_VISIT',
+      'scroll_depth': 'PREVIEW_VIEWED',
     }
 
     const eventType = eventTypeMap[event]
