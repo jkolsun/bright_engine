@@ -24,6 +24,7 @@ export default function LeadsPage() {
   const [leads, setLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set())
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -108,6 +109,7 @@ export default function LeadsPage() {
 
       if (res.ok) {
         alert('Lead deleted successfully')
+        setSelectedLeads(new Set([...selectedLeads].filter(id => id !== leadId)))
         fetchLeads()
       } else {
         alert('Failed to delete lead')
@@ -116,6 +118,74 @@ export default function LeadsPage() {
       console.error('Error deleting lead:', error)
       alert('Failed to delete lead')
     }
+  }
+
+  const handleSelectLead = (leadId: string) => {
+    const newSelected = new Set(selectedLeads)
+    if (newSelected.has(leadId)) {
+      newSelected.delete(leadId)
+    } else {
+      newSelected.add(leadId)
+    }
+    setSelectedLeads(newSelected)
+  }
+
+  const handleSelectAll = () => {
+    if (selectedLeads.size === filteredLeads.length) {
+      setSelectedLeads(new Set())
+    } else {
+      setSelectedLeads(new Set(filteredLeads.map(l => l.id)))
+    }
+  }
+
+  const handleExportCSV = () => {
+    const leadsToExport = selectedLeads.size > 0 
+      ? filteredLeads.filter(l => selectedLeads.has(l.id))
+      : filteredLeads
+
+    if (leadsToExport.length === 0) {
+      alert('No leads to export')
+      return
+    }
+
+    // CSV Headers
+    const headers = ['First Name', 'Last Name', 'Company Name', 'Email', 'Phone', 'City', 'State', 'Industry', 'Status', 'Source']
+    
+    // CSV Rows
+    const rows = leadsToExport.map(lead => [
+      lead.firstName || '',
+      lead.lastName || '',
+      lead.companyName || '',
+      lead.email || '',
+      lead.phone || '',
+      lead.city || '',
+      lead.state || '',
+      lead.industry || '',
+      lead.status || '',
+      lead.source || ''
+    ])
+
+    // Create CSV content
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n')
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    
+    link.setAttribute('href', url)
+    link.setAttribute('download', `leads_export_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    alert(`Exported ${leadsToExport.length} leads to CSV`)
+    setSelectedLeads(new Set())
   }
 
   const filteredLeads = leads.filter(lead => {
@@ -147,9 +217,14 @@ export default function LeadsPage() {
           <p className="text-gray-500 mt-1">{stats.total} total leads</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline">
+          <Button 
+            variant="outline"
+            onClick={handleExportCSV}
+            disabled={leads.length === 0}
+            title={selectedLeads.size > 0 ? `Export ${selectedLeads.size} selected leads` : 'Export all leads'}
+          >
             <Download size={18} className="mr-2" />
-            Export CSV
+            Export CSV {selectedLeads.size > 0 && `(${selectedLeads.size} selected)`}
           </Button>
           <Link href="/admin/import">
             <Button variant="outline">
@@ -329,6 +404,15 @@ export default function LeadsPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
+                  <th className="text-center p-4 w-12">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedLeads.size === filteredLeads.length && filteredLeads.length > 0}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 cursor-pointer"
+                      title="Select all"
+                    />
+                  </th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Name</th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Company</th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Phone</th>
@@ -339,7 +423,15 @@ export default function LeadsPage() {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {filteredLeads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-gray-50">
+                  <tr key={lead.id} className={`hover:bg-gray-50 ${selectedLeads.has(lead.id) ? 'bg-blue-50' : ''}`}>
+                    <td className="text-center p-4">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedLeads.has(lead.id)}
+                        onChange={() => handleSelectLead(lead.id)}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                    </td>
                     <td className="p-4">
                       <div className="font-medium text-gray-900">{lead.firstName} {lead.lastName}</div>
                       {lead.email && <div className="text-sm text-gray-500">{lead.email}</div>}
