@@ -220,19 +220,23 @@ export async function addEnrichmentJob(data: {
   city?: string
   state?: string
 }) {
-  const queue = getEnrichmentQueue()
-  if (!queue) {
-    console.warn('Enrichment queue unavailable, skipping job for lead:', data.leadId)
-    return null
-  }
-  
   try {
-    // Test Redis connection with a quick ping - don't rely on isRedisAvailable flag
-    if (connection) {
-      await connection.ping()
-    }
+    // Create fresh Redis connection and queue each time to avoid race conditions
+    console.log(`[QUEUE] Creating fresh connection for lead ${data.leadId}`)
     
-    const job = await queue.add(
+    const freshConnection = new Redis(process.env.REDIS_URL!, {
+      maxRetriesPerRequest: null,
+      connectTimeout: 5000,
+    })
+    
+    // Wait for connection to be ready
+    await freshConnection.ping()
+    console.log(`[QUEUE] Fresh Redis connection ready for lead ${data.leadId}`)
+    
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    const freshQueue = new Queue('enrichment', { connection: freshConnection })
+    
+    const job = await freshQueue.add(
       'enrich-lead',
       data,
       {
@@ -243,10 +247,17 @@ export async function addEnrichmentJob(data: {
         },
       }
     )
-    console.log(`✅ Enrichment job queued for lead ${data.leadId}`)
+    
+    console.log(`✅ Enrichment job queued successfully for lead ${data.leadId}, job ID: ${job.id}`)
+    
+    // Clean up connection after a delay to allow job processing
+    setTimeout(() => {
+      freshConnection.disconnect()
+    }, 1000)
+    
     return job
   } catch (err) {
-    console.warn('Failed to add enrichment job:', err)
+    console.error(`❌ Failed to queue enrichment job for lead ${data.leadId}:`, err)
     return null
   }
 }
