@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     
     console.log(`[MANUAL-PROCESS] Found ${leads.length} leads to process`)
     
-    const results = []
+    const results: any[] = []
     
     for (const lead of leads) {
       console.log(`[MANUAL-PROCESS] Processing lead ${lead.id} - ${lead.firstName} ${lead.lastName} at ${lead.companyName}`)
