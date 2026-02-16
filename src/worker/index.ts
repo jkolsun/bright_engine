@@ -448,4 +448,6 @@ async function runDailyAudit() {
 
 export { startWorkers }
 
-startWorkers()
+// Note: startWorkers() is called on-demand via GET /api/worker-init, not automatically
+// This prevents startup failures if Redis is not configured
+// startWorkers()
