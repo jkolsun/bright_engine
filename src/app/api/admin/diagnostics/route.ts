@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifySession } from '@/lib/session'
 import Redis from 'ioredis'
+import { Queue } from 'bullmq'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +25,7 @@ export async function GET(request: NextRequest) {
       redis: { connected: false, error: null },
       worker: { running: false, registered: false, error: null },
       queues: {},
+      failedJobs: [],
       errors: [],
       summary: 'Initializing...',
     }
@@ -39,33 +41,52 @@ export async function GET(request: NextRequest) {
       NODE_ENV: process.env.NODE_ENV || 'unknown',
     }
 
-    // 2. Test Redis connection
+    // 2. Test Redis connection and check queue status
     if (process.env.REDIS_URL) {
       try {
-        const redis = new Redis(process.env.REDIS_URL)
-        const pong = await redis.ping()
-        diagnostics.redis.connected = pong === 'PONG'
-        
-        // Get queue info
-        const keys = await redis.keys('bull:*')
-        const queueNames = keys
-          .map(k => k.replace('bull:', '').split(':')[0])
-          .filter((v, i, a) => a.indexOf(v) === i)
+        const redis = new Redis(process.env.REDIS_URL, {
+          maxRetriesPerRequest: null,
+          connectTimeout: 5000,
+          retryStrategy: () => null,
+        })
 
-        for (const queueName of queueNames) {
-          const jobCounts = await redis.call(
-            'ZCARD',
-            `bull:${queueName}:wait`
-          )
-          diagnostics.queues[queueName] = {
-            pending: jobCounts || 0,
-            active: 0,
-            completed: 0,
-            failed: 0,
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Redis timeout')), 5000)
+        )
+
+        // Test connection
+        const pingPromise = redis.ping()
+        const pong = await Promise.race([pingPromise, timeoutPromise])
+        diagnostics.redis.connected = pong === 'PONG'
+
+        // If connected, check enrichment queue
+        if (diagnostics.redis.connected) {
+          try {
+            // @ts-ignore - bullmq has vendored ioredis
+            const enrichmentQueue = new Queue('enrichment', { connection: redis })
+
+            // Get job counts
+            const jobCountsPromise = enrichmentQueue.getJobCounts()
+            const jobCounts = await Promise.race([jobCountsPromise, timeoutPromise]) as any
+            diagnostics.queues.enrichment = jobCounts
+
+            // Get failed jobs
+            const failedJobsPromise = enrichmentQueue.getFailed(0, 10)
+            const failedJobs = await Promise.race([failedJobsPromise, timeoutPromise]) as any[]
+            diagnostics.failedJobs = failedJobs.map((j) => ({
+              id: j?.id,
+              name: j?.name,
+              failedReason: j?.failedReason,
+              attemptsMade: j?.attemptsMade,
+            }))
+          } catch (err) {
+            diagnostics.errors.push(
+              'Failed to inspect queue: ' + (err instanceof Error ? err.message : String(err))
+            )
           }
         }
 
-        await redis.disconnect()
+        await redis.quit()
       } catch (err) {
         diagnostics.redis.error = err instanceof Error ? err.message : String(err)
         diagnostics.redis.connected = false
