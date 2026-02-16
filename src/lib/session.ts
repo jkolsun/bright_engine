@@ -1,4 +1,10 @@
-const SESSION_SECRET = process.env.SESSION_SECRET || 'CHANGE-ME-IN-PRODUCTION-fallback-secret-key'
+const SESSION_SECRET = process.env.SESSION_SECRET
+
+if (!SESSION_SECRET) {
+  throw new Error('SESSION_SECRET environment variable is required. Set it on Railway.')
+}
+
+const SESSION_SECRET_FINAL: string = SESSION_SECRET
 
 // Simple but real HMAC using Web Crypto-compatible approach
 // Works in Edge Runtime (no Node.js crypto needed)
@@ -44,7 +50,7 @@ export function signSession(data: object): string {
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '')
-  const sig = simpleHmac(payload, SESSION_SECRET)
+  const sig = simpleHmac(payload, SESSION_SECRET_FINAL)
   return `${payload}.${sig}`
 }
 
@@ -58,7 +64,7 @@ export function verifySession(cookie: string): any | null {
   if (!payload || !sig) return null
 
   // Verify signature
-  const expected = simpleHmac(payload, SESSION_SECRET)
+  const expected = simpleHmac(payload, SESSION_SECRET_FINAL)
   if (sig !== expected) return null
 
   try {
