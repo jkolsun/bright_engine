@@ -4,9 +4,6 @@ const nextConfig = {
   images: {
     domains: ['res.cloudinary.com', 'localhost'],
   },
-  experimental: {
-    instrumentationHook: true,
-  },
 }
 
 module.exports = nextConfig
