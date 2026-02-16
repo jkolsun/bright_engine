@@ -143,6 +143,42 @@ export function parseLead(row: RawLeadRow): ParsedLead {
   }
 }
 
+/**
+ * Proper CSV parsing that handles quoted fields with commas
+ * Matches RFC 4180 CSV format
+ */
+function parseCSVLine(line: string): string[] {
+  const result: string[] = []
+  let current = ''
+  let insideQuotes = false
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]
+    const nextChar = line[i + 1]
+
+    if (char === '"') {
+      if (insideQuotes && nextChar === '"') {
+        // Escaped quote ""
+        current += '"'
+        i++ // Skip next quote
+      } else {
+        // Toggle quote state
+        insideQuotes = !insideQuotes
+      }
+    } else if (char === ',' && !insideQuotes) {
+      // Field separator
+      result.push(current.trim())
+      current = ''
+    } else {
+      current += char
+    }
+  }
+
+  // Don't forget last field
+  result.push(current.trim())
+  return result
+}
+
 export function parseCSV(csvContent: string): {
   leads: ParsedLead[]
   totalRows: number
@@ -163,9 +199,10 @@ export function parseCSV(csvContent: string): {
 
   // Parse header (first row)
   const headerLine = lines[0]
-  const headers = headerLine
-    .split(',')
-    .map((h) => h.trim().toLowerCase().replace(/['"]/g, '').replace(/\s+/g, '_'))
+  const headerValues = parseCSVLine(headerLine)
+  const headers = headerValues.map((h) =>
+    h.toLowerCase().replace(/['"]/g, '').replace(/\s+/g, '_')
+  )
 
   const errors = new Map<number, string[]>()
   const leads: ParsedLead[] = []
@@ -175,13 +212,14 @@ export function parseCSV(csvContent: string): {
     const line = lines[i].trim()
     if (!line) continue
 
-    // Simple CSV parsing (handle quoted values)
-    const values = line.match(/(?:[^,]*"[^"]*"[^,]*|[^,]+)/g) || []
+    const values = parseCSVLine(line)
 
     const row: RawLeadRow = {}
     for (let j = 0; j < headers.length && j < values.length; j++) {
       const header = headers[j]
-      const value = values[j].replace(/['"]/g, '').trim()
+      const value = values[j]
+        .replace(/^["']|["']$/g, '') // Remove surrounding quotes
+        .trim()
       row[header as keyof RawLeadRow] = value
     }
 
