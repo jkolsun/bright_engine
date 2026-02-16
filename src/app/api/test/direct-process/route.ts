@@ -27,13 +27,13 @@ export async function GET(request: NextRequest) {
     
     // Create queue and worker with same connection
     // @ts-ignore - BullMQ has vendored ioredis that conflicts with root ioredis
-    const queue = new Queue('test-direct', { connection })
-    
+    const queue = new Queue('test-direct', { connection: connection as any })
+
     // @ts-ignore - BullMQ has vendored ioredis that conflicts with root ioredis
     const worker = new Worker('test-direct', async (job) => {
       console.log(`[DIRECT-TEST] Processing job ${job.id}`)
       return { processed: true, jobId: job.id }
-    }, { connection })
+    }, { connection: connection as any })
     
     // Wait for worker to be ready
     await new Promise((resolve) => {
