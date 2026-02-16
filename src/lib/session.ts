@@ -1,7 +1,9 @@
-const SESSION_SECRET = process.env.SESSION_SECRET
+const SESSION_SECRET = process.env.SESSION_SECRET || 'build-placeholder-do-not-use-in-production'
 
-if (!SESSION_SECRET) {
-  throw new Error('SESSION_SECRET environment variable is required')
+function validateSessionSecret() {
+  if (SESSION_SECRET === 'build-placeholder-do-not-use-in-production') {
+    throw new Error('SESSION_SECRET environment variable is required and not set')
+  }
 }
 
 async function hmacSign(message: string, secret: string): Promise<string> {
@@ -21,15 +23,17 @@ async function hmacSign(message: string, secret: string): Promise<string> {
 }
 
 export async function signSession(data: object): Promise<string> {
+  validateSessionSecret()
   const payload = btoa(JSON.stringify(data))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '')
-  const sig = await hmacSign(payload, SESSION_SECRET!)
+  const sig = await hmacSign(payload, SESSION_SECRET)
   return `${payload}.${sig}`
 }
 
 export async function verifySession(cookie: string): Promise<any | null> {
+  validateSessionSecret()
   if (!cookie || !cookie.includes('.')) return null
 
   const lastDot = cookie.lastIndexOf('.')
@@ -38,7 +42,7 @@ export async function verifySession(cookie: string): Promise<any | null> {
 
   if (!payload || !sig) return null
 
-  const expected = await hmacSign(payload, SESSION_SECRET!)
+  const expected = await hmacSign(payload, SESSION_SECRET)
   if (sig !== expected) return null
 
   try {
