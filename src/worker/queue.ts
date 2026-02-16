@@ -80,14 +80,21 @@ let sequenceEvents: QueueEvents | null = null
 let monitoringEvents: QueueEvents | null = null
 
 // Get or create queues (with lazy Redis initialization)
-function getQueues() {
+async function getQueues() {
   initializeRedisConnection()
   
-  if (!enrichmentQueue && connection) {
-    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-    enrichmentQueue = new Queue('enrichment', { connection })
-    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-    enrichmentEvents = new QueueEvents('enrichment', { connection })
+  // Wait for connection to be ready before creating queues
+  if (connection && !enrichmentQueue) {
+    try {
+      await connection.ping() // Ensure connection is ready
+      // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+      enrichmentQueue = new Queue('enrichment', { connection })
+      // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+      enrichmentEvents = new QueueEvents('enrichment', { connection })
+      console.log('[QUEUE] Enrichment queue initialized with ready connection')
+    } catch (err) {
+      console.warn('[QUEUE] Failed to initialize enrichment queue:', err)
+    }
   }
   if (!previewQueue && connection) {
     // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
@@ -128,8 +135,8 @@ function getQueues() {
 }
 
 // Export getters instead of direct references
-export function getEnrichmentQueue() {
-  getQueues()
+export async function getEnrichmentQueue() {
+  await getQueues()
   return enrichmentQueue
 }
 
@@ -221,22 +228,16 @@ export async function addEnrichmentJob(data: {
   state?: string
 }) {
   try {
-    // Create fresh Redis connection and queue each time to avoid race conditions
-    console.log(`[QUEUE] Creating fresh connection for lead ${data.leadId}`)
+    // Use the shared queue (properly initialized) instead of fresh connections
+    const queue = await getEnrichmentQueue()
+    if (!queue) {
+      console.error(`❌ No enrichment queue available for lead ${data.leadId}`)
+      return null
+    }
     
-    const freshConnection = new Redis(process.env.REDIS_URL!, {
-      maxRetriesPerRequest: null,
-      connectTimeout: 5000,
-    })
+    console.log(`[QUEUE] Using shared queue for lead ${data.leadId}`)
     
-    // Wait for connection to be ready
-    await freshConnection.ping()
-    console.log(`[QUEUE] Fresh Redis connection ready for lead ${data.leadId}`)
-    
-    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-    const freshQueue = new Queue('enrichment', { connection: freshConnection })
-    
-    const job = await freshQueue.add(
+    const job = await queue.add(
       'enrich-lead',
       data,
       {
@@ -249,11 +250,6 @@ export async function addEnrichmentJob(data: {
     )
     
     console.log(`✅ Enrichment job queued successfully for lead ${data.leadId}, job ID: ${job.id}`)
-    
-    // Clean up connection after a delay to allow job processing
-    setTimeout(() => {
-      freshConnection.disconnect()
-    }, 1000)
     
     return job
   } catch (err) {
