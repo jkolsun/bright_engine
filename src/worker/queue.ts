@@ -39,7 +39,6 @@ function initializeRedisConnection() {
         lazyConnect: false, // Connect immediately
         retryStrategy: (times) => Math.min(times * 50, 2000), // Retry with backoff
         enableReadyCheck: true,
-        maxLoadingTimeout: 5000,
       })
     } else if (hasExplicitRedisHost || hasExplicitRedisPort) {
       // Only connect if host or port are explicitly set
