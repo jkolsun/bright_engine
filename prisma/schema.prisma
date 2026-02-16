@@ -212,7 +212,7 @@ model Client {
   id                   String        @id @default(cuid())
   leadId               String?       @unique @map("lead_id")
   companyName          String        @map("company_name")
-  industry             Industry
+  industry             String        @default("GENERAL_CONTRACTING")
   siteUrl              String?       @map("site_url")
   stagingUrl           String?       @map("staging_url")
   domainStatus         String?       @map("domain_status") // 'none', 'client_owned', 'registered_by_us'
