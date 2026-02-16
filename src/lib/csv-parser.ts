@@ -48,6 +48,22 @@ const VALID_INDUSTRIES = [
   'GENERAL_CONTRACTING',
   'CLEANING',
   'PEST_CONTROL',
+  'LAW',
+  'LAW_PRACTICE',
+  'LEGAL',
+  'LEGAL_SERVICES',
+  'CONSULTING',
+  'TECHNOLOGY',
+  'FINANCE',
+  'HEALTHCARE',
+  'REAL_ESTATE',
+  'CONSTRUCTION',
+  'MANUFACTURING',
+  'RETAIL',
+  'HOSPITALITY',
+  'TRANSPORTATION',
+  'EDUCATION',
+  'NONPROFIT',
 ]
 
 const PHONE_REGEX = /^\+?1?\d{10,14}$/
@@ -69,8 +85,9 @@ function normalizeEmail(email: string): string | null {
 
 function normalizeIndustry(industry: string): string | null {
   if (!industry) return null
-  const normalized = industry.toUpperCase().replace(/\s+/g, '_')
-  return VALID_INDUSTRIES.includes(normalized) ? normalized : null
+  const normalized = industry.toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '')
+  // Accept any normalized industry (not just hardcoded list)
+  return normalized || null
 }
 
 export function parseLead(row: RawLeadRow): ParsedLead {
@@ -105,11 +122,8 @@ export function parseLead(row: RawLeadRow): ParsedLead {
   if (!normalizedEmail) errors.push('Email must be valid (name@domain.com)')
 
   const normalizedIndustry = normalizeIndustry(industry)
-  if (!normalizedIndustry) {
-    errors.push(
-      `Industry must be one of: ${VALID_INDUSTRIES.join(', ')}`
-    )
-  }
+  // Industry is optional - use GENERAL_CONTRACTING as fallback if not provided
+  // This allows CSVs without industry field to still import
 
   return {
     firstName,
