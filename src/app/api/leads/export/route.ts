@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     // Admin-only access check - exporting sensitive lead data
     const sessionCookie = request.cookies.get('session')?.value
-    const session = sessionCookie ? verifySession(sessionCookie) : null
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }

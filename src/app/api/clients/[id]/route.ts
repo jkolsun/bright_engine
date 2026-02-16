@@ -10,7 +10,7 @@ export async function GET(
   try {
     // Admin-only access check - sensitive client/financial data
     const sessionCookie = request.cookies.get('session')?.value
-    const session = sessionCookie ? verifySession(sessionCookie) : null
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }
@@ -65,7 +65,7 @@ export async function PUT(
   try {
     // Admin-only access check
     const sessionCookie = request.cookies.get('session')?.value
-    const session = sessionCookie ? verifySession(sessionCookie) : null
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }
@@ -98,7 +98,7 @@ export async function DELETE(
   try {
     // Admin-only access check
     const sessionCookie = request.cookies.get('session')?.value
-    const session = sessionCookie ? verifySession(sessionCookie) : null
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }

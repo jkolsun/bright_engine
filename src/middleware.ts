@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifySession } from '@/lib/session'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Clawdbot API uses API key auth, not cookies
@@ -43,7 +43,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Verify signed session
-  const decoded = verifySession(sessionCookie)
+  const decoded = await verifySession(sessionCookie)
   if (!decoded) {
     // Invalid session — clear it and redirect to login
     if (pathname.startsWith('/api/')) {

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   try {
     // Require admin auth (bootstrap/admin is the only truly unauthenticated bootstrap route)
     const sessionCookie = request.cookies.get('session')?.value
-    const session = sessionCookie ? verifySession(sessionCookie) : null
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin required to create reps' }, { status: 403 })
     }

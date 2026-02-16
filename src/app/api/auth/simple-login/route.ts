@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     )
 
     // Set session cookie (HMAC signed)
-    const sessionData = signSession({
+    const sessionData = await signSession({
       userId: user.id,
       email: user.email,
       name: user.name,

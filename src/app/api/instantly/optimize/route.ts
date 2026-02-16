@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   try {
     const sessionCookie = request.cookies.get('session')?.value
-    const session = sessionCookie ? verifySession(sessionCookie) : null
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }

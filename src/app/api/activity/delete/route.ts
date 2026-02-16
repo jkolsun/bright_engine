@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   try {
     // Admin-only access check
     const sessionCookie = request.cookies.get('session')?.value
-    const session = sessionCookie ? verifySession(sessionCookie) : null
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }
@@ -62,7 +62,7 @@ export async function DELETE(request: NextRequest) {
   try {
     // Admin-only access check
     const sessionCookie = request.cookies.get('session')?.value
-    const session = sessionCookie ? verifySession(sessionCookie) : null
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }

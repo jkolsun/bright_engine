@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify signed session cookie
-    const decoded = verifySession(sessionCookie)
+    const decoded = await verifySession(sessionCookie)
     if (!decoded) {
       return NextResponse.json(
         { error: 'Invalid session' },

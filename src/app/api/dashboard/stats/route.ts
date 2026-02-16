@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     // Authentication check - admin or rep access
     const sessionCookie = request.cookies.get('session')?.value
-    const session = sessionCookie ? verifySession(sessionCookie) : null
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || !['ADMIN', 'REP'].includes(session.role)) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
