@@ -167,7 +167,7 @@ function calculateTotalCapacity(accounts: any[]): number {
  */
 function calculateSequenceDuration(steps: any[]): number {
   if (!steps || steps.length === 0) return 7
-  return Math.max(...steps.map((s) => s.delay || 0))
+  return steps.reduce((sum, s) => sum + (s.delay || 0), 0)
 }
 
 /**
