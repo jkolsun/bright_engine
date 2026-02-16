@@ -505,18 +505,13 @@ async function ensureCampaignsExist() {
       return
     }
 
-    // Check if campaigns already exist in database
-    let campaignA = await prisma.lead.findFirst({
-      where: { instantlyCampaignId: 'campaign_a' },
+    // Check if campaigns already exist in Settings table
+    const existing = await prisma.settings.findUnique({
+      where: { key: 'instantly_campaigns' },
     })
 
-    let campaignB = await prisma.lead.findFirst({
-      where: { instantlyCampaignId: 'campaign_b' },
-    })
-
-    // If both exist in our DB, campaigns are set up
-    if (campaignA || campaignB) {
-      console.log('[Instantly] Campaigns already created')
+    if (existing) {
+      console.log('[Instantly] Campaigns already created:', existing.value)
       return
     }
 
@@ -547,9 +542,13 @@ async function ensureCampaignsExist() {
       }),
     })
 
+    let campaignAId: string | null = null
+    let campaignBId: string | null = null
+
     if (campaignARes.ok) {
       const campaignAData = await campaignARes.json()
-      console.log('[Instantly] Campaign A created:', campaignAData.id)
+      campaignAId = campaignAData.id
+      console.log('[Instantly] Campaign A created:', campaignAId)
     }
 
     // Create Campaign B
@@ -579,10 +578,25 @@ async function ensureCampaignsExist() {
 
     if (campaignBRes.ok) {
       const campaignBData = await campaignBRes.json()
-      console.log('[Instantly] Campaign B created:', campaignBData.id)
+      campaignBId = campaignBData.id
+      console.log('[Instantly] Campaign B created:', campaignBId)
     }
 
-    console.log('[Instantly] Campaigns created successfully')
+    // Store campaign IDs in Settings for future reference
+    if (campaignAId || campaignBId) {
+      await prisma.settings.upsert({
+        where: { key: 'instantly_campaigns' },
+        create: {
+          key: 'instantly_campaigns',
+          value: { campaign_a: campaignAId, campaign_b: campaignBId },
+        },
+        update: {
+          value: { campaign_a: campaignAId, campaign_b: campaignBId },
+        },
+      })
+    }
+    
+    console.log('[Instantly] Campaigns created and IDs stored:', { campaignAId, campaignBId })
   } catch (error) {
     console.error('[Instantly] Campaign creation failed:', error)
     // Don't throw — continue sync even if campaign creation fails
