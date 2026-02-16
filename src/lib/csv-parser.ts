@@ -13,6 +13,7 @@ export interface RawLeadRow {
   company?: string
   email?: string
   phone?: string
+  company_phone?: string
   industry?: string
   city?: string
   state?: string
@@ -103,7 +104,7 @@ export function parseLead(row: RawLeadRow): ParsedLead {
     ''
   ).trim()
   const email = (row.email || '').trim()
-  const phone = (row.phone || '').trim()
+  const phone = (row.phone || row.company_phone || '').trim()
   const industry = (row.industry || '').trim()
   const city = (row.city || '').trim()
   const state = (row.state || '').trim()
@@ -164,7 +165,7 @@ export function parseCSV(csvContent: string): {
   const headerLine = lines[0]
   const headers = headerLine
     .split(',')
-    .map((h) => h.trim().toLowerCase().replace(/['"]/g, ''))
+    .map((h) => h.trim().toLowerCase().replace(/['"]/g, '').replace(/\s+/g, '_'))
 
   const errors = new Map<number, string[]>()
   const leads: ParsedLead[] = []
