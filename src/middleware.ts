@@ -57,7 +57,7 @@ export async function middleware(request: NextRequest) {
 
   const userRole = decoded.role || 'guest'
 
-  // Admin-only API routes
+  // Admin-only API routes (but diagnostics is checked inside the route)
   const adminOnlyPaths = [
     '/api/admin/',
     '/api/users',
@@ -69,7 +69,7 @@ export async function middleware(request: NextRequest) {
     '/api/clients',
     '/api/dashboard/stats'
   ]
-  if (adminOnlyPaths.some(p => pathname.startsWith(p))) {
+  if (adminOnlyPaths.some(p => pathname.startsWith(p)) && !pathname.includes('/diagnostics')) {
     if (userRole !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
