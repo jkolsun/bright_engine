@@ -221,13 +221,18 @@ export async function addEnrichmentJob(data: {
   state?: string
 }) {
   const queue = getEnrichmentQueue()
-  if (!queue || !isRedisAvailable) {
+  if (!queue) {
     console.warn('Enrichment queue unavailable, skipping job for lead:', data.leadId)
     return null
   }
   
   try {
-    return await queue.add(
+    // Test Redis connection with a quick ping - don't rely on isRedisAvailable flag
+    if (connection) {
+      await connection.ping()
+    }
+    
+    const job = await queue.add(
       'enrich-lead',
       data,
       {
@@ -238,6 +243,8 @@ export async function addEnrichmentJob(data: {
         },
       }
     )
+    console.log(`✅ Enrichment job queued for lead ${data.leadId}`)
+    return job
   } catch (err) {
     console.warn('Failed to add enrichment job:', err)
     return null
@@ -249,13 +256,17 @@ export async function addPreviewGenerationJob(data: {
   clientId?: string
 }) {
   const queue = getPreviewQueue()
-  if (!queue || !isRedisAvailable) {
+  if (!queue) {
     console.warn('Preview queue unavailable, skipping job for lead:', data.leadId)
     return null
   }
   
   try {
-    return await queue.add(
+    if (connection) {
+      await connection.ping()
+    }
+    
+    const job = await queue.add(
       'generate-preview',
       data,
       {
@@ -266,6 +277,8 @@ export async function addPreviewGenerationJob(data: {
         },
       }
     )
+    console.log(`✅ Preview job queued for lead ${data.leadId}`)
+    return job
   } catch (err) {
     console.warn('Failed to add preview generation job:', err)
     return null
