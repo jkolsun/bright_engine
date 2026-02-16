@@ -27,6 +27,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/test/') ||
     pathname.startsWith('/api/worker-init') ||
     pathname.startsWith('/api/admin/diagnostics') ||
+    pathname.startsWith('/api/instantly/sync-campaigns') ||
     pathname === '/api/webhook-trigger' ||
     pathname === '/api/webhook-trigger-simple' ||
     pathname === '/api/health-simple'
