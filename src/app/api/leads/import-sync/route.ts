@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { parseCSV } from '@/lib/csv-parser'
 import { enrichLead } from '@/lib/serpapi'
+import { generatePreview } from '@/lib/preview-generator'
+import { fetchSerperResearch } from '@/lib/serper'
+import { generatePersonalization } from '@/lib/personalization'
 import { logActivity } from '@/lib/logging'
 import { getTimezoneFromState } from '@/lib/utils'
 import { verifySession } from '@/lib/session'
@@ -39,10 +42,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No valid leads found in CSV' }, { status: 400 })
     }
 
-    // Create leads and process synchronously
+    // Create leads and process synchronously through full pipeline
     const results = {
       created: 0,
       enriched: 0,
+      previews: 0,
+      personalized: 0,
       failed: 0,
       errors: [] as string[]
     }
@@ -76,14 +81,37 @@ export async function POST(request: NextRequest) {
         results.created++
         console.log(`[SYNC-IMPORT] Created lead ${lead.id}: ${lead.firstName} ${lead.lastName} at ${lead.companyName}`)
 
-        // 2. Immediately enrich the lead (synchronous)
+        // 2. Enrich via SerpAPI
         try {
           await enrichLead(lead.id)
           results.enriched++
           console.log(`[SYNC-IMPORT] ✅ Enriched lead ${lead.id}`)
         } catch (enrichErr) {
           console.error(`[SYNC-IMPORT] ❌ Enrichment failed for lead ${lead.id}:`, enrichErr)
-          results.errors.push(`Enrichment failed for ${lead.firstName} ${lead.lastName}: ${enrichErr instanceof Error ? enrichErr.message : String(enrichErr)}`)
+          results.errors.push(`Enrichment failed for ${row.firstName} ${row.lastName}: ${enrichErr instanceof Error ? enrichErr.message : String(enrichErr)}`)
+        }
+
+        // 3. Generate preview URL
+        try {
+          await generatePreview({ leadId: lead.id })
+          results.previews++
+          console.log(`[SYNC-IMPORT] ✅ Preview generated for lead ${lead.id}`)
+        } catch (previewErr) {
+          console.error(`[SYNC-IMPORT] ❌ Preview failed for lead ${lead.id}:`, previewErr)
+          results.errors.push(`Preview failed for ${row.firstName} ${row.lastName}: ${previewErr instanceof Error ? previewErr.message : String(previewErr)}`)
+        }
+
+        // 4. Personalization: Serper research (non-fatal) then AI personalization
+        try {
+          try { await fetchSerperResearch(lead.id) } catch (e) { console.warn(`[SYNC-IMPORT] Serper research skipped for ${lead.id}:`, e instanceof Error ? e.message : e) }
+          const personResult = await generatePersonalization(lead.id)
+          if (personResult) {
+            results.personalized++
+            console.log(`[SYNC-IMPORT] ✅ Personalized lead ${lead.id}: "${personResult.firstLine}"`)
+          }
+        } catch (personErr) {
+          console.error(`[SYNC-IMPORT] ❌ Personalization failed for lead ${lead.id}:`, personErr)
+          results.errors.push(`Personalization failed for ${row.firstName} ${row.lastName}: ${personErr instanceof Error ? personErr.message : String(personErr)}`)
         }
 
       } catch (createErr) {
@@ -96,13 +124,15 @@ export async function POST(request: NextRequest) {
     // Log activity
     await logActivity(
       'IMPORT',
-      `Synchronous import: ${results.created} leads created, ${results.enriched} enriched`,
+      `Synchronous import: ${results.created} created, ${results.enriched} enriched, ${results.previews} previews, ${results.personalized} personalized`,
       {
         metadata: {
           mode: 'SYNCHRONOUS',
           totalProcessed: validRows.length,
           created: results.created,
           enriched: results.enriched,
+          previews: results.previews,
+          personalized: results.personalized,
           failed: results.failed,
           campaign,
         },
@@ -116,11 +146,13 @@ export async function POST(request: NextRequest) {
         totalRequested: validRows.length,
         created: results.created,
         enriched: results.enriched,
+        previews: results.previews,
+        personalized: results.personalized,
         failed: results.failed,
         successRate: `${Math.round((results.enriched / results.created) * 100)}%`
       },
       errors: results.errors,
-      message: `✅ Synchronously processed ${results.created} leads with ${results.enriched} enrichments`
+      message: `✅ Synchronously processed ${results.created} leads: ${results.enriched} enriched, ${results.previews} previews, ${results.personalized} personalized`
     })
 
   } catch (error) {

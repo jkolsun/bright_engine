@@ -61,7 +61,9 @@ export async function enrichLead(leadId: string): Promise<EnrichmentResult> {
       address: result.address,
       phone: result.phone,
       hours: result.hours,
-      services: result.service_options?.map((s: any) => s.name) || [],
+      services: Array.isArray(result.service_options)
+        ? result.service_options.map((s: any) => typeof s === 'string' ? s : s.name || s.offered_service || String(s)).filter(Boolean)
+        : [],
       rating: result.rating,
       reviews: result.reviews,
       photos: result.photos?.slice(0, 10).map((p: any) => p.thumbnail) || [],
