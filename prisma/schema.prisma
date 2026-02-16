@@ -55,19 +55,6 @@ model User {
 // ============================================
 // LEAD MODEL (Pre-payment prospects)
 // ============================================
-enum Industry {
-  RESTORATION
-  ROOFING
-  PLUMBING
-  HVAC
-  PAINTING
-  LANDSCAPING
-  ELECTRICAL
-  GENERAL_CONTRACTING
-  CLEANING
-  PEST_CONTROL
-}
-
 enum LeadStatus {
   NEW
   HOT_LEAD
@@ -89,6 +76,7 @@ enum LeadSource {
   REFERRAL
   PARTNER
   ORGANIC
+  CSV_IMPORT
 }
 
 enum LeadPriority {
@@ -104,7 +92,7 @@ model Lead {
   email            String?
   phone            String
   companyName      String       @map("company_name")
-  industry         Industry
+  industry         String       @default("GENERAL_CONTRACTING") // Accept any industry as string
   city             String?
   state            String?
   timezone         String?      @default("America/New_York")
