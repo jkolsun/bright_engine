@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
         createdAt: { gte: thirtyMinutesAgo },
         // No enrichment data yet
         website: null,
-        googleRating: null,
-        lastEnriched: null
+        enrichedRating: null,
+        enrichedAddress: null
       },
       take: 5 // Process max 5 leads
     })
@@ -50,10 +50,10 @@ export async function GET(request: NextRequest) {
             lastName: true,
             companyName: true,
             website: true,
-            googleRating: true,
-            businessAddress: true,
-            lastEnriched: true,
-            enrichmentStatus: true
+            enrichedRating: true,
+            enrichedAddress: true,
+            enrichedReviews: true,
+            updatedAt: true
           }
         })
         
@@ -64,10 +64,10 @@ export async function GET(request: NextRequest) {
           processed: true,
           enriched: {
             website: enrichedLead?.website,
-            googleRating: enrichedLead?.googleRating,
-            businessAddress: enrichedLead?.businessAddress,
-            lastEnriched: enrichedLead?.lastEnriched,
-            status: enrichedLead?.enrichmentStatus
+            enrichedRating: enrichedLead?.enrichedRating,
+            enrichedAddress: enrichedLead?.enrichedAddress,
+            enrichedReviews: enrichedLead?.enrichedReviews,
+            updatedAt: enrichedLead?.updatedAt
           }
         })
         
