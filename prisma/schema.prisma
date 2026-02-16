@@ -136,7 +136,6 @@ model Lead {
   
   createdAt        DateTime     @default(now()) @map("created_at")
   updatedAt        DateTime     @updatedAt @map("updated_at")
-  distributedAt    DateTime?    @map("distributed_at")
 
   // Relations
   assignedTo         User?               @relation("AssignedLeads", fields: [assignedToId], references: [id])

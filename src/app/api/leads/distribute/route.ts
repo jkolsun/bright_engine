@@ -131,8 +131,7 @@ export async function POST(request: NextRequest) {
           where: { id: lead.id },
           data: {
             status: 'BUILDING',
-            campaign: targetCampaign,
-            distributedAt: new Date()
+            campaign: targetCampaign
           }
         })
 
