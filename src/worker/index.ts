@@ -14,18 +14,33 @@ import { addPreviewGenerationJob, addPersonalizationJob, addScriptGenerationJob,
 
 async function startWorkers() {
   try {
-    // Test Redis connection
-    const testConnection = new Redis(process.env.REDIS_URL || process.env.REDIS_HOST || 'redis://localhost:6379', { maxRetriesPerRequest: null })
-    await testConnection.ping()
-    await testConnection.quit()
-    console.log('Redis connected. Starting workers...')
+    // Test Redis connection with timeout
+    const testConnection = new Redis(process.env.REDIS_URL || process.env.REDIS_HOST || 'redis://localhost:6379', { 
+      maxRetriesPerRequest: null,
+      connectTimeout: 5000,
+      lazyConnect: true // Don't connect until explicitly called
+    })
+    
+    try {
+      await testConnection.connect()
+      await testConnection.ping()
+      await testConnection.quit()
+      console.log('Redis connected. Starting workers...')
+    } catch (err) {
+      console.warn('Redis unavailable, skipping worker initialization:', err instanceof Error ? err.message : String(err))
+      return // Exit gracefully if Redis not available
+    }
 
     // Initialize Redis connection (supports both Railway internal URL and localhost fallback)
     // BullMQ REQUIRES maxRetriesPerRequest: null
     let connection: Redis | null = null
     if (process.env.REDIS_URL) {
       // Use Railway's internal Redis URL
-      connection = new Redis(process.env.REDIS_URL, { maxRetriesPerRequest: null })
+      connection = new Redis(process.env.REDIS_URL, { 
+        maxRetriesPerRequest: null,
+        connectTimeout: 5000,
+        retryStrategy: () => null // Don't retry if connection fails
+      })
     } else {
       // Fallback to localhost (for local development)
       connection = new Redis({
@@ -33,6 +48,8 @@ async function startWorkers() {
         port: parseInt(process.env.REDIS_PORT || '6379'),
         password: process.env.REDIS_PASSWORD || undefined,
         maxRetriesPerRequest: null,
+        connectTimeout: 5000,
+        retryStrategy: () => null // Don't retry if connection fails
       })
     }
     
