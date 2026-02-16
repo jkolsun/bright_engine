@@ -14,6 +14,7 @@ export default function ImportPage() {
   const [pipelineState, setPipelineState] = useState<any>(null)
   const [uploading, setUploading] = useState(false)
   const [importResult, setImportResult] = useState<any>(null)
+  const [importMode, setImportMode] = useState<'async' | 'sync'>('sync') // Default to sync (working solution)
 
   // Poll for pipeline status every 2 seconds while processing
   useEffect(() => {
@@ -58,7 +59,9 @@ export default function ImportPage() {
       const formData = new FormData()
       formData.append('file', file)
 
-      const res = await fetch('/api/leads/import', {
+      // Use sync or async endpoint based on selected mode
+      const endpoint = importMode === 'sync' ? '/api/leads/import-sync' : '/api/leads/import'
+      const res = await fetch(endpoint, {
         method: 'POST',
         body: formData
       })
@@ -67,7 +70,8 @@ export default function ImportPage() {
 
       if (res.ok) {
         setImportResult(data)
-        setStep('processing')
+        // Sync mode goes directly to complete, async mode goes to processing
+        setStep(importMode === 'sync' ? 'complete' : 'processing')
       } else {
         alert(`Import failed: ${data.error}`)
       }
@@ -104,6 +108,48 @@ export default function ImportPage() {
             </div>
           </Card>
 
+          {/* Import Mode Selection */}
+          <Card className="p-6 mb-6">
+            <h4 className="font-semibold text-gray-900 mb-4">Import Mode</h4>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setImportMode('sync')}
+                className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+                  importMode === 'sync' 
+                    ? 'border-green-500 bg-green-50 text-green-900' 
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center justify-center mb-2">
+                  <Zap size={24} className={importMode === 'sync' ? 'text-green-600' : 'text-gray-400'} />
+                </div>
+                <h5 className="font-semibold mb-1">Synchronous (Recommended)</h5>
+                <p className="text-sm opacity-75">Immediate enrichment, see results instantly. Uses SerpAPI directly.</p>
+                {importMode === 'sync' && (
+                  <Badge className="mt-2 bg-green-100 text-green-800">✅ Working Now</Badge>
+                )}
+              </button>
+              
+              <button
+                onClick={() => setImportMode('async')}
+                className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+                  importMode === 'async' 
+                    ? 'border-blue-500 bg-blue-50 text-blue-900' 
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center justify-center mb-2">
+                  <Clock size={24} className={importMode === 'async' ? 'text-blue-600' : 'text-gray-400'} />
+                </div>
+                <h5 className="font-semibold mb-1">Queue-Based</h5>
+                <p className="text-sm opacity-75">Background processing with full pipeline monitoring.</p>
+                {importMode === 'async' && (
+                  <Badge variant="outline" className="mt-2">⚠️ Debug Mode</Badge>
+                )}
+              </button>
+            </div>
+          </Card>
+
           {/* Upload Zone */}
           <Card className="p-12">
             <div className="text-center">
@@ -126,9 +172,13 @@ export default function ImportPage() {
                   disabled={uploading}
                   className="hidden"
                 />
-                <span className="cursor-pointer inline-flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-lg font-semibold disabled:opacity-50">
+                <span className={`cursor-pointer inline-flex items-center gap-2 px-8 py-4 text-white rounded-lg transition-colors text-lg font-semibold disabled:opacity-50 ${
+                  importMode === 'sync' 
+                    ? 'bg-green-600 hover:bg-green-700' 
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}>
                   {uploading ? <Loader2 size={24} className="animate-spin" /> : <Upload size={24} />}
-                  {uploading ? 'Uploading...' : 'Choose CSV File'}
+                  {uploading ? 'Processing...' : `${importMode === 'sync' ? 'Import & Enrich Now' : 'Queue for Processing'}`}
                 </span>
               </label>
 
@@ -149,63 +199,90 @@ export default function ImportPage() {
 
           {/* Pipeline Info */}
           <Card className="p-6 mt-6">
-            <h4 className="font-semibold text-gray-900 mb-4">What Happens Next</h4>
+            <h4 className="font-semibold text-gray-900 mb-4">
+              What Happens Next ({importMode === 'sync' ? 'Synchronous Mode' : 'Queue-Based Mode'})
+            </h4>
             <div className="space-y-3 text-sm">
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-blue-600">1</span>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Validate & Deduplicate</p>
-                  <p className="text-gray-600">Check emails, remove duplicates, verify required fields</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-blue-600">2</span>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Auto-Split by Campaign</p>
-                  <p className="text-gray-600">A: Bad website | B: No website | C: Reps (has phone)</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-blue-600">3</span>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Enrich (SerpAPI)</p>
-                  <p className="text-gray-600">Google Maps data: phone, rating, reviews, competitors</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-blue-600">4</span>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Generate Previews</p>
-                  <p className="text-gray-600">Industry templates with real data, unique URLs, analytics ready</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-blue-600">5</span>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Personalize (Serper + AI)</p>
-                  <p className="text-gray-600">AI first lines using enrichment + competitors + preview URL</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-blue-600">6</span>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Assemble & Output</p>
-                  <p className="text-gray-600">3 CSV files ready for Campaign A, B, and C</p>
-                </div>
-              </div>
+              {importMode === 'sync' ? (
+                // Synchronous mode steps
+                <>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-bold text-green-600">1</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Parse & Validate CSV</p>
+                      <p className="text-gray-600">Immediate validation, create leads in database</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-bold text-green-600">2</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Immediate Enrichment</p>
+                      <p className="text-gray-600">Direct SerpAPI calls for each lead - see results instantly</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-bold text-green-600">3</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Complete Report</p>
+                      <p className="text-gray-600">Detailed success/failure results with enrichment data</p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                // Async mode steps
+                <>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-bold text-blue-600">1</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Validate & Queue</p>
+                      <p className="text-gray-600">Check emails, create leads, queue background jobs</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-bold text-blue-600">2</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Background Processing</p>
+                      <p className="text-gray-600">Workers process enrichment, preview generation, personalization</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-bold text-blue-600">3</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">Pipeline Monitoring</p>
+                      <p className="text-gray-600">Real-time status updates as jobs complete</p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
+            
+            {importMode === 'sync' && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-800">
+                  <strong>✅ Recommended:</strong> Synchronous mode processes leads immediately and uses your API credits efficiently. Perfect for testing and production use.
+                </p>
+              </div>
+            )}
+            
+            {importMode === 'async' && (
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  <strong>⚠️ Debug Mode:</strong> Queue-based processing is currently in debug mode. Jobs may not process automatically.
+                </p>
+              </div>
+            )}
           </Card>
         </div>
       )}
@@ -251,20 +328,57 @@ export default function ImportPage() {
               <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <CheckCircle size={48} className="text-green-600" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Pipeline Complete!</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {importResult?.mode === 'SYNCHRONOUS' ? 'Synchronous Import Complete!' : 'Pipeline Complete!'}
+              </h3>
               <p className="text-gray-600 mb-8">
-                Successfully processed {importResult?.createdCount || '—'} leads through full enrichment pipeline
+                {importResult?.mode === 'SYNCHRONOUS' 
+                  ? `Immediately processed ${importResult?.summary?.created || '—'} leads with ${importResult?.summary?.enriched || '—'} successful enrichments`
+                  : `Successfully processed ${importResult?.createdCount || '—'} leads through full enrichment pipeline`
+                }
               </p>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-1 gap-6 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-4xl font-bold text-blue-600">
-                    {importResult?.summary?.createdCount || importResult?.createdCount || '—'}
+                    {importResult?.summary?.created || importResult?.summary?.createdCount || importResult?.createdCount || '—'}
                   </p>
-                  <p className="text-sm text-gray-700 mt-2">Total Leads Imported</p>
+                  <p className="text-sm text-gray-700 mt-2">Leads Created</p>
                 </div>
+                
+                {importResult?.mode === 'SYNCHRONOUS' && (
+                  <>
+                    <div className="p-6 bg-green-50 rounded-lg border border-green-200">
+                      <p className="text-4xl font-bold text-green-600">
+                        {importResult?.summary?.enriched || '—'}
+                      </p>
+                      <p className="text-sm text-gray-700 mt-2">Successfully Enriched</p>
+                    </div>
+                    
+                    <div className="p-6 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <p className="text-4xl font-bold text-yellow-600">
+                        {importResult?.summary?.successRate || '—'}
+                      </p>
+                      <p className="text-sm text-gray-700 mt-2">Success Rate</p>
+                    </div>
+                  </>
+                )}
               </div>
+              
+              {importResult?.mode === 'SYNCHRONOUS' && importResult?.errors && importResult.errors.length > 0 && (
+                <Card className="p-4 mb-6 bg-red-50 border-red-200">
+                  <h4 className="font-semibold text-red-900 mb-2">Processing Errors ({importResult.errors.length})</h4>
+                  <div className="text-sm text-red-800 space-y-1 max-h-40 overflow-y-auto">
+                    {importResult.errors.slice(0, 5).map((error: string, i: number) => (
+                      <p key={i}>• {error}</p>
+                    ))}
+                    {importResult.errors.length > 5 && (
+                      <p className="italic">... and {importResult.errors.length - 5} more</p>
+                    )}
+                  </div>
+                </Card>
+              )}
 
               {/* Download Buttons */}
               <div className="space-y-3 mb-8">
