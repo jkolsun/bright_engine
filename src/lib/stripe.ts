@@ -1,7 +1,24 @@
 import Stripe from 'stripe'
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
+let _stripe: Stripe | null = null
+
+export function getStripe(): Stripe {
+  if (!_stripe) {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error('STRIPE_SECRET_KEY not set — cannot initialize Stripe')
+    }
+    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2023-10-16',
+    })
+  }
+  return _stripe
+}
+
+// Keep backward-compatible export (lazy proxy)
+export const stripe = new Proxy({} as Stripe, {
+  get(_, prop) {
+    return (getStripe() as any)[prop]
+  }
 })
 
 // Pre-created Stripe Payment Links
@@ -35,7 +52,7 @@ export async function createCustomer(options: {
   phone?: string
   metadata?: Record<string, string>
 }) {
-  const customer = await stripe.customers.create({
+  const customer = await getStripe().customers.create({
     email: options.email,
     name: options.name,
     phone: options.phone,
@@ -50,7 +67,7 @@ export async function createSubscription(options: {
   priceId: string
   metadata?: Record<string, string>
 }) {
-  const subscription = await stripe.subscriptions.create({
+  const subscription = await getStripe().subscriptions.create({
     customer: options.customerId,
     items: [{ price: options.priceId }],
     metadata: options.metadata || {},
@@ -65,7 +82,7 @@ export async function createPaymentLink(options: {
   metadata?: Record<string, string>
 }) {
   // For one-time payments (site build)
-  const session = await stripe.checkout.sessions.create({
+  const session = await getStripe().checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: [
       {
@@ -88,4 +105,4 @@ export async function createPaymentLink(options: {
   return session.url
 }
 
-export default stripe
+export default getStripe()
