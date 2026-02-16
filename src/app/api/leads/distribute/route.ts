@@ -7,8 +7,8 @@ import { verifySession } from '@/lib/session'
 /**
  * POST /api/leads/distribute
  * Route leads to Instantly campaigns based on website status
- * Campaign A: No website (websiteUrl is null/empty)
- * Campaign B: Has website (websiteUrl exists)
+ * Campaign A: Has website (websiteUrl exists) - BAD WEBSITE
+ * Campaign B: No website (websiteUrl is null/empty)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -84,8 +84,8 @@ export async function POST(request: NextRequest) {
       try {
         // Determine which campaign based on website presence
         const hasWebsite = lead.website && lead.website.trim().length > 0
-        const targetCampaign = hasWebsite ? campaign_b : campaign_a
-        const campaignLabel = hasWebsite ? 'Campaign B (Bad Site)' : 'Campaign A (No Site)'
+        const targetCampaign = hasWebsite ? campaign_a : campaign_b
+        const campaignLabel = hasWebsite ? 'Campaign A (Bad Site)' : 'Campaign B (No Site)'
 
         // Prepare lead data for Instantly API
         const leadData = {
@@ -137,9 +137,9 @@ export async function POST(request: NextRequest) {
 
         results.distributed++
         if (hasWebsite) {
-          results.campaignB++
-        } else {
           results.campaignA++
+        } else {
+          results.campaignB++
         }
       } catch (error) {
         results.failed++
