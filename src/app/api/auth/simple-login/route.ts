@@ -11,23 +11,25 @@ export const dynamic = 'force-dynamic'
  * Validates against bcrypt passwordHash with auto-migration for legacy passwords
  * Returns: { success, redirectUrl }
  */
-export async function POST(request: NextRequest) {
-  // Wrap entire handler with 10-second timeout
-  return Promise.race([
-    handleLogin(request),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Login handler timeout')), 10000)
-    )
-  ]).catch((error) => {
-    console.error('Login error:', error)
+export async function POST(request: NextRequest): Promise<Response> {
+  try {
+    // Wrap entire handler with 10-second timeout
+    return await Promise.race([
+      handleLogin(request) as Promise<Response>,
+      new Promise<Response>((_, reject) =>
+        setTimeout(() => reject(new Error('Login handler timeout')), 10000)
+      )
+    ])
+  } catch (error) {
+    console.error('Login timeout:', error)
     return NextResponse.json(
       { success: false, error: 'Login failed' },
       { status: 500 }
     )
-  })
+  }
 }
 
-async function handleLogin(request: NextRequest) {
+async function handleLogin(request: NextRequest): Promise<Response> {
   try {
     // Parse JSON request with timeout
     const parsePromise = request.json()
