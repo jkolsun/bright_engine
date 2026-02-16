@@ -169,8 +169,9 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET /api/leads/distribute?status=BUILDING
- * Get distribution statistics
+ * GET /api/leads/distribute
+ * Preview leads ready for distribution without actually sending them
+ * Query param: preview=true (shows distribution plan)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -181,28 +182,60 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }
 
-    const status = request.nextUrl.searchParams.get('status') || 'BUILDING'
+    const preview = request.nextUrl.searchParams.get('preview') === 'true'
 
-    const distributedLeads = await prisma.lead.findMany({
-      where: { status: status as any }
+    // Get all leads ready for distribution
+    const leadsToDistribute = await prisma.lead.findMany({
+      where: {
+        status: { in: ['NEW', 'HOT_LEAD', 'QUALIFIED'] }
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        companyName: true,
+        website: true,
+        city: true,
+        state: true,
+        status: true
+      }
     })
 
-    const campaignStats = {
-      total: distributedLeads.length,
-      with_website: distributedLeads.filter(l => l.website).length,
-      without_website: distributedLeads.filter(l => !l.website).length,
-      with_campaign: distributedLeads.filter(l => l.campaign).length
-    }
+    // Build distribution plan
+    const plan = leadsToDistribute.map(lead => {
+      const hasWebsite = lead.website && lead.website.trim().length > 0
+      return {
+        id: lead.id,
+        name: `${lead.firstName} ${lead.lastName}`,
+        email: lead.email,
+        company: lead.companyName,
+        website: lead.website || 'NONE',
+        campaign: hasWebsite ? 'Campaign A (Bad Website)' : 'Campaign B (No Website)',
+        campaignId: hasWebsite ? 'cb463064-c7b4-4252-b1f0-07283ba16329' : '5d41542d-31ce-456b-b820-8eba32544eba',
+        status: lead.status
+      }
+    })
+
+    // Summary stats
+    const campaignA = plan.filter(p => p.campaign.includes('Campaign A')).length
+    const campaignB = plan.filter(p => p.campaign.includes('Campaign B')).length
 
     return NextResponse.json({
       status: 'success',
-      distribution: campaignStats,
-      leads: distributedLeads
+      preview: preview,
+      summary: {
+        total: plan.length,
+        campaign_a_count: campaignA,
+        campaign_b_count: campaignB
+      },
+      leads: plan
     })
   } catch (error) {
     console.error('Get distribution error:', error)
     return NextResponse.json(
-      { error: 'Failed to get distribution stats' },
+      { error: 'Failed to get distribution plan' },
       { status: 500 }
     )
   }
