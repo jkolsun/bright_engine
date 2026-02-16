@@ -92,14 +92,18 @@ async function getQueues() {
   // Wait for connection to be ready before creating queues
   if (connection && !enrichmentQueue) {
     try {
-      await connection.ping() // Ensure connection is ready
+      console.log('[QUEUE] Testing connection before creating queue...')
+      const pong = await connection.ping() // Ensure connection is ready
+      console.log('[QUEUE] Connection ping successful:', pong)
+      
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
       enrichmentQueue = new Queue('enrichment', { connection })
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
       enrichmentEvents = new QueueEvents('enrichment', { connection })
-      console.log('[QUEUE] Enrichment queue initialized with ready connection')
+      console.log('[QUEUE] ✅ Enrichment queue initialized with ready connection')
+      console.log('[QUEUE] Queue connection status:', connection.status)
     } catch (err) {
-      console.warn('[QUEUE] Failed to initialize enrichment queue:', err)
+      console.error('[QUEUE] ❌ Failed to initialize enrichment queue:', err)
     }
   }
   if (!previewQueue && connection) {

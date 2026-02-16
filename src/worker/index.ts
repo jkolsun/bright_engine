@@ -32,27 +32,54 @@ async function startWorkers() {
 
     // Use shared Redis connection from queue.ts to avoid connection mismatch
     const connection = getSharedConnection()
+    console.log('[WORKER-INIT] Shared connection status:', {
+      exists: !!connection,
+      status: connection?.status,
+      readyState: connection?.options?.connectTimeout
+    })
+    
     if (!connection) {
-      console.warn('No shared Redis connection available, workers cannot start')
+      console.error('[WORKER-INIT] No shared Redis connection available, workers cannot start')
       return
     }
     
-    console.log('Using shared Redis connection for workers')
+    console.log('[WORKER-INIT] Using shared Redis connection for workers, testing connection...')
+    
+    try {
+      const pong = await connection.ping()
+      console.log('[WORKER-INIT] Connection test successful:', pong)
+    } catch (err) {
+      console.error('[WORKER-INIT] Connection test failed:', err)
+      return
+    }
 
     // Enrichment worker
+    console.log('[WORKER-INIT] Creating enrichment worker with connection...')
     const enrichmentWorker = new Worker(
       'enrichment',
       async (job) => {
-        console.log(`Processing enrichment job: ${job.id}`)
+        console.log(`🚀 [ENRICHMENT] Processing job ${job.id} for lead ${job.data.leadId}`)
         const { leadId } = job.data
         
         await enrichLead(leadId)
         
+        console.log(`✅ [ENRICHMENT] Completed job ${job.id} for lead ${leadId}`)
         return { success: true }
       },
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
       { connection }
     )
+    
+    console.log('[WORKER-INIT] Enrichment worker created successfully')
+    
+    // Add enrichment worker event listeners
+    enrichmentWorker.on('ready', () => {
+      console.log('🟢 [ENRICHMENT] Worker is ready and listening for jobs')
+    })
+    
+    enrichmentWorker.on('active', (job) => {
+      console.log(`🏃 [ENRICHMENT] Job ${job.id} started processing`)
+    })
 
     // Preview worker
     const previewWorker = new Worker(
