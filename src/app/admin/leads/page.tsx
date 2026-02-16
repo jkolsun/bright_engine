@@ -188,6 +188,40 @@ export default function LeadsPage() {
     setSelectedLeads(new Set())
   }
 
+  const handleDeleteSelected = async () => {
+    if (selectedLeads.size === 0) {
+      alert('No leads selected')
+      return
+    }
+
+    const count = selectedLeads.size
+    if (!confirm(`Are you sure you want to delete ${count} selected lead${count !== 1 ? 's' : ''}? This marks them as CLOSED_LOST.`)) {
+      return
+    }
+
+    try {
+      const res = await fetch('/api/leads/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadIds: Array.from(selectedLeads)
+        })
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        alert(`Deleted ${data.deletedCount || count} leads successfully`)
+        setSelectedLeads(new Set())
+        fetchLeads()
+      } else {
+        alert('Failed to delete leads')
+      }
+    } catch (error) {
+      console.error('Error deleting leads:', error)
+      alert('Failed to delete leads')
+    }
+  }
+
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = 
       lead.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -225,6 +259,14 @@ export default function LeadsPage() {
           >
             <Download size={18} className="mr-2" />
             Export CSV {selectedLeads.size > 0 && `(${selectedLeads.size} selected)`}
+          </Button>
+          <Button 
+            variant="destructive"
+            onClick={handleDeleteSelected}
+            disabled={selectedLeads.size === 0}
+            title={selectedLeads.size > 0 ? `Delete ${selectedLeads.size} selected leads` : 'Select leads to delete'}
+          >
+            Delete {selectedLeads.size > 0 && `(${selectedLeads.size})`}
           </Button>
           <Link href="/admin/import">
             <Button variant="outline">
