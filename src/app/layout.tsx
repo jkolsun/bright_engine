@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { Providers } from './providers'
 
 export const metadata: Metadata = {
   title: 'Bright Engine',
@@ -12,16 +11,16 @@ async function initializeWorker() {
     if (process.env.REDIS_URL) {
       const { startWorkers } = await import('@/worker')
       await startWorkers()
-      console.log('[Layout] Workers initialized')
+      console.log('[Layout] Workers initialized on startup')
     }
   } catch (error) {
     console.error('[Layout] Worker init failed:', error)
-    // Continue without worker
+    // Continue without worker - it can be started via /api/worker-init
   }
 }
 
-// Call on server startup
-initializeWorker()
+// Trigger initialization once per process
+initializeWorker().catch(console.error)
 
 export default function RootLayout({
   children,
@@ -30,9 +29,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <Providers>{children}</Providers>
-      </body>
+      <head />
+      <body>{children}</body>
     </html>
   )
 }
