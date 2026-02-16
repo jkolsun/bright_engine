@@ -1,5 +1,4 @@
 import { prisma } from './db'
-import { distributeToInstantly } from './instantly-integration'
 import { addRepTask } from './rep-queue'
 import { logActivity } from './logging'
 
@@ -60,10 +59,42 @@ export async function distributeLead(
       options.channel === 'BOTH'
     ) {
       try {
-        results.instantly = await distributeToInstantly({
-          leadId: options.leadId,
-          campaignId: options.campaignId,
+        // Queue lead for Instantly drip feed instead of pushing directly
+        // The daily 8AM sync handles actual pushing based on capacity
+        const campaignId = options.campaignId || null
+        
+        // Determine campaign based on website field
+        let assignedCampaign = campaignId
+        if (!assignedCampaign) {
+          const leadData = await prisma.lead.findUnique({
+            where: { id: options.leadId },
+            select: { website: true },
+          })
+          
+          // Has website = Campaign A, No website = Campaign B
+          // Actual Instantly campaign IDs are stored in Settings after first sync
+          const campaignSettings = await prisma.settings.findUnique({
+            where: { key: 'instantly_campaigns' },
+          })
+          
+          if (campaignSettings) {
+            const campaigns = campaignSettings.value as any
+            assignedCampaign = leadData?.website ? campaigns.campaign_a : campaigns.campaign_b
+          }
+        }
+        
+        await prisma.lead.update({
+          where: { id: options.leadId },
+          data: {
+            instantlyStatus: 'QUEUED',
+            instantlyCampaignId: assignedCampaign,
+          },
         })
+        
+        results.instantly = {
+          success: true,
+          instantlyId: `queued_${Date.now()}`,
+        }
       } catch (err) {
         const error = err instanceof Error ? err.message : 'Unknown error'
         results.instantly = { success: false, error }
