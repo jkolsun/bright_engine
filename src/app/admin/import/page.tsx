@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useState, useEffect } from 'react'
 import {
   Upload, Download, Check, X, AlertCircle, Loader2,
-  CheckCircle, Pause, XCircle, DollarSign, Clock
+  CheckCircle, Pause, XCircle, DollarSign, Clock, Zap
 } from 'lucide-react'
 
 export default function ImportPage() {
