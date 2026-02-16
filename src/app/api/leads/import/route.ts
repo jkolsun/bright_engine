@@ -127,16 +127,15 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Queue enrichment jobs after successful transaction (non-blocking)
-      // Order: Enrichment → Preview → Personalization → Scripts → Distribution
-      for (const job of jobsToQueue) {
-        try {
-          // 1. Enrichment (SerpAPI) - triggers the entire pipeline via event chaining
-          await addEnrichmentJob(job)
-        } catch (err) {
+      // Queue enrichment jobs after successful transaction (fire-and-forget, non-blocking)
+      // Start background jobs without blocking the response
+      // Each job queuing happens in the background, independent of POST response
+      jobsToQueue.forEach((job) => {
+        // Fire-and-forget: start the job but don't wait for it
+        addEnrichmentJob(job).catch(err => 
           console.error(`Pipeline job queueing failed for lead ${job.leadId}:`, err)
-        }
-      }
+        )
+      })
     }
 
     // Log activity
