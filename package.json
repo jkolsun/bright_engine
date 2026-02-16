@@ -5,9 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "bash ./start.sh",
-    "start:web": "next start",
-    "start:worker": "tsx src/worker/index.ts",
+    "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
     "db:push": "prisma db push --accept-data-loss",

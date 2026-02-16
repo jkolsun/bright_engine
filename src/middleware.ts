@@ -25,6 +25,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/auth/') ||
     pathname.startsWith('/api/webhooks/') ||
     pathname.startsWith('/api/test/') ||
+    pathname.startsWith('/api/worker-init') ||
     pathname === '/api/webhook-trigger' ||
     pathname === '/api/webhook-trigger-simple' ||
     pathname === '/api/health-simple'

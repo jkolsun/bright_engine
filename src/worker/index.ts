@@ -446,4 +446,6 @@ async function runDailyAudit() {
   })
 }
 
+export { startWorkers }
+
 startWorkers()
