@@ -526,7 +526,7 @@ async function ensureCampaignsExist() {
     const campaignARes = await fetch(`${INSTANTLY_API_BASE}/campaigns`, {
       method: 'POST',
       headers: {
-        Authorization: apiKey,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -556,7 +556,7 @@ async function ensureCampaignsExist() {
     const campaignBRes = await fetch(`${INSTANTLY_API_BASE}/campaigns`, {
       method: 'POST',
       headers: {
-        Authorization: apiKey,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -611,7 +611,7 @@ async function ensureWebhookRegistered() {
     const webhookRes = await fetch(`${INSTANTLY_API_BASE}/webhooks`, {
       method: 'POST',
       headers: {
-        Authorization: apiKey,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
