@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { logActivity } from '@/lib/logging'
+import { addEnrichmentJob } from '@/worker/queue'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,6 +54,18 @@ export async function POST(request: NextRequest) {
         console.error(`Failed to create lead ${lead.firstName}:`, err)
       }
     }
+
+    // Queue enrichment jobs for created leads (fire-and-forget, non-blocking)
+    createdLeads.forEach((lead) => {
+      addEnrichmentJob({
+        leadId: lead.id,
+        companyName: lead.companyName,
+        city: lead.city || undefined,
+        state: lead.state || undefined,
+      }).catch(err => 
+        console.error(`Enrichment job queueing failed for lead ${lead.id}:`, err)
+      )
+    })
 
     // Log activity
     await logActivity(

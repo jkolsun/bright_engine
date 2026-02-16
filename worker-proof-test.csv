@@ -1,0 +1,4 @@
+firstName,lastName,companyName,email,phone,city,state,industry,source
+Mike,Johnson,Johnson Plumbing,mike@johnsonplumb.com,555-0001,Tampa,FL,Construction,worker_proof
+Sarah,Davis,Davis Legal,sarah@davislegal.com,555-0002,Orlando,FL,Legal,worker_proof
+Tom,Wilson,Wilson HVAC,tom@wilsonhvac.com,555-0003,Jacksonville,FL,HVAC,worker_proof
