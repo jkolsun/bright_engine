@@ -14,10 +14,10 @@ export const prisma =
 // Auto-start workers on first import (runs once)
 if (process.env.NODE_ENV === 'production' && typeof window === 'undefined') {
   console.log('[DB Auto-start] Attempting to start workers via db.ts import...')
-  import('../app/api/worker-init/route').then(mod => {
-    console.log('[DB Auto-start] Worker module loaded, calling startWorkersOnce...')
+  import('../worker/worker-manager').then(mod => {
+    console.log('[DB Auto-start] Worker manager loaded, calling startWorkersOnce...')
     mod.startWorkersOnce().catch(e => console.warn('[Auto] Worker boot failed:', e))
-  }).catch(e => console.warn('[DB Auto-start] Failed to import worker module:', e))
+  }).catch(e => console.warn('[DB Auto-start] Failed to import worker manager:', e))
 }
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
