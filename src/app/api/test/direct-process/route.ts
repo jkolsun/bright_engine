@@ -36,9 +36,9 @@ export async function GET(request: NextRequest) {
     }, { connection: connection as any })
     
     // Wait for worker to be ready
-    await new Promise((resolve) => {
-      worker.on('ready', resolve)
-      setTimeout(resolve, 2000) // Fallback timeout
+    await new Promise<void>((resolve) => {
+      worker.on('ready', () => resolve())
+      setTimeout(() => resolve(), 2000) // Fallback timeout
     })
     
     console.log('[DIRECT-TEST] Worker ready, adding job...')
