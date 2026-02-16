@@ -5,6 +5,12 @@ let connection: Redis | null = null
 let isRedisAvailable = false
 let connectionAttempted = false
 
+// Export the connection for workers to use
+export function getSharedConnection() {
+  initializeRedisConnection()
+  return connection
+}
+
 // Lazy initialization - only connect when first needed
 function initializeRedisConnection() {
   if (connectionAttempted) {

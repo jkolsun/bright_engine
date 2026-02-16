@@ -10,7 +10,7 @@ import { calculateEngagementScore } from '../lib/engagement-scoring'
 import { prisma } from '../lib/db'
 import { sendSMS } from '../lib/twilio'
 import { canSendMessage } from '../lib/utils'
-import { addPreviewGenerationJob, addPersonalizationJob, addScriptGenerationJob, addDistributionJob } from './queue'
+import { addPreviewGenerationJob, addPersonalizationJob, addScriptGenerationJob, addDistributionJob, getSharedConnection } from './queue'
 
 async function startWorkers() {
   try {
@@ -30,35 +30,14 @@ async function startWorkers() {
       return // Exit gracefully if Redis not available
     }
 
-    // Initialize Redis connection (supports both Railway internal URL and localhost fallback)
-    // BullMQ REQUIRES maxRetriesPerRequest: null
-    let connection: Redis | null = null
-    if (process.env.REDIS_URL) {
-      // Use Railway's internal Redis URL
-      connection = new Redis(process.env.REDIS_URL, {
-        maxRetriesPerRequest: null,
-        connectTimeout: 10000,
-      })
-    } else {
-      // Fallback to localhost (for local development)
-      connection = new Redis({
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-        password: process.env.REDIS_PASSWORD || undefined,
-        maxRetriesPerRequest: null,
-        connectTimeout: 5000,
-        retryStrategy: () => null // Don't retry if connection fails
-      })
+    // Use shared Redis connection from queue.ts to avoid connection mismatch
+    const connection = getSharedConnection()
+    if (!connection) {
+      console.warn('No shared Redis connection available, workers cannot start')
+      return
     }
     
-    connection.on('error', (err) => {
-      console.warn('Redis connection failed, continuing without Redis:', err.message)
-      connection = null
-    })
-    
-    connection.on('connect', () => {
-      console.log('Redis connected successfully')
-    })
+    console.log('Using shared Redis connection for workers')
 
     // Enrichment worker
     const enrichmentWorker = new Worker(
@@ -263,7 +242,8 @@ async function startWorkers() {
       await distributionWorker.close()
       await sequenceWorker.close()
       await monitoringWorker.close()
-      await connection?.quit()
+      // Don't quit shared connection - other parts of system may use it
+      // await connection?.quit()
       
       console.log('Workers shut down successfully')
       process.exit(0)
