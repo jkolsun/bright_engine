@@ -13,7 +13,12 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    // Parse request with timeout
+    const parsePromise = request.json()
+    const parseTimeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request parse timeout')), 5000)
+    )
+    const { email, password } = await Promise.race([parsePromise, parseTimeout]) as { email: string; password: string }
 
     if (!email || !password) {
       return NextResponse.json(
@@ -22,10 +27,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Query database for user
-    const user = await prisma.user.findUnique({
+    // Query database for user with timeout
+    const queryPromise = prisma.user.findUnique({
       where: { email }
     })
+    const queryTimeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Database query timeout')), 5000)
+    )
+    const user = await Promise.race([queryPromise, queryTimeout]) as any
 
     if (!user) {
       return NextResponse.json(
@@ -37,7 +46,12 @@ export async function POST(request: NextRequest) {
     // Validate password (with bcrypt if hash exists, else default password + auto-migrate)
     const defaultPassword = process.env.DEFAULT_LOGIN_PASSWORD || '123456'
     if (user.passwordHash) {
-      const valid = await bcrypt.compare(password, user.passwordHash)
+      const comparePromise = bcrypt.compare(password, user.passwordHash)
+      const compareTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Password comparison timeout')), 5000)
+      )
+      const valid = await Promise.race([comparePromise, compareTimeout]) as boolean
+      
       if (!valid) {
         return NextResponse.json(
           { success: false, error: 'Invalid credentials' },
@@ -56,11 +70,21 @@ export async function POST(request: NextRequest) {
       // Fire-and-forget: don't block login on migration failure
       const migratePassword = async () => {
         try {
-          const hash = await bcrypt.hash(password, 10)
-          await prisma.user.update({
+          const hashPromise = bcrypt.hash(password, 10)
+          const hashTimeout = new Promise<string>((_, reject) =>
+            setTimeout(() => reject(new Error('Bcrypt hash timeout')), 5000)
+          )
+          const hash = await Promise.race([hashPromise, hashTimeout])
+          
+          const updatePromise = prisma.user.update({
             where: { id: user.id },
             data: { passwordHash: hash }
           })
+          const updateTimeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Update timeout')), 5000)
+          )
+          await Promise.race([updatePromise, updateTimeout])
+          
           console.log(`Password hash migrated for user ${user.email}`)
         } catch (err) {
           console.error(`Failed to migrate password hash for user ${user.id}:`, err)
@@ -80,14 +104,18 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     )
 
-    // Set session cookie (HMAC signed)
-    const sessionData = await signSession({
+    // Set session cookie (HMAC signed) with timeout
+    const signPromise = signSession({
       userId: user.id,
       email: user.email,
       name: user.name,
       role: user.role,
       iat: Date.now()
     })
+    const signTimeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Session signing timeout')), 5000)
+    )
+    const sessionData = await Promise.race([signPromise, signTimeout]) as string
     
     response.cookies.set({
       name: 'session',
