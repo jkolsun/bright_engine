@@ -15,10 +15,9 @@ import { addPreviewGenerationJob, addPersonalizationJob, addScriptGenerationJob,
 async function startWorkers() {
   try {
     // Test Redis connection with timeout
-    const testConnection = new Redis(process.env.REDIS_URL || process.env.REDIS_HOST || 'redis://localhost:6379', { 
+    const testConnection = new Redis(process.env.REDIS_URL || process.env.REDIS_HOST || 'redis://localhost:6379', {
       maxRetriesPerRequest: null,
       connectTimeout: 5000,
-      lazyConnect: true // Don't connect until explicitly called
     })
     
     try {
@@ -36,10 +35,9 @@ async function startWorkers() {
     let connection: Redis | null = null
     if (process.env.REDIS_URL) {
       // Use Railway's internal Redis URL
-      connection = new Redis(process.env.REDIS_URL, { 
+      connection = new Redis(process.env.REDIS_URL, {
         maxRetriesPerRequest: null,
-        connectTimeout: 5000,
-        retryStrategy: () => null // Don't retry if connection fails
+        connectTimeout: 10000,
       })
     } else {
       // Fallback to localhost (for local development)
