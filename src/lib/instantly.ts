@@ -185,7 +185,9 @@ async function calculateCapacityPerCampaign(syncReport: any) {
     const inboxCapacity = campaignInboxes.reduce((sum: number, i: any) => sum + i.campaign_capacity, 0)
 
     // Estimate follow-ups due today
-    const followupEstimate = await estimateFollowupsToday(campaign.id)
+    // Extract step delays from campaign config
+    const campaignStepDelays = campaign.step_delays?.map((s: any) => s.delay_days) || undefined
+    const followupEstimate = await estimateFollowupsToday(campaign.id, campaignStepDelays)
 
     // Available capacity
     const bufferedCapacity = Math.floor(inboxCapacity * SAFETY_BUFFER)
@@ -220,7 +222,7 @@ async function calculateCapacityPerCampaign(syncReport: any) {
  * Estimate how many follow-ups are due today for a campaign
  * Based on when leads were added and sequence timing
  */
-async function estimateFollowupsToday(campaignId: string): Promise<number> {
+async function estimateFollowupsToday(campaignId: string, stepDelays?: number[]): Promise<number> {
   // Query leads that are IN_SEQUENCE for this campaign
   const activeLeads = await prisma.lead.findMany({
     where: {
@@ -244,10 +246,17 @@ async function estimateFollowupsToday(campaignId: string): Promise<number> {
       (today.getTime() - lead.instantlyAddedDate.getTime()) / (1000 * 60 * 60 * 24)
     )
 
-    // Simple heuristic: assume 2-day gaps between emails
-    // Day 0: Email 1, Day 2: Email 2, Day 4: Email 3, Day 6: Email 4
-    const stepDays = [0, 2, 4, 6]
-    if (stepDays.includes(daysSinceAdded)) {
+    // Build cumulative day schedule from actual delays
+    // Default: [0, 2, 4, 6] for a 4-step sequence with 2-day gaps
+    const delays = stepDelays || [0, 2, 2, 2]
+    const cumulativeDays: number[] = []
+    let cumulative = 0
+    for (const d of delays) {
+      cumulative += d
+      cumulativeDays.push(cumulative)
+    }
+    // cumulativeDays = [0, 2, 4, 6] for delays [0, 2, 2, 2]
+    if (cumulativeDays.includes(daysSinceAdded)) {
       followupCount += 1
     }
   }
