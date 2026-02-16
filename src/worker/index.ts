@@ -15,16 +15,17 @@ import { addPreviewGenerationJob, addPersonalizationJob, addScriptGenerationJob,
 async function startWorkers() {
   try {
     // Test Redis connection
-    const testConnection = new Redis(process.env.REDIS_URL || process.env.REDIS_HOST || 'redis://localhost:6379', { maxRetriesPerRequest: 3 })
+    const testConnection = new Redis(process.env.REDIS_URL || process.env.REDIS_HOST || 'redis://localhost:6379', { maxRetriesPerRequest: null })
     await testConnection.ping()
     await testConnection.quit()
     console.log('Redis connected. Starting workers...')
 
     // Initialize Redis connection (supports both Railway internal URL and localhost fallback)
+    // BullMQ REQUIRES maxRetriesPerRequest: null
     let connection: Redis | null = null
     if (process.env.REDIS_URL) {
       // Use Railway's internal Redis URL
-      connection = new Redis(process.env.REDIS_URL)
+      connection = new Redis(process.env.REDIS_URL, { maxRetriesPerRequest: null })
     } else {
       // Fallback to localhost (for local development)
       connection = new Redis({
