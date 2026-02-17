@@ -2,12 +2,16 @@
 
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
-  Building, Target, Zap, Users, Key, Clock, DollarSign,
-  CheckCircle2, AlertTriangle, XCircle, RefreshCw, Loader2
+  Building, Target, Zap, Users, Key, DollarSign,
+  CheckCircle2, AlertTriangle, XCircle, RefreshCw, Loader2,
+  Save, Plus, Trash2, Phone, Link, FileText, Brain,
+  BarChart3, ExternalLink
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 
+// ── Types ──────────────────────────────────────────────────────
 type ServiceStatus = {
   key: string
   label: string
@@ -16,34 +20,183 @@ type ServiceStatus = {
   detail: string
 }
 
+type SettingsData = Record<string, any>
+
+type TabId = 'company' | 'sequences' | 'personalization' | 'targets' | 'team' | 'api'
+
+// ── Helper Components ──────────────────────────────────────────
+
 function StatusIcon({ service }: { service: ServiceStatus }) {
-  if (!service.configured) {
-    return <XCircle size={16} className="text-gray-400 shrink-0" />
-  }
-  if (service.connected === true) {
-    return <CheckCircle2 size={16} className="text-green-500 shrink-0" />
-  }
+  if (!service.configured) return <XCircle size={16} className="text-gray-400 shrink-0" />
+  if (service.connected === true) return <CheckCircle2 size={16} className="text-green-500 shrink-0" />
   return <AlertTriangle size={16} className="text-amber-500 shrink-0" />
 }
 
 function StatusBadge({ service }: { service: ServiceStatus }) {
-  if (!service.configured) {
-    return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Not configured</span>
-  }
-  if (service.connected === true) {
-    return <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700">Connected</span>
-  }
+  if (!service.configured) return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Not configured</span>
+  if (service.connected === true) return <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700">Connected</span>
   return <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">Failed</span>
 }
 
+function SaveButton({ onClick, saving, saved }: { onClick: () => void, saving: boolean, saved: boolean }) {
+  return (
+    <Button onClick={onClick} disabled={saving} className={saved ? 'bg-green-600 hover:bg-green-700' : ''}>
+      {saving ? (
+        <><Loader2 size={16} className="mr-1 animate-spin" /> Saving...</>
+      ) : saved ? (
+        <><CheckCircle2 size={16} className="mr-1" /> Saved</>
+      ) : (
+        <><Save size={16} className="mr-1" /> Save Changes</>
+      )}
+    </Button>
+  )
+}
+
+function SectionHeader({ title, description }: { title: string, description?: string }) {
+  return (
+    <div className="mb-4">
+      <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+      {description && <p className="text-sm text-gray-500 mt-0.5">{description}</p>}
+    </div>
+  )
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <label className="text-sm font-medium text-gray-700 block mb-1">{children}</label>
+}
+
+// ── Default Values ─────────────────────────────────────────────
+
+const DEFAULT_COMPANY = { companyName: 'Bright Automations', adminPhone: '', previewExpirationDays: 14 }
+const DEFAULT_PRICING = { siteBuild: 149, monthlyHosting: 39, annualHosting: 349 }
+const DEFAULT_SEQUENCES = {
+  urgencyDays: [3, 5, 6, 7, 8, 10, 14],
+  urgencyTemplates: {
+    3: '🔥 Hey {name}, previews expire in 11 days. Let\'s finalize your site so it goes live. Reply YES.',
+    5: '⏰ {name}, 9 days left on your preview. Don\'t want to miss your window. Can we schedule a call?',
+    6: '⚡ Quick question {name} - is time the only thing holding you back from launching?',
+    7: '🚨 {name}, 7 days left. We\'re holding your spot, but can\'t wait forever. Ready to move forward?',
+    8: 'Last chance to save your spot at this price, {name}. Preview expires in 6 days.',
+    10: 'Your preview from {date} is ending soon. We can have you live TODAY if you say yes.',
+    14: '{name}, your preview is ending in 24 hours! This is your final notice.',
+  } as Record<number, string>,
+  safetyBuffer: 0.85,
+}
+const DEFAULT_PERSONALIZATION = {
+  model: 'claude-3-5-haiku-20241022',
+  enabled: true,
+  fallbackBehavior: 'generic_template',
+  defaultCallScript: `OPENER (10 sec):
+"Hey {{firstName}}, this is [YOUR NAME] with Bright Automations. Not trying to sell you anything crazy — quick question, do you have 30 seconds?"
+
+If no: "When's a better time?"
+
+HOOK — Bad Website (20 sec):
+"I pulled up {{companyName}}'s website before I called. Not gonna sugarcoat it — not showing up well on mobile and the design looks dated. Are you getting leads from it?"
+
+HOOK — No Website (20 sec):
+"I searched for {{industry}} in {{location}} and couldn't find a site for {{companyName}}. Are you getting most business from referrals?"
+
+PITCH (30 sec):
+"Here's why I'm calling. We build professional sites specifically for {{industry}} businesses. Clean, works on phones, shows up on Google. $149, live in 48 hours. And actually — I already mocked up what a site for {{companyName}} would look like. Want me to text you the link so you can see it?"
+
+CLOSE — If Interested:
+"Awesome. I'm texting you the preview right now. Take a look, and if you like it, just text us back and we'll make it live. You don't pay until you're happy with it. What's the best number to text?"`,
+}
+const DEFAULT_TARGETS = {
+  dailyDials: 100,
+  dailyConversations: 20,
+  dailyCloses: 3,
+  dailyLeadCap: 25,
+  monthlyRevenueTarget: 50000,
+}
+
+// ── Main Component ─────────────────────────────────────────────
+
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<'company' | 'sequences' | 'personalization' | 'targets' | 'team' | 'api'>('company')
+  const [activeTab, setActiveTab] = useState<TabId>('company')
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
+  const [loadingSettings, setLoadingSettings] = useState(true)
+
+  // Settings state per key
+  const [companyInfo, setCompanyInfo] = useState(DEFAULT_COMPANY)
+  const [pricing, setPricing] = useState(DEFAULT_PRICING)
+  const [sequences, setSequences] = useState(DEFAULT_SEQUENCES)
+  const [personalization, setPersonalization] = useState(DEFAULT_PERSONALIZATION)
+  const [targets, setTargets] = useState(DEFAULT_TARGETS)
+
+  // Instantly campaigns (from existing key)
+  const [campaigns, setCampaigns] = useState({ campaign_a: '', campaign_b: '' })
+
+  // Save state per section
+  const [savingKey, setSavingKey] = useState<string | null>(null)
+  const [savedKey, setSavedKey] = useState<string | null>(null)
+
+  // API tab state
   const [services, setServices] = useState<ServiceStatus[] | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [apiLoading, setApiLoading] = useState(false)
   const [lastChecked, setLastChecked] = useState<string | null>(null)
 
+  // New urgency day input
+  const [newDay, setNewDay] = useState('')
+
+  // ── Load all settings on mount ─────────────────────────────
+  useEffect(() => {
+    loadAllSettings()
+  }, [])
+
+  const loadAllSettings = async () => {
+    try {
+      const res = await fetch('/api/settings')
+      if (!res.ok) return
+      const data = await res.json()
+      const s: SettingsData = data.settings || {}
+
+      if (s.company_info) setCompanyInfo({ ...DEFAULT_COMPANY, ...s.company_info })
+      if (s.pricing) setPricing({ ...DEFAULT_PRICING, ...s.pricing })
+      if (s.sequences) {
+        setSequences({
+          urgencyDays: s.sequences.urgencyDays || DEFAULT_SEQUENCES.urgencyDays,
+          urgencyTemplates: { ...DEFAULT_SEQUENCES.urgencyTemplates, ...s.sequences.urgencyTemplates },
+          safetyBuffer: s.sequences.safetyBuffer ?? DEFAULT_SEQUENCES.safetyBuffer,
+        })
+      }
+      if (s.personalization) setPersonalization({ ...DEFAULT_PERSONALIZATION, ...s.personalization })
+      if (s.targets) setTargets({ ...DEFAULT_TARGETS, ...s.targets })
+      if (s.instantly_campaigns) setCampaigns(s.instantly_campaigns)
+
+      setSettingsLoaded(true)
+    } catch (e) {
+      console.error('Failed to load settings:', e)
+    } finally {
+      setLoadingSettings(false)
+    }
+  }
+
+  // ── Save a settings key ────────────────────────────────────
+  const saveSetting = async (key: string, value: any) => {
+    setSavingKey(key)
+    setSavedKey(null)
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value }),
+      })
+      if (res.ok) {
+        setSavedKey(key)
+        setTimeout(() => setSavedKey(null), 2000)
+      }
+    } catch (e) {
+      console.error('Failed to save:', e)
+    } finally {
+      setSavingKey(null)
+    }
+  }
+
+  // ── API status check ───────────────────────────────────────
   const checkApiStatus = useCallback(async () => {
-    setLoading(true)
+    setApiLoading(true)
     try {
       const res = await fetch('/api/settings/api-status')
       if (res.ok) {
@@ -51,39 +204,82 @@ export default function SettingsPage() {
         setServices(data.services)
         setLastChecked(new Date().toLocaleTimeString())
       }
-    } catch {
-      // silently fail — user can retry
-    } finally {
-      setLoading(false)
-    }
+    } catch { /* user can retry */ }
+    finally { setApiLoading(false) }
   }, [])
 
   useEffect(() => {
-    if (activeTab === 'api' && !services && !loading) {
+    if (activeTab === 'api' && !services && !apiLoading) {
       checkApiStatus()
     }
-  }, [activeTab, services, loading, checkApiStatus])
+  }, [activeTab, services, apiLoading, checkApiStatus])
 
+  // ── Urgency day helpers ────────────────────────────────────
+  const addUrgencyDay = () => {
+    const day = parseInt(newDay)
+    if (!day || day < 1 || day > 30 || sequences.urgencyDays.includes(day)) return
+    const newDays = [...sequences.urgencyDays, day].sort((a, b) => a - b)
+    const newTemplates = { ...sequences.urgencyTemplates }
+    if (!newTemplates[day]) {
+      newTemplates[day] = `{name}, your preview for {company} is still waiting. Day ${day} reminder.`
+    }
+    setSequences({ ...sequences, urgencyDays: newDays, urgencyTemplates: newTemplates })
+    setNewDay('')
+  }
+
+  const removeUrgencyDay = (day: number) => {
+    const newDays = sequences.urgencyDays.filter(d => d !== day)
+    const newTemplates = { ...sequences.urgencyTemplates }
+    delete newTemplates[day]
+    setSequences({ ...sequences, urgencyDays: newDays, urgencyTemplates: newTemplates })
+  }
+
+  // ── Sync Instantly campaigns ───────────────────────────────
+  const [syncing, setSyncing] = useState(false)
+  const syncCampaigns = async () => {
+    setSyncing(true)
+    try {
+      const res = await fetch('/api/instantly/sync-campaigns', { method: 'POST' })
+      if (res.ok) {
+        // Reload to get updated campaign IDs
+        const settingsRes = await fetch('/api/settings?key=instantly_campaigns')
+        if (settingsRes.ok) {
+          const data = await settingsRes.json()
+          if (data.value) setCampaigns(data.value)
+        }
+      }
+    } catch (e) { console.error('Sync failed:', e) }
+    finally { setSyncing(false) }
+  }
+
+  // ── Tab config ─────────────────────────────────────────────
   const tabs = [
-    { id: 'company', label: 'Company', icon: <Building size={16} /> },
-    { id: 'sequences', label: 'Sequences', icon: <Zap size={16} /> },
-    { id: 'personalization', label: 'Personalization', icon: <Target size={16} /> },
-    { id: 'targets', label: 'Targets', icon: <DollarSign size={16} /> },
-    { id: 'team', label: 'Team', icon: <Users size={16} /> },
-    { id: 'api', label: 'API Keys', icon: <Key size={16} /> },
-  ] as const
+    { id: 'company' as TabId, label: 'Company', icon: <Building size={16} /> },
+    { id: 'sequences' as TabId, label: 'Sequences', icon: <Zap size={16} /> },
+    { id: 'personalization' as TabId, label: 'Personalization', icon: <Brain size={16} /> },
+    { id: 'targets' as TabId, label: 'Targets', icon: <BarChart3 size={16} /> },
+    { id: 'team' as TabId, label: 'Team', icon: <Users size={16} /> },
+    { id: 'api' as TabId, label: 'API Keys', icon: <Key size={16} /> },
+  ]
 
   const connectedCount = services?.filter(s => s.connected === true).length ?? 0
   const totalCount = services?.length ?? 0
 
+  if (loadingSettings) {
+    return (
+      <div className="p-8 flex items-center justify-center text-gray-500 gap-2">
+        <Loader2 size={20} className="animate-spin" />
+        <span>Loading settings...</span>
+      </div>
+    )
+  }
+
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-500 mt-1">Manage your system configuration</p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+        <p className="text-gray-500 mt-1">Manage your system configuration</p>
       </div>
 
       {/* Tabs */}
@@ -106,19 +302,486 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* Content */}
-      {activeTab === 'team' && (
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold">Team Management</h3>
-            <Button onClick={() => window.location.href = '/admin/settings/reps'}>
-              Manage Reps →
-            </Button>
-          </div>
-          <p className="text-gray-600">Add, edit, and manage your sales reps from the Reps page.</p>
-        </Card>
+      {/* ═══════════════════════════════════════════════════════════
+          TAB: COMPANY
+         ═══════════════════════════════════════════════════════════ */}
+      {activeTab === 'company' && (
+        <div className="space-y-6">
+          {/* Company Info */}
+          <Card className="p-6">
+            <SectionHeader title="Company Info" description="Basic company details and contact information" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <FieldLabel>Company Name</FieldLabel>
+                <Input
+                  value={companyInfo.companyName}
+                  onChange={(e) => setCompanyInfo({ ...companyInfo, companyName: e.target.value })}
+                />
+              </div>
+              <div>
+                <FieldLabel>Admin Notification Phone</FieldLabel>
+                <div className="flex items-center gap-2">
+                  <Phone size={16} className="text-gray-400" />
+                  <Input
+                    value={companyInfo.adminPhone}
+                    onChange={(e) => setCompanyInfo({ ...companyInfo, adminPhone: e.target.value })}
+                    placeholder="+1 (555) 123-4567"
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Receives hot lead alerts, digest reports, and system alerts</p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <FieldLabel>Preview Expiration (Days)</FieldLabel>
+              <Input
+                type="number"
+                min={1}
+                max={90}
+                className="w-32"
+                value={companyInfo.previewExpirationDays}
+                onChange={(e) => setCompanyInfo({ ...companyInfo, previewExpirationDays: parseInt(e.target.value) || 14 })}
+              />
+              <p className="text-xs text-gray-400 mt-1">How many days before a preview link expires</p>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <SaveButton
+                onClick={() => saveSetting('company_info', companyInfo)}
+                saving={savingKey === 'company_info'}
+                saved={savedKey === 'company_info'}
+              />
+            </div>
+          </Card>
+
+          {/* Pricing */}
+          <Card className="p-6">
+            <SectionHeader title="Product Pricing" description="Default pricing for your services" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <FieldLabel>Site Build (one-time)</FieldLabel>
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-500">$</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={pricing.siteBuild}
+                    onChange={(e) => setPricing({ ...pricing, siteBuild: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+              <div>
+                <FieldLabel>Monthly Hosting</FieldLabel>
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-500">$</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={pricing.monthlyHosting}
+                    onChange={(e) => setPricing({ ...pricing, monthlyHosting: parseInt(e.target.value) || 0 })}
+                  />
+                  <span className="text-xs text-gray-400">/mo</span>
+                </div>
+              </div>
+              <div>
+                <FieldLabel>Annual Hosting</FieldLabel>
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-500">$</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={pricing.annualHosting}
+                    onChange={(e) => setPricing({ ...pricing, annualHosting: parseInt(e.target.value) || 0 })}
+                  />
+                  <span className="text-xs text-gray-400">/yr</span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <SaveButton
+                onClick={() => saveSetting('pricing', pricing)}
+                saving={savingKey === 'pricing'}
+                saved={savedKey === 'pricing'}
+              />
+            </div>
+          </Card>
+
+          {/* Stripe Payment Links */}
+          <Card className="p-6">
+            <SectionHeader title="Stripe Payment Links" description="Configured via Railway environment variables" />
+            <div className="space-y-2">
+              {[
+                { label: 'Site Build ($149)', env: 'STRIPE_LINK_SITE_BUILD' },
+                { label: 'Monthly Hosting ($39/mo)', env: 'STRIPE_LINK_HOSTING_39' },
+                { label: 'Annual Hosting ($349/yr)', env: 'STRIPE_LINK_HOSTING_ANNUAL' },
+                { label: 'Google Business Profile ($49)', env: 'STRIPE_LINK_GBP' },
+                { label: 'Review Widget ($69/mo)', env: 'STRIPE_LINK_REVIEW_WIDGET' },
+                { label: 'SEO ($149/mo)', env: 'STRIPE_LINK_SEO' },
+                { label: 'Social Media ($99/mo)', env: 'STRIPE_LINK_SOCIAL' },
+              ].map((link) => (
+                <div key={link.env} className="flex items-center justify-between p-3 bg-gray-50 rounded text-sm">
+                  <div className="flex items-center gap-2">
+                    <Link size={14} className="text-gray-400" />
+                    <span className="font-medium text-gray-700">{link.label}</span>
+                  </div>
+                  <span className="text-xs text-gray-400 font-mono">{link.env}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-3">Payment links are managed in your Railway/Stripe dashboard. Changes there take effect immediately.</p>
+          </Card>
+        </div>
       )}
 
+      {/* ═══════════════════════════════════════════════════════════
+          TAB: SEQUENCES
+         ═══════════════════════════════════════════════════════════ */}
+      {activeTab === 'sequences' && (
+        <div className="space-y-6">
+          {/* Instantly Campaigns */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <SectionHeader title="Instantly Campaigns" description="Email campaign mapping for lead distribution" />
+              <Button variant="outline" onClick={syncCampaigns} disabled={syncing}>
+                {syncing ? <Loader2 size={14} className="mr-1 animate-spin" /> : <RefreshCw size={14} className="mr-1" />}
+                {syncing ? 'Syncing...' : 'Sync Campaigns'}
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="text-sm font-medium text-gray-700 mb-1">Campaign A — Bad Website</div>
+                <p className="text-xs text-gray-400 font-mono truncate">{campaigns.campaign_a || 'Not configured'}</p>
+              </div>
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="text-sm font-medium text-gray-700 mb-1">Campaign B — No Website</div>
+                <p className="text-xs text-gray-400 font-mono truncate">{campaigns.campaign_b || 'Not configured'}</p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Urgency Schedule */}
+          <Card className="p-6">
+            <SectionHeader title="Urgency Message Schedule" description="Days after preview creation when urgency texts are sent" />
+
+            {/* Day pills */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {sequences.urgencyDays.map((day) => (
+                <div key={day} className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full text-sm">
+                  <span className="font-medium text-blue-700">Day {day}</span>
+                  <button
+                    onClick={() => removeUrgencyDay(day)}
+                    className="text-blue-400 hover:text-red-500 ml-1"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+              <div className="flex items-center gap-1">
+                <Input
+                  type="number"
+                  min={1}
+                  max={30}
+                  placeholder="Day"
+                  className="w-20 h-8 text-sm"
+                  value={newDay}
+                  onChange={(e) => setNewDay(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addUrgencyDay()}
+                />
+                <Button variant="outline" size="sm" onClick={addUrgencyDay} className="h-8">
+                  <Plus size={14} />
+                </Button>
+              </div>
+            </div>
+
+            {/* Templates per day */}
+            <div className="space-y-3">
+              {sequences.urgencyDays.map((day) => (
+                <div key={day} className="space-y-1">
+                  <FieldLabel>Day {day} Message</FieldLabel>
+                  <textarea
+                    value={sequences.urgencyTemplates[day] || ''}
+                    onChange={(e) => setSequences({
+                      ...sequences,
+                      urgencyTemplates: { ...sequences.urgencyTemplates, [day]: e.target.value }
+                    })}
+                    className="w-full h-16 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Use {name}, {company}, {date} as variables"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <p className="text-xs text-gray-400 mt-3">Variables: {'{name}'}, {'{company}'}, {'{date}'}</p>
+          </Card>
+
+          {/* Send Settings */}
+          <Card className="p-6">
+            <SectionHeader title="Send Settings" description="Controls for email campaign capacity" />
+            <div>
+              <FieldLabel>Safety Buffer</FieldLabel>
+              <div className="flex items-center gap-3">
+                <Input
+                  type="number"
+                  min={0.5}
+                  max={1.0}
+                  step={0.05}
+                  className="w-24"
+                  value={sequences.safetyBuffer}
+                  onChange={(e) => setSequences({ ...sequences, safetyBuffer: parseFloat(e.target.value) || 0.85 })}
+                />
+                <span className="text-sm text-gray-500">({Math.round(sequences.safetyBuffer * 100)}% of Instantly daily limit)</span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Conservative margin to avoid hitting Instantly rate limits. 0.85 = use 85% of capacity.</p>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <SaveButton
+                onClick={() => saveSetting('sequences', sequences)}
+                saving={savingKey === 'sequences'}
+                saved={savedKey === 'sequences'}
+              />
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          TAB: PERSONALIZATION
+         ═══════════════════════════════════════════════════════════ */}
+      {activeTab === 'personalization' && (
+        <div className="space-y-6">
+          {/* AI Configuration */}
+          <Card className="p-6">
+            <SectionHeader title="AI Configuration" description="Control how AI personalization works for new leads" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <FieldLabel>AI Model</FieldLabel>
+                <select
+                  value={personalization.model}
+                  onChange={(e) => setPersonalization({ ...personalization, model: e.target.value })}
+                  className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (fast, cost-effective)</option>
+                  <option value="claude-sonnet-4-5-20250929">Claude 4.5 Sonnet (higher quality)</option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">Haiku is recommended for high-volume personalization</p>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <FieldLabel>Personalization</FieldLabel>
+                  <button
+                    onClick={() => setPersonalization({ ...personalization, enabled: !personalization.enabled })}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      personalization.enabled ? 'bg-blue-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      personalization.enabled ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                  <span className="ml-2 text-sm text-gray-600">
+                    {personalization.enabled ? 'Enabled' : 'Disabled'}
+                  </span>
+                </div>
+                <div>
+                  <FieldLabel>Fallback Behavior</FieldLabel>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="fallback"
+                        checked={personalization.fallbackBehavior === 'generic_template'}
+                        onChange={() => setPersonalization({ ...personalization, fallbackBehavior: 'generic_template' })}
+                        className="text-blue-600"
+                      />
+                      Use generic template (recommended)
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="fallback"
+                        checked={personalization.fallbackBehavior === 'skip'}
+                        onChange={() => setPersonalization({ ...personalization, fallbackBehavior: 'skip' })}
+                        className="text-blue-600"
+                      />
+                      Skip personalization entirely
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">What happens when AI personalization fails for a lead</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <SaveButton
+                onClick={() => saveSetting('personalization', personalization)}
+                saving={savingKey === 'personalization'}
+                saved={savedKey === 'personalization'}
+              />
+            </div>
+          </Card>
+
+          {/* Default Call Script */}
+          <Card className="p-6">
+            <SectionHeader title="Default Call Script" description="Master template used when leads don't have a custom script" />
+            <div className="bg-blue-50 p-3 rounded-lg mb-3">
+              <p className="text-xs text-blue-700">
+                <strong>Available variables:</strong>{' '}
+                {'{{firstName}}'}, {'{{companyName}}'}, {'{{industry}}'}, {'{{location}}'}
+              </p>
+            </div>
+            <textarea
+              value={personalization.defaultCallScript}
+              onChange={(e) => setPersonalization({ ...personalization, defaultCallScript: e.target.value })}
+              className="w-full h-80 px-4 py-3 text-sm border border-gray-200 rounded-md resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono leading-relaxed"
+              placeholder="Enter your call script template..."
+            />
+            <div className="mt-4 flex justify-end">
+              <SaveButton
+                onClick={() => saveSetting('personalization', personalization)}
+                saving={savingKey === 'personalization'}
+                saved={savedKey === 'personalization'}
+              />
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          TAB: TARGETS
+         ═══════════════════════════════════════════════════════════ */}
+      {activeTab === 'targets' && (
+        <div className="space-y-6">
+          {/* Daily Rep Targets */}
+          <Card className="p-6">
+            <SectionHeader title="Daily Rep Targets" description="Performance benchmarks for your sales team" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <FieldLabel>Dials / Day</FieldLabel>
+                <Input
+                  type="number"
+                  min={0}
+                  value={targets.dailyDials}
+                  onChange={(e) => setTargets({ ...targets, dailyDials: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <div>
+                <FieldLabel>Conversations / Day</FieldLabel>
+                <Input
+                  type="number"
+                  min={0}
+                  value={targets.dailyConversations}
+                  onChange={(e) => setTargets({ ...targets, dailyConversations: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <div>
+                <FieldLabel>Closes / Day</FieldLabel>
+                <Input
+                  type="number"
+                  min={0}
+                  value={targets.dailyCloses}
+                  onChange={(e) => setTargets({ ...targets, dailyCloses: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <div>
+                <FieldLabel>Lead Cap / Day</FieldLabel>
+                <Input
+                  type="number"
+                  min={0}
+                  value={targets.dailyLeadCap}
+                  onChange={(e) => setTargets({ ...targets, dailyLeadCap: parseInt(e.target.value) || 0 })}
+                />
+                <p className="text-xs text-gray-400 mt-1">Max new leads per rep</p>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <SaveButton
+                onClick={() => saveSetting('targets', targets)}
+                saving={savingKey === 'targets'}
+                saved={savedKey === 'targets'}
+              />
+            </div>
+          </Card>
+
+          {/* Revenue Goals */}
+          <Card className="p-6">
+            <SectionHeader title="Revenue Goals" description="Team-wide monthly targets" />
+            <div>
+              <FieldLabel>Monthly Revenue Target</FieldLabel>
+              <div className="flex items-center gap-1">
+                <span className="text-gray-500">$</span>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1000}
+                  className="w-40"
+                  value={targets.monthlyRevenueTarget}
+                  onChange={(e) => setTargets({ ...targets, monthlyRevenueTarget: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Combined target across all reps</p>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <SaveButton
+                onClick={() => saveSetting('targets', targets)}
+                saving={savingKey === 'targets'}
+                saved={savedKey === 'targets'}
+              />
+            </div>
+          </Card>
+
+          {/* Commission Settings Link */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Commission Settings</h3>
+                <p className="text-sm text-gray-500 mt-0.5">Set individual commission rates per rep</p>
+              </div>
+              <Button onClick={() => window.location.href = '/admin/settings/commission'}>
+                <DollarSign size={16} className="mr-1" /> Manage Commissions
+                <ExternalLink size={14} className="ml-2" />
+              </Button>
+            </div>
+            <div className="mt-4 p-3 bg-amber-50 rounded-lg">
+              <p className="text-sm text-amber-800">
+                <strong>Default tiers:</strong> New reps 40% | Standard 50% | Top performers 60%
+              </p>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          TAB: TEAM (unchanged)
+         ═══════════════════════════════════════════════════════════ */}
+      {activeTab === 'team' && (
+        <div className="space-y-6">
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-semibold">Team Management</h3>
+                <p className="text-sm text-gray-500 mt-0.5">Add, edit, and manage your sales reps</p>
+              </div>
+              <Button onClick={() => window.location.href = '/admin/settings/reps'}>
+                <Users size={16} className="mr-1" /> Manage Reps
+                <ExternalLink size={14} className="ml-2" />
+              </Button>
+            </div>
+          </Card>
+          <Card className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Commission Rates</h3>
+                <p className="text-sm text-gray-500 mt-0.5">Set per-rep commission percentages</p>
+              </div>
+              <Button variant="outline" onClick={() => window.location.href = '/admin/settings/commission'}>
+                <DollarSign size={16} className="mr-1" /> Commission Settings
+                <ExternalLink size={14} className="ml-2" />
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          TAB: API KEYS (unchanged)
+         ═══════════════════════════════════════════════════════════ */}
       {activeTab === 'api' && (
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
@@ -132,23 +795,21 @@ export default function SettingsPage() {
             </div>
             <button
               onClick={checkApiStatus}
-              disabled={loading}
+              disabled={apiLoading}
               className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded transition-colors disabled:opacity-50"
             >
-              {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-              {loading ? 'Checking...' : 'Recheck'}
+              {apiLoading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+              {apiLoading ? 'Checking...' : 'Recheck'}
             </button>
           </div>
 
-          {/* Loading state */}
-          {loading && !services && (
+          {apiLoading && !services && (
             <div className="flex items-center justify-center py-12 text-gray-500 gap-2">
               <Loader2 size={20} className="animate-spin" />
               <span>Testing API connections...</span>
             </div>
           )}
 
-          {/* Results */}
           {services && (
             <div className="space-y-2">
               {services.map((service) => (
@@ -180,22 +841,6 @@ export default function SettingsPage() {
             {lastChecked && (
               <p className="text-xs text-gray-400">Last checked: {lastChecked}</p>
             )}
-          </div>
-        </Card>
-      )}
-
-      {activeTab !== 'team' && activeTab !== 'api' && (
-        <Card className="p-12">
-          <div className="text-center space-y-4">
-            <div className="inline-block p-4 bg-blue-100 rounded-full">
-              <Clock size={32} className="text-blue-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              {tabs.find(t => t.id === activeTab)?.label} Settings
-            </h2>
-            <p className="text-gray-600 max-w-md mx-auto">
-              This section is in development. Contact Andrew for configuration changes.
-            </p>
           </div>
         </Card>
       )}
