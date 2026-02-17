@@ -56,17 +56,39 @@ export async function enrichLead(leadId: string): Promise<EnrichmentResult> {
       return {}
     }
 
-    // Extract data
+    // Extract data with defensive handling for varying SerpAPI response formats
+    let services: string[] = []
+    try {
+      if (Array.isArray(result.service_options)) {
+        services = result.service_options
+          .map((s: any) => typeof s === 'string' ? s : s.name || s.offered_service || '')
+          .filter(Boolean)
+      }
+    } catch { /* non-fatal */ }
+
+    let photos: string[] = []
+    try {
+      if (Array.isArray(result.photos)) {
+        photos = result.photos
+          .slice(0, 10)
+          .map((p: any) => typeof p === 'string' ? p : p.thumbnail || p.url || '')
+          .filter(Boolean)
+      }
+    } catch { /* non-fatal */ }
+
+    let hours: Record<string, string> | undefined
+    if (result.hours && typeof result.hours === 'object' && !Array.isArray(result.hours)) {
+      hours = result.hours
+    }
+
     const enrichment: EnrichmentResult = {
       address: result.address,
       phone: result.phone,
-      hours: result.hours,
-      services: Array.isArray(result.service_options)
-        ? result.service_options.map((s: any) => typeof s === 'string' ? s : s.name || s.offered_service || String(s)).filter(Boolean)
-        : [],
-      rating: result.rating,
-      reviews: result.reviews,
-      photos: result.photos?.slice(0, 10).map((p: any) => p.thumbnail) || [],
+      hours,
+      services,
+      rating: typeof result.rating === 'number' ? result.rating : undefined,
+      reviews: typeof result.reviews === 'number' ? result.reviews : undefined,
+      photos,
     }
 
     // Get top 3 competitors

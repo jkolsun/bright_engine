@@ -2,6 +2,65 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
 
+// GET /api/users/[id] - Get user details with related data
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: params.id },
+      include: {
+        assignedLeads: {
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            companyName: true,
+            status: true,
+            priority: true,
+            industry: true,
+            city: true,
+            state: true,
+            previewUrl: true,
+            createdAt: true,
+          },
+        },
+        commissions: {
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+        },
+        repTasks: {
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+          include: {
+            lead: {
+              select: { id: true, firstName: true, lastName: true, companyName: true },
+            },
+          },
+        },
+      },
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({ user })
+  } catch (error) {
+    console.error('Error fetching user:', error)
+    return NextResponse.json({ error: 'Failed to fetch user' }, { status: 500 })
+  }
+}
+
 // PATCH /api/users/[id] - Update user
 export async function PATCH(
   request: NextRequest,

@@ -332,32 +332,46 @@ export default function ImportPage() {
                 {importResult?.mode === 'SYNCHRONOUS' ? 'Synchronous Import Complete!' : 'Pipeline Complete!'}
               </h3>
               <p className="text-gray-600 mb-8">
-                {importResult?.mode === 'SYNCHRONOUS' 
-                  ? `Immediately processed ${importResult?.summary?.created || '—'} leads with ${importResult?.summary?.enriched || '—'} successful enrichments`
+                {importResult?.mode === 'SYNCHRONOUS'
+                  ? `Immediately processed ${importResult?.summary?.created || '—'} leads: ${importResult?.summary?.enriched || 0} enriched, ${importResult?.summary?.previews || 0} previews, ${importResult?.summary?.personalized || 0} personalized`
                   : `Successfully processed ${importResult?.createdCount || '—'} leads through full enrichment pipeline`
                 }
               </p>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-4xl font-bold text-blue-600">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+                <div className="p-5 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-3xl font-bold text-blue-600">
                     {importResult?.summary?.created || importResult?.summary?.createdCount || importResult?.createdCount || '—'}
                   </p>
                   <p className="text-sm text-gray-700 mt-2">Leads Created</p>
                 </div>
-                
+
                 {importResult?.mode === 'SYNCHRONOUS' && (
                   <>
-                    <div className="p-6 bg-green-50 rounded-lg border border-green-200">
-                      <p className="text-4xl font-bold text-green-600">
+                    <div className="p-5 bg-green-50 rounded-lg border border-green-200">
+                      <p className="text-3xl font-bold text-green-600">
                         {importResult?.summary?.enriched || '—'}
                       </p>
-                      <p className="text-sm text-gray-700 mt-2">Successfully Enriched</p>
+                      <p className="text-sm text-gray-700 mt-2">Enriched</p>
                     </div>
-                    
-                    <div className="p-6 bg-yellow-50 rounded-lg border border-yellow-200">
-                      <p className="text-4xl font-bold text-yellow-600">
+
+                    <div className="p-5 bg-purple-50 rounded-lg border border-purple-200">
+                      <p className="text-3xl font-bold text-purple-600">
+                        {importResult?.summary?.previews || '—'}
+                      </p>
+                      <p className="text-sm text-gray-700 mt-2">Previews</p>
+                    </div>
+
+                    <div className="p-5 bg-amber-50 rounded-lg border border-amber-200">
+                      <p className="text-3xl font-bold text-amber-600">
+                        {importResult?.summary?.personalized || '—'}
+                      </p>
+                      <p className="text-sm text-gray-700 mt-2">Personalized</p>
+                    </div>
+
+                    <div className="p-5 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <p className="text-3xl font-bold text-yellow-600">
                         {importResult?.summary?.successRate || '—'}
                       </p>
                       <p className="text-sm text-gray-700 mt-2">Success Rate</p>
