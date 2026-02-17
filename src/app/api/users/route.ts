@@ -18,8 +18,11 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const role = searchParams.get('role')
     
+    const portalType = searchParams.get('portalType')
+
     const where: any = {}
     if (role) where.role = role
+    if (portalType) where.portalType = portalType
 
     const users = await prisma.user.findMany({
       where,
@@ -58,6 +61,7 @@ export async function POST(request: NextRequest) {
         email: data.email,
         phone: data.phone,
         role: data.role || 'REP',
+        portalType: data.portalType || 'FULL',
         status: 'ACTIVE',
         passwordHash,
       },

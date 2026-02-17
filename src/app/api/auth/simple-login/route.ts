@@ -115,8 +115,10 @@ async function handleLogin(request: NextRequest): Promise<Response> {
       void migratePassword()
     }
 
-    // Determine redirect URL based on user role
-    const redirectUrl = user.role === 'ADMIN' ? '/admin/dashboard' : '/reps'
+    // Determine redirect URL based on user role and portal type
+    const redirectUrl = user.role === 'ADMIN'
+      ? '/admin/dashboard'
+      : user.portalType === 'PART_TIME' ? '/part-time' : '/reps'
 
     // Create response with redirect
     const response = NextResponse.json(
@@ -130,6 +132,7 @@ async function handleLogin(request: NextRequest): Promise<Response> {
       email: user.email,
       name: user.name,
       role: user.role,
+      portalType: user.portalType || 'FULL',
       iat: Date.now()
     })
     const signTimeout = new Promise((_, reject) =>

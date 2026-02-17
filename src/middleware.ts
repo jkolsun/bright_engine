@@ -87,10 +87,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Rep routes — REP or ADMIN
+  // Part-time rep routes — REP (PART_TIME) or ADMIN
+  if (pathname.startsWith('/part-time')) {
+    if (userRole !== 'REP' && userRole !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    // Full-time reps should use /reps instead
+    if (userRole === 'REP' && decoded.portalType !== 'PART_TIME') {
+      return NextResponse.redirect(new URL('/reps', request.url))
+    }
+    return NextResponse.next()
+  }
+
+  // Rep routes — REP (FULL) or ADMIN
   if (pathname.startsWith('/reps')) {
     if (userRole !== 'REP' && userRole !== 'ADMIN') {
       return NextResponse.redirect(new URL('/login', request.url))
+    }
+    // Part-time reps should use /part-time instead
+    if (userRole === 'REP' && decoded.portalType === 'PART_TIME') {
+      return NextResponse.redirect(new URL('/part-time', request.url))
     }
     return NextResponse.next()
   }

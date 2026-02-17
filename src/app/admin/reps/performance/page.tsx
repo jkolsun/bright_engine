@@ -22,7 +22,7 @@ export default function RepPerformancePage() {
   const loadRepPerformance = async () => {
     try {
       const [repsRes, leadsRes, commRes] = await Promise.all([
-        fetch('/api/users?role=REP'),
+        fetch('/api/users?role=REP&portalType=FULL'),
         fetch('/api/leads?limit=500'),
         fetch('/api/commissions')
       ])

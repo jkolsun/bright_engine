@@ -39,6 +39,8 @@ export async function GET(request: NextRequest) {
         role: true,
         phone: true,
         status: true,
+        portalType: true,
+        dailyLeadCap: true,
       },
     })
 

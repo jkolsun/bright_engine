@@ -24,7 +24,8 @@ export default function RepsPage() {
     name: '',
     email: '',
     phone: '',
-    role: 'REP'
+    role: 'REP',
+    portalType: 'FULL'
   })
 
   useEffect(() => {
@@ -57,7 +58,7 @@ export default function RepsPage() {
 
       if (res.ok) {
         setDialogOpen(false)
-        setFormData({ name: '', email: '', phone: '', role: 'REP' })
+        setFormData({ name: '', email: '', phone: '', role: 'REP', portalType: 'FULL' })
         loadReps()
       } else {
         alert('Failed to create rep account')
@@ -181,6 +182,22 @@ export default function RepsPage() {
                     <option value="ADMIN">Admin</option>
                   </select>
                 </div>
+                {formData.role === 'REP' && (
+                  <div className="space-y-2">
+                    <label htmlFor="portalType" className="text-sm font-medium">
+                      Portal Type
+                    </label>
+                    <select
+                      id="portalType"
+                      value={formData.portalType}
+                      onChange={(e) => setFormData(prev => ({ ...prev, portalType: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    >
+                      <option value="FULL">Full-Time</option>
+                      <option value="PART_TIME">Part-Time</option>
+                    </select>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>
@@ -238,6 +255,7 @@ export default function RepsPage() {
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Email</th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Phone</th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Role</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Type</th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Status</th>
                   <th className="text-right p-4 text-sm font-semibold text-gray-700">Actions</th>
                 </tr>
@@ -252,6 +270,15 @@ export default function RepsPage() {
                       <Badge variant={rep.role === 'ADMIN' ? 'default' : 'secondary'}>
                         {rep.role}
                       </Badge>
+                    </td>
+                    <td className="p-4">
+                      {rep.role === 'REP' ? (
+                        <Badge variant={rep.portalType === 'PART_TIME' ? 'outline' : 'secondary'}>
+                          {rep.portalType === 'PART_TIME' ? 'Part-Time' : 'Full-Time'}
+                        </Badge>
+                      ) : (
+                        <span className="text-gray-400 text-sm">—</span>
+                      )}
                     </td>
                     <td className="p-4">
                       <Badge variant={rep.status === 'ACTIVE' ? 'default' : 'secondary'}>
