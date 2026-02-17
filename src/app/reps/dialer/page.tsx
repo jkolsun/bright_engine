@@ -26,7 +26,12 @@ import {
   Clock,
   Target,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  ArrowLeft,
+  Globe,
+  Star,
+  MapPin,
+  Building
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 
@@ -375,6 +380,41 @@ export default function DialerPage() {
                 </Button>
               </div>
 
+              {/* Company Summary */}
+              <div className="bg-gray-50 rounded-lg p-3 mb-4 space-y-1.5">
+                <div className="flex items-center gap-4 text-sm text-gray-700">
+                  <span className="flex items-center gap-1">
+                    <Building size={13} className="text-gray-400" />
+                    {currentLead.industry?.replace(/_/g, ' ') || 'Unknown industry'}
+                  </span>
+                  {(currentLead.city || currentLead.state) && (
+                    <span className="flex items-center gap-1">
+                      <MapPin size={13} className="text-gray-400" />
+                      {[currentLead.city, currentLead.state].filter(Boolean).join(', ')}
+                    </span>
+                  )}
+                  {currentLead.enrichedRating && (
+                    <span className="flex items-center gap-1">
+                      <Star size={13} className="text-amber-400 fill-amber-400" />
+                      {currentLead.enrichedRating}{currentLead.enrichedReviews ? ` (${currentLead.enrichedReviews} reviews)` : ''}
+                    </span>
+                  )}
+                </div>
+                {currentLead.website && (
+                  <div className="flex items-center gap-1 text-sm">
+                    <Globe size={13} className="text-gray-400" />
+                    <a href={currentLead.website.startsWith('http') ? currentLead.website : `https://${currentLead.website}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">
+                      {currentLead.website.replace(/^https?:\/\//, '')}
+                    </a>
+                  </div>
+                )}
+                {currentLead.enrichedServices && Array.isArray(currentLead.enrichedServices) && currentLead.enrichedServices.length > 0 && (
+                  <p className="text-xs text-gray-500">
+                    Services: {currentLead.enrichedServices.slice(0, 4).join(', ')}{currentLead.enrichedServices.length > 4 ? ` +${currentLead.enrichedServices.length - 4} more` : ''}
+                  </p>
+                )}
+              </div>
+
               {/* Phone Number */}
               <div className="text-3xl font-bold text-blue-600 mb-4 font-mono">{currentLead.phone}</div>
               {currentLead.email && (
@@ -394,7 +434,17 @@ export default function DialerPage() {
               ) : !connected ? (
                 /* Initial outcome: did they pick up? */
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-gray-700">Did they pick up?</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-gray-700">Did they pick up?</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-gray-500 hover:text-gray-700"
+                      onClick={() => { setCallActive(false); setCallNotes('') }}
+                    >
+                      <ArrowLeft size={14} className="mr-1" /> Cancel Call
+                    </Button>
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     <Button onClick={() => setConnected(true)} className="bg-green-600 hover:bg-green-700 text-white" disabled={processing}>
                       <PhoneForwarded size={16} className="mr-2" /> Connected
@@ -413,7 +463,18 @@ export default function DialerPage() {
               ) : (
                 /* Connected: what was the result? */
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-green-700">Connected — What happened?</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-green-700">Connected — What happened?</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-gray-500 hover:text-gray-700"
+                      onClick={() => setConnected(false)}
+                      disabled={processing}
+                    >
+                      <ArrowLeft size={14} className="mr-1" /> Back
+                    </Button>
+                  </div>
                   <div className="grid grid-cols-1 gap-2">
                     <Button onClick={() => handleOutcome('INTERESTED')} className="bg-green-600 hover:bg-green-700 text-white h-12 text-base" disabled={processing}>
                       <TrendingUp size={18} className="mr-2" /> Interested — Send Preview
