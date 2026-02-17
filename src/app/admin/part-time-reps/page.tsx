@@ -25,6 +25,9 @@ import {
   TrendingUp,
   Activity,
   CheckCircle,
+  Copy,
+  RefreshCw,
+  KeyRound,
 } from 'lucide-react'
 
 const DAILY_TARGET = 40 // Part-time daily call target
@@ -52,8 +55,14 @@ export default function PartTimeRepsPage() {
   const [loading, setLoading] = useState(true)
   const [recentActivity, setRecentActivity] = useState<any[]>([])
   const [showAddDialog, setShowAddDialog] = useState(false)
-  const [newRep, setNewRep] = useState({ name: '', email: '', phone: '' })
+  const [newRep, setNewRep] = useState({ name: '', email: '', phone: '', password: '' })
   const [creating, setCreating] = useState(false)
+  const [createdCreds, setCreatedCreds] = useState<{ email: string; password: string } | null>(null)
+  const [resetDialogOpen, setResetDialogOpen] = useState(false)
+  const [resetTarget, setResetTarget] = useState<any>(null)
+  const [resetPassword, setResetPassword] = useState('')
+  const [resetResult, setResetResult] = useState<string | null>(null)
+  const [resetting, setResetting] = useState(false)
 
   useEffect(() => { loadData() }, [])
 
@@ -195,8 +204,20 @@ export default function PartTimeRepsPage() {
     }
   }
 
+  const generatePassword = () => {
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+    let pw = ''
+    for (let i = 0; i < 10; i++) pw += chars[Math.floor(Math.random() * chars.length)]
+    return pw
+  }
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+  }
+
   const handleAddRep = async () => {
     if (!newRep.name || !newRep.email) return
+    const password = newRep.password || generatePassword()
     setCreating(true)
     try {
       const res = await fetch('/api/users', {
@@ -206,17 +227,43 @@ export default function PartTimeRepsPage() {
           name: newRep.name,
           email: newRep.email,
           phone: newRep.phone,
+          password,
           role: 'REP',
           portalType: 'PART_TIME',
         }),
       })
       if (res.ok) {
         setShowAddDialog(false)
-        setNewRep({ name: '', email: '', phone: '' })
+        setCreatedCreds({ email: newRep.email, password })
+        setNewRep({ name: '', email: '', phone: '', password: '' })
         loadData()
       }
     } catch (e) { console.error('Failed to create rep:', e) }
     finally { setCreating(false) }
+  }
+
+  const handleResetPassword = async () => {
+    if (!resetTarget) return
+    const newPassword = resetPassword || generatePassword()
+    setResetting(true)
+    try {
+      const res = await fetch(`/api/users/${resetTarget.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: newPassword })
+      })
+      if (res.ok) {
+        setResetResult(newPassword)
+        setResetPassword('')
+      } else {
+        alert('Failed to reset password')
+      }
+    } catch (error) {
+      console.error('Error resetting password:', error)
+      alert('Failed to reset password')
+    } finally {
+      setResetting(false)
+    }
   }
 
   const getStatusBadge = (rep: RepWithStats) => {
@@ -259,6 +306,37 @@ export default function PartTimeRepsPage() {
           <UserPlus size={18} /> Add Part-Time Rep
         </Button>
       </div>
+
+      {/* Created Credentials Banner */}
+      {createdCreds && (
+        <Card className="p-4 border-green-200 bg-green-50">
+          <div className="flex items-start justify-between">
+            <div>
+              <h4 className="font-semibold text-green-800 mb-1">Rep Account Created</h4>
+              <p className="text-sm text-green-700 mb-2">Share these login credentials with the rep:</p>
+              <div className="bg-white rounded-md p-3 border border-green-200 space-y-1 font-mono text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 w-20">Email:</span>
+                  <span className="font-medium">{createdCreds.email}</span>
+                  <button onClick={() => copyToClipboard(createdCreds.email)} className="text-gray-400 hover:text-gray-600"><Copy size={14} /></button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 w-20">Password:</span>
+                  <span className="font-medium">{createdCreds.password}</span>
+                  <button onClick={() => copyToClipboard(createdCreds.password)} className="text-gray-400 hover:text-gray-600"><Copy size={14} /></button>
+                </div>
+              </div>
+              <button
+                onClick={() => copyToClipboard(`Email: ${createdCreds.email}\nPassword: ${createdCreds.password}`)}
+                className="text-xs text-green-600 hover:text-green-800 mt-2 underline"
+              >
+                Copy both to clipboard
+              </button>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setCreatedCreds(null)} className="text-green-600">Dismiss</Button>
+          </div>
+        </Card>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -314,6 +392,7 @@ export default function PartTimeRepsPage() {
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Pace</th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Last Active</th>
                   <th className="text-right p-4 text-sm font-semibold text-gray-700">Commission</th>
+                  <th className="text-right p-4 text-sm font-semibold text-gray-700">Login</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -358,6 +437,22 @@ export default function PartTimeRepsPage() {
                       <div className="font-medium text-gray-900">{formatCurrency(rep.weekCommission)}</div>
                       <div className="text-xs text-gray-400">this week</div>
                     </td>
+                    <td className="p-4 text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => {
+                          setResetTarget(rep)
+                          setResetPassword('')
+                          setResetResult(null)
+                          setResetDialogOpen(true)
+                        }}
+                      >
+                        <RefreshCw size={14} />
+                        Reset PW
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -395,6 +490,50 @@ export default function PartTimeRepsPage() {
         )}
       </Card>
 
+      {/* Reset Password Dialog */}
+      <Dialog open={resetDialogOpen} onOpenChange={(open) => { setResetDialogOpen(open); if (!open) setResetResult(null) }}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-500">Reset the password for {resetTarget?.name} ({resetTarget?.email})</p>
+          {resetResult ? (
+            <div className="py-2">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-green-800 mb-2">Password has been reset!</p>
+                <div className="bg-white rounded-md p-3 border border-green-200 font-mono text-sm flex items-center justify-between">
+                  <span>{resetResult}</span>
+                  <button onClick={() => copyToClipboard(resetResult)} className="text-gray-400 hover:text-gray-600 ml-2"><Copy size={14} /></button>
+                </div>
+                <button
+                  onClick={() => copyToClipboard(`Email: ${resetTarget?.email}\nNew Password: ${resetResult}`)}
+                  className="text-xs text-green-600 hover:text-green-800 mt-2 underline"
+                >
+                  Copy email + password to clipboard
+                </button>
+              </div>
+              <DialogFooter className="mt-4">
+                <Button onClick={() => { setResetDialogOpen(false); setResetResult(null) }}>Done</Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="py-2 space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">New Password</label>
+                <div className="flex gap-2">
+                  <Input value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} placeholder="Leave blank to auto-generate" />
+                  <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => setResetPassword(generatePassword())}>Generate</Button>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setResetDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleResetPassword} disabled={resetting}>{resetting ? 'Resetting...' : 'Reset Password'}</Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Add Rep Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="sm:max-w-[400px]">
@@ -414,7 +553,16 @@ export default function PartTimeRepsPage() {
               <label className="text-sm font-medium text-gray-700">Phone (optional)</label>
               <Input value={newRep.phone} onChange={(e) => setNewRep({ ...newRep, phone: e.target.value })} placeholder="(555) 123-4567" />
             </div>
-            <p className="text-xs text-gray-400">Rep will be created with portalType = PART_TIME and default password.</p>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">Password</label>
+              <div className="flex gap-2">
+                <Input value={newRep.password} onChange={(e) => setNewRep({ ...newRep, password: e.target.value })} placeholder="Leave blank to auto-generate" />
+                <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => setNewRep({ ...newRep, password: generatePassword() })}>
+                  Generate
+                </Button>
+              </div>
+              <p className="text-xs text-gray-400">Credentials will be shown after creation.</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>

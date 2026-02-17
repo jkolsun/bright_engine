@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
+import bcrypt from 'bcryptjs'
 
 // GET /api/users/[id] - Get user details with related data
 export async function GET(
@@ -76,6 +77,12 @@ export async function PATCH(
 
     const data = await request.json()
 
+    // If password reset requested, hash the new password
+    let passwordHash: string | undefined
+    if (data.password) {
+      passwordHash = await bcrypt.hash(data.password, 10)
+    }
+
     const user = await prisma.user.update({
       where: { id: params.id },
       data: {
@@ -85,6 +92,7 @@ export async function PATCH(
         ...(data.phone && { phone: data.phone }),
         ...(data.role && { role: data.role }),
         ...(data.commissionRate !== undefined && { commissionRate: data.commissionRate }),
+        ...(passwordHash && { passwordHash }),
       },
     })
 
