@@ -333,16 +333,26 @@ export default function ImportPage() {
               </h3>
               <p className="text-gray-600 mb-8">
                 {importResult?.mode === 'SYNCHRONOUS'
-                  ? `Immediately processed ${importResult?.summary?.created || '—'} leads: ${importResult?.summary?.enriched || 0} enriched, ${importResult?.summary?.previews || 0} previews, ${importResult?.summary?.personalized || 0} personalized`
-                  : `Successfully processed ${importResult?.createdCount || '—'} leads through full enrichment pipeline`
+                  ? `Immediately processed ${importResult?.summary?.created ?? '—'} leads: ${importResult?.summary?.enriched ?? 0} enriched, ${importResult?.summary?.previews ?? 0} previews, ${importResult?.summary?.personalized ?? 0} personalized`
+                  : `Successfully processed ${importResult?.createdCount ?? '—'} leads through full enrichment pipeline`
                 }
               </p>
+              {importResult?.mode === 'SYNCHRONOUS' && (importResult?.summary?.skipped ?? 0) > 0 && (
+                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm font-semibold text-yellow-800">
+                    ⚠️ {importResult.summary.skipped} leads skipped (already in database)
+                  </p>
+                  <p className="text-xs text-yellow-700 mt-1">
+                    These leads matched existing records by email or phone. Import new leads or delete existing ones first.
+                  </p>
+                </div>
+              )}
 
               {/* Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
                 <div className="p-5 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-3xl font-bold text-blue-600">
-                    {importResult?.summary?.created || importResult?.summary?.createdCount || importResult?.createdCount || '—'}
+                    {importResult?.summary?.created ?? importResult?.summary?.createdCount ?? importResult?.createdCount ?? '—'}
                   </p>
                   <p className="text-sm text-gray-700 mt-2">Leads Created</p>
                 </div>
@@ -351,28 +361,28 @@ export default function ImportPage() {
                   <>
                     <div className="p-5 bg-green-50 rounded-lg border border-green-200">
                       <p className="text-3xl font-bold text-green-600">
-                        {importResult?.summary?.enriched || '—'}
+                        {importResult?.summary?.enriched ?? '—'}
                       </p>
                       <p className="text-sm text-gray-700 mt-2">Enriched</p>
                     </div>
 
                     <div className="p-5 bg-purple-50 rounded-lg border border-purple-200">
                       <p className="text-3xl font-bold text-purple-600">
-                        {importResult?.summary?.previews || '—'}
+                        {importResult?.summary?.previews ?? '—'}
                       </p>
                       <p className="text-sm text-gray-700 mt-2">Previews</p>
                     </div>
 
                     <div className="p-5 bg-amber-50 rounded-lg border border-amber-200">
                       <p className="text-3xl font-bold text-amber-600">
-                        {importResult?.summary?.personalized || '—'}
+                        {importResult?.summary?.personalized ?? '—'}
                       </p>
                       <p className="text-sm text-gray-700 mt-2">Personalized</p>
                     </div>
 
                     <div className="p-5 bg-yellow-50 rounded-lg border border-yellow-200">
                       <p className="text-3xl font-bold text-yellow-600">
-                        {importResult?.summary?.successRate || '—'}
+                        {importResult?.summary?.successRate ?? '—'}
                       </p>
                       <p className="text-sm text-gray-700 mt-2">Success Rate</p>
                     </div>
@@ -441,7 +451,7 @@ export default function ImportPage() {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Total estimated cost</span>
                     <span className="font-bold text-gray-900">
-                      ${((importResult?.summary?.createdCount || importResult?.createdCount || 0) * 0.004).toFixed(2)}
+                      ${((importResult?.summary?.created ?? importResult?.summary?.createdCount ?? importResult?.createdCount ?? 0) * 0.004).toFixed(2)}
                     </span>
                   </div>
                 </div>
