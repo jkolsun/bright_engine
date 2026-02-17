@@ -31,8 +31,13 @@ import {
   Globe,
   Star,
   MapPin,
-  Building
+  Building,
+  Mail,
+  ExternalLink,
+  ChevronLeft,
+  Eye
 } from 'lucide-react'
+import Link from 'next/link'
 import { useState, useEffect, useCallback } from 'react'
 
 const DEFAULT_SCRIPT = `OPENER (10 sec):
@@ -70,6 +75,11 @@ export default function DialerPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editForm, setEditForm] = useState<any>({})
   const [saving, setSaving] = useState(false)
+
+  // Preview send dialog
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
+  const [previewMethod, setPreviewMethod] = useState<'sms' | 'email'>('sms')
+  const [previewMessage, setPreviewMessage] = useState('')
 
   const currentLead = queue[currentIndex] || null
 
@@ -208,23 +218,54 @@ export default function DialerPage() {
     }
   }
 
-  const handleSendPreview = async (method: 'sms' | 'copy') => {
+  const prevLead = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1)
+      setCallActive(false)
+      setConnected(false)
+      setCallNotes('')
+    }
+  }
+
+  const getDefaultTextMessage = () => {
+    if (!currentLead) return ''
+    return `Hey ${currentLead.firstName}, this is [YOUR NAME] with Bright Automations. I just mocked up a preview of what a new website could look like for ${currentLead.companyName} — take a look: ${currentLead.previewUrl}\n\nIf you like it, just text us back and we'll make it live. You don't pay until you're happy with it!`
+  }
+
+  const getDefaultEmailMessage = () => {
+    if (!currentLead) return ''
+    return `Hi ${currentLead.firstName},\n\nI put together a quick preview of what a professional website could look like for ${currentLead.companyName}. Here's the link:\n\n${currentLead.previewUrl}\n\nIt's mobile-friendly, loads fast, and designed specifically for ${currentLead.industry?.toLowerCase().replace(/_/g, ' ') || 'your industry'}.\n\nIf you like what you see, just reply to this email and we'll get it live for you. No payment until you're happy with it.\n\nBest,\n[YOUR NAME]\nBright Automations`
+  }
+
+  const openPreviewDialog = (method: 'sms' | 'email') => {
+    setPreviewMethod(method)
+    setPreviewMessage(method === 'sms' ? getDefaultTextMessage() : getDefaultEmailMessage())
+    setPreviewDialogOpen(true)
+  }
+
+  const handleSendPreview = async () => {
     if (!currentLead?.previewUrl) return
 
-    if (method === 'sms') {
-      const message = encodeURIComponent(
-        `Hey ${currentLead.firstName}, here's the preview of your new website for ${currentLead.companyName}: ${currentLead.previewUrl}`
-      )
+    if (previewMethod === 'sms') {
+      const message = encodeURIComponent(previewMessage)
       window.open(`sms:${currentLead.phone}?body=${message}`)
     } else {
-      await navigator.clipboard.writeText(currentLead.previewUrl)
-      setCopiedPreview(true)
-      setTimeout(() => setCopiedPreview(false), 2000)
+      const subject = encodeURIComponent(`Website preview for ${currentLead.companyName}`)
+      const body = encodeURIComponent(previewMessage)
+      window.open(`mailto:${currentLead.email || ''}?subject=${subject}&body=${body}`)
     }
 
     // Log preview sent
     await logPreviewSent(currentLead.id)
     setSessionStats(prev => ({ ...prev, previewLinksSent: prev.previewLinksSent + 1 }))
+    setPreviewDialogOpen(false)
+  }
+
+  const handleCopyPreviewLink = async () => {
+    if (!currentLead?.previewUrl) return
+    await navigator.clipboard.writeText(currentLead.previewUrl)
+    setCopiedPreview(true)
+    setTimeout(() => setCopiedPreview(false), 2000)
   }
 
   // Edit lead handlers
@@ -282,13 +323,20 @@ export default function DialerPage() {
     <div className="p-8 space-y-6">
       {/* Header + Session Stats */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Power Dialer</h1>
-          <p className="text-gray-500 mt-1">
-            {queue.length > 0
-              ? `Lead ${currentIndex + 1} of ${queue.length} remaining (${completedCount} completed)`
-              : 'No leads in queue'}
-          </p>
+        <div className="flex items-center gap-4">
+          <Link href="/reps">
+            <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700">
+              <ChevronLeft size={18} className="mr-1" /> Dashboard
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Power Dialer</h1>
+            <p className="text-gray-500 mt-1">
+              {queue.length > 0
+                ? `Lead ${currentIndex + 1} of ${queue.length} remaining (${completedCount} completed)`
+                : 'No leads in queue'}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -421,9 +469,12 @@ export default function DialerPage() {
                 <p className="text-sm text-gray-500 mb-4">{currentLead.email}</p>
               )}
 
-              {/* Call / Skip Buttons */}
+              {/* Call / Skip / Previous Buttons */}
               {!callActive ? (
                 <div className="flex gap-3">
+                  <Button size="lg" variant="outline" onClick={prevLead} disabled={currentIndex <= 0}>
+                    <ArrowLeft size={20} />
+                  </Button>
                   <Button size="lg" className="flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={handleCall}>
                     <Phone size={20} className="mr-2" /> Call Now
                   </Button>
@@ -503,16 +554,50 @@ export default function DialerPage() {
               )}
             </Card>
 
-            {/* Preview Link Actions */}
-            {currentLead.previewUrl && (
-              <Card className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">Preview Link</span>
-                  <div className="flex gap-2">
+            {/* Website & Preview Actions */}
+            <Card className="p-4 space-y-3">
+              {/* Client's Current Website */}
+              <div>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Client&apos;s Website</span>
+                {currentLead.website ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <a
+                      href={currentLead.website.startsWith('http') ? currentLead.website : `https://${currentLead.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:underline truncate flex-1"
+                    >
+                      {currentLead.website.replace(/^https?:\/\//, '')}
+                    </a>
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleSendPreview('copy')}
+                      onClick={() => window.open(currentLead.website.startsWith('http') ? currentLead.website : `https://${currentLead.website}`, '_blank')}
+                    >
+                      <ExternalLink size={14} className="mr-1" /> View Site
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 mt-1">No website on file — great pitch angle</p>
+                )}
+              </div>
+
+              {/* Preview Link */}
+              {currentLead.previewUrl && (
+                <div className="border-t pt-3">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Our Preview</span>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.open(currentLead.previewUrl, '_blank')}
+                    >
+                      <Eye size={14} className="mr-1" /> View Preview
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleCopyPreviewLink}
                     >
                       {copiedPreview ? (
                         <><CheckCircle size={14} className="mr-1 text-green-600" /> Copied!</>
@@ -522,16 +607,23 @@ export default function DialerPage() {
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => handleSendPreview('sms')}
+                      onClick={() => openPreviewDialog('sms')}
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       <MessageSquare size={14} className="mr-1" /> Text Preview
                     </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => openPreviewDialog('email')}
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      <Mail size={14} className="mr-1" /> Email Preview
+                    </Button>
                   </div>
+                  <p className="text-xs text-gray-400 mt-1.5 truncate">{currentLead.previewUrl}</p>
                 </div>
-                <p className="text-xs text-gray-400 truncate">{currentLead.previewUrl}</p>
-              </Card>
-            )}
+              )}
+            </Card>
           </div>
 
           {/* Right: Call Script */}
@@ -546,6 +638,62 @@ export default function DialerPage() {
           </Card>
         </div>
       )}
+
+      {/* Text / Email Preview Dialog */}
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {previewMethod === 'sms' ? (
+                <><MessageSquare size={18} className="text-blue-600" /> Text Preview</>
+              ) : (
+                <><Mail size={18} className="text-purple-600" /> Email Preview</>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span className="font-medium">To:</span>
+              <span>{previewMethod === 'sms' ? (currentLead?.phone || 'No phone') : (currentLead?.email || 'No email on file')}</span>
+            </div>
+            {previewMethod === 'email' && (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span className="font-medium">Subject:</span>
+                <span>Website preview for {currentLead?.companyName}</span>
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1">Message</label>
+              <textarea
+                value={previewMessage}
+                onChange={(e) => setPreviewMessage(e.target.value)}
+                className="w-full h-40 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <p className="text-xs text-gray-400">
+              {previewMethod === 'sms'
+                ? 'This will open your default messaging app with this message pre-filled.'
+                : 'This will open your default email client with this message pre-filled.'}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewDialogOpen(false)}>
+              <ArrowLeft size={14} className="mr-1" /> Back
+            </Button>
+            <Button
+              onClick={handleSendPreview}
+              className={previewMethod === 'sms' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'}
+              disabled={previewMethod === 'email' && !currentLead?.email}
+            >
+              {previewMethod === 'sms' ? (
+                <><MessageSquare size={14} className="mr-1" /> Send Text</>
+              ) : (
+                <><Mail size={14} className="mr-1" /> Send Email</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Lead Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
