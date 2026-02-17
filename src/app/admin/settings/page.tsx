@@ -2,13 +2,67 @@
 
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { 
-  Building, Target, Zap, Users, Key, Clock, DollarSign
+import {
+  Building, Target, Zap, Users, Key, Clock, DollarSign,
+  CheckCircle2, AlertTriangle, XCircle, RefreshCw, Loader2
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+
+type ServiceStatus = {
+  key: string
+  label: string
+  configured: boolean
+  connected: boolean | null
+  detail: string
+}
+
+function StatusIcon({ service }: { service: ServiceStatus }) {
+  if (!service.configured) {
+    return <XCircle size={16} className="text-gray-400 shrink-0" />
+  }
+  if (service.connected === true) {
+    return <CheckCircle2 size={16} className="text-green-500 shrink-0" />
+  }
+  return <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+}
+
+function StatusBadge({ service }: { service: ServiceStatus }) {
+  if (!service.configured) {
+    return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Not configured</span>
+  }
+  if (service.connected === true) {
+    return <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700">Connected</span>
+  }
+  return <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">Failed</span>
+}
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'company' | 'sequences' | 'personalization' | 'targets' | 'team' | 'api'>('company')
+  const [services, setServices] = useState<ServiceStatus[] | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [lastChecked, setLastChecked] = useState<string | null>(null)
+
+  const checkApiStatus = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/settings/api-status')
+      if (res.ok) {
+        const data = await res.json()
+        setServices(data.services)
+        setLastChecked(new Date().toLocaleTimeString())
+      }
+    } catch {
+      // silently fail — user can retry
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === 'api' && !services && !loading) {
+      checkApiStatus()
+    }
+  }, [activeTab, services, loading, checkApiStatus])
 
   const tabs = [
     { id: 'company', label: 'Company', icon: <Building size={16} /> },
@@ -18,6 +72,9 @@ export default function SettingsPage() {
     { id: 'team', label: 'Team', icon: <Users size={16} /> },
     { id: 'api', label: 'API Keys', icon: <Key size={16} /> },
   ] as const
+
+  const connectedCount = services?.filter(s => s.connected === true).length ?? 0
+  const totalCount = services?.length ?? 0
 
   return (
     <div className="p-8 space-y-6">
@@ -64,26 +121,66 @@ export default function SettingsPage() {
 
       {activeTab === 'api' && (
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">API Configuration</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between p-3 bg-gray-50 rounded text-sm">
-              <span className="text-gray-600">Stripe</span>
-              <span className="text-gray-900">Configured via Railway env vars</span>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold">API Configuration</h3>
+              {services && (
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {connectedCount}/{totalCount} services connected
+                </p>
+              )}
             </div>
-            <div className="flex justify-between p-3 bg-gray-50 rounded text-sm">
-              <span className="text-gray-600">Twilio</span>
-              <span className="text-gray-900">Configured via Railway env vars</span>
-            </div>
-            <div className="flex justify-between p-3 bg-gray-50 rounded text-sm">
-              <span className="text-gray-600">SerpAPI</span>
-              <span className="text-gray-900">Used during import enrichment</span>
-            </div>
-            <div className="flex justify-between p-3 bg-gray-50 rounded text-sm">
-              <span className="text-gray-600">Anthropic</span>
-              <span className="text-gray-900">Used for personalization + scripts</span>
-            </div>
+            <button
+              onClick={checkApiStatus}
+              disabled={loading}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded transition-colors disabled:opacity-50"
+            >
+              {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+              {loading ? 'Checking...' : 'Recheck'}
+            </button>
           </div>
-          <p className="text-xs text-gray-500 mt-4">All API keys are managed via Railway environment variables for security.</p>
+
+          {/* Loading state */}
+          {loading && !services && (
+            <div className="flex items-center justify-center py-12 text-gray-500 gap-2">
+              <Loader2 size={20} className="animate-spin" />
+              <span>Testing API connections...</span>
+            </div>
+          )}
+
+          {/* Results */}
+          {services && (
+            <div className="space-y-2">
+              {services.map((service) => (
+                <div
+                  key={service.key}
+                  className={`flex items-center justify-between p-3 rounded text-sm ${
+                    service.connected === true
+                      ? 'bg-green-50 border border-green-100'
+                      : service.configured
+                      ? 'bg-amber-50 border border-amber-100'
+                      : 'bg-gray-50 border border-gray-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <StatusIcon service={service} />
+                    <span className="font-medium text-gray-900">{service.label}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-500 hidden sm:inline">{service.detail}</span>
+                    <StatusBadge service={service} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-xs text-gray-500">All API keys are managed via Railway environment variables for security.</p>
+            {lastChecked && (
+              <p className="text-xs text-gray-400">Last checked: {lastChecked}</p>
+            )}
+          </div>
         </Card>
       )}
 
