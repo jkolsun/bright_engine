@@ -14,7 +14,8 @@ import {
   Upload,
   Target,
   Zap,
-  Mail
+  Mail,
+  Radio
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -85,6 +86,9 @@ export default function AdminLayout({
           </NavLink>
           <NavLink href="/admin/clawdbot-monitor" icon={<Zap size={20} />}>
             Clawdbot Monitor
+          </NavLink>
+          <NavLink href="/admin/dialer-monitor" icon={<Radio size={20} />}>
+            Live Dialer
           </NavLink>
           <NavLink href="/admin/import" icon={<Upload size={20} />}>
             Lead Import

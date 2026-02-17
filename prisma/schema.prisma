@@ -48,6 +48,9 @@ model User {
   outboundEvents     OutboundEvent[]     @relation("RepOutboundEvents")
   channelPerformance ChannelPerformance[]
   repTasks           RepTask[]           @relation("RepTasks")
+  calls              Call[]              @relation("RepCalls")
+  callScorings       CallScoring[]       @relation("RepScoring")
+  dialerSessions     DialerSession[]     @relation("DialerSessions")
 
   @@map("users")
 }
@@ -147,6 +150,7 @@ model Lead {
   outboundEvents     OutboundEvent[]
   touchRecommendations TouchRecommendation[]
   repTasks           RepTask[]
+  calls              Call[]
 
   @@index([status])
   @@index([assignedToId])
@@ -796,6 +800,99 @@ model InstantlySyncChange {
 
   @@map("instantly_sync_changes")
   @@index([syncTimestamp])
+}
+
+// ============================================
+// DIALER CALL MODEL (Power Dialer calls)
+// ============================================
+model Call {
+  id               String    @id @default(cuid())
+  leadId           String    @map("lead_id")
+  repId            String    @map("rep_id")
+  twilioCallSid    String?   @map("twilio_call_sid")
+  conferenceSid    String?   @map("conference_sid")
+  direction        String    @default("outbound")
+  status           String    @default("initiated") // initiated, ringing, connected, completed, no_answer, voicemail, busy, failed
+  outcome          String?   // interested, not_interested, callback, wrong_number, dnc, voicemail_left, voicemail_skipped
+  durationSeconds  Int?      @map("duration_seconds")
+  notes            String?   @db.Text
+  callbackDate     DateTime? @map("callback_date")
+  autoTexted       Boolean   @default(false) @map("auto_texted")
+  dialBatchId      String?   @map("dial_batch_id") // Groups parallel dial attempts
+  lineNumber       Int?      @map("line_number") // 1, 2, or 3 in parallel dial
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  rep  User @relation("RepCalls", fields: [repId], references: [id])
+
+  @@index([leadId])
+  @@index([repId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([dialBatchId])
+  @@map("calls")
+}
+
+// ============================================
+// CALL SCORING MODEL (Weekly rep performance)
+// ============================================
+model CallScoring {
+  id                  String   @id @default(cuid())
+  repId               String   @map("rep_id")
+  weekStart           DateTime @map("week_start") @db.Date
+  connectToInterest   Float    @default(0) @map("connect_to_interest")
+  interestToClose     Float    @default(0) @map("interest_to_close")
+  previewTextRate     Float    @default(0) @map("preview_text_rate")
+  avgDuration         Int      @default(0) @map("avg_duration")
+  callbackShowRate    Float    @default(0) @map("callback_show_rate")
+  dncRate             Float    @default(0) @map("dnc_rate")
+  volumeScore         Int      @default(0) @map("volume_score")
+  totalScore          Int      @default(0) @map("total_score")
+  coachingNotes       String?  @db.Text @map("coaching_notes")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  rep User @relation("RepScoring", fields: [repId], references: [id])
+
+  @@unique([repId, weekStart])
+  @@index([repId])
+  @@index([weekStart])
+  @@map("call_scoring")
+}
+
+// ============================================
+// DO NOT CALL MODEL
+// ============================================
+model DoNotCall {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  reason    String?
+  addedBy   String?  @map("added_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("do_not_call")
+}
+
+// ============================================
+// DIALER SESSION MODEL (Track active dialing sessions)
+// ============================================
+model DialerSession {
+  id              String    @id @default(cuid())
+  repId           String    @map("rep_id")
+  mode            String    @default("power") // power, single, manual
+  linesPerDial    Int       @default(3) @map("lines_per_dial")
+  status          String    @default("active") // active, paused, ended
+  totalDials      Int       @default(0) @map("total_dials")
+  totalConnects   Int       @default(0) @map("total_connects")
+  totalInterested Int       @default(0) @map("total_interested")
+  totalPreviews   Int       @default(0) @map("total_previews")
+  startedAt       DateTime  @default(now()) @map("started_at")
+  endedAt         DateTime? @map("ended_at")
+
+  rep User @relation("DialerSessions", fields: [repId], references: [id])
+
+  @@index([repId])
+  @@index([status])
+  @@map("dialer_sessions")
 }
 
 model InstantlyDailyReport {
