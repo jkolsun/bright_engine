@@ -58,15 +58,9 @@ export async function calculateCommission(params: {
       rateMultiplier = 1.1 // 10% bonus
     }
 
-    // Adjust rate based on revenue type
-    let typeMultiplier = 1
-    if (revenueType === 'HOSTING_MONTHLY') {
-      typeMultiplier = 0.3 // Lower rate for recurring
-    } else if (revenueType === 'UPSELL') {
-      typeMultiplier = 0.6 // Higher rate for upsells
-    }
-
-    const finalRate = baseRate * rateMultiplier * typeMultiplier
+    // Commission is 50% of anything the rep directly sells
+    // No type-based reduction — same rate for site builds, hosting, and upsells
+    const finalRate = baseRate * rateMultiplier
     const commissionAmount = Math.round(amount * finalRate * 100) / 100
 
     return {

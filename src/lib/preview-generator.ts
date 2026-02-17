@@ -35,7 +35,7 @@ export async function generatePreview(
   if (existingLead.previewId && existingLead.previewUrl) {
     // Just ensure expiration is set
     if (!existingLead.previewExpiresAt) {
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       await prisma.lead.update({
         where: { id: leadId },
         data: { previewExpiresAt: expiresAt }
@@ -59,7 +59,7 @@ export async function generatePreview(
     return {
       previewId: existingLead.previewId,
       previewUrl: existingLead.previewUrl,
-      expiresAt: existingLead.previewExpiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      expiresAt: existingLead.previewExpiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     }
   }
 
@@ -70,8 +70,8 @@ export async function generatePreview(
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://brightengine-production.up.railway.app'
   const previewUrl = `${baseUrl}/preview/${previewId}`
 
-  // Preview expires in 30 days
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+  // Preview expires in 7 days (per Operating Manual + banner text)
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
   // Store in database
   const lead = await prisma.lead.update({
@@ -163,7 +163,7 @@ export async function isPreviewExpired(previewId: string): Promise<boolean> {
  */
 export async function refreshPreviewExpiration(
   leadId: string,
-  daysFromNow: number = 30
+  daysFromNow: number = 7
 ) {
   const expiresAt = new Date(Date.now() + daysFromNow * 24 * 60 * 60 * 1000)
 
