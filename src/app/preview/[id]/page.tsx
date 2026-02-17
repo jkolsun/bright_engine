@@ -53,6 +53,7 @@ export default async function PreviewPage({ params }: { params: { id: string } }
             enrichedServices: services,
             enrichedPhotos: photos,
           }}
+          websiteCopy={personalization?.websiteCopy || undefined}
         />
       </body>
     </html>

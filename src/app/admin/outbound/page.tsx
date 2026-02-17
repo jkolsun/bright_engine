@@ -21,6 +21,22 @@ export default function OutboundTrackerPage() {
 
   useEffect(() => {
     loadData()
+    // Auto-refresh engagement scores every 30 seconds
+    const interval = setInterval(() => {
+      fetch('/api/engagement-score?all=true')
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data?.scores) {
+            const scoresMap: Record<string, any> = {}
+            data.scores.forEach((score: any) => {
+              scoresMap[score.leadId] = score
+            })
+            setEngagementScores(scoresMap)
+          }
+        })
+        .catch(() => {})
+    }, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   const loadData = async () => {

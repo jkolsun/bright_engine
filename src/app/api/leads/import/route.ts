@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db'
 import { parseCSV } from '@/lib/csv-parser'
 import { addEnrichmentJob } from '@/worker/queue'
 import { logActivity } from '@/lib/logging'
-import { getTimezoneFromState } from '@/lib/utils'
+import { getTimezoneFromState, generatePreviewId } from '@/lib/utils'
 import { dispatchWebhook, WebhookEvents } from '@/lib/webhook-dispatcher'
 import { verifySession } from '@/lib/session'
 
@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
 
     // Create leads in database with transaction for consistency
     const createdLeads: any[] = []
+    const skippedLeads: any[] = []
     const failedRows: any[] = []
     const jobsToQueue: Array<{ leadId: string; companyName: string; city?: string; state?: string }> = []
 
@@ -83,71 +84,103 @@ export async function POST(request: NextRequest) {
       return true
     })
 
-    // Use transaction for all valid lead creation to ensure consistency
+    // Deduplicate: check for existing leads by email or phone
     if (validRows.length > 0) {
-      try {
-        const transactionResults = await prisma.$transaction(
-          validRows.map((row) =>
-            prisma.lead.create({
-              data: {
-                firstName: row.parsed.firstName,
-                lastName: row.parsed.lastName,
-                email: row.parsed.email,
-                phone: row.parsed.phone,
-                companyName: row.parsed.companyName,
-                industry: row.parsed.industry as any,
-                city: row.parsed.city,
-                state: row.parsed.state,
-                website: row.parsed.website,
-                status: 'NEW',
-                source: 'COLD_EMAIL',
-                sourceDetail: campaign || 'CSV Import',
-                campaign: campaign || undefined,
-                assignedToId: assignTo,
-                priority: 'COLD',
-                timezone: getTimezoneFromState(row.parsed.state || '') || 'America/New_York',
-              },
+      const emails = validRows.map(r => r.parsed.email).filter(Boolean)
+      const phones = validRows.map(r => r.parsed.phone).filter(Boolean)
+
+      const existingLeads = await prisma.lead.findMany({
+        where: {
+          OR: [
+            ...(emails.length > 0 ? [{ email: { in: emails } }] : []),
+            ...(phones.length > 0 ? [{ phone: { in: phones } }] : []),
+          ],
+        },
+        select: { email: true, phone: true },
+      })
+
+      const existingEmails = new Set(existingLeads.map(l => l.email?.toLowerCase()).filter(Boolean))
+      const existingPhones = new Set(existingLeads.map(l => l.phone).filter(Boolean))
+
+      // Filter out duplicates
+      const newRows = validRows.filter(row => {
+        const isDuplicate = (row.parsed.email && existingEmails.has(row.parsed.email.toLowerCase())) ||
+                           (row.parsed.phone && existingPhones.has(row.parsed.phone))
+        if (isDuplicate) {
+          skippedLeads.push({ firstName: row.parsed.firstName, companyName: row.parsed.companyName, email: row.parsed.email, reason: 'Already exists' })
+        }
+        return !isDuplicate
+      })
+
+      // Use transaction for all new lead creation to ensure consistency
+      if (newRows.length > 0) {
+        try {
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || 'https://brightengine-production.up.railway.app'
+          const transactionResults = await prisma.$transaction(
+            newRows.map((row) => {
+              const previewId = generatePreviewId()
+              return prisma.lead.create({
+                data: {
+                  firstName: row.parsed.firstName,
+                  lastName: row.parsed.lastName,
+                  email: row.parsed.email,
+                  phone: row.parsed.phone,
+                  companyName: row.parsed.companyName,
+                  industry: row.parsed.industry as any,
+                  city: row.parsed.city,
+                  state: row.parsed.state,
+                  website: row.parsed.website,
+                  status: 'NEW',
+                  source: 'COLD_EMAIL',
+                  sourceDetail: campaign || 'CSV Import',
+                  campaign: campaign || undefined,
+                  assignedToId: assignTo,
+                  priority: 'COLD',
+                  timezone: getTimezoneFromState(row.parsed.state || '') || 'America/New_York',
+                  previewId,
+                  previewUrl: `${baseUrl}/preview/${previewId}`,
+                  previewExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+                },
+              })
             })
           )
-        )
 
-        // Collect jobs to queue
-        transactionResults.forEach((lead) => {
-          createdLeads.push(lead)
-          jobsToQueue.push({
-            leadId: lead.id,
-            companyName: lead.companyName,
-            city: lead.city || undefined,
-            state: lead.state || undefined,
+          // Collect jobs to queue
+          transactionResults.forEach((lead) => {
+            createdLeads.push(lead)
+            jobsToQueue.push({
+              leadId: lead.id,
+              companyName: lead.companyName,
+              city: lead.city || undefined,
+              state: lead.state || undefined,
+            })
           })
-        })
-      } catch (err) {
-        throw new Error(
-          `Transaction failed during lead creation: ${err instanceof Error ? err.message : 'Unknown error'}`
-        )
-      }
+        } catch (err) {
+          throw new Error(
+            `Transaction failed during lead creation: ${err instanceof Error ? err.message : 'Unknown error'}`
+          )
+        }
 
-      // Queue enrichment jobs after successful transaction (fire-and-forget, non-blocking)
-      // Start background jobs without blocking the response
-      // Each job queuing happens in the background, independent of POST response
-      jobsToQueue.forEach((job) => {
-        // Fire-and-forget: start the job but don't wait for it
-        addEnrichmentJob(job).catch(err => 
-          console.error(`Pipeline job queueing failed for lead ${job.leadId}:`, err)
-        )
-      })
+        // Queue enrichment jobs after successful transaction (fire-and-forget, non-blocking)
+        jobsToQueue.forEach((job) => {
+          addEnrichmentJob(job).catch(err =>
+            console.error(`Pipeline job queueing failed for lead ${job.leadId}:`, err)
+          )
+        })
+      }
     }
 
     // Log activity
     await logActivity(
       'IMPORT',
-      `Imported ${createdLeads.length} leads from CSV (${campaign || 'unknown campaign'})`,
+      `Imported ${createdLeads.length} leads from CSV, skipped ${skippedLeads.length} duplicates (${campaign || 'unknown campaign'})`,
       {
         metadata: {
           totalProcessed: parsedLeads.length,
           validCount,
           invalidCount,
           createdCount: createdLeads.length,
+          skippedCount: skippedLeads.length,
           campaign,
         },
       }
@@ -165,12 +198,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: `Successfully imported ${createdLeads.length} leads`,
+        message: `Successfully imported ${createdLeads.length} leads${skippedLeads.length > 0 ? `, skipped ${skippedLeads.length} duplicates` : ''}`,
         summary: {
           totalProcessed: parsedLeads.length,
           validCount,
           invalidCount,
           createdCount: createdLeads.length,
+          skippedCount: skippedLeads.length,
+          skippedLeads: skippedLeads.slice(0, 20), // Show first 20 skipped for transparency
           failedRows,
         },
         leads: createdLeads.map((l) => ({

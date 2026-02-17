@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
       enriched: 0,
       previews: 0,
       personalized: 0,
+      skipped: 0,
       failed: 0,
       errors: [] as string[]
     }
@@ -56,6 +57,22 @@ export async function POST(request: NextRequest) {
 
     for (const row of validRows) {
       try {
+        // Check for existing lead by email or phone to prevent duplicates
+        const existingLead = await prisma.lead.findFirst({
+          where: {
+            OR: [
+              ...(row.email ? [{ email: row.email }] : []),
+              ...(row.phone ? [{ phone: row.phone }] : []),
+            ],
+          },
+        })
+
+        if (existingLead) {
+          results.skipped++
+          console.log(`[SYNC-IMPORT] Skipped duplicate: ${row.firstName} ${row.lastName} (${row.email || row.phone})`)
+          continue
+        }
+
         // 1. Create lead in database
         const lead = await prisma.lead.create({
           data: {
@@ -124,12 +141,13 @@ export async function POST(request: NextRequest) {
     // Log activity
     await logActivity(
       'IMPORT',
-      `Synchronous import: ${results.created} created, ${results.enriched} enriched, ${results.previews} previews, ${results.personalized} personalized`,
+      `Synchronous import: ${results.created} created, ${results.skipped} skipped, ${results.enriched} enriched, ${results.previews} previews, ${results.personalized} personalized`,
       {
         metadata: {
           mode: 'SYNCHRONOUS',
           totalProcessed: validRows.length,
           created: results.created,
+          skipped: results.skipped,
           enriched: results.enriched,
           previews: results.previews,
           personalized: results.personalized,
@@ -145,14 +163,15 @@ export async function POST(request: NextRequest) {
       summary: {
         totalRequested: validRows.length,
         created: results.created,
+        skipped: results.skipped,
         enriched: results.enriched,
         previews: results.previews,
         personalized: results.personalized,
         failed: results.failed,
-        successRate: `${Math.round((results.enriched / results.created) * 100)}%`
+        successRate: results.created > 0 ? `${Math.round((results.enriched / results.created) * 100)}%` : '0%'
       },
       errors: results.errors,
-      message: `✅ Synchronously processed ${results.created} leads: ${results.enriched} enriched, ${results.previews} previews, ${results.personalized} personalized`
+      message: `✅ Synchronously processed ${results.created} leads (${results.skipped} skipped as duplicates): ${results.enriched} enriched, ${results.previews} previews, ${results.personalized} personalized`
     })
 
   } catch (error) {

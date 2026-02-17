@@ -1,4 +1,15 @@
-export type TemplateVariant = 'modern' | 'bold' | 'classic' | 'premium'
+export type TemplateVariant = 'modern' | 'bold' | 'classic' | 'premium' | 'modern-b' | 'bold-b' | 'classic-b' | 'premium-b' | 'premium-c'
+
+export interface WebsiteCopy {
+  heroHeadline: string
+  heroSubheadline: string
+  aboutParagraph1: string
+  aboutParagraph2: string
+  valueProps: Array<{ title: string; description: string }>
+  closingHeadline: string
+  closingBody: string
+  serviceDescriptions: Record<string, string>
+}
 
 export interface PreviewLead {
   companyName: string
@@ -30,4 +41,5 @@ export interface TemplateProps {
   config: IndustryConfig
   onCTAClick: () => Promise<void>
   onCallClick: () => Promise<void>
+  websiteCopy?: WebsiteCopy
 }

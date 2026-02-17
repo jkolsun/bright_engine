@@ -2,11 +2,12 @@ import { prisma } from './db'
 import { Anthropic } from '@anthropic-ai/sdk'
 import { logActivity } from './logging'
 import type { Artifact, SerperResearchData } from './serper'
+import type { WebsiteCopy } from '@/components/preview/config/template-types'
 
 /**
  * AI Personalization Service
- * Generates high-quality personalized first lines using artifact hierarchy
- * Ported from reference algorithm: artifact selection → Claude generation → quality validation
+ * Generates high-quality personalized first lines AND website copy
+ * using artifact hierarchy and enrichment data
  */
 
 const anthropic = new Anthropic({
@@ -18,6 +19,7 @@ export interface PersonalizationResult {
   hook: string
   angle: string
   tokensCost: number
+  websiteCopy?: WebsiteCopy
 }
 
 // ============================================
@@ -436,6 +438,10 @@ export async function generatePersonalization(
     if (!hasUsefulData && !lead.enrichedRating && !lead.city) {
       // No data at all — go straight to fallback, save API cost
       const fallback = generateSmartFallback(lead.companyName, lead, bestArtifact)
+      // Still try to generate website copy with whatever data we have
+      const { copy: websiteCopy, cost: copyCost } = await generateWebsiteCopy(lead, research, research?.artifacts || [])
+      fallback.websiteCopy = websiteCopy || undefined
+      fallback.tokensCost += copyCost
       await storeResult(leadId, lead.companyName, fallback)
       return fallback
     }
@@ -474,11 +480,18 @@ export async function generatePersonalization(
 
         if (validation.isValid) {
           const tokensCost = (response.usage.input_tokens + response.usage.output_tokens) * 0.0000008
+
+          // Generate website copy in parallel with storing the first line
+          const { copy: websiteCopy, cost: copyCost } = await generateWebsiteCopy(
+            lead, research, research?.artifacts || []
+          )
+
           const result: PersonalizationResult = {
             firstLine: parsed.line,
             hook: parsed.artifact || (bestArtifact?.text ?? ''),
             angle: parsed.type.toLowerCase().replace(/_/g, '-'),
-            tokensCost,
+            tokensCost: tokensCost + copyCost,
+            websiteCopy: websiteCopy || undefined,
           }
 
           await storeResult(leadId, lead.companyName, result)
@@ -488,7 +501,7 @@ export async function generatePersonalization(
             data: {
               service: 'anthropic',
               operation: 'personalization',
-              cost: tokensCost,
+              cost: result.tokensCost,
             },
           }).catch(() => {}) // non-fatal
 
@@ -511,11 +524,193 @@ export async function generatePersonalization(
     // All attempts failed — use smart fallback
     console.warn(`[PERSONALIZATION] Using fallback for ${lead.companyName}`)
     const fallback = generateSmartFallback(lead.companyName, lead, bestArtifact)
+    // Still try website copy generation — it uses a different prompt
+    const { copy: websiteCopy, cost: copyCost } = await generateWebsiteCopy(lead, research, research?.artifacts || [])
+    fallback.websiteCopy = websiteCopy || undefined
+    fallback.tokensCost += copyCost
     await storeResult(leadId, lead.companyName, fallback)
     return fallback
   } catch (error) {
     console.error('Personalization error:', error)
     return null
+  }
+}
+
+// ============================================
+// WEBSITE COPY GENERATION
+// ============================================
+
+const WEBSITE_COPY_SYSTEM = `You are a senior conversion copywriter. You write landing page copy for local service businesses that sounds like it was RESEARCHED and WRITTEN specifically for that company — not pulled from a template.
+
+Your copy speaks to the CUSTOMER visiting the page. Use "you/your" language.
+
+RULES:
+- Use REAL data provided (ratings, review counts, years, services, location). Never invent numbers.
+- NEVER use: impressive, amazing, innovative, best, leading, incredible, outstanding, excellent, exceptional, cutting-edge, world-class, premier, top-notch, superb, remarkable, fantastic
+- NEVER use: "we believe", "we strive", "we are committed", "our mission is", "we take pride" — these are dead phrases
+- Vary sentence length and structure across sections. Mix short punchy lines with longer ones.
+- Be SPECIFIC. "127 five-star reviews" beats "many happy customers". "Serving Plano since 2008" beats "years of experience".
+- Sound confident and direct, not salesy or desperate.
+- Each value prop should reference ACTUAL company data, not generic claims.`
+
+function buildWebsiteCopyPrompt(lead: any, research: SerperResearchData | null, artifacts: Artifact[]): string {
+  const parts: string[] = []
+  const industry = (lead.industry || '').toLowerCase().replace(/_/g, ' ')
+  const location = [lead.city, lead.state].filter(Boolean).join(', ')
+  const services = Array.isArray(lead.enrichedServices) ? (lead.enrichedServices as string[]) : []
+  const rating = lead.enrichedRating as number | null
+  const reviews = lead.enrichedReviews as number | null
+
+  parts.push(`COMPANY: ${lead.companyName}`)
+  parts.push(`INDUSTRY: ${industry}`)
+  if (location) parts.push(`LOCATION: ${location}`)
+  if (rating) parts.push(`RATING: ${rating} stars${reviews ? ` (${reviews} reviews)` : ''}`)
+  if (services.length > 0) parts.push(`SERVICES: ${services.slice(0, 8).join(', ')}`)
+
+  // Add research artifacts for context
+  const usableArtifacts = artifacts.filter(a => a.type !== 'FALLBACK' && a.text.length > 3)
+  if (usableArtifacts.length > 0) {
+    parts.push(`\nRESEARCH FINDINGS:`)
+    for (const a of usableArtifacts.slice(0, 5)) {
+      parts.push(`  [${a.type}] ${a.text}`)
+    }
+  }
+
+  if (research && research.snippets.length > 0) {
+    parts.push(`\nWEB SNIPPETS:`)
+    for (const s of research.snippets.slice(0, 3)) {
+      parts.push(`  - ${s.substring(0, 200)}`)
+    }
+  }
+
+  parts.push(`\nGenerate landing page copy for ${lead.companyName}. Use the real data above. Be specific, not generic.\n`)
+  parts.push(`FORMAT (output EXACTLY these labels):`)
+  parts.push(`HERO_HEADLINE: [6-12 words. Punchy, specific. Reference their actual strength — rating, years, specialty, location. NOT generic like "Professional Services You Can Trust"]`)
+  parts.push(`HERO_SUBHEADLINE: [12-22 words. Supports headline. Mention a specific detail — location, specialty, or differentiator.]`)
+  parts.push(`ABOUT_P1: [2-3 sentences. What makes THIS specific company stand out. Use real data — years in business, review count, service area, team size. Written as if you researched them.]`)
+  parts.push(`ABOUT_P2: [2-3 sentences. Their approach to work. Reference their actual services or specialties. End with something concrete, not a platitude.]`)
+  parts.push(`VP1_TITLE: [2-4 words — first trust/value item]`)
+  parts.push(`VP1_DESC: [8-15 words. Grounded in their actual data — real rating, real credentials, etc.]`)
+  parts.push(`VP2_TITLE: [2-4 words — second trust/value item]`)
+  parts.push(`VP2_DESC: [8-15 words. Specific to this company.]`)
+  parts.push(`VP3_TITLE: [2-4 words — third trust/value item]`)
+  parts.push(`VP3_DESC: [8-15 words. Specific to this company.]`)
+  parts.push(`CLOSING_HEADLINE: [5-10 words. Compelling, not "Ready to Get Started?"]`)
+  parts.push(`CLOSING_BODY: [15-25 words. Specific CTA referencing their services or location.]`)
+
+  // Service descriptions
+  if (services.length > 0) {
+    parts.push(`\nFor each service below, write a one-line description (10-18 words) that sounds specific to this company, not a template. Reference the company's strengths or location where natural.`)
+    for (const svc of services.slice(0, 6)) {
+      parts.push(`SVC_${svc.toUpperCase().replace(/[^A-Z0-9]/g, '_')}: [10-18 word description for "${svc}"]`)
+    }
+  }
+
+  return parts.join('\n')
+}
+
+function parseWebsiteCopyResponse(raw: string, services: string[]): WebsiteCopy | null {
+  try {
+    const get = (label: string): string => {
+      const regex = new RegExp(`${label}:\\s*(.+?)(?=\\n[A-Z_]+:|$)`, 's')
+      const match = raw.match(regex)
+      return match ? match[1].trim().replace(/^\[|\]$/g, '').replace(/^["']|["']$/g, '') : ''
+    }
+
+    const heroHeadline = get('HERO_HEADLINE')
+    const heroSubheadline = get('HERO_SUBHEADLINE')
+    const aboutParagraph1 = get('ABOUT_P1')
+    const aboutParagraph2 = get('ABOUT_P2')
+    const vp1Title = get('VP1_TITLE')
+    const vp1Desc = get('VP1_DESC')
+    const vp2Title = get('VP2_TITLE')
+    const vp2Desc = get('VP2_DESC')
+    const vp3Title = get('VP3_TITLE')
+    const vp3Desc = get('VP3_DESC')
+    const closingHeadline = get('CLOSING_HEADLINE')
+    const closingBody = get('CLOSING_BODY')
+
+    // Validate we got the critical fields
+    if (!heroHeadline || !heroSubheadline || !aboutParagraph1) {
+      console.warn('[WEBSITE_COPY] Missing critical fields in response')
+      return null
+    }
+
+    // Parse service descriptions
+    const serviceDescriptions: Record<string, string> = {}
+    for (const svc of services.slice(0, 6)) {
+      const svcKey = svc.toUpperCase().replace(/[^A-Z0-9]/g, '_')
+      const desc = get(`SVC_${svcKey}`)
+      if (desc && desc.length > 10) {
+        serviceDescriptions[svc] = desc
+      }
+    }
+
+    return {
+      heroHeadline,
+      heroSubheadline,
+      aboutParagraph1,
+      aboutParagraph2: aboutParagraph2 || aboutParagraph1,
+      valueProps: [
+        { title: vp1Title || 'Verified & Trusted', description: vp1Desc || '' },
+        { title: vp2Title || 'Proven Results', description: vp2Desc || '' },
+        { title: vp3Title || 'Local Expertise', description: vp3Desc || '' },
+      ],
+      closingHeadline: closingHeadline || 'Let\'s Talk About Your Project',
+      closingBody: closingBody || '',
+      serviceDescriptions,
+    }
+  } catch (error) {
+    console.error('[WEBSITE_COPY] Parse error:', error)
+    return null
+  }
+}
+
+async function generateWebsiteCopy(
+  lead: any,
+  research: SerperResearchData | null,
+  artifacts: Artifact[]
+): Promise<{ copy: WebsiteCopy | null; cost: number }> {
+  const services = Array.isArray(lead.enrichedServices) ? (lead.enrichedServices as string[]) : []
+
+  try {
+    const prompt = buildWebsiteCopyPrompt(lead, research, artifacts)
+
+    const response = await anthropic.messages.create({
+      model: 'claude-3-5-haiku-20241022',
+      max_tokens: 800,
+      system: WEBSITE_COPY_SYSTEM,
+      messages: [{ role: 'user', content: prompt }],
+    })
+
+    const responseText = response.content[0].type === 'text' ? response.content[0].text : ''
+    const cost = (response.usage.input_tokens + response.usage.output_tokens) * 0.0000008
+    const copy = parseWebsiteCopyResponse(responseText, services)
+
+    if (copy) {
+      // Quick quality check — reject if hero headline contains banned words
+      const heroLower = copy.heroHeadline.toLowerCase()
+      const hasBanned = BANNED_HYPE_ADJECTIVES.some(w => heroLower.includes(w))
+      if (hasBanned) {
+        console.warn('[WEBSITE_COPY] Hero headline contains banned words, retrying...')
+        // One retry
+        const retryResponse = await anthropic.messages.create({
+          model: 'claude-3-5-haiku-20241022',
+          max_tokens: 800,
+          system: WEBSITE_COPY_SYSTEM,
+          messages: [{ role: 'user', content: prompt + '\n\nIMPORTANT: Do NOT use hype adjectives. Be specific and factual.' }],
+        })
+        const retryText = retryResponse.content[0].type === 'text' ? retryResponse.content[0].text : ''
+        const retryCost = (retryResponse.usage.input_tokens + retryResponse.usage.output_tokens) * 0.0000008
+        const retryCopy = parseWebsiteCopyResponse(retryText, services)
+        return { copy: retryCopy || copy, cost: cost + retryCost }
+      }
+    }
+
+    return { copy, cost }
+  } catch (error) {
+    console.error('[WEBSITE_COPY] Generation error:', error)
+    return { copy: null, cost: 0 }
   }
 }
 
@@ -531,6 +726,7 @@ async function storeResult(leadId: string, companyName: string, result: Personal
         firstLine: result.firstLine,
         hook: result.hook,
         angle: result.angle,
+        ...(result.websiteCopy ? { websiteCopy: result.websiteCopy } : {}),
       }),
     },
   })

@@ -29,6 +29,36 @@ const variantStyles: Record<TemplateVariant, { wrapper: string; text: string; bo
     bold: 'text-amber-400',
     close: 'text-gray-500 hover:text-gray-300',
   },
+  'modern-b': {
+    wrapper: 'bg-white border-b border-gray-200 shadow-sm',
+    text: 'text-gray-600',
+    bold: 'text-gray-900',
+    close: 'text-gray-400 hover:text-gray-600',
+  },
+  'bold-b': {
+    wrapper: 'bg-gray-950 border-b border-gray-800',
+    text: 'text-gray-400',
+    bold: 'text-white',
+    close: 'text-gray-500 hover:text-gray-300',
+  },
+  'classic-b': {
+    wrapper: 'bg-green-50 border-b border-green-200',
+    text: 'text-stone-600',
+    bold: 'text-stone-900',
+    close: 'text-stone-400 hover:text-stone-600',
+  },
+  'premium-b': {
+    wrapper: 'bg-gray-950 border-b border-sky-500/20',
+    text: 'text-gray-400',
+    bold: 'text-sky-400',
+    close: 'text-gray-500 hover:text-gray-300',
+  },
+  'premium-c': {
+    wrapper: 'bg-stone-50 border-b border-emerald-200',
+    text: 'text-stone-600',
+    bold: 'text-emerald-700',
+    close: 'text-stone-400 hover:text-stone-600',
+  },
 }
 
 export default function DisclaimerBanner({ variant, companyName }: { variant: TemplateVariant; companyName: string }) {

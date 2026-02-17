@@ -17,10 +17,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find lead by preview ID
-    const lead = await prisma.lead.findUnique({
+    // Find lead by preview ID, fall back to lead ID
+    let lead = await prisma.lead.findUnique({
       where: { previewId },
     })
+
+    if (!lead) {
+      // Fallback: try looking up by lead ID (handles cases where previewId wasn't set)
+      lead = await prisma.lead.findUnique({
+        where: { id: previewId },
+      })
+    }
 
     if (!lead) {
       return NextResponse.json(

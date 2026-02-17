@@ -2,7 +2,7 @@ import { Phone, MapPin, Star, Shield, Zap, CheckCircle, ArrowRight, Mail, Flame,
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
 
-export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, websiteCopy }: TemplateProps) {
+export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, websiteCopy }: TemplateProps) {
   const services = lead.enrichedServices || []
   const photos = lead.enrichedPhotos || []
   const industryLabel = lead.industry.toLowerCase().replace(/_/g, ' ')
@@ -25,7 +25,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                 {lead.phone}
               </a>
             )}
-            <button onClick={onCTAClick} className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-md hover:shadow-lg animate-cta-glow-orange">
+            <button onClick={onCTAClick} className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:from-blue-600 hover:to-cyan-600 transition-all shadow-md hover:shadow-lg animate-cta-glow">
               Free Quote
             </button>
           </div>
@@ -40,15 +40,16 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         <div className="absolute inset-0 bg-mesh-dark" />
 
         {/* Decorative glows */}
-        <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-orange-500/10 rounded-full translate-x-1/2 blur-3xl" />
-        <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-red-500/10 rounded-full translate-y-1/2 blur-3xl" />
+        <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-blue-500/10 rounded-full translate-x-1/2 blur-3xl" />
+        <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-cyan-500/10 rounded-full translate-y-1/2 blur-3xl" />
+        <div className="absolute top-1/2 left-0 w-[300px] h-[300px] bg-indigo-500/8 rounded-full -translate-x-1/2 blur-3xl" />
 
         <div className="relative max-w-6xl mx-auto w-full px-4 sm:px-6 py-28">
           {hasRating && (
             <div className="inline-flex items-center gap-2.5 bg-white/10 backdrop-blur-md border border-white/10 rounded-full px-5 py-2.5 mb-8">
               <div className="flex gap-0.5">
                 {Array.from({ length: 5 }, (_, i) => (
-                  <Star key={i} size={15} className={i < Math.floor(lead.enrichedRating!) ? 'text-amber-400 fill-current' : 'text-white/20'} />
+                  <Star key={i} size={15} className={i < Math.floor(lead.enrichedRating!) ? 'text-blue-400 fill-current' : 'text-white/20'} />
                 ))}
               </div>
               <span className="text-sm font-bold text-white">{lead.enrichedRating}</span>
@@ -60,14 +61,14 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
             {lead.companyName}
           </h1>
 
-          <p className="text-xl md:text-2xl text-white/60 mb-12 max-w-2xl leading-relaxed">{wc?.heroHeadline || config.tagline}</p>
-          {wc?.heroSubheadline && <p className="text-lg text-gray-400 -mt-8 mb-12 max-w-2xl leading-relaxed">{wc.heroSubheadline}</p>}
+          <p className={`text-xl md:text-2xl text-white/60 max-w-2xl leading-relaxed ${wc?.heroSubheadline ? 'mb-3' : 'mb-12'}`}>{wc?.heroHeadline || config.tagline}</p>
+          {wc?.heroSubheadline && <p className="text-lg text-white/50 mb-12 max-w-xl leading-relaxed">{wc.heroSubheadline}</p>}
 
           <div className="flex flex-col sm:flex-row gap-4">
             <a
               href={`tel:${lead.phone}`}
               onClick={onCallClick}
-              className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white px-10 py-5 rounded-xl font-black text-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-2xl animate-cta-glow-orange"
+              className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-10 py-5 rounded-xl font-black text-lg hover:from-blue-600 hover:to-cyan-600 transition-all shadow-2xl animate-cta-glow"
             >
               <Phone size={22} />
               Call Now
@@ -88,10 +89,10 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {hasRating && (
             <div className="group">
-              <p className="font-display text-5xl md:text-6xl font-black text-gradient-fire mb-2">{lead.enrichedRating}</p>
+              <p className="font-display text-5xl md:text-6xl font-black text-gradient-electric mb-2">{lead.enrichedRating}</p>
               <div className="flex justify-center mb-3 gap-0.5">
                 {Array.from({ length: 5 }, (_, i) => (
-                  <Star key={i} size={14} className={i < Math.floor(lead.enrichedRating!) ? 'text-orange-400 fill-current' : 'text-gray-700'} />
+                  <Star key={i} size={14} className={i < Math.floor(lead.enrichedRating!) ? 'text-blue-400 fill-current' : 'text-gray-700'} />
                 ))}
               </div>
               <p className="text-xs text-gray-500 uppercase tracking-[0.2em] font-semibold">Star Rating</p>
@@ -99,7 +100,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           )}
           {lead.enrichedReviews && (
             <div>
-              <p className="font-display text-5xl md:text-6xl font-black text-gradient-fire mb-2">{lead.enrichedReviews}+</p>
+              <p className="font-display text-5xl md:text-6xl font-black text-gradient-electric mb-2">{lead.enrichedReviews}+</p>
               <p className="text-xs text-gray-500 uppercase tracking-[0.2em] font-semibold mt-3">Reviews</p>
             </div>
           )}
@@ -119,7 +120,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         <section className="py-24 px-4 sm:px-6 bg-gray-950">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-sm font-bold mb-4 border border-orange-500/20">
+              <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-sm font-bold mb-4 border border-blue-500/20">
                 <Wrench size={14} />
                 Our Expertise
               </div>
@@ -128,13 +129,13 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {services.slice(0, 6).map((service, i) => (
-                <div key={i} className="group bg-gray-900/50 border border-gray-800/50 rounded-2xl p-8 card-lift card-lift-dark hover:border-orange-500/30">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center mb-6 shadow-lg shadow-orange-500/10 group-hover:shadow-orange-500/20 transition-shadow">
+                <div key={i} className="group bg-gray-900/50 border border-gray-800/50 rounded-2xl p-8 card-lift card-lift-dark hover:border-blue-500/30">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center mb-6 shadow-lg shadow-blue-500/10 group-hover:shadow-blue-500/20 transition-shadow">
                     <Wrench size={24} className="text-white" />
                   </div>
                   <h3 className="font-display font-bold text-xl text-white mb-3">{service}</h3>
                   <p className="text-gray-400 text-sm leading-relaxed mb-4">{wc?.serviceDescriptions?.[service] || `Professional ${service.toLowerCase()} with guaranteed quality and competitive pricing.`}</p>
-                  <div className="flex items-center gap-1.5 text-orange-400 text-sm font-bold opacity-0 group-hover:opacity-100 transition-all duration-300">
+                  <div className="flex items-center gap-1.5 text-blue-400 text-sm font-bold opacity-0 group-hover:opacity-100 transition-all duration-300">
                     Get a quote <ArrowRight size={14} />
                   </div>
                 </div>
@@ -148,7 +149,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       <section className="py-24 px-4 sm:px-6 bg-gray-900/50">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-sm font-bold mb-4 border border-orange-500/20">
+            <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-sm font-bold mb-4 border border-blue-500/20">
               The Difference
             </div>
             <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-4">Why Choose {lead.companyName}?</h2>
@@ -160,7 +161,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
               { icon: ThumbsUp, title: wc?.valueProps?.[2]?.title || 'Fair & Transparent', desc: wc?.valueProps?.[2]?.description || 'No hidden fees, no surprises. You get honest pricing upfront with a detailed estimate before any work begins.' },
             ].map((item, i) => (
               <div key={i} className="bg-gray-950/80 border border-gray-800/50 rounded-2xl p-10 text-center card-lift card-lift-dark">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-orange-500/15">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-500/15">
                   <item.icon size={32} className="text-white" />
                 </div>
                 <h3 className="font-display text-xl font-bold text-white mb-4">{item.title}</h3>
@@ -175,26 +176,16 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       <section className="py-24 px-4 sm:px-6 bg-gray-950">
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
           <div>
-            <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-sm font-bold mb-4 border border-orange-500/20">
+            <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-sm font-bold mb-4 border border-blue-500/20">
               About Us
             </div>
             <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-8">Built on Hard Work & Results</h2>
             <div className="space-y-5 text-gray-400 leading-relaxed text-lg">
               <p>
-                {wc?.aboutParagraph1 || (
-                  <>
-                    {lead.companyName} isn&apos;t just another {industryLabel} company.
-                    {location ? ` We're a team of dedicated professionals based in ${location} who take pride in every single job.` : ` We're a team of dedicated professionals who take pride in every single job.`}
-                  </>
-                )}
+                {wc?.aboutParagraph1 || `${lead.companyName} isn't just another ${industryLabel} company.${location ? ` We're a team of dedicated professionals based in ${location} who take pride in every single job.` : ` We're a team of dedicated professionals who take pride in every single job.`}`}
               </p>
               <p>
-                {wc?.aboutParagraph2 || (
-                  <>
-                    From emergency calls to planned projects, we bring the same level of intensity and commitment.
-                    Our crew shows up on time, works efficiently, and doesn&apos;t leave until the job is done right.
-                  </>
-                )}
+                {wc?.aboutParagraph2 || `From emergency calls to planned projects, we bring the same level of intensity and commitment. Our crew shows up on time, works efficiently, and doesn't leave until the job is done right.`}
               </p>
               <p>
                 Fully licensed, fully insured, and fully committed to your satisfaction.
@@ -204,7 +195,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
             <a
               href={`tel:${lead.phone}`}
               onClick={onCallClick}
-              className="inline-flex items-center gap-2.5 mt-10 bg-gradient-to-r from-orange-500 to-red-500 text-white px-10 py-4 rounded-xl font-bold text-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-lg animate-cta-glow-orange"
+              className="inline-flex items-center gap-2.5 mt-10 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-10 py-4 rounded-xl font-bold text-lg hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg animate-cta-glow"
             >
               <Phone size={20} />
               Call Us Now
@@ -215,7 +206,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
             <div className="space-y-5">
               {lead.phone && (
                 <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 text-gray-300 hover:text-white transition-colors p-3 rounded-xl hover:bg-white/5">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-orange-500/10">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/10">
                     <Phone size={22} className="text-white" />
                   </div>
                   <div>
@@ -226,7 +217,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
               )}
               {lead.email && (
                 <a href={`mailto:${lead.email}`} className="flex items-center gap-4 text-gray-300 hover:text-white transition-colors p-3 rounded-xl hover:bg-white/5">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-red-500/10">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/10">
                     <Mail size={22} className="text-white" />
                   </div>
                   <div>
@@ -237,7 +228,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
               )}
               {lead.enrichedAddress && (
                 <div className="flex items-start gap-4 text-gray-300 p-3 rounded-xl">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/10">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-cyan-500/10">
                     <MapPin size={22} className="text-white" />
                   </div>
                   <div>
@@ -247,7 +238,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                 </div>
               )}
             </div>
-            <button onClick={onCTAClick} className="w-full mt-8 bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-xl font-bold text-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-lg">
+            <button onClick={onCTAClick} className="w-full mt-8 bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-4 rounded-xl font-bold text-lg hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg">
               {config.ctaText}
             </button>
           </div>
@@ -259,7 +250,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         <section className="py-24 px-4 sm:px-6 bg-gray-900/50">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-sm font-bold mb-4 border border-orange-500/20">
+              <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-sm font-bold mb-4 border border-blue-500/20">
                 Our Work
               </div>
               <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-4">Results Speak Louder</h2>
@@ -267,7 +258,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {photos.slice(0, 8).map((photo, i) => (
-                <div key={i} className="group aspect-square bg-gray-800 rounded-xl overflow-hidden border border-gray-700/50 hover:border-orange-500/40 transition-all duration-500 hover:shadow-xl hover:shadow-orange-500/5">
+                <div key={i} className="group aspect-square bg-gray-800 rounded-xl overflow-hidden border border-gray-700/50 hover:border-blue-500/40 transition-all duration-500 hover:shadow-xl hover:shadow-blue-500/5">
                   <img src={photo} alt={`${lead.companyName} project ${i + 1}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                 </div>
               ))}
@@ -277,7 +268,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       )}
 
       {/* ─── Emergency / Fast Response Strip ─── */}
-      <section className="relative py-12 px-4 sm:px-6 bg-gradient-to-r from-orange-500 via-red-500 to-orange-500 overflow-hidden">
+      <section className="relative py-12 px-4 sm:px-6 bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 overflow-hidden">
         <div className="absolute inset-0 bg-noise opacity-10" />
         <div className="relative max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
           <div className="flex items-center gap-5">
@@ -308,13 +299,13 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         <div className="relative max-w-4xl mx-auto text-center">
           <h2 className="font-display text-4xl md:text-6xl font-black text-white mb-6">{wc?.closingHeadline || 'Ready to Get Started?'}</h2>
           <p className="text-xl text-white/60 mb-12 max-w-xl mx-auto leading-relaxed">
-            {wc?.closingBody || <>Don&apos;t wait — contact {lead.companyName} today for a free, no-obligation estimate.</>}
+            {wc?.closingBody || `Don't wait — contact ${lead.companyName} today for a free, no-obligation estimate.`}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href={`tel:${lead.phone}`}
               onClick={onCallClick}
-              className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white px-10 py-5 rounded-xl font-black text-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-2xl animate-cta-glow-orange"
+              className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-10 py-5 rounded-xl font-black text-lg hover:from-blue-600 hover:to-cyan-600 transition-all shadow-2xl animate-cta-glow"
             >
               <Phone size={22} />
               {lead.phone || 'Call Now'}
@@ -345,7 +336,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
               <ul className="space-y-3 text-sm text-gray-500">
                 {services.slice(0, 4).map((s, i) => (
                   <li key={i} className="flex items-center gap-2 hover:text-white transition-colors">
-                    <CheckCircle size={12} className="text-orange-500" />
+                    <CheckCircle size={12} className="text-blue-500" />
                     {s}
                   </li>
                 ))}
@@ -354,9 +345,9 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
             <div>
               <h4 className="text-white font-bold mb-4 text-sm uppercase tracking-wider">Contact</h4>
               <div className="space-y-3 text-sm text-gray-500">
-                {lead.phone && <p className="flex items-center gap-2.5 hover:text-white transition-colors"><Phone size={14} className="text-orange-500" /> {lead.phone}</p>}
-                {lead.email && <p className="flex items-center gap-2.5 hover:text-white transition-colors"><Mail size={14} className="text-orange-500" /> {lead.email}</p>}
-                {lead.enrichedAddress && <p className="flex items-center gap-2.5"><MapPin size={14} className="text-orange-500" /> {lead.enrichedAddress}</p>}
+                {lead.phone && <p className="flex items-center gap-2.5 hover:text-white transition-colors"><Phone size={14} className="text-blue-500" /> {lead.phone}</p>}
+                {lead.email && <p className="flex items-center gap-2.5 hover:text-white transition-colors"><Mail size={14} className="text-blue-500" /> {lead.email}</p>}
+                {lead.enrichedAddress && <p className="flex items-center gap-2.5"><MapPin size={14} className="text-blue-500" /> {lead.enrichedAddress}</p>}
               </div>
             </div>
           </div>
