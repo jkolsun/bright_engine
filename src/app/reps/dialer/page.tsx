@@ -19,13 +19,9 @@ import {
   Copy,
   Edit3,
   Save,
-  X,
   PhoneForwarded,
-  PhoneOff,
   PhoneMissed,
-  Clock,
   Target,
-  TrendingUp,
   AlertCircle,
   ArrowLeft,
   Globe,
@@ -37,10 +33,6 @@ import {
   ChevronLeft,
   Eye,
   Zap,
-  Pause,
-  Play,
-  Ban,
-  StickyNote,
   Send,
   Mic,
   MicOff,
@@ -52,13 +44,38 @@ import { Suspense, useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 // ============================================
-// VM SCRIPTS (from spec)
+// VM SCRIPTS — Multiple variants for variety
 // ============================================
-const VM_SCRIPT_BAD_WEBSITE = `Hey {{firstName}}, this is [REP] with Bright Automations. I was looking at {{companyName}}'s website and put together a quick preview of what a refresh could look like. Texting you the link now — take a look. Talk soon.`
+const VM_SCRIPTS_BAD_WEBSITE = [
+  `Hey {{firstName}}, this is [REP] with Bright Automations. I was looking at {{companyName}}'s website and put together a quick preview of what a refresh could look like. Texting you the link now — take a look. Talk soon.`,
+  `Hey {{firstName}}, [REP] here from Bright Automations. I pulled up your site for {{companyName}} and honestly, it's not showing up great on mobile. I went ahead and mocked up a modern version — texting it over now so you can see the difference. Give me a call back when you get a sec.`,
+  `{{firstName}}, this is [REP] with Bright Automations. I took a look at {{companyName}}'s website and noticed it could use an upgrade. Good news — I already put together a preview of what a new one could look like. Sending you the link right now. Let me know what you think!`,
+  `Hey {{firstName}}, it's [REP] from Bright Automations. I checked out your current website for {{companyName}} — I think we can do a lot better for you. I actually already built a preview. Shooting you a text with the link. Take a look and call me back if you like it.`,
+]
 
-const VM_SCRIPT_NO_WEBSITE = `Hey {{firstName}}, this is [REP] with Bright Automations. I searched for {{industry}} in {{city}} and found {{companyName}} but no website. I mocked up what one could look like — texting you the preview now. Talk soon.`
+const VM_SCRIPTS_NO_WEBSITE = [
+  `Hey {{firstName}}, this is [REP] with Bright Automations. I searched for {{industry}} in {{city}} and found {{companyName}} but no website. I mocked up what one could look like — texting you the preview now. Talk soon.`,
+  `{{firstName}}, [REP] here from Bright Automations. I was looking up {{industry}} businesses in {{city}} and couldn't find a site for {{companyName}}. So I went ahead and designed one. Texting you the preview right now — check it out and let me know what you think.`,
+  `Hey {{firstName}}, it's [REP] with Bright Automations. I tried to find {{companyName}} online but you don't have a website yet. I put together a professional mock-up — sending it to your phone now. Would love to hear what you think. Call me back!`,
+  `{{firstName}}, this is [REP] from Bright Automations. Customers are searching for {{industry}} in {{city}} every day and can't find {{companyName}} online. I built a quick preview of what your site could look like — texting it over. Take 30 seconds to look at it.`,
+]
 
-const DEFAULT_SCRIPT = `OPENER (10 sec):
+const VM_SCRIPTS_CALLBACK = [
+  `Hey {{firstName}}, it's [REP] with Bright Automations calling back like I said I would. Give me a ring when you get this — I still have that preview ready for {{companyName}}. Talk soon.`,
+  `{{firstName}}, [REP] from Bright Automations following up. We chatted the other day about a website for {{companyName}} — just wanted to check in. Call me back when you get a chance.`,
+]
+
+const VM_SCRIPTS_RE_ENGAGE = [
+  `Hey {{firstName}}, this is [REP] with Bright Automations. We spoke a while back about a site for {{companyName}}. We've got some new designs I think you'd like — texting you a fresh preview now. Let me know!`,
+  `{{firstName}}, [REP] here from Bright Automations. It's been a bit since we connected. I put together an updated preview for {{companyName}} — sending it over now. Would love to hear your thoughts.`,
+]
+
+// ============================================
+// CALL SCRIPTS — Multiple variants
+// ============================================
+const CALL_SCRIPTS = [
+  // Script 1: Standard (original)
+  `OPENER (10 sec):
 "Hey {{firstName}}, this is [YOUR NAME] with Bright Automations. Not trying to sell you anything crazy — quick question, do you have 30 seconds?"
 
 If no: "When's a better time?"
@@ -72,13 +89,76 @@ HOOK — No Website (20 sec):
 PITCH (30 sec):
 "Here's why I'm calling. We build professional sites specifically for {{industry}} businesses. Clean, works on phones, shows up on Google. $149, live in 48 hours. And actually — I already mocked up what a site for {{companyName}} would look like. Want me to text you the link so you can see it?"
 
-CLOSE — If Interested:
-"Awesome. I'm texting you the preview right now. Take a look, and if you like it, just text us back and we'll make it live. You don't pay until you're happy with it. What's the best number to text?"
+CLOSE:
+"Awesome. I'm texting you the preview right now. Take a look, and if you like it, just text us back and we'll make it live. You don't pay until you're happy with it."
 
 OBJECTIONS:
 "Already have a site" → "Are you getting leads from it?"
 "Too expensive" → "Check out the preview before you decide."
-"Don't need one" → "97% of customers Google before calling."`
+"Don't need one" → "97% of customers Google before calling."`,
+
+  // Script 2: Curiosity-based
+  `OPENER (10 sec):
+"Hey {{firstName}}, this is [YOUR NAME] from Bright Automations. Real quick — have you ever Googled your own business?"
+
+If yes: "What came up?" / If no: "You should — I did, and I have some thoughts."
+
+DISCOVERY:
+"When someone searches for {{industry}} in {{location}}, your competitors are showing up but {{companyName}} is hard to find. Is that something you've thought about?"
+
+PITCH:
+"So here's what we do — we build clean, professional websites for businesses like yours. $149, mobile-friendly, shows up on Google. And I actually already built a preview for {{companyName}} before I called. Want me to send it over so you can take a look?"
+
+CLOSE:
+"I'll text it to you right now. No pressure — just take a look. If you like it, text us back and we'll make it live. Zero risk."
+
+OBJECTIONS:
+"I get referrals" → "Imagine if those referrals could Google you and see a professional site."
+"Send me info" → "Even better �� I'll text you the actual preview so you can see it, not just read about it."
+"Not interested" → "Totally fair. Mind if I text you the link anyway? Takes 10 seconds to look at."`,
+
+  // Script 3: Compliment-first
+  `OPENER (10 sec):
+"Hey {{firstName}}, this is [YOUR NAME] with Bright Automations. I was doing some research on {{industry}} in {{location}} and came across {{companyName}} — looks like you guys do great work."
+
+BRIDGE:
+"Quick question though — are you getting new customers from online, or is it mostly word of mouth?"
+
+HOOK — No Website:
+"That makes sense, because right now when people search for you online, there's nothing coming up. We actually specialize in building websites for {{industry}} businesses."
+
+HOOK — Has Website:
+"I took a look at your site and honestly, I think it could be working harder for you. It's not loading great on mobile and the design is a little outdated."
+
+PITCH:
+"Here's the cool part — I already mocked up what a new site would look like for {{companyName}}. Professional, fast, mobile-friendly. Want me to text it over so you can see?"
+
+CLOSE:
+"Sending it now. It's $149 to go live, and you don't pay until you're happy with it. Just text us back if you like what you see."
+
+OBJECTIONS:
+"I'm busy" → "Totally get it. I'll text the preview — look at it when you have 30 seconds."
+"How much?" → "$149 one-time. No contracts, no monthly fees. And you see it before you pay."
+"I'll think about it" → "For sure. The preview isn't going anywhere — take a look tonight and text us if you like it."`,
+
+  // Script 4: Social proof
+  `OPENER (10 sec):
+"Hey {{firstName}}, [YOUR NAME] from Bright Automations. We've been building websites for {{industry}} businesses in {{location}} and I wanted to reach out to {{companyName}}. Got 30 seconds?"
+
+HOOK:
+"We just finished a site for another {{industry}} business nearby and they started getting calls from it within the first week. Are you getting leads from online right now?"
+
+PITCH:
+"We build professional websites specifically for businesses like yours — mobile-friendly, shows up on Google, $149 flat. I actually already built a mockup for {{companyName}} before I called. Want to see it?"
+
+CLOSE:
+"I'll text it right now. Takes 10 seconds to look. If you like it, text us back and we go live in 48 hours. You don't pay until you approve it."
+
+OBJECTIONS:
+"Sounds too good to be true" → "I get that. That's why we show you the site before you pay anything."
+"I need to talk to my partner" → "Totally — I'll text you the preview so you can both look at it together."
+"Call me next week" → "Sure. Mind if I text you the preview now so you have it ready?"`,
+]
 
 export default function DialerPageWrapper() {
   return (
@@ -582,7 +662,29 @@ function DialerPage() {
     finally { setSaving(false) }
   }
 
-  // Script personalization
+  // Script personalization — uses lead ID as seed for consistent-per-lead random pick
+  const pickByLead = (arr: string[]) => {
+    if (!currentLead?.id || arr.length === 0) return arr[0] || ''
+    // Simple hash from lead ID for consistent selection per lead
+    let hash = 0
+    for (let i = 0; i < currentLead.id.length; i++) {
+      hash = ((hash << 5) - hash) + currentLead.id.charCodeAt(i)
+      hash |= 0
+    }
+    return arr[Math.abs(hash) % arr.length]
+  }
+
+  const personalizeScript = (script: string) => {
+    return script
+      .replace(/\{\{firstName\}\}/g, currentLead?.firstName || '[Name]')
+      .replace(/\{\{companyName\}\}/g, currentLead?.companyName || '[Company]')
+      .replace(/\{\{industry\}\}/g, currentLead?.industry?.toLowerCase().replace(/_/g, ' ') || '[industry]')
+      .replace(/\{\{location\}\}/g, [currentLead?.city, currentLead?.state].filter(Boolean).join(', ') || '[location]')
+      .replace(/\{\{city\}\}/g, currentLead?.city || '[city]')
+      .replace(/\[REP\]/g, userName)
+      .replace(/\[YOUR NAME\]/g, userName)
+  }
+
   const getScript = () => {
     if (currentLead?.callScript) {
       try {
@@ -592,21 +694,22 @@ function DialerPage() {
         return currentLead.callScript
       }
     }
-    return DEFAULT_SCRIPT
-      .replace(/\{\{firstName\}\}/g, currentLead?.firstName || '[Name]')
-      .replace(/\{\{companyName\}\}/g, currentLead?.companyName || '[Company]')
-      .replace(/\{\{industry\}\}/g, currentLead?.industry?.toLowerCase().replace(/_/g, ' ') || '[industry]')
-      .replace(/\{\{location\}\}/g, [currentLead?.city, currentLead?.state].filter(Boolean).join(', ') || '[location]')
+    return personalizeScript(pickByLead(CALL_SCRIPTS))
   }
 
   const getVMScript = () => {
-    const script = currentLead?.website ? VM_SCRIPT_BAD_WEBSITE : VM_SCRIPT_NO_WEBSITE
-    return script
-      .replace(/\{\{firstName\}\}/g, currentLead?.firstName || '[Name]')
-      .replace(/\{\{companyName\}\}/g, currentLead?.companyName || '[Company]')
-      .replace(/\{\{industry\}\}/g, currentLead?.industry?.toLowerCase().replace(/_/g, ' ') || '[industry]')
-      .replace(/\{\{city\}\}/g, currentLead?.city || '[city]')
-      .replace(/\[REP\]/g, userName)
+    // Pick VM script based on lead context
+    let scripts: string[]
+    if (currentLead?.queueCategory === 'overdue_callback' || currentLead?.queueCategory === 'scheduled_callback') {
+      scripts = VM_SCRIPTS_CALLBACK
+    } else if (currentLead?.queueCategory === 're_engage') {
+      scripts = VM_SCRIPTS_RE_ENGAGE
+    } else if (currentLead?.website) {
+      scripts = VM_SCRIPTS_BAD_WEBSITE
+    } else {
+      scripts = VM_SCRIPTS_NO_WEBSITE
+    }
+    return personalizeScript(pickByLead(scripts))
   }
 
   // ============================================

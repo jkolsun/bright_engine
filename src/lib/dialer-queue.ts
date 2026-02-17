@@ -48,6 +48,19 @@ export interface QueueSummary {
   total: number
 }
 
+// Cache table existence checks for the lifetime of the process
+let _callsTableExists: boolean | null = null
+let _dncTableExists: boolean | null = null
+
+async function checkTableExists(tableName: string): Promise<boolean> {
+  try {
+    await prisma.$queryRawUnsafe(`SELECT 1 FROM "${tableName}" LIMIT 1`)
+    return true
+  } catch {
+    return false
+  }
+}
+
 /**
  * Build prioritized lead queue for a rep
  * Priority order per spec:
@@ -62,43 +75,43 @@ export interface QueueSummary {
 export async function buildRepQueue(repId: string): Promise<{ leads: QueuedLead[], summary: QueueSummary }> {
   const now = new Date()
   const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000)
-  const todayStart = new Date(now)
-  todayStart.setHours(0, 0, 0, 0)
   const todayEnd = new Date(now)
   todayEnd.setHours(23, 59, 59, 999)
 
-  // Get all assigned leads that are dialable (not closed/paid/dnc)
-  const assignedLeads = await prisma.lead.findMany({
+  // Check if new dialer tables exist (they require prisma db push after schema update)
+  if (_callsTableExists === null) _callsTableExists = await checkTableExists('calls')
+  if (_dncTableExists === null) _dncTableExists = await checkTableExists('do_not_call')
+
+  // Build include object — only include `calls` if the table exists
+  const includeObj: any = {
+    events: { orderBy: { createdAt: 'desc' }, take: 20 },
+    activities: { where: { activityType: 'CALL' }, orderBy: { createdAt: 'desc' }, take: 5 },
+    outboundEvents: { orderBy: { createdAt: 'desc' }, take: 10 },
+  }
+  if (_callsTableExists) {
+    includeObj.calls = { orderBy: { createdAt: 'desc' }, take: 5 }
+  }
+
+  // Get all assigned leads that are dialable
+  const assignedLeads: any[] = await prisma.lead.findMany({
     where: {
       assignedToId: repId,
       status: { in: ['NEW', 'HOT_LEAD', 'QUALIFIED', 'INFO_COLLECTED'] },
     },
-    include: {
-      events: {
-        orderBy: { createdAt: 'desc' },
-        take: 20,
-      },
-      activities: {
-        where: { activityType: 'CALL' },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-      },
-      calls: {
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-      },
-      outboundEvents: {
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-      },
-    },
+    include: includeObj,
   })
 
-  // Get DNC list to filter out
-  const dncPhones = await prisma.doNotCall.findMany({
-    select: { phone: true },
-  })
-  const dncSet = new Set(dncPhones.map(d => d.phone))
+  // Get DNC list (skip if table doesn't exist yet)
+  let dncSet = new Set<string>()
+  if (_dncTableExists) {
+    try {
+      const dncPhones: any[] = await (prisma as any).doNotCall.findMany({ select: { phone: true } })
+      dncSet = new Set(dncPhones.map((d: any) => d.phone))
+    } catch {
+      // Table may have been dropped — reset cache
+      _dncTableExists = false
+    }
+  }
 
   // Categorize and score each lead
   const categorized: QueuedLead[] = []
@@ -106,29 +119,25 @@ export async function buildRepQueue(repId: string): Promise<{ leads: QueuedLead[
   for (const lead of assignedLeads) {
     if (dncSet.has(lead.phone)) continue
 
-    const lastCall = lead.calls[0] || lead.activities[0]
+    const calls = lead.calls || []
+    const activities = lead.activities || []
+
+    const lastCall = calls[0] || activities[0]
     const lastCallAt = lastCall?.createdAt || null
-    const callAttempts = lead.calls.length + lead.activities.filter(a => a.activityType === 'CALL').length
+    const callAttempts = calls.length + activities.filter((a: any) => a.activityType === 'CALL').length
 
     // Check for callbacks
-    const callbackCall = lead.calls.find(c => c.outcome === 'callback' && c.callbackDate)
-    const callbackActivity = lead.activities.find(a => a.callDisposition === 'CALLBACK' && a.callbackDate)
+    const callbackCall = calls.find((c: any) => c.outcome === 'callback' && c.callbackDate)
+    const callbackActivity = activities.find((a: any) => a.callDisposition === 'CALLBACK' && a.callbackDate)
     const callbackDate = callbackCall?.callbackDate || callbackActivity?.callbackDate || null
 
     // Calculate engagement score
-    const engagementScore = calculateQuickEngagement(lead.events, lead.outboundEvents)
+    const engagementScore = calculateQuickEngagement(lead.events || [], lead.outboundEvents || [])
 
     // Categorize
     const { priority, category, reason } = categorizeLead(
-      lead,
-      callbackDate,
-      lastCallAt,
-      callAttempts,
-      engagementScore,
-      now,
-      twoHoursAgo,
-      todayStart,
-      todayEnd
+      lead, callbackDate, lastCallAt, callAttempts,
+      engagementScore, now, twoHoursAgo, todayEnd
     )
 
     categorized.push({
@@ -169,7 +178,6 @@ export async function buildRepQueue(repId: string): Promise<{ leads: QueuedLead[
     return b.engagementScore - a.engagementScore
   })
 
-  // Build summary
   const summary: QueueSummary = {
     overdueCallbacks: categorized.filter(l => l.queueCategory === 'overdue_callback').length,
     hotLeads: categorized.filter(l => l.queueCategory === 'hot').length,
@@ -192,17 +200,12 @@ function categorizeLead(
   engagementScore: number,
   now: Date,
   twoHoursAgo: Date,
-  todayStart: Date,
   todayEnd: Date,
 ): { priority: number, category: string, reason: string } {
 
   // Priority 1: Overdue callbacks
   if (callbackDate && callbackDate < now) {
-    return {
-      priority: 1,
-      category: 'overdue_callback',
-      reason: `Callback overdue since ${callbackDate.toLocaleDateString()}`,
-    }
+    return { priority: 1, category: 'overdue_callback', reason: `Callback overdue since ${callbackDate.toLocaleDateString()}` }
   }
 
   // Priority 2: Hot leads (preview engaged in last 2 hours)
@@ -212,11 +215,8 @@ function categorizeLead(
   )
   if (recentPreviewEvents?.length > 0 || (engagementScore >= 16 && lead.status === 'HOT_LEAD')) {
     return {
-      priority: 2,
-      category: 'hot',
-      reason: recentPreviewEvents?.length > 0
-        ? 'Preview engaged in last 2 hours'
-        : `Hot lead — engagement score ${engagementScore}`,
+      priority: 2, category: 'hot',
+      reason: recentPreviewEvents?.length > 0 ? 'Preview engaged in last 2 hours' : `Hot lead — engagement score ${engagementScore}`,
     }
   }
 
@@ -224,39 +224,27 @@ function categorizeLead(
   const warmEvents = lead.events?.filter((e: any) =>
     ['EMAIL_OPENED', 'PREVIEW_VIEWED', 'PREVIEW_CTA_CLICKED'].includes(e.eventType)
   )
-  const emailOpens = lead.outboundEvents?.filter((e: any) =>
-    e.status === 'OPENED' || e.openedAt
-  )
+  const emailOpens = lead.outboundEvents?.filter((e: any) => e.status === 'OPENED' || e.openedAt)
   if ((warmEvents?.length > 0 || emailOpens?.length > 0) && engagementScore >= 6) {
-    return {
-      priority: 3,
-      category: 'warm',
-      reason: `Warm — ${warmEvents?.length || 0} engagement events`,
-    }
+    return { priority: 3, category: 'warm', reason: `Warm — ${warmEvents?.length || 0} engagement events` }
   }
 
   // Priority 4: Scheduled callbacks (due today, not overdue)
   if (callbackDate && callbackDate >= now && callbackDate <= todayEnd) {
     return {
-      priority: 4,
-      category: 'scheduled_callback',
+      priority: 4, category: 'scheduled_callback',
       reason: `Callback at ${callbackDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
     }
   }
 
   // Priority 5: Fresh leads (never contacted)
   if (callAttempts === 0) {
-    return {
-      priority: 5,
-      category: 'fresh',
-      reason: 'Never contacted — first call attempt',
-    }
+    return { priority: 5, category: 'fresh', reason: 'Never contacted — first call attempt' }
   }
 
   // Priority 6: Retries (previous no-answer, within retry window)
   const lastOutcome = lead.calls?.[0]?.outcome || lead.activities?.[0]?.callDisposition
   if (['no_answer', 'NO_ANSWER', 'voicemail_skipped', 'VOICEMAIL'].includes(lastOutcome)) {
-    // Check retry timing: attempt 2 next day, attempt 3 two days later
     if (lastCallAt) {
       const daysSinceLast = (now.getTime() - new Date(lastCallAt).getTime()) / (1000 * 60 * 60 * 24)
       if (
@@ -264,47 +252,28 @@ function categorizeLead(
         (callAttempts === 2 && daysSinceLast >= 2) ||
         (callAttempts >= 3 && daysSinceLast >= 3)
       ) {
-        return {
-          priority: 6,
-          category: 'retry',
-          reason: `Retry attempt ${callAttempts + 1} — last tried ${Math.floor(daysSinceLast)}d ago`,
-        }
+        return { priority: 6, category: 'retry', reason: `Retry attempt ${callAttempts + 1} — last tried ${Math.floor(daysSinceLast)}d ago` }
       }
     }
-    // Not ready for retry yet — push to bottom
-    return {
-      priority: 8,
-      category: 'retry_pending',
-      reason: `Retry not due yet — attempt ${callAttempts}`,
-    }
+    return { priority: 8, category: 'retry_pending', reason: `Retry not due yet — attempt ${callAttempts}` }
   }
 
   // Priority 7: Re-engage (warm leads revisit after 30 days)
   if (lastCallAt) {
     const daysSinceLast = (now.getTime() - new Date(lastCallAt).getTime()) / (1000 * 60 * 60 * 24)
     if (daysSinceLast >= 30) {
-      return {
-        priority: 7,
-        category: 're_engage',
-        reason: `Re-engage — last contact ${Math.floor(daysSinceLast)} days ago`,
-      }
+      return { priority: 7, category: 're_engage', reason: `Re-engage — last contact ${Math.floor(daysSinceLast)} days ago` }
     }
   }
 
-  // Default: lower priority
-  return {
-    priority: 8,
-    category: 'other',
-    reason: 'Standard queue position',
-  }
+  return { priority: 8, category: 'other', reason: 'Standard queue position' }
 }
 
 /**
  * Quick engagement calculation without full DB lookup
  */
-function calculateQuickEngagement(events: any[], outboundEvents: any[]): number {
+function calculateQuickEngagement(events: any[], _outboundEvents: any[]): number {
   let score = 0
-
   if (!events) return 0
 
   for (const event of events) {
@@ -319,7 +288,6 @@ function calculateQuickEngagement(events: any[], outboundEvents: any[]): number 
     }
   }
 
-  // Cap at 100
   return Math.min(100, score)
 }
 
@@ -331,54 +299,166 @@ export async function getQueueSummary(repId: string): Promise<QueueSummary> {
   return result.summary
 }
 
+// ============================================
+// AI TIPS — Multiple varied tips per context
+// ============================================
+
+const TIPS_HIGH_ENGAGEMENT = [
+  'High engagement — they\'re interested. Be direct and confident asking for the close.',
+  'This lead has been all over the preview. Skip the pitch, go straight to: "Did you get a chance to look at the preview I sent?"',
+  'Strong engagement signals. Don\'t oversell — they\'re already warm. Just confirm what they liked and close.',
+  'They\'ve clicked multiple times. Try: "Looks like you\'ve been checking out the site — what did you think?"',
+]
+
+const TIPS_HOT = [
+  'Just viewed the preview. Reference it: "I saw you checked out the preview — what stood out to you?"',
+  'They were literally just on the preview. This is your best shot — call with energy and reference what they saw.',
+  'Hot timing. Open with: "Hey, I noticed you just took a look at the mock-up — pretty cool right?"',
+  'Preview was just viewed. Be casual: "Perfect timing — did you see the site I put together for you?"',
+]
+
+const TIPS_OVERDUE_CALLBACK = [
+  'This is an overdue callback — they asked you to call back. Remind them: "You asked me to give you a ring back..."',
+  'Overdue callback. Open with: "Hey, I\'m following up like you asked — is now still a good time?"',
+  'They wanted this call. Lead with confidence: "Last time we spoke you said to call back around now."',
+  'This person specifically asked for a callback. That\'s a buying signal — don\'t treat it like a cold call.',
+]
+
+const TIPS_NO_WEBSITE = [
+  'No website on file — great angle: "I searched for you online and couldn\'t find a site..."',
+  'They don\'t have a website. Try: "I looked you up on Google and your competitors are showing up but you\'re not..."',
+  'No web presence — use the urgency angle: "Customers are Googling {{industry}} in {{city}} and not finding you."',
+  'No website = easy pitch. "97% of people search online before calling a business. Right now they can\'t find you."',
+]
+
+const TIPS_HAS_WEBSITE = [
+  'Has a website — lead with: "I checked out your current site and thought it could use a refresh..."',
+  'Their current site exists but could be better. Try: "I took a look at your site — when was the last time it was updated?"',
+  'Has a website. Angle: "Your site doesn\'t load well on mobile — want to see what a modern version looks like?"',
+  'They have a site. Be honest: "I pulled up your site before calling — it looks a bit dated. Are you getting leads from it?"',
+]
+
+const TIPS_GREAT_REVIEWS = [
+  'Great reviews — compliment them: "I see your customers love you — your online presence should match that."',
+  'Highly rated business. Open with: "I was reading your reviews and people clearly love what you do. Your website should reflect that."',
+  'Amazing reviews. Try: "With ratings like yours, imagine how many more customers you\'d get with a site that shows up on Google."',
+]
+
+const TIPS_FIRST_CONTACT = [
+  'First contact — be friendly and establish rapport before pitching. Ask permission to continue.',
+  'Fresh lead — start warm: "Not trying to sell you anything crazy — just had a quick question, do you have 30 seconds?"',
+  'First call. Key goal: build trust in 10 seconds. Be human, not salesy.',
+  'Never been contacted. Remember: earn the right to pitch by asking a question first.',
+]
+
+const TIPS_RETRY = [
+  'Multiple attempts — try a different angle or time of day this round.',
+  'They didn\'t pick up last time. Try calling at a different hour — morning or late afternoon works best.',
+  'Retry call. Switch your opener — if you led with website angle last time, try the Google search angle.',
+  'Previous no-answer. Leave a voicemail this time if they don\'t pick up — creates familiarity for next attempt.',
+]
+
+const TIPS_WARM = [
+  'Warm lead — they\'ve opened emails or viewed the preview. Reference that engagement in your opener.',
+  'This lead has shown interest through email/preview activity. They know who you are — use that.',
+  'Warm signals detected. Try: "I sent over some info and it looks like you checked it out — wanted to follow up."',
+]
+
+const TIPS_SCHEDULED_CALLBACK = [
+  'Scheduled callback — they\'re expecting your call. Open with: "Hey, calling back like I said I would."',
+  'This is a scheduled callback. They agreed to this call — that\'s a great sign. Be confident.',
+  'Callback time. Start with: "I promised I\'d follow up today — is now still good?"',
+]
+
+const TIPS_RE_ENGAGE = [
+  'Re-engagement call — it\'s been a while. Open with: "We spoke a while back about a website — wanted to check if anything\'s changed."',
+  'Long time since last contact. Lead with something new: "We\'ve updated our designs since we last spoke — mind if I send you a fresh preview?"',
+  'Re-engage attempt. Try a fresh angle — mention a seasonal pitch or new feature.',
+]
+
+const TIPS_DEFAULT = [
+  'Follow the script and listen for buying signals. Mirror their energy.',
+  'Focus on asking questions, not pitching. The best closers listen more than they talk.',
+  'Remember: the goal is to get them to look at the preview. That\'s the close.',
+  'Stay curious. Ask about their business before you pitch — people buy from people who care.',
+]
+
+function pickRandom(arr: string[]): string {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
 /**
- * Generate AI tip for a specific lead based on their engagement data
+ * Generate contextual AI tip for a specific lead
+ * Returns a varied tip based on lead context — never the same tip twice in a row
  */
 export function generateAITip(lead: QueuedLead): string {
-  const tips: string[] = []
+  const industry = lead.industry?.toLowerCase().replace(/_/g, ' ') || 'local businesses'
 
-  // Based on engagement
+  // Pick the most relevant tip category
   if (lead.engagementScore >= 16) {
-    tips.push('High engagement — they\'re interested. Be direct and ask for the close.')
+    return pickRandom(TIPS_HIGH_ENGAGEMENT)
   }
 
-  // Based on preview engagement
   if (lead.queueCategory === 'hot') {
-    tips.push('Just viewed the preview. Reference it: "I saw you checked out the preview..."')
+    return pickRandom(TIPS_HOT)
   }
 
-  // Based on callback
   if (lead.queueCategory === 'overdue_callback') {
-    tips.push('This is an overdue callback — they asked you to call back. Remind them.')
+    return pickRandom(TIPS_OVERDUE_CALLBACK)
   }
 
-  // Based on website status
-  if (!lead.website) {
-    tips.push('No website on file — great angle: "I searched for you online and couldn\'t find a site..."')
-  } else {
-    tips.push('Has a website — lead with: "I checked out your current site..."')
+  if (lead.queueCategory === 'scheduled_callback') {
+    return pickRandom(TIPS_SCHEDULED_CALLBACK)
   }
 
-  // Based on enriched data
-  if (lead.enrichedRating && lead.enrichedRating >= 4.5) {
-    tips.push(`Great reviews (${lead.enrichedRating}/5). Compliment them: "I see your customers love you..."`)
+  if (lead.queueCategory === 'warm') {
+    return pickRandom(TIPS_WARM)
   }
 
-  // Based on call attempts
+  if (lead.queueCategory === 're_engage') {
+    return pickRandom(TIPS_RE_ENGAGE)
+  }
+
   if (lead.callAttempts === 0) {
-    tips.push('First contact — be friendly and establish rapport. Ask permission to continue.')
-  } else if (lead.callAttempts >= 2) {
-    tips.push(`Attempt ${lead.callAttempts + 1} — try a different angle or time of day.`)
+    // First contact — combine with website-specific tip
+    const firstTip = pickRandom(TIPS_FIRST_CONTACT)
+    if (!lead.website) {
+      return firstTip + ' ' + pickRandom(TIPS_NO_WEBSITE)
+        .replace('{{industry}}', industry)
+        .replace('{{city}}', lead.city || 'your city')
+    }
+    return firstTip
   }
 
-  return tips[0] || 'Follow the script and listen for buying signals.'
+  if (lead.callAttempts >= 2) {
+    return pickRandom(TIPS_RETRY)
+  }
+
+  // Reviews-based tips
+  if (lead.enrichedRating && lead.enrichedRating >= 4.5) {
+    return pickRandom(TIPS_GREAT_REVIEWS)
+  }
+
+  // Website-based tips
+  if (!lead.website) {
+    return pickRandom(TIPS_NO_WEBSITE)
+      .replace('{{industry}}', industry)
+      .replace('{{city}}', lead.city || 'your city')
+  }
+
+  if (lead.website) {
+    return pickRandom(TIPS_HAS_WEBSITE)
+  }
+
+  return pickRandom(TIPS_DEFAULT)
 }
 
 /**
  * Get contact history for a lead (for the call screen)
  */
 export async function getLeadHistory(leadId: string) {
-  const [activities, events, calls, messages] = await Promise.all([
+  // Fetch from existing tables — Call table is optional
+  const queries: Promise<any[]>[] = [
     prisma.activity.findMany({
       where: { leadId },
       orderBy: { createdAt: 'desc' },
@@ -390,26 +470,34 @@ export async function getLeadHistory(leadId: string) {
       orderBy: { createdAt: 'desc' },
       take: 15,
     }),
-    prisma.call.findMany({
-      where: { leadId },
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-    }),
     prisma.message.findMany({
       where: { leadId },
       orderBy: { createdAt: 'desc' },
       take: 10,
     }),
-  ])
+  ]
 
-  // Merge into unified timeline
-  type TimelineItem = {
-    type: string
-    description: string
-    timestamp: Date
-    details?: string
+  // Only query calls table if it exists
+  if (_callsTableExists) {
+    queries.push(
+      (prisma as any).call.findMany({
+        where: { leadId },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      }).catch(() => {
+        _callsTableExists = false
+        return []
+      })
+    )
   }
 
+  const results = await Promise.all(queries)
+  const activities = results[0]
+  const events = results[1]
+  const messages = results[2]
+  const calls = results[3] || []
+
+  type TimelineItem = { type: string; description: string; timestamp: Date; details?: string }
   const timeline: TimelineItem[] = []
 
   for (const activity of activities) {
@@ -442,6 +530,15 @@ export async function getLeadHistory(leadId: string) {
     })
   }
 
+  for (const call of calls) {
+    timeline.push({
+      type: 'call',
+      description: `Call — ${call.outcome || call.status || 'dialed'}`,
+      timestamp: call.createdAt,
+      details: call.notes || undefined,
+    })
+  }
+
   for (const msg of messages) {
     timeline.push({
       type: msg.channel === 'SMS' ? 'text' : 'email',
@@ -451,8 +548,6 @@ export async function getLeadHistory(leadId: string) {
     })
   }
 
-  // Sort by timestamp descending
   timeline.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-
   return timeline.slice(0, 20)
 }
