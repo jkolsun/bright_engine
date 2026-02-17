@@ -53,6 +53,9 @@ export async function GET(request: NextRequest) {
         include: {
           assignedTo: {
             select: { id: true, name: true, email: true }
+          },
+          folder: {
+            select: { id: true, name: true, color: true }
           }
         },
         orderBy: { createdAt: 'desc' },

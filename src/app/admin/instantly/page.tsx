@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
   Mail,
   MousePointerClick,
@@ -16,6 +17,8 @@ import {
   Target,
   BarChart3,
   Globe,
+  X,
+  UserPlus,
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -120,11 +123,62 @@ function StatusBadge({ value, target, redFlag }: { value: number; target: number
   )
 }
 
-export default function InstantlyDashboard() {
+export default function InstantlyDashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="p-8">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 w-64 bg-slate-200 rounded" />
+          <div className="grid grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => <div key={i} className="h-32 bg-slate-200 rounded-xl" />)}
+          </div>
+        </div>
+      </div>
+    }>
+      <InstantlyDashboard />
+    </Suspense>
+  )
+}
+
+function InstantlyDashboard() {
+  const searchParams = useSearchParams()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
+
+  // Lead assignment from Leads page
+  const assignLeadIds = searchParams.get('assignLeads')?.split(',').filter(Boolean) || []
+  const [assigningToCampaign, setAssigningToCampaign] = useState(false)
+  const [assignSuccess, setAssignSuccess] = useState('')
+  const [showAssignBanner, setShowAssignBanner] = useState(assignLeadIds.length > 0)
+
+  const handleAssignToCampaign = async (campaignId: string, campaignName: string) => {
+    if (assignLeadIds.length === 0) return
+    setAssigningToCampaign(true)
+    try {
+      const res = await fetch('/api/instantly/assign-campaign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadIds: assignLeadIds, campaignId, campaignName }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setAssignSuccess(`${data.updated} leads assigned to "${campaignName}"`)
+        setShowAssignBanner(false)
+        // Remove query params from URL
+        window.history.replaceState({}, '', '/admin/instantly')
+        setTimeout(() => setAssignSuccess(''), 5000)
+        fetchStats()
+      } else {
+        alert('Failed to assign leads to campaign')
+      }
+    } catch {
+      alert('Failed to assign leads to campaign')
+    } finally {
+      setAssigningToCampaign(false)
+    }
+  }
 
   const fetchStats = async () => {
     try {
@@ -230,6 +284,49 @@ export default function InstantlyDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Lead Assignment Banner */}
+      {showAssignBanner && assignLeadIds.length > 0 && (
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <UserPlus size={20} className="text-purple-600" />
+              <span className="font-semibold text-purple-900">
+                Assign {assignLeadIds.length} lead{assignLeadIds.length !== 1 ? 's' : ''} to a campaign
+              </span>
+            </div>
+            <button
+              onClick={() => { setShowAssignBanner(false); window.history.replaceState({}, '', '/admin/instantly') }}
+              className="text-purple-400 hover:text-purple-600"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <div className="flex gap-3 flex-wrap">
+            {stats?.campaigns.map((campaign) => (
+              <button
+                key={campaign.campaign_id}
+                onClick={() => handleAssignToCampaign(campaign.campaign_id, campaign.campaign_name)}
+                disabled={assigningToCampaign}
+                className="px-4 py-2 bg-white border border-purple-200 rounded-lg text-sm font-medium text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-colors disabled:opacity-50"
+              >
+                {campaign.campaign_name} ({campaign.total_leads} leads)
+              </button>
+            ))}
+            {(!stats?.campaigns || stats.campaigns.length === 0) && (
+              <p className="text-sm text-purple-600">No campaigns found. Sync with Instantly first.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Assignment Success */}
+      {assignSuccess && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-2">
+          <CheckCircle2 size={20} className="text-green-600" />
+          <span className="font-medium text-green-900">{assignSuccess}</span>
+        </div>
+      )}
 
       {/* Top Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

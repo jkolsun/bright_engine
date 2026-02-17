@@ -5,8 +5,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useState, useEffect } from 'react'
 import {
-  Upload, Download, Check, X, AlertCircle, Loader2,
-  CheckCircle, Pause, XCircle, DollarSign, Clock, Zap
+  Upload, Check, X, AlertCircle, Loader2,
+  CheckCircle, Pause, XCircle, DollarSign, Clock, Zap,
+  FolderPlus, FolderOpen, Plus
 } from 'lucide-react'
 
 export default function ImportPage() {
@@ -15,6 +16,71 @@ export default function ImportPage() {
   const [uploading, setUploading] = useState(false)
   const [importResult, setImportResult] = useState<any>(null)
   const [importMode, setImportMode] = useState<'async' | 'sync'>('sync') // Default to sync (working solution)
+
+  // Folder state
+  const [folders, setFolders] = useState<any[]>([])
+  const [folderDialogOpen, setFolderDialogOpen] = useState(false)
+  const [selectedFolderId, setSelectedFolderId] = useState<string>('')
+  const [newFolderName, setNewFolderName] = useState('')
+  const [creatingFolder, setCreatingFolder] = useState(false)
+  const [addingToFolder, setAddingToFolder] = useState(false)
+  const [folderSuccess, setFolderSuccess] = useState('')
+
+  const fetchFolders = async () => {
+    try {
+      const res = await fetch('/api/folders')
+      const data = await res.json()
+      setFolders(data.folders || [])
+    } catch { /* ignore */ }
+  }
+
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return
+    setCreatingFolder(true)
+    try {
+      const res = await fetch('/api/folders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newFolderName.trim() }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setSelectedFolderId(data.folder.id)
+        setNewFolderName('')
+        fetchFolders()
+      }
+    } catch { /* ignore */ }
+    finally { setCreatingFolder(false) }
+  }
+
+  const handleAddToFolder = async () => {
+    if (!selectedFolderId || !importResult) return
+    setAddingToFolder(true)
+    try {
+      // Get all recently imported lead IDs
+      const res = await fetch('/api/leads?limit=500')
+      const data = await res.json()
+      const recentLeads = (data.leads || [])
+        .filter((l: any) => !l.folderId)
+        .slice(0, importResult.summary?.created || importResult.createdCount || 100)
+
+      const assignRes = await fetch('/api/folders/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadIds: recentLeads.map((l: any) => l.id),
+          folderId: selectedFolderId,
+        }),
+      })
+      if (assignRes.ok) {
+        const result = await assignRes.json()
+        const folderName = folders.find(f => f.id === selectedFolderId)?.name || 'folder'
+        setFolderSuccess(`${result.updated} leads added to "${folderName}"`)
+        setFolderDialogOpen(false)
+      }
+    } catch { /* ignore */ }
+    finally { setAddingToFolder(false) }
+  }
 
   // Poll for pipeline status every 2 seconds while processing
   useEffect(() => {
@@ -404,44 +470,91 @@ export default function ImportPage() {
                 </Card>
               )}
 
-              {/* Download Buttons */}
+              {/* Add to Folder */}
               <div className="space-y-3 mb-8">
-                <Button
-                  className="w-full justify-between"
-                  size="lg"
-                  onClick={() => window.open('/api/leads/export?campaign=A', '_blank')}
-                >
-                  <span>Campaign A CSV (Bad Website)</span>
-                  <Download size={20} />
-                </Button>
-                <Button
-                  className="w-full justify-between"
-                  size="lg"
-                  variant="outline"
-                  onClick={() => window.open('/api/leads/export?campaign=B', '_blank')}
-                >
-                  <span>Campaign B CSV (No Website)</span>
-                  <Download size={20} />
-                </Button>
-                <Button
-                  className="w-full justify-between"
-                  size="lg"
-                  variant="outline"
-                  onClick={() => window.open('/api/leads/export?campaign=C', '_blank')}
-                >
-                  <span>Campaign C CSV (Reps w/ Phone)</span>
-                  <Download size={20} />
-                </Button>
-                <Button
-                  className="w-full justify-between"
-                  size="lg"
-                  variant="outline"
-                  onClick={() => window.open('/api/leads/export', '_blank')}
-                >
-                  <span>All Leads CSV</span>
-                  <Download size={20} />
-                </Button>
+                {folderSuccess ? (
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+                    <CheckCircle size={24} className="text-green-600 mx-auto mb-2" />
+                    <p className="font-medium text-green-900">{folderSuccess}</p>
+                  </div>
+                ) : (
+                  <Button
+                    className="w-full justify-between"
+                    size="lg"
+                    onClick={() => { setFolderDialogOpen(true); fetchFolders() }}
+                  >
+                    <span>Add to Folder</span>
+                    <FolderPlus size={20} />
+                  </Button>
+                )}
               </div>
+
+              {/* Folder Dialog */}
+              {folderDialogOpen && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setFolderDialogOpen(false)}>
+                  <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">Add Imported Leads to Folder</h3>
+                      <button onClick={() => setFolderDialogOpen(false)} className="text-gray-400 hover:text-gray-600">
+                        <X size={20} />
+                      </button>
+                    </div>
+
+                    {/* Create New Folder */}
+                    <div className="mb-4">
+                      <label className="text-sm font-medium text-gray-700 block mb-1">Create New Folder</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newFolderName}
+                          onChange={(e) => setNewFolderName(e.target.value)}
+                          placeholder="e.g., January Import, Texas Leads..."
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
+                        />
+                        <Button size="sm" onClick={handleCreateFolder} disabled={creatingFolder || !newFolderName.trim()}>
+                          <Plus size={16} />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Existing Folders */}
+                    <div className="mb-4">
+                      <label className="text-sm font-medium text-gray-700 block mb-2">Or Choose Existing Folder</label>
+                      <div className="space-y-1 max-h-48 overflow-y-auto">
+                        {folders.map((folder) => (
+                          <button
+                            key={folder.id}
+                            onClick={() => setSelectedFolderId(folder.id)}
+                            className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors text-left ${
+                              selectedFolderId === folder.id
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:bg-gray-50'
+                            }`}
+                          >
+                            <FolderOpen size={18} style={{ color: folder.color }} />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 text-sm">{folder.name}</div>
+                              <div className="text-xs text-gray-500">{folder._count?.leads || 0} leads</div>
+                            </div>
+                          </button>
+                        ))}
+                        {folders.length === 0 && (
+                          <p className="text-sm text-gray-500 text-center py-4">No folders yet. Create one above.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <Button
+                      className="w-full"
+                      onClick={handleAddToFolder}
+                      disabled={!selectedFolderId || addingToFolder}
+                    >
+                      {addingToFolder ? 'Adding...' : 'Add Leads to Folder'}
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {/* Cost Breakdown */}
               <Card className="p-6 bg-gray-50">
@@ -463,7 +576,7 @@ export default function ImportPage() {
                   Import More Leads
                 </Button>
                 <Button onClick={() => window.location.href = '/admin/outbound'}>
-                  View in Outbound Tracker
+                  View in Sales Rep Tracker
                 </Button>
               </div>
             </div>

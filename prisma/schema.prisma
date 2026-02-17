@@ -56,6 +56,21 @@ model User {
 }
 
 // ============================================
+// LEAD FOLDER MODEL (Organize leads into folders)
+// ============================================
+model LeadFolder {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#3B82F6") // Default blue
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  leads Lead[]
+
+  @@map("lead_folders")
+}
+
+// ============================================
 // LEAD MODEL (Pre-payment prospects)
 // ============================================
 enum LeadStatus {
@@ -103,6 +118,7 @@ model Lead {
   status           LeadStatus   @default(NEW)
   priority         LeadPriority @default(COLD)
   assignedToId     String?      @map("assigned_to_id")
+  folderId         String?      @map("folder_id")
   source           LeadSource
   sourceDetail     String?      @map("source_detail") // Rep name, campaign name, ad variant
   campaign         String?
@@ -142,6 +158,7 @@ model Lead {
 
   // Relations
   assignedTo         User?               @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  folder             LeadFolder?         @relation(fields: [folderId], references: [id])
   activities         Activity[]
   events             LeadEvent[]
   messages           Message[]
@@ -154,6 +171,7 @@ model Lead {
 
   @@index([status])
   @@index([assignedToId])
+  @@index([folderId])
   @@index([industry])
   @@index([phone])
   @@index([email])

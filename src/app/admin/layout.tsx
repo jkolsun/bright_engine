@@ -80,7 +80,7 @@ export default function AdminLayout({
             Messages
           </NavLink>
           <NavLink href="/admin/outbound" icon={<Target size={20} />}>
-            Outbound Tracker
+            Sales Rep Tracker
           </NavLink>
           <NavLink href="/admin/instantly" icon={<Mail size={20} />}>
             Instantly Campaigns

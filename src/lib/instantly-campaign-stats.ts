@@ -291,18 +291,37 @@ export async function getPersonalizationStats(): Promise<PersonalizationStats> {
  * Get combined stats for the dashboard — single call for everything
  */
 export async function getInstantlyDashboardStats() {
-  const [funnel, preview, personalization, recentDrips, recentSync] = await Promise.all([
-    getCampaignFunnelStats(),
-    getPreviewEngagementStats(),
-    getPersonalizationStats(),
-    prisma.instantlyDripLog.findMany({
-      orderBy: { date: 'desc' },
-      take: 14, // Last 2 weeks
-    }),
-    prisma.instantlySyncLog.findFirst({
-      orderBy: { timestamp: 'desc' },
-    }),
+  // Wrap each section so one failing table doesn't break the whole page
+  const [funnel, preview, personalization] = await Promise.all([
+    getCampaignFunnelStats().catch(() => [] as CampaignFunnelStats[]),
+    getPreviewEngagementStats().catch(() => ({
+      total_previews_generated: 0, total_previews_viewed: 0, total_cta_clicks: 0,
+      total_call_clicks: 0, total_return_visits: 0, avg_time_on_preview: null,
+      view_rate: 0, cta_click_rate: 0, hot_leads_from_previews: 0,
+      from_instantly: 0, from_cold_call: 0, from_meta_ad: 0, from_other: 0,
+    } as PreviewEngagementStats)),
+    getPersonalizationStats().catch(() => ({
+      total_personalized: 0, total_with_preview_url: 0,
+      total_missing_personalization: 0, total_missing_preview: 0,
+      personalization_coverage: 0, preview_coverage: 0,
+      quality_breakdown: { high: 0, medium: 0, low: 0, fallback: 0 },
+    } as PersonalizationStats)),
   ])
+
+  // These tables may not exist yet — gracefully handle
+  let recentDrips: any[] = []
+  let recentSync: any = null
+  try {
+    recentDrips = await prisma.instantlyDripLog.findMany({
+      orderBy: { date: 'desc' },
+      take: 14,
+    })
+  } catch { /* table may not exist */ }
+  try {
+    recentSync = await prisma.instantlySyncLog.findFirst({
+      orderBy: { timestamp: 'desc' },
+    })
+  } catch { /* table may not exist */ }
 
   // Calculate totals across campaigns
   const totalSent = funnel.reduce((sum, c) => sum + (c.total_leads - c.queued), 0)

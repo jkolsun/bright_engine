@@ -65,6 +65,7 @@ export async function GET(request: NextRequest) {
           email: rep.email,
           phone: rep.phone,
           status: rep.status,
+          portalType: rep.portalType,
           createdAt: rep.createdAt,
           stats: {
             assignedLeads: rep.assignedLeads.length,

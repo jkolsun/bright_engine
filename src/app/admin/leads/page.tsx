@@ -16,7 +16,10 @@ import {
 import Link from 'next/link'
 import { formatPhone } from '@/lib/utils'
 import { useState, useEffect } from 'react'
-import { Search, Filter, Download, Plus, Eye, TrendingUp, UserPlus, UserMinus, Users } from 'lucide-react'
+import {
+  Search, Filter, Plus, Eye, TrendingUp, UserPlus, UserMinus, Users,
+  FolderOpen, FolderPlus, ArrowLeft, Target, Mail, X
+} from 'lucide-react'
 
 export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -41,9 +44,20 @@ export default function LeadsPage() {
     source: 'COLD_EMAIL'
   })
 
+  // Folder state
+  const [folders, setFolders] = useState<any[]>([])
+  const [activeFolder, setActiveFolder] = useState<string | null>(null)
+  const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false)
+  const [newFolderName, setNewFolderName] = useState('')
+  const [creatingFolder, setCreatingFolder] = useState(false)
+
+  // Assignment destination state
+  const [assignDestination, setAssignDestination] = useState<'rep-tracker' | 'instantly' | null>(null)
+
   useEffect(() => {
     fetchLeads()
     fetchReps()
+    fetchFolders()
   }, [])
 
   const fetchLeads = async () => {
@@ -66,6 +80,32 @@ export default function LeadsPage() {
     } catch (error) {
       console.error('Failed to fetch reps:', error)
     }
+  }
+
+  const fetchFolders = async () => {
+    try {
+      const res = await fetch('/api/folders')
+      const data = await res.json()
+      setFolders(data.folders || [])
+    } catch { /* ignore */ }
+  }
+
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return
+    setCreatingFolder(true)
+    try {
+      const res = await fetch('/api/folders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newFolderName.trim() }),
+      })
+      if (res.ok) {
+        setNewFolderName('')
+        setNewFolderDialogOpen(false)
+        fetchFolders()
+      }
+    } catch { /* ignore */ }
+    finally { setCreatingFolder(false) }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -173,6 +213,7 @@ export default function LeadsPage() {
         alert(`${data.updated} lead${data.updated !== 1 ? 's' : ''} ${repName ? `assigned to ${repName}` : 'unassigned'}`)
         setSelectedLeads(new Set())
         setAssignDialogOpen(false)
+        setAssignDestination(null)
         fetchLeads()
         fetchReps()
       } else {
@@ -186,51 +227,10 @@ export default function LeadsPage() {
     }
   }
 
-  const handleExportCSV = () => {
-    const leadsToExport = selectedLeads.size > 0
-      ? filteredLeads.filter(l => selectedLeads.has(l.id))
-      : filteredLeads
-
-    if (leadsToExport.length === 0) {
-      alert('No leads to export')
-      return
-    }
-
-    const headers = ['First Name', 'Last Name', 'Company Name', 'Email', 'Phone', 'City', 'State', 'Industry', 'Status', 'Source', 'Assigned To']
-
-    const rows = leadsToExport.map(lead => [
-      lead.firstName || '',
-      lead.lastName || '',
-      lead.companyName || '',
-      lead.email || '',
-      lead.phone || '',
-      lead.city || '',
-      lead.state || '',
-      lead.industry || '',
-      lead.status || '',
-      lead.source || '',
-      lead.assignedTo?.name || ''
-    ])
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-
-    link.setAttribute('href', url)
-    link.setAttribute('download', `leads_export_${new Date().toISOString().split('T')[0]}.csv`)
-    link.style.visibility = 'hidden'
-
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-
-    alert(`Exported ${leadsToExport.length} leads to CSV`)
-    setSelectedLeads(new Set())
+  const handleAssignToInstantly = () => {
+    // Navigate to Instantly campaigns page with selected lead IDs in query
+    const leadIds = Array.from(selectedLeads).join(',')
+    window.location.href = `/admin/instantly?assignLeads=${leadIds}`
   }
 
   const handleDeleteSelected = async () => {
@@ -267,7 +267,12 @@ export default function LeadsPage() {
     }
   }
 
-  const filteredLeads = leads.filter(lead => {
+  // Filter leads: if a folder is active, only show leads in that folder
+  const folderFilteredLeads = activeFolder
+    ? leads.filter(l => l.folderId === activeFolder)
+    : leads
+
+  const filteredLeads = folderFilteredLeads.filter(lead => {
     const matchesSearch =
       lead.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -286,40 +291,172 @@ export default function LeadsPage() {
   })
 
   const stats = {
-    total: leads.length,
-    new: leads.filter(l => l.status === 'NEW').length,
-    hot: leads.filter(l => l.status === 'HOT_LEAD').length,
-    qualified: leads.filter(l => l.status === 'QUALIFIED').length,
-    building: leads.filter(l => l.status === 'BUILDING').length,
+    total: folderFilteredLeads.length,
+    new: folderFilteredLeads.filter(l => l.status === 'NEW').length,
+    hot: folderFilteredLeads.filter(l => l.status === 'HOT_LEAD').length,
+    qualified: folderFilteredLeads.filter(l => l.status === 'QUALIFIED').length,
+    building: folderFilteredLeads.filter(l => l.status === 'BUILDING').length,
   }
 
   const activeReps = reps.filter(r => r.status === 'ACTIVE')
+  const activeFolderData = folders.find(f => f.id === activeFolder)
+  const unfolderedCount = leads.filter(l => !l.folderId).length
+
+  // ===== FOLDER VIEW (no active folder selected) =====
+  if (!activeFolder) {
+    return (
+      <div className="p-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Leads</h1>
+            <p className="text-gray-500 mt-1">{leads.length} total leads in {folders.length} folders</p>
+          </div>
+          <div className="flex gap-3">
+            <Link href="/admin/import">
+              <Button variant="outline">
+                <Filter size={18} className="mr-2" />
+                Import
+              </Button>
+            </Link>
+            <Dialog open={newFolderDialogOpen} onOpenChange={setNewFolderDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <FolderPlus size={18} className="mr-2" />
+                  New Folder
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[400px]">
+                <DialogHeader>
+                  <DialogTitle>Create New Folder</DialogTitle>
+                  <DialogDescription>
+                    Organize your leads into folders for easy management.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Folder Name</label>
+                    <Input
+                      placeholder="e.g., January Import, Texas Leads..."
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setNewFolderDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleCreateFolder} disabled={creatingFolder || !newFolderName.trim()}>
+                    {creatingFolder ? 'Creating...' : 'Create Folder'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+
+        {/* Folders Grid */}
+        {loading ? (
+          <div className="text-center py-12 text-gray-500">Loading...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {folders.map((folder) => {
+              const folderLeads = leads.filter(l => l.folderId === folder.id)
+              const newCount = folderLeads.filter(l => l.status === 'NEW').length
+              const hotCount = folderLeads.filter(l => l.status === 'HOT_LEAD').length
+
+              return (
+                <Card
+                  key={folder.id}
+                  className="p-6 cursor-pointer hover:shadow-md transition-all hover:border-blue-300"
+                  onClick={() => { setActiveFolder(folder.id); setSelectedLeads(new Set()); setStatusFilter('all') }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: folder.color + '20' }}>
+                      <FolderOpen size={22} style={{ color: folder.color }} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900">{folder.name}</h3>
+                      <p className="text-sm text-gray-500 mt-1">{folder._count?.leads || 0} leads</p>
+                      <div className="flex gap-2 mt-2">
+                        {newCount > 0 && <Badge variant="secondary" className="text-xs">{newCount} new</Badge>}
+                        {hotCount > 0 && <Badge variant="destructive" className="text-xs">{hotCount} hot</Badge>}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              )
+            })}
+
+            {/* Unfoldered leads */}
+            {unfolderedCount > 0 && (
+              <Card
+                className="p-6 cursor-pointer hover:shadow-md transition-all hover:border-gray-400 border-dashed"
+                onClick={() => { setActiveFolder('unfoldered'); setSelectedLeads(new Set()); setStatusFilter('all') }}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                    <FolderOpen size={22} className="text-gray-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-700">Unorganized</h3>
+                    <p className="text-sm text-gray-500 mt-1">{unfolderedCount} leads not in any folder</p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {folders.length === 0 && unfolderedCount === 0 && (
+              <div className="col-span-full text-center py-12">
+                <FolderOpen size={48} className="text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No folders yet</h3>
+                <p className="text-gray-600 mb-4">Create a folder or import leads to get started</p>
+                <div className="flex gap-3 justify-center">
+                  <Button onClick={() => setNewFolderDialogOpen(true)}>
+                    <FolderPlus size={18} className="mr-2" />
+                    New Folder
+                  </Button>
+                  <Link href="/admin/import">
+                    <Button variant="outline">Import Leads</Button>
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ===== LEAD LIST VIEW (inside a folder) =====
+  // If activeFolder === 'unfoldered', show leads with no folder
+  const folderLeadsForView = activeFolder === 'unfoldered'
+    ? leads.filter(l => !l.folderId)
+    : leads.filter(l => l.folderId === activeFolder)
 
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Leads</h1>
-          <p className="text-gray-500 mt-1">{stats.total} total leads</p>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => { setActiveFolder(null); setSelectedLeads(new Set()) }}>
+            <ArrowLeft size={18} />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {activeFolderData?.name || 'Unorganized'}
+            </h1>
+            <p className="text-gray-500 mt-1">{stats.total} leads</p>
+          </div>
         </div>
         <div className="flex gap-3">
+          {/* Assignment button — opens destination picker */}
           <Button
             variant="outline"
             onClick={() => setAssignDialogOpen(true)}
             disabled={selectedLeads.size === 0}
           >
             <UserPlus size={18} className="mr-2" />
-            Assign to Rep {selectedLeads.size > 0 && `(${selectedLeads.size})`}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleExportCSV}
-            disabled={leads.length === 0}
-            title={selectedLeads.size > 0 ? `Export ${selectedLeads.size} selected leads` : 'Export all leads'}
-          >
-            <Download size={18} className="mr-2" />
-            Export {selectedLeads.size > 0 && `(${selectedLeads.size})`}
+            Assignment {selectedLeads.size > 0 && `(${selectedLeads.size})`}
           </Button>
           <Button
             variant="destructive"
@@ -328,12 +465,6 @@ export default function LeadsPage() {
           >
             Delete {selectedLeads.size > 0 && `(${selectedLeads.size})`}
           </Button>
-          <Link href="/admin/import">
-            <Button variant="outline">
-              <Filter size={18} className="mr-2" />
-              Import
-            </Button>
-          </Link>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -452,62 +583,112 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      {/* Assign to Rep Dialog */}
-      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+      {/* Assignment Dialog — Step 1: Choose destination */}
+      <Dialog open={assignDialogOpen} onOpenChange={(open) => { setAssignDialogOpen(open); if (!open) setAssignDestination(null) }}>
         <DialogContent className="sm:max-w-[450px]">
-          <DialogHeader>
-            <DialogTitle>Assign {selectedLeads.size} Lead{selectedLeads.size !== 1 ? 's' : ''} to Rep</DialogTitle>
-            <DialogDescription>
-              Choose a sales rep to assign the selected leads to.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-2 max-h-[400px] overflow-y-auto">
-            {/* Unassign option */}
-            <button
-              onClick={() => handleBulkAssign(null)}
-              disabled={assigning}
-              className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-left disabled:opacity-50"
-            >
-              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                <UserMinus size={18} className="text-gray-500" />
+          {!assignDestination ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Assign {selectedLeads.size} Lead{selectedLeads.size !== 1 ? 's' : ''}</DialogTitle>
+                <DialogDescription>
+                  Choose where to assign the selected leads.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4 space-y-3">
+                <button
+                  onClick={() => setAssignDestination('rep-tracker')}
+                  className="w-full flex items-center gap-4 p-4 rounded-lg border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all text-left"
+                >
+                  <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <Target size={24} className="text-blue-600" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-gray-900">Sales Rep Tracker</div>
+                    <div className="text-sm text-gray-500">Assign to a sales rep for calling</div>
+                  </div>
+                </button>
+                <button
+                  onClick={handleAssignToInstantly}
+                  className="w-full flex items-center gap-4 p-4 rounded-lg border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 transition-all text-left"
+                >
+                  <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <Mail size={24} className="text-purple-600" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-gray-900">Instantly Campaigns</div>
+                    <div className="text-sm text-gray-500">Add to an email campaign</div>
+                  </div>
+                </button>
               </div>
-              <div className="flex-1">
-                <div className="font-medium text-gray-900">Unassign</div>
-                <div className="text-sm text-gray-500">Remove rep assignment</div>
-              </div>
-            </button>
+            </>
+          ) : (
+            <>
+              {/* Step 2: Choose rep */}
+              <DialogHeader>
+                <DialogTitle>
+                  <button onClick={() => setAssignDestination(null)} className="mr-2 text-gray-400 hover:text-gray-600">
+                    <ArrowLeft size={18} className="inline" />
+                  </button>
+                  Assign to Sales Rep
+                </DialogTitle>
+                <DialogDescription>
+                  Choose a sales rep to assign {selectedLeads.size} lead{selectedLeads.size !== 1 ? 's' : ''} to.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4 space-y-2 max-h-[400px] overflow-y-auto">
+                {/* Unassign option */}
+                <button
+                  onClick={() => handleBulkAssign(null)}
+                  disabled={assigning}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-left disabled:opacity-50"
+                >
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                    <UserMinus size={18} className="text-gray-500" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">Unassign</div>
+                    <div className="text-sm text-gray-500">Remove rep assignment</div>
+                  </div>
+                </button>
 
-            {/* Rep options */}
-            {activeReps.map((rep) => (
-              <button
-                key={rep.id}
-                onClick={() => handleBulkAssign(rep.id)}
-                disabled={assigning}
-                className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors text-left disabled:opacity-50"
-              >
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <span className="text-blue-700 font-semibold text-sm">
-                    {rep.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
-                  </span>
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900">{rep.name}</div>
-                  <div className="text-sm text-gray-500">{rep.stats?.assignedLeads || 0} leads assigned</div>
-                </div>
-                <Badge variant="secondary" className="text-xs">
-                  {rep.stats?.monthActivity?.closes || 0} closes
-                </Badge>
-              </button>
-            ))}
+                {/* Rep options */}
+                {activeReps.map((rep) => (
+                  <button
+                    key={rep.id}
+                    onClick={() => handleBulkAssign(rep.id)}
+                    disabled={assigning}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors text-left disabled:opacity-50"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-blue-700 font-semibold text-sm">
+                        {rep.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">
+                        {rep.name}
+                        {rep.portalType === 'PART_TIME' && (
+                          <Badge variant="secondary" className="ml-2 text-xs">Part-Time</Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-500">{rep.stats?.assignedLeads || 0} leads assigned</div>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {rep.stats?.monthActivity?.closes || 0} closes
+                    </Badge>
+                  </button>
+                ))}
 
-            {activeReps.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <Users size={32} className="mx-auto mb-2 text-gray-300" />
-                <p>No active reps found.</p>
-                <p className="text-sm">Create reps in Settings first.</p>
+                {activeReps.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users size={32} className="mx-auto mb-2 text-gray-300" />
+                    <p>No active reps found.</p>
+                    <p className="text-sm">Create reps in Settings first.</p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -518,7 +699,7 @@ export default function LeadsPage() {
         <StatCard label="Hot Leads" value={stats.hot} variant="danger" onClick={() => { setStatusFilter('HOT_LEAD'); setSelectedLeads(new Set()) }} active={statusFilter === 'HOT_LEAD'} />
         <StatCard label="Qualified" value={stats.qualified} variant="success" onClick={() => { setStatusFilter('QUALIFIED'); setSelectedLeads(new Set()) }} active={statusFilter === 'QUALIFIED'} />
         <StatCard label="Building" value={stats.building} variant="warning" onClick={() => { setStatusFilter('BUILDING'); setSelectedLeads(new Set()) }} active={statusFilter === 'BUILDING'} />
-        <StatCard label="Closed" value={leads.filter(l => l.status === 'PAID').length} variant="success" onClick={() => { setStatusFilter('PAID'); setSelectedLeads(new Set()) }} active={statusFilter === 'PAID'} />
+        <StatCard label="Closed" value={folderFilteredLeads.filter(l => l.status === 'PAID').length} variant="success" onClick={() => { setStatusFilter('PAID'); setSelectedLeads(new Set()) }} active={statusFilter === 'PAID'} />
       </div>
 
       {/* Search & Filters */}
@@ -621,7 +802,7 @@ export default function LeadsPage() {
                           {lead.assignedTo.name}
                         </span>
                       ) : (
-                        <span className="text-sm text-gray-400">—</span>
+                        <span className="text-sm text-gray-400">&mdash;</span>
                       )}
                     </td>
                     <td className="p-4">

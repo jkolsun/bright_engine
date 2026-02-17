@@ -4,24 +4,36 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useState, useEffect } from 'react'
 import {
-  Mail, Phone, MessageSquare, Eye, TrendingUp, Search, Filter
+  Mail, Phone, Eye, TrendingUp, Search, UserPlus, UserMinus, Users
 } from 'lucide-react'
 import Link from 'next/link'
 
-export default function OutboundTrackerPage() {
+export default function SalesRepTrackerPage() {
   const [leads, setLeads] = useState<any[]>([])
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterView, setFilterView] = useState('all')
-
   const [engagementScores, setEngagementScores] = useState<Record<string, any>>({})
+
+  // Assignment state
+  const [reps, setReps] = useState<any[]>([])
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set())
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false)
+  const [assigning, setAssigning] = useState(false)
 
   useEffect(() => {
     loadData()
-    // Auto-refresh engagement scores every 30 seconds
+    fetchReps()
     const interval = setInterval(() => {
       fetch('/api/engagement-score?all=true')
         .then(res => res.ok ? res.json() : null)
@@ -66,14 +78,72 @@ export default function OutboundTrackerPage() {
         setEngagementScores(scoresMap)
       }
     } catch (error) {
-      console.error('Failed to load outbound data:', error)
+      console.error('Failed to load data:', error)
     } finally {
       setLoading(false)
     }
   }
 
+  const fetchReps = async () => {
+    try {
+      const res = await fetch('/api/reps')
+      const data = await res.json()
+      setReps(data.reps || [])
+    } catch { /* ignore */ }
+  }
+
+  const handleSelectLead = (leadId: string) => {
+    const newSelected = new Set(selectedLeads)
+    if (newSelected.has(leadId)) {
+      newSelected.delete(leadId)
+    } else {
+      newSelected.add(leadId)
+    }
+    setSelectedLeads(newSelected)
+  }
+
+  const handleSelectAll = () => {
+    if (selectedLeads.size === filteredLeads.length) {
+      setSelectedLeads(new Set())
+    } else {
+      setSelectedLeads(new Set(filteredLeads.map(l => l.id)))
+    }
+  }
+
+  const handleBulkAssign = async (repId: string | null) => {
+    if (selectedLeads.size === 0) return
+    setAssigning(true)
+    try {
+      const res = await fetch('/api/admin/bulk-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reassign',
+          leadIds: Array.from(selectedLeads),
+          payload: { repId }
+        })
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const repName = repId ? reps.find(r => r.id === repId)?.name : null
+        alert(`${data.updated} lead${data.updated !== 1 ? 's' : ''} ${repName ? `assigned to ${repName}` : 'unassigned'}`)
+        setSelectedLeads(new Set())
+        setAssignDialogOpen(false)
+        loadData()
+        fetchReps()
+      } else {
+        alert('Failed to assign leads')
+      }
+    } catch (error) {
+      console.error('Error assigning leads:', error)
+      alert('Failed to assign leads')
+    } finally {
+      setAssigning(false)
+    }
+  }
+
   const filteredLeads = leads.filter(lead => {
-    const matchesSearch = 
+    const matchesSearch =
       lead.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.companyName?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -82,11 +152,10 @@ export default function OutboundTrackerPage() {
     if (filterView === 'hot') return matchesSearch && lead.status === 'HOT_LEAD'
     if (filterView === 'qualified') return matchesSearch && lead.status === 'QUALIFIED'
     if (filterView === 'building') return matchesSearch && lead.status === 'BUILDING'
-    
+
     return matchesSearch
   })
 
-  // Get real engagement score from API cache
   const getEngagementScore = (lead: any) => {
     const scoreData = engagementScores[lead.id]
     return scoreData?.score || 0
@@ -95,18 +164,18 @@ export default function OutboundTrackerPage() {
   const getTemperature = (leadId: string) => {
     const scoreData = engagementScores[leadId]
     const temperature = scoreData?.temperature || 'COLD'
-    
+
     const colorMap: Record<string, string> = {
       'COLD': 'bg-blue-100 text-blue-800',
       'WARM': 'bg-amber-100 text-amber-800',
       'HOT': 'bg-red-100 text-red-800',
     }
-    
+
     return { label: temperature, color: colorMap[temperature] }
   }
 
   if (loading) {
-    return <div className="p-8 text-center">Loading outbound tracker...</div>
+    return <div className="p-8 text-center">Loading sales rep tracker...</div>
   }
 
   const defaultStats = {
@@ -116,15 +185,88 @@ export default function OutboundTrackerPage() {
   }
 
   const data = stats || defaultStats
+  const activeReps = reps.filter(r => r.status === 'ACTIVE')
 
   return (
     <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Multi-Channel Outbound Tracker</h1>
-        <p className="text-gray-500 mt-1">
-          Track every touchpoint across email, calls, texts, and previews with AI-powered recommendations
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Sales Rep Tracker</h1>
+          <p className="text-gray-500 mt-1">
+            Track every touchpoint across email, calls, texts, and previews with AI-powered recommendations
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => setAssignDialogOpen(true)}
+          disabled={selectedLeads.size === 0}
+        >
+          <UserPlus size={18} className="mr-2" />
+          Assign to Rep {selectedLeads.size > 0 && `(${selectedLeads.size})`}
+        </Button>
       </div>
+
+      {/* Assign to Rep Dialog — includes both full-time and part-time reps */}
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle>Assign {selectedLeads.size} Lead{selectedLeads.size !== 1 ? 's' : ''} to Rep</DialogTitle>
+            <DialogDescription>
+              Choose a sales rep (full-time or part-time) to assign the selected leads to.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2 max-h-[400px] overflow-y-auto">
+            <button
+              onClick={() => handleBulkAssign(null)}
+              disabled={assigning}
+              className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-left disabled:opacity-50"
+            >
+              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                <UserMinus size={18} className="text-gray-500" />
+              </div>
+              <div className="flex-1">
+                <div className="font-medium text-gray-900">Unassign</div>
+                <div className="text-sm text-gray-500">Remove rep assignment</div>
+              </div>
+            </button>
+
+            {activeReps.map((rep) => (
+              <button
+                key={rep.id}
+                onClick={() => handleBulkAssign(rep.id)}
+                disabled={assigning}
+                className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors text-left disabled:opacity-50"
+              >
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <span className="text-blue-700 font-semibold text-sm">
+                    {rep.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
+                  </span>
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900">
+                    {rep.name}
+                    {rep.portalType === 'PART_TIME' && (
+                      <Badge variant="secondary" className="ml-2 text-xs">Part-Time</Badge>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-500">{rep.stats?.assignedLeads || 0} leads assigned</div>
+                </div>
+                <Badge variant="secondary" className="text-xs">
+                  {rep.stats?.monthActivity?.closes || 0} closes
+                </Badge>
+              </button>
+            ))}
+
+            {activeReps.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <Users size={32} className="mx-auto mb-2 text-gray-300" />
+                <p>No active reps found.</p>
+                <p className="text-sm">Create reps in Settings first.</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Channel Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -171,28 +313,28 @@ export default function OutboundTrackerPage() {
       <Card className="p-4">
         <div className="flex items-center gap-4">
           <div className="flex gap-2">
-            <Button 
+            <Button
               variant={filterView === 'all' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setFilterView('all')}
             >
               All ({leads.length})
             </Button>
-            <Button 
+            <Button
               variant={filterView === 'hot' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setFilterView('hot')}
             >
               Hot ({leads.filter(l => l.status === 'HOT_LEAD').length})
             </Button>
-            <Button 
+            <Button
               variant={filterView === 'qualified' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setFilterView('qualified')}
             >
               Qualified ({leads.filter(l => l.status === 'QUALIFIED').length})
             </Button>
-            <Button 
+            <Button
               variant={filterView === 'building' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setFilterView('building')}
@@ -202,8 +344,8 @@ export default function OutboundTrackerPage() {
           </div>
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <Input 
-              className="pl-10" 
+            <Input
+              className="pl-10"
               placeholder="Search by name, company, or location..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -235,9 +377,19 @@ export default function OutboundTrackerPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
+                  <th className="text-center p-4 w-12">
+                    <input
+                      type="checkbox"
+                      checked={selectedLeads.size === filteredLeads.length && filteredLeads.length > 0}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 cursor-pointer"
+                      title="Select all"
+                    />
+                  </th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Lead</th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Company</th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Location</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Assigned To</th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Status</th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Temperature</th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Engagement</th>
@@ -248,9 +400,17 @@ export default function OutboundTrackerPage() {
                 {filteredLeads.map((lead) => {
                   const score = getEngagementScore(lead)
                   const temp = getTemperature(lead.id)
-                  
+
                   return (
-                    <tr key={lead.id} className="hover:bg-gray-50">
+                    <tr key={lead.id} className={`hover:bg-gray-50 ${selectedLeads.has(lead.id) ? 'bg-blue-50' : ''}`}>
+                      <td className="text-center p-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeads.has(lead.id)}
+                          onChange={() => handleSelectLead(lead.id)}
+                          className="w-4 h-4 cursor-pointer"
+                        />
+                      </td>
                       <td className="p-4">
                         <div className="font-medium text-gray-900">
                           {lead.firstName} {lead.lastName}
@@ -262,6 +422,18 @@ export default function OutboundTrackerPage() {
                       <td className="p-4 text-gray-700">{lead.companyName}</td>
                       <td className="p-4 text-gray-700">
                         {lead.city && lead.state ? `${lead.city}, ${lead.state}` : '-'}
+                      </td>
+                      <td className="p-4">
+                        {lead.assignedTo ? (
+                          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-full">
+                            <span className="w-5 h-5 rounded-full bg-blue-200 flex items-center justify-center text-[10px] font-bold text-blue-800">
+                              {lead.assignedTo.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                            </span>
+                            {lead.assignedTo.name}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-400">&mdash;</span>
+                        )}
                       </td>
                       <td className="p-4">
                         <Badge variant={
@@ -296,18 +468,18 @@ export default function OutboundTrackerPage() {
 
       {/* Info Card */}
       <Card className="p-6 bg-blue-50 border-blue-200">
-        <h3 className="font-semibold text-gray-900 mb-3">📊 Engagement Scoring</h3>
+        <h3 className="font-semibold text-gray-900 mb-3">Engagement Scoring</h3>
         <div className="space-y-2 text-sm text-gray-700">
           <p className="font-medium">Score Calculation:</p>
           <div className="grid grid-cols-2 gap-4 ml-2">
             <div>
-              <div>📧 Email opened: <span className="font-semibold">+2</span></div>
-              <div>👀 Preview viewed: <span className="font-semibold">+3</span></div>
-              <div>🖱️ CTA clicked: <span className="font-semibold">+5</span></div>
+              <div>Email opened: <span className="font-semibold">+2</span></div>
+              <div>Preview viewed: <span className="font-semibold">+3</span></div>
+              <div>CTA clicked: <span className="font-semibold">+5</span></div>
             </div>
             <div>
-              <div>☎️ Call connected: <span className="font-semibold">+7</span></div>
-              <div>💬 Text responded: <span className="font-semibold">+4</span></div>
+              <div>Call connected: <span className="font-semibold">+7</span></div>
+              <div>Text responded: <span className="font-semibold">+4</span></div>
             </div>
           </div>
           <p className="font-medium mt-3">Temperature Ranges:</p>

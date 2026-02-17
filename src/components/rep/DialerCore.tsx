@@ -43,6 +43,7 @@ import {
   Clock,
   MousePointerClick,
   RotateCcw,
+  PhoneOff,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useState, useEffect, useRef } from 'react'
@@ -386,6 +387,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         case 't': case 'T': e.preventDefault(); handleAutoText(); break
         case 'n': case 'N': e.preventDefault(); setShowNoteDialog(true); break
         case 'h': case 'H': e.preventDefault(); handleHold(); break
+        case 'x': case 'X': e.preventDefault(); handleHangup(); break
       }
     }
 
@@ -492,6 +494,29 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           body: JSON.stringify({ callId: activeCallId, action: 'hold' }),
         }).catch(() => {})
       }
+    }
+  }
+
+  const handleHangup = async (callId?: string) => {
+    const idToHangup = callId || activeCallId
+    if (idToHangup) {
+      fetch('/api/dialer/hangup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callId: idToHangup }),
+      }).catch(() => {})
+    }
+    // If hanging up a specific parallel line, mark it as dropped
+    if (callId && callId !== activeCallId) {
+      setParallelLines(prev => prev.map(line =>
+        line.callId === callId ? { ...line, status: 'dropped' } : line
+      ))
+    } else {
+      // Hanging up the active call — reset to idle so rep can log outcome
+      setCallPhase('idle')
+      setCallActive(false)
+      setParallelLines([])
+      setCallStartTime(null)
     }
   }
 
@@ -993,8 +1018,8 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                       <MicOff size={16} className="mr-1" /> VM - Skip
                     </Button>
                   </div>
-                  <Button variant="ghost" size="sm" className="w-full text-gray-500" onClick={() => { setCallActive(false); setCallPhase('idle'); setParallelLines([]); setCallStartTime(null) }}>
-                    <ArrowLeft size={14} className="mr-1" /> Cancel
+                  <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => handleHangup()}>
+                    <PhoneOff size={16} className="mr-1" /> Hang Up
                   </Button>
                 </div>
               ) : (
@@ -1017,7 +1042,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                     <button onClick={handleAutoText} className="hover:bg-gray-700 rounded px-1.5 py-1 text-purple-400">[T] Text</button>
                     <button onClick={() => setShowNoteDialog(true)} className="hover:bg-gray-700 rounded px-1.5 py-1 text-yellow-400">[N] Note</button>
                     <button onClick={handleHold} className="hover:bg-gray-700 rounded px-1.5 py-1 text-cyan-400">[H] Hold</button>
-                    <button onClick={() => handleOutcome('interested')} className="hover:bg-gray-700 rounded px-1.5 py-1 text-green-500 font-bold">Close</button>
+                    <button onClick={() => handleHangup()} className="hover:bg-gray-700 rounded px-1.5 py-1 text-red-500 font-bold">[X] Hangup</button>
                   </div>
                 </div>
               )}
@@ -1053,6 +1078,15 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                        line.status === 'ringing' ? 'Ringing...' :
                        line.status === 'dropped' ? 'Dropped' : line.status}
                     </Badge>
+                    {line.status !== 'dropped' && (
+                      <button
+                        onClick={() => handleHangup(line.callId)}
+                        className="text-red-500 hover:text-red-700 p-0.5"
+                        title="Hang up this line"
+                      >
+                        <PhoneOff size={14} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </Card>
