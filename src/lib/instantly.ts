@@ -1,12 +1,132 @@
 /**
  * Instantly Integration — Core Drip Feed Algorithm
- * Daily capacity calculation + lead pushing
+ * Daily capacity calculation + lead pushing + full email sequences
  */
 
 import { prisma } from './db'
 
 const INSTANTLY_API_BASE = 'https://api.instantly.ai/api/v2'
 const SAFETY_BUFFER = 0.85 // Only tunable config — conservative margin
+
+// ============================================
+// EMAIL SEQUENCES — From Operating Manual
+// Campaign A: Bad Website | Campaign B: No Website
+// Variables: {{first_name}}, {{company_name}}, {{preview_url}}, {{industry}}, {{location}}
+// ============================================
+
+const SEQUENCE_A_BAD_WEBSITE = [
+  {
+    delay: 0,
+    subject: "{{company_name}}'s website",
+    body: `Hey {{first_name}},
+
+I came across {{company_name}} and pulled up your site. Looks like it could use a refresh — not loading great on mobile and the design is dated.
+
+That matters because 70% of people searching for {{industry}} services are on their phone. If your site doesn't look right, they're calling your competitor.
+
+I actually already mocked up what a new site would look like for {{company_name}}: {{preview_url}}
+
+$149 to make it live. No contracts, no hassle.
+
+Andrew
+Bright Automations`,
+  },
+  {
+    delay: 2,
+    subject: "Re: {{company_name}}'s website",
+    body: `Hey {{first_name}},
+
+Quick follow-up — did you get a chance to look at the preview I built for you? {{preview_url}}
+
+The businesses we've built sites for are seeing more calls and form fills within the first week.
+
+$149, live by {{delivery_date}}. Takes 10 minutes of your time.
+
+Andrew`,
+  },
+  {
+    delay: 2,
+    subject: "Re: {{company_name}}'s website",
+    body: `{{first_name}},
+
+Just wrapped a site for a {{industry}} company in {{location}}. They got 3 new leads in the first week.
+
+Your preview is still live: {{preview_url}} — but it expires in a few days.
+
+$149 to make it permanent. I handle everything.
+
+Andrew`,
+  },
+  {
+    delay: 2,
+    subject: "Re: {{company_name}}'s website",
+    body: `Hey {{first_name}},
+
+Your preview site expires tomorrow. If a $149 professional website isn't on your radar right now, no worries at all.
+
+But if it ever is, just reply to this email and we'll rebuild it in 48 hours.
+
+Good luck with {{company_name}}.
+
+Andrew`,
+  },
+]
+
+const SEQUENCE_B_NO_WEBSITE = [
+  {
+    delay: 0,
+    subject: "Found {{company_name}} on Google but no website",
+    body: `Hey {{first_name}},
+
+I searched for {{industry}} in {{location}} and found {{company_name}} on Google Maps — but no website. Most people won't call a business with no site.
+
+I put together a preview of what a site could look like for you: {{preview_url}}
+
+$149 to go live with your own domain. You'd have a real site showing up on Google by this weekend.
+
+Andrew
+Bright Automations`,
+  },
+  {
+    delay: 2,
+    subject: "Re: Found {{company_name}} on Google but no website",
+    body: `{{first_name}},
+
+97% of people search online before hiring a local service company. Without a website, you're invisible to almost all of them.
+
+Your preview is still live: {{preview_url}}
+
+$149. We handle everything. No maintenance headaches.
+
+Andrew`,
+  },
+  {
+    delay: 2,
+    subject: "Re: Found {{company_name}} on Google but no website",
+    body: `{{first_name}},
+
+I searched '{{industry}} in {{location}}' and the top 5 results all have sites with reviews and click-to-call. They're getting calls that should go to you.
+
+Your preview expires in 2 days: {{preview_url}}
+
+Reply 'yes' and I'll get started today. $149.
+
+Andrew`,
+  },
+  {
+    delay: 2,
+    subject: "Re: Found {{company_name}} on Google but no website",
+    body: `Hey {{first_name}},
+
+Last note. Your preview expires today. If you ever want a website for {{company_name}}, just reply.
+
+$149, 48 hours, we handle everything.
+
+Good luck.
+
+Andrew`,
+  },
+]
 
 /**
  * Main daily sync + calculate + push
@@ -297,18 +417,28 @@ async function pushLeadsPerCampaign(calculations: any) {
       continue
     }
 
-    // Format for Instantly API
-    const pushLeads = leadsToPush.map((lead) => ({
-      email: lead.email || undefined,
-      first_name: lead.firstName || undefined,
-      last_name: lead.lastName || undefined,
-      company_name: lead.companyName || undefined,
-      website: lead.website || undefined,
-      phone: lead.phone || undefined,
-      // Custom variables for personalization
-      preview_url: lead.previewUrl || '',
-      personalization: lead.personalization || '',
-    }))
+    // Format for Instantly API with full custom variables
+    // These map to {{variable}} merge tags in email sequences
+    const pushLeads = leadsToPush.map((lead) => {
+      const deliveryDate = new Date()
+      deliveryDate.setDate(deliveryDate.getDate() + 3)
+      const deliveryStr = deliveryDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+
+      return {
+        email: lead.email || undefined,
+        first_name: lead.firstName || undefined,
+        last_name: lead.lastName || undefined,
+        company_name: lead.companyName || undefined,
+        website: lead.website || undefined,
+        phone: lead.phone || undefined,
+        // Custom variables for email sequence merge tags
+        preview_url: lead.previewUrl || '',
+        personalization: lead.personalization || '',
+        industry: formatIndustry(lead.industry) || 'home service',
+        location: [lead.city, lead.state].filter(Boolean).join(', ') || '',
+        delivery_date: deliveryStr,
+      }
+    })
 
     try {
       // Push to Instantly API
@@ -460,11 +590,55 @@ export async function handleInstantlyWebhook(event: any) {
         break
 
       case 'email_opened':
-        // Track opens (optional)
+        // Track email opens
+        await prisma.leadEvent.create({
+          data: {
+            leadId: lead.id,
+            eventType: 'EMAIL_OPENED',
+            actor: 'system',
+            metadata: { source: 'instantly', campaign_id },
+          },
+        })
+        // Update outbound event if exists
+        await prisma.outboundEvent.updateMany({
+          where: { leadId: lead.id, channel: 'INSTANTLY', openedAt: null },
+          data: { status: 'OPENED', openedAt: new Date() },
+        })
+        console.log(`[Instantly] Lead ${email} opened email`)
         break
 
       case 'link_clicked':
-        // Track clicks (optional)
+        // Track link clicks — likely preview URL click
+        await prisma.leadEvent.create({
+          data: {
+            leadId: lead.id,
+            eventType: 'PREVIEW_VIEWED',
+            actor: 'system',
+            metadata: { source: 'instantly', campaign_id, click_url: body },
+          },
+        })
+        // Update outbound event
+        await prisma.outboundEvent.updateMany({
+          where: { leadId: lead.id, channel: 'INSTANTLY', clickedAt: null },
+          data: { status: 'CLICKED', clickedAt: new Date() },
+        })
+        // Check for hot lead promotion (clicked preview = high engagement)
+        if (lead.status === 'NEW' || lead.status === 'BUILDING') {
+          await prisma.lead.update({
+            where: { id: lead.id },
+            data: { status: 'HOT_LEAD', priority: 'HOT' },
+          })
+          // Create hot lead notification
+          await prisma.notification.create({
+            data: {
+              type: 'HOT_LEAD',
+              title: `Preview Clicked: ${lead.companyName}`,
+              message: `${lead.firstName} at ${lead.companyName} clicked their preview link from Instantly campaign. Follow up ASAP.`,
+              metadata: { leadId: lead.id, source: 'instantly_click' },
+            },
+          })
+        }
+        console.log(`[Instantly] Lead ${email} clicked link (likely preview)`)
         break
 
       default:
@@ -474,6 +648,27 @@ export async function handleInstantlyWebhook(event: any) {
     console.error('[Instantly] Webhook handling failed:', error)
     throw error
   }
+}
+
+/**
+ * Format industry slug into human-readable text for email merge tags
+ */
+function formatIndustry(industry: string): string {
+  const map: Record<string, string> = {
+    RESTORATION: 'restoration',
+    WATER_DAMAGE: 'water damage restoration',
+    ROOFING: 'roofing',
+    PLUMBING: 'plumbing',
+    HVAC: 'HVAC',
+    PAINTING: 'painting',
+    LANDSCAPING: 'landscaping',
+    ELECTRICAL: 'electrical',
+    GENERAL_CONTRACTING: 'general contracting',
+    CLEANING: 'cleaning',
+    PEST_CONTROL: 'pest control',
+    CONSTRUCTION: 'construction',
+  }
+  return map[industry] || industry.toLowerCase().replace(/_/g, ' ')
 }
 
 /**
@@ -526,7 +721,7 @@ async function ensureCampaignsExist() {
 
     console.log('[Instantly] Creating Campaign A & B in Instantly...')
 
-    // Create Campaign A
+    // Create Campaign A — Bad Website sequence (4 emails, 2 days apart)
     const campaignARes = await fetch(`${INSTANTLY_API_BASE}/campaigns`, {
       method: 'POST',
       headers: {
@@ -535,17 +730,16 @@ async function ensureCampaignsExist() {
       },
       body: JSON.stringify({
         name: 'Campaign A - Bad Website',
-        description: 'Leads with bad or outdated websites',
-        email_list: [], // Will be assigned during sync
+        description: 'Leads with bad or outdated websites — 4-email sequence with preview links',
+        email_list: [],
         sequences: [
           {
-            name: 'Default Sequence',
-            steps: [
-              { delay: 0, subject: 'Step 1', body: '' },
-              { delay: 2, subject: 'Step 2', body: '' },
-              { delay: 4, subject: 'Step 3', body: '' },
-              { delay: 6, subject: 'Step 4', body: '' },
-            ],
+            name: 'Bad Website Sequence',
+            steps: SEQUENCE_A_BAD_WEBSITE.map((step) => ({
+              delay: step.delay,
+              subject: step.subject,
+              body: step.body,
+            })),
           },
         ],
       }),
@@ -560,7 +754,7 @@ async function ensureCampaignsExist() {
       console.log('[Instantly] Campaign A created:', campaignAId)
     }
 
-    // Create Campaign B
+    // Create Campaign B — No Website sequence (4 emails, 2 days apart)
     const campaignBRes = await fetch(`${INSTANTLY_API_BASE}/campaigns`, {
       method: 'POST',
       headers: {
@@ -569,17 +763,16 @@ async function ensureCampaignsExist() {
       },
       body: JSON.stringify({
         name: 'Campaign B - No Website',
-        description: 'Leads without websites',
+        description: 'Leads without websites — 4-email sequence with preview links',
         email_list: [],
         sequences: [
           {
-            name: 'Default Sequence',
-            steps: [
-              { delay: 0, subject: 'Step 1', body: '' },
-              { delay: 2, subject: 'Step 2', body: '' },
-              { delay: 4, subject: 'Step 3', body: '' },
-              { delay: 6, subject: 'Step 4', body: '' },
-            ],
+            name: 'No Website Sequence',
+            steps: SEQUENCE_B_NO_WEBSITE.map((step) => ({
+              delay: step.delay,
+              subject: step.subject,
+              body: step.body,
+            })),
           },
         ],
       }),

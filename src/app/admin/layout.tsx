@@ -3,17 +3,18 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { 
-  LayoutDashboard, 
-  Users, 
-  UserCircle, 
-  DollarSign, 
+import {
+  LayoutDashboard,
+  Users,
+  UserCircle,
+  DollarSign,
   MessageSquare,
   Settings,
   LogOut,
   Upload,
   Target,
-  Zap
+  Zap,
+  Mail
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -78,6 +79,9 @@ export default function AdminLayout({
           </NavLink>
           <NavLink href="/admin/outbound" icon={<Target size={20} />}>
             Outbound Tracker
+          </NavLink>
+          <NavLink href="/admin/instantly" icon={<Mail size={20} />}>
+            Instantly Campaigns
           </NavLink>
           <NavLink href="/admin/clawdbot-monitor" icon={<Zap size={20} />}>
             Clawdbot Monitor
