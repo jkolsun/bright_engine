@@ -57,37 +57,76 @@ const ARTIFACT_PRIORITY: Array<Artifact['type']> = [
 ]
 
 // ============================================
-// SYSTEM PROMPT (from reference algorithm)
+// ARTIFACT TEXT QUALITY CHECK
 // ============================================
 
-const SYSTEM_PROMPT = `Write a cold email opener that sounds personal and conversational.
+function isArtifactTextUsable(text: string): boolean {
+  if (!text || text.length < 5) return false
 
-You're writing TO the person, not ABOUT their company. Use "you/your" language.
+  const words = text.trim().split(/\s+/)
 
-WRONG (sounds like a news article):
-- "The McGuire Firm has secured over $29M in verdicts."
-- "Smith Law boasts a 4.9 star rating."
+  // Too short to be meaningful
+  if (words.length < 2) return false
 
-RIGHT (sounds like a personal email):
-- "Securing $29M in verdicts for your clients, that kind of track record speaks for itself."
-- "Your 4.9 stars across 200+ reviews caught my eye, that's rare in this space."
-- "30 years building your practice in Dallas, you've clearly figured something out."
+  // Ends with article/preposition (truncated)
+  const lastWord = words[words.length - 1].toLowerCase().replace(/[.,!?"']+$/, '')
+  const truncationEnds = ['a', 'an', 'the', 'to', 'of', 'in', 'for', 'with', 'and', 'or', 'but', 'from', 'by', 'on', 'at', 'is', 'are', 'was']
+  if (truncationEnds.includes(lastWord)) return false
+
+  // Starts with lowercase article (probably a fragment)
+  if (/^(the|a|an)\s/i.test(text) && words.length < 4) return false
+
+  // Contains obvious truncation patterns
+  if (text.endsWith('...') || text.endsWith('…')) return false
+
+  // Has unmatched quotes
+  const dq = (text.match(/"/g) || []).length
+  if (dq % 2 !== 0) return false
+
+  // Only generic/meaningless words
+  const genericOnly = words.every(w =>
+    ['best', 'of', 'the', 'and', 'in', 'a', 'an', 'for', 'to', 'is', 'are', 'our', 'your', 'we'].includes(w.toLowerCase().replace(/[^a-z]/g, ''))
+  )
+  if (genericOnly) return false
+
+  return true
+}
+
+// ============================================
+// SYSTEM PROMPT
+// ============================================
+
+const SYSTEM_PROMPT = `You write one cold email opening line. This line appears FIRST in the email — before any pitch. It must feel like the sender did their homework.
+
+You're writing TO the business owner. Use "you/your."
+
+EXAMPLES OF GREAT OPENERS:
+- "Your 4.9 stars across 200+ reviews — that's rare for HVAC in Dallas."
+- "Saw your crew handles both residential and commercial roofing, that range is hard to pull off."
+- "BBB A+ rated with same-day service — you're running a tight ship."
+- "ServiceTitan, Angi Super Service, and 150 reviews — you're not messing around."
+- "17 years in the Phoenix heat and still growing, that says everything."
+
+EXAMPLES OF BAD OPENERS (never write like this):
+- "Building your reputation in X takes time, you've clearly earned it." ← generic, says nothing specific
+- "This stood out on your site: [random fragment]." ← lazy, often broken
+- "Your focus on X really sets you apart from the generalists." ← vague, could apply to anyone
 
 RULES:
-1. Use "you/your" to address them directly
-2. Use EXACT data from the research (don't invent numbers)
-3. Sound like a human who did their homework, not a robot reading stats
-4. 8-18 words, conversational tone
-5. NEVER use these timing words: recently, just, new, latest, launched, upcoming, soon, now
-6. NEVER use these hype words: impressive, amazing, innovative, incredible, outstanding, excellent, fantastic, great, awesome, cutting-edge, world-class, best-in-class, leading, premier
-7. ONE data point per line — do NOT stack multiple facts
-8. Do NOT start with the company name as the subject (e.g. "Acme Corp has...")
+1. Open with a SPECIFIC detail — a number, a service, a credential, an award. Something only THEY have.
+2. 8-18 words. Punchy. Conversational.
+3. Use "you/your" in the first 6 words.
+4. NEVER use: recently, just, new, latest, launched, impressive, amazing, innovative, incredible, outstanding, excellent, fantastic, great, awesome, cutting-edge, world-class, best-in-class, leading, premier, remarkable
+5. NEVER start with "This stood out" or "Building your reputation" — find a better angle.
+6. ONE data point. Don't cram multiple facts.
+7. Do NOT start with the company name as subject.
+8. If you reference a quote or award, make sure it reads as a COMPLETE thought — never a fragment.
 
 OUTPUT FORMAT:
-LINE: [personal opener using "you/your"]
+LINE: [your opener]
 TIER: [S/A/B]
 TYPE: [artifact type used]
-ARTIFACT: [exact data from research]
+ARTIFACT: [exact data referenced]
 
 If no usable data: LINE: NO_DATA_FOUND`
 
@@ -98,8 +137,11 @@ If no usable data: LINE: NO_DATA_FOUND`
 function selectBestArtifact(artifacts: Artifact[]): Artifact | null {
   if (!artifacts || artifacts.length === 0) return null
 
+  // Filter out artifacts with unusable text FIRST
+  const usable = artifacts.filter(a => a.type === 'FALLBACK' || isArtifactTextUsable(a.text))
+
   // Sort by priority order, then by score within same type
-  const sorted = [...artifacts].sort((a, b) => {
+  const sorted = [...usable].sort((a, b) => {
     const aPriority = ARTIFACT_PRIORITY.indexOf(a.type)
     const bPriority = ARTIFACT_PRIORITY.indexOf(b.type)
     const aIdx = aPriority === -1 ? ARTIFACT_PRIORITY.length : aPriority
@@ -242,45 +284,54 @@ function buildPrompt(companyName: string, artifact: Artifact | null, research: S
 
   // Industry hint
   const industry = (lead.industry || '').toLowerCase().replace(/_/g, ' ')
-  if (industry) {
-    parts.push(`INDUSTRY: ${industry}`)
+  if (industry) parts.push(`INDUSTRY: ${industry}`)
+
+  // Collect ALL data points for Claude to pick from
+  parts.push(`\n--- DATA POINTS (use the most SPECIFIC one) ---`)
+
+  // Rating/Reviews — most concrete
+  if (lead.enrichedRating) {
+    const ratingText = lead.enrichedReviews
+      ? `${lead.enrichedRating} stars across ${lead.enrichedReviews} Google reviews`
+      : `${lead.enrichedRating}-star Google rating`
+    parts.push(`REVIEWS: ${ratingText}`)
   }
 
   // Best artifact
-  if (artifact && artifact.type !== 'FALLBACK') {
-    parts.push(`\nBEST ARTIFACT [${artifact.tier}]:`)
-    parts.push(`  Type: ${artifact.type}`)
-    parts.push(`  Data: ${artifact.text}`)
-    if (artifact.url) parts.push(`  Source: ${artifact.url}`)
+  if (artifact && artifact.type !== 'FALLBACK' && isArtifactTextUsable(artifact.text)) {
+    parts.push(`ARTIFACT [${artifact.tier}/${artifact.type}]: ${artifact.text}`)
   }
 
-  // Other research snippets for context
+  // Other usable artifacts for more options
+  if (research) {
+    const otherArtifacts = research.artifacts
+      .filter(a => a.type !== 'FALLBACK' && a !== artifact && isArtifactTextUsable(a.text))
+      .slice(0, 3)
+    for (const a of otherArtifacts) {
+      parts.push(`ALSO FOUND [${a.type}]: ${a.text}`)
+    }
+  }
+
+  const services = Array.isArray(lead.enrichedServices) ? (lead.enrichedServices as string[]) : []
+  if (services.length > 0) {
+    parts.push(`SERVICES: ${services.slice(0, 5).join(', ')}`)
+  }
+
+  if (lead.city && lead.state) {
+    parts.push(`LOCATION: ${lead.city}, ${lead.state}`)
+  }
+
+  // Research snippets for context
   if (research && research.snippets.length > 0) {
-    parts.push(`\nRESEARCH CONTEXT:`)
+    parts.push(`\nWEB SNIPPETS:`)
     for (const snippet of research.snippets.slice(0, 3)) {
       parts.push(`  - ${snippet.substring(0, 200)}`)
     }
   }
 
-  // Enriched data from SerpAPI
-  if (lead.enrichedRating) {
-    const ratingText = lead.enrichedReviews
-      ? `${lead.enrichedRating} stars across ${lead.enrichedReviews} Google reviews`
-      : `${lead.enrichedRating}-star Google rating`
-    parts.push(`  - ${ratingText}`)
-  }
-
-  const services = Array.isArray(lead.enrichedServices) ? (lead.enrichedServices as string[]) : []
-  if (services.length > 0) {
-    parts.push(`  - Services: ${services.slice(0, 5).join(', ')}`)
-  }
-
-  if (lead.city && lead.state) {
-    parts.push(`  - Location: ${lead.city}, ${lead.state}`)
-  }
-
-  parts.push(`\nWrite a personal cold email opener (8-18 words) using the BEST ARTIFACT data above.`)
-  parts.push(`Use "you/your" language. Use the exact data provided. ONE data point only.`)
+  parts.push(`\nPick the MOST SPECIFIC data point above and write one cold email opener (8-18 words).`)
+  parts.push(`Prefer numbers, credentials, or awards over generic location/service mentions.`)
+  parts.push(`Do NOT write "This stood out" or "Building your reputation" — be more creative.`)
 
   return parts.join('\n')
 }
@@ -289,64 +340,103 @@ function buildPrompt(companyName: string, artifact: Artifact | null, research: S
 // SMART FALLBACKS
 // ============================================
 
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
 function generateSmartFallback(companyName: string, lead: any, artifact: Artifact | null): PersonalizationResult {
   const city = lead.city || ''
+  const state = lead.state || ''
+  const location = city || state
   const services = Array.isArray(lead.enrichedServices) ? (lead.enrichedServices as string[]) : []
   const rating = lead.enrichedRating as number | null
+  const reviews = lead.enrichedReviews as number | null
+  const industry = (lead.industry || '').toLowerCase().replace(/_/g, ' ')
 
-  // Try artifact-based fallback first
-  if (artifact && artifact.type !== 'FALLBACK' && artifact.text) {
+  // --- Priority 1: Rating + Reviews (most concrete data) ---
+  if (rating && rating >= 4.0 && reviews && reviews > 5) {
+    const line = pick([
+      `Your ${rating} stars across ${reviews}+ reviews — that's not easy to maintain in ${industry || 'this space'}.`,
+      `${reviews} reviews and still holding ${rating} stars, your customers clearly trust you.`,
+      `${rating}-star average with ${reviews} reviews — you're doing something your competitors aren't.`,
+    ])
+    return { firstLine: line, hook: `${rating} stars / ${reviews} reviews`, angle: 'social-proof', tokensCost: 0 }
+  }
+
+  if (rating && rating >= 4.0) {
+    const line = pick([
+      `Your ${rating}-star rating caught my attention — that's well above average for ${industry || 'your industry'}.`,
+      `Holding a ${rating}-star rating in ${industry || 'this business'} says a lot about how you operate.`,
+    ])
+    return { firstLine: line, hook: `${rating} stars`, angle: 'social-proof', tokensCost: 0 }
+  }
+
+  // --- Priority 2: Artifact-based (only if text passes quality check) ---
+  if (artifact && artifact.type !== 'FALLBACK' && isArtifactTextUsable(artifact.text)) {
     const text = artifact.text
     switch (artifact.type) {
-      case 'EXACT_PHRASE':
-        return { firstLine: `This stood out on your site: "${text}."`, hook: text, angle: 'exact-phrase', tokensCost: 0 }
       case 'TOOL_PLATFORM':
-        return { firstLine: `Noticed your team uses ${text}, that tells me you take operations seriously.`, hook: text, angle: 'tool-platform', tokensCost: 0 }
+        return { firstLine: pick([
+          `Your team runs on ${text} — that's a sign you take operations seriously.`,
+          `Saw you're using ${text}, that puts you ahead of most ${industry} companies.`,
+        ]), hook: text, angle: 'tool-platform', tokensCost: 0 }
       case 'CLIENT_OR_PROJECT':
-        return { firstLine: `Your work on the ${text} project caught my eye.`, hook: text, angle: 'client-project', tokensCost: 0 }
+        return { firstLine: pick([
+          `Your work on ${text} caught my eye — that's a solid portfolio piece.`,
+          `The ${text} project on your profile shows the caliber of work you do.`,
+        ]), hook: text, angle: 'client-project', tokensCost: 0 }
+      case 'EXACT_PHRASE':
+        return { firstLine: `${text} — that's a credential most ${industry} companies can't claim.`, hook: text, angle: 'exact-phrase', tokensCost: 0 }
       case 'SERVICE_PROGRAM':
-        return { firstLine: `Your ${text} offering stood out to me while researching.`, hook: text, angle: 'service-program', tokensCost: 0 }
+        return { firstLine: pick([
+          `Your ${text} is the kind of thing that wins repeat customers.`,
+          `Offering ${text} — that's a smart move most of your competitors skip.`,
+        ]), hook: text, angle: 'service-program', tokensCost: 0 }
       case 'HIRING_SIGNAL':
-        return { firstLine: `Saw you're scaling the team with ${text}, that's a solid growth signal.`, hook: text, angle: 'hiring-signal', tokensCost: 0 }
-      case 'LOCATION':
-        return { firstLine: `Building your reputation in ${text} takes time, you've clearly earned it.`, hook: text, angle: 'location', tokensCost: 0 }
+        return { firstLine: `Scaling up with ${text} — looks like business is moving in the right direction.`, hook: text, angle: 'hiring-signal', tokensCost: 0 }
       case 'COMPANY_DESCRIPTION':
-        return { firstLine: `This stood out about your team: ${text}.`, hook: text, angle: 'description', tokensCost: 0 }
+        return { firstLine: `${text} — that kind of focus is rare in ${industry || 'this market'}.`, hook: text, angle: 'description', tokensCost: 0 }
     }
   }
 
-  // Data-based fallbacks
-  if (rating && rating >= 4.0 && lead.enrichedReviews) {
-    return {
-      firstLine: `Your ${rating} stars across ${lead.enrichedReviews} reviews says a lot about how you run things.`,
-      hook: `${rating} stars`,
-      angle: 'social-proof',
-      tokensCost: 0,
-    }
+  // --- Priority 3: Services + Location combo ---
+  if (services.length > 0 && services[0].length > 5 && location) {
+    const svc = services[0]
+    const line = pick([
+      `Running ${svc.toLowerCase()} in ${location} is competitive — your reviews suggest you're winning.`,
+      `Your ${svc.toLowerCase()} work in ${location} keeps coming up in searches, that's a good sign.`,
+      `Handling ${svc.toLowerCase()} in the ${location} market — you clearly know the area.`,
+    ])
+    return { firstLine: line, hook: `${svc} / ${location}`, angle: 'service-location', tokensCost: 0 }
+  }
+
+  // --- Priority 4: Services only ---
+  if (services.length >= 2) {
+    const line = pick([
+      `Covering both ${services[0].toLowerCase()} and ${services[1].toLowerCase()} — that range gives your customers one less call to make.`,
+      `Your ${services[0].toLowerCase()} and ${services[1].toLowerCase()} work shows you're not a one-trick operation.`,
+    ])
+    return { firstLine: line, hook: services.slice(0, 2).join(', '), angle: 'specialization', tokensCost: 0 }
   }
 
   if (services.length > 0 && services[0].length > 5) {
     const svc = services[0]
-    return {
-      firstLine: `Your focus on ${svc} really sets you apart from the generalists.`,
-      hook: svc,
-      angle: 'specialization',
-      tokensCost: 0,
-    }
+    return { firstLine: `Your ${svc.toLowerCase()} work keeps showing up in my research — clearly doing something right.`, hook: svc, angle: 'specialization', tokensCost: 0 }
   }
 
-  if (city && city.length > 2) {
-    return {
-      firstLine: `Building a strong reputation in ${city} takes years of solid work, you've clearly put in the time.`,
-      hook: city,
-      angle: 'location',
-      tokensCost: 0,
-    }
+  // --- Priority 5: Location only ---
+  if (location) {
+    const line = pick([
+      `Running a ${industry || 'service'} business in ${location} means competing with a lot of noise — and you're standing out.`,
+      `${location} has no shortage of ${industry || 'service'} companies, but your name keeps coming up.`,
+      `Your presence in the ${location} ${industry || 'service'} market is hard to miss.`,
+    ])
+    return { firstLine: line, hook: location, angle: 'location', tokensCost: 0 }
   }
 
-  // Last resort
+  // --- Last resort ---
   return {
-    firstLine: `Came across your team while researching and wanted to reach out.`,
+    firstLine: `Your online presence stood out while I was researching ${industry || 'local service'} companies — wanted to reach out.`,
     hook: companyName,
     angle: 'general',
     tokensCost: 0,
