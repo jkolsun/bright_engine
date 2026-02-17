@@ -28,25 +28,26 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'reassign':
-        // Bulk reassign leads to different rep - use transaction for data consistency
+        // Bulk reassign leads to different rep (or unassign with null)
+        const targetRepId = payload?.repId || null
         const reassignResults = await Promise.allSettled(
           leadIds.map(async (leadId: string) => {
             return await prisma.$transaction(async (tx) => {
               const lead = await tx.lead.update({
                 where: { id: leadId },
-                data: { assignedToId: payload.repId }
+                data: { assignedToId: targetRepId }
               })
-              
+
               await tx.leadEvent.create({
                 data: {
                   leadId,
                   eventType: 'STAGE_CHANGE',
-                  toStage: 'REASSIGNED',
-                  metadata: { bulkAction: true, newRep: payload.repId },
+                  toStage: targetRepId ? 'REASSIGNED' : 'UNASSIGNED',
+                  metadata: { bulkAction: true, newRep: targetRepId },
                   actor: 'admin'
                 }
               })
-              
+
               return lead
             })
           })

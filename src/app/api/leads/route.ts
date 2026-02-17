@@ -39,7 +39,13 @@ export async function GET(request: NextRequest) {
   
   if (source) where.source = source
   if (priority) where.priority = priority
-  if (assignedTo) where.assignedToId = assignedTo
+  if (assignedTo) {
+    if (assignedTo === 'unassigned') {
+      where.assignedToId = null
+    } else {
+      where.assignedToId = assignedTo
+    }
+  }
 
     const [leads, total] = await Promise.all([
       prisma.lead.findMany({
