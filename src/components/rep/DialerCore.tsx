@@ -60,17 +60,17 @@ interface DialerCoreProps {
 // VM SCRIPTS — Multiple variants for variety
 // ============================================
 const VM_SCRIPTS_BAD_WEBSITE = [
-  `Hey {{firstName}}, this is [REP] with Bright Automations. I was looking at {{companyName}}'s website and put together a quick preview of what a refresh could look like. Texting you the link now — take a look. Talk soon.`,
-  `Hey {{firstName}}, [REP] here from Bright Automations. I pulled up your site for {{companyName}} and honestly, it's not showing up great on mobile. I went ahead and mocked up a modern version — texting it over now so you can see the difference. Give me a call back when you get a sec.`,
-  `{{firstName}}, this is [REP] with Bright Automations. I took a look at {{companyName}}'s website and noticed it could use an upgrade. Good news — I already put together a preview of what a new one could look like. Sending you the link right now. Let me know what you think!`,
-  `Hey {{firstName}}, it's [REP] from Bright Automations. I checked out your current website for {{companyName}} — I think we can do a lot better for you. I actually already built a preview. Shooting you a text with the link. Take a look and call me back if you like it.`,
+  `Hey {{firstName}}, this is [REP] with Bright Automations. I looked at {{companyName}}'s current website and I actually went ahead and built you a brand new one. Texting you the link right now — check it out. If you like it we can have it live today. Talk soon.`,
+  `Hey {{firstName}}, [REP] here from Bright Automations. I pulled up your site for {{companyName}} and honestly, it's not cutting it on mobile. So I already built a modern version for you — texting it over now so you can see the difference. Give me a call back when you get a sec.`,
+  `{{firstName}}, this is [REP] with Bright Automations. I took a look at {{companyName}}'s website and built you a brand new one. Sending you the link right now — take a look and text me back if you want it live.`,
+  `Hey {{firstName}}, it's [REP] from Bright Automations. I checked out your current website for {{companyName}} and already built a new one for you. Shooting you a text with the link. Take a look and call me back if you like it.`,
 ]
 
 const VM_SCRIPTS_NO_WEBSITE = [
-  `Hey {{firstName}}, this is [REP] with Bright Automations. I searched for {{industry}} in {{city}} and found {{companyName}} but no website. I mocked up what one could look like — texting you the preview now. Talk soon.`,
-  `{{firstName}}, [REP] here from Bright Automations. I was looking up {{industry}} businesses in {{city}} and couldn't find a site for {{companyName}}. So I went ahead and designed one. Texting you the preview right now — check it out and let me know what you think.`,
-  `Hey {{firstName}}, it's [REP] with Bright Automations. I tried to find {{companyName}} online but you don't have a website yet. I put together a professional mock-up — sending it to your phone now. Would love to hear what you think. Call me back!`,
-  `{{firstName}}, this is [REP] from Bright Automations. Customers are searching for {{industry}} in {{city}} every day and can't find {{companyName}} online. I built a quick preview of what your site could look like — texting it over. Take 30 seconds to look at it.`,
+  `Hey {{firstName}}, this is [REP] with Bright Automations. I searched for {{industry}} in {{city}} and couldn't find a website for {{companyName}}. So I built one for you — texting you the link right now. If you like it we can have it live today. Talk soon.`,
+  `{{firstName}}, [REP] here from Bright Automations. I was looking up {{industry}} businesses in {{city}} and couldn't find a site for {{companyName}}. So I already built one. Texting you the link right now — check it out and let me know what you think.`,
+  `Hey {{firstName}}, it's [REP] with Bright Automations. I tried to find {{companyName}} online but you don't have a website yet. So I built one for you — sending it to your phone now. Would love to hear what you think. Call me back!`,
+  `{{firstName}}, this is [REP] from Bright Automations. Customers are searching for {{industry}} in {{city}} every day and can't find {{companyName}} online. I already built you a website ��� texting it over now. Take 30 seconds to look at it.`,
 ]
 
 const VM_SCRIPTS_CALLBACK = [
@@ -87,86 +87,91 @@ const VM_SCRIPTS_RE_ENGAGE = [
 // CALL SCRIPTS — Multiple variants
 // ============================================
 const CALL_SCRIPTS = [
-  `OPENER (10 sec):
-"Hey {{firstName}}, this is [YOUR NAME] with Bright Automations. Not trying to sell you anything crazy — quick question, do you have 30 seconds?"
+  `OPENER:
+"Hey {{firstName}}, this is [YOUR NAME] with Bright Automations. Real quick — I actually already put together a new website for {{companyName}}. Want me to text you the link so you can see it while we talk?"
 
-If no: "When's a better time?"
+[SEND PREVIEW NOW — press P or tap button]
 
-HOOK — Bad Website (20 sec):
-"I pulled up {{companyName}}'s website before I called. Not gonna sugarcoat it — not showing up well on mobile and the design looks dated. Are you getting leads from it?"
+WAIT FOR THEM TO OPEN IT (10-15 sec)
 
-HOOK — No Website (20 sec):
-"I searched for {{industry}} in {{location}} and couldn't find a site for {{companyName}}. Are you getting most business from referrals?"
+ON-CALL WALKTHROUGH:
+"You see it? That's a full site — your services, your reviews, everything's already on there. How's it look?"
 
-PITCH (30 sec):
-"Here's why I'm calling. We build professional sites specifically for {{industry}} businesses. Clean, works on phones, shows up on Google. $149, live in 48 hours. And actually — I already mocked up what a site for {{companyName}} would look like. Want me to text you the link so you can see it?"
+LET THEM REACT
 
-CLOSE:
-"Awesome. I'm texting you the preview right now. Take a look, and if you like it, just text us back and we'll make it live. You don't pay until you're happy with it."
+IF POSITIVE:
+"Want it live? I can have it up today. It's $149 to go live and $39/month after the first month to keep it running."
 
-OBJECTIONS:
-"Already have a site" → "Are you getting leads from it?"
-"Too expensive" → "Check out the preview before you decide."
-"Don't need one" → "97% of customers Google before calling."`,
+[SEND PAYMENT LINK — press $ or tap button]
 
-  `OPENER (10 sec):
-"Hey {{firstName}}, this is [YOUR NAME] from Bright Automations. Real quick — have you ever Googled your own business?"
+IF QUESTIONS:
+"What would you want different?" (note the edit, we can change it before go-live)
 
-If yes: "What came up?" / If no: "You should — I did, and I have some thoughts."
-
-DISCOVERY:
-"When someone searches for {{industry}} in {{location}}, your competitors are showing up but {{companyName}} is hard to find. Is that something you've thought about?"
-
-PITCH:
-"So here's what we do — we build clean, professional websites for businesses like yours. $149, mobile-friendly, shows up on Google. And I actually already built a preview for {{companyName}} before I called. Want me to send it over so you can take a look?"
-
-CLOSE:
-"I'll text it to you right now. No pressure — just take a look. If you like it, text us back and we'll make it live. Zero risk."
+IF NOT INTERESTED:
+"No worries — the preview stays up if you change your mind. Have a good one."
 
 OBJECTIONS:
-"I get referrals" → "Imagine if those referrals could Google you and see a professional site."
-"Send me info" → "Even better — I'll text you the actual preview so you can see it, not just read about it."
-"Not interested" → "Totally fair. Mind if I text you the link anyway? Takes 10 seconds to look at."`,
+"Already have a site" → "Pull yours up next to this one. Which one would you call?"
+"Too expensive" → "It's less than one service call. And you're not paying monthly for the first 30 days."
+"Need to think about it" → "The preview link stays active. Take a look later and text us when you're ready."
+"Can you change [X]?" → "Absolutely. We'll update that before it goes live. Want to lock it in?"`,
 
-  `OPENER (10 sec):
-"Hey {{firstName}}, this is [YOUR NAME] with Bright Automations. I was doing some research on {{industry}} in {{location}} and came across {{companyName}} — looks like you guys do great work."
+  `OPENER:
+"Hey {{firstName}}, [YOUR NAME] from Bright Automations. Real quick — have you ever Googled {{companyName}}? I did, and I actually already built you a new website. Let me text it to you right now."
 
-BRIDGE:
-"Quick question though — are you getting new customers from online, or is it mostly word of mouth?"
+[SEND PREVIEW NOW — press P]
 
-HOOK — No Website:
-"That makes sense, because right now when people search for you online, there's nothing coming up. We actually specialize in building websites for {{industry}} businesses."
+WAIT FOR OPEN (10-15 sec)
+"Did the text come through? Pull it up — I'll wait."
 
-HOOK — Has Website:
-"I took a look at your site and honestly, I think it could be working harder for you. It's not loading great on mobile and the design is a little outdated."
-
-PITCH:
-"Here's the cool part — I already mocked up what a new site would look like for {{companyName}}. Professional, fast, mobile-friendly. Want me to text it over so you can see?"
+WALKTHROUGH:
+"See that? Mobile-friendly, your services listed, shows up on Google. What do you think?"
 
 CLOSE:
-"Sending it now. It's $149 to go live, and you don't pay until you're happy with it. Just text us back if you like what you see."
+"If you like what you see, it's $149 to go live. I can send the payment link right now."
 
 OBJECTIONS:
-"I'm busy" → "Totally get it. I'll text the preview — look at it when you have 30 seconds."
-"How much?" → "$149 one-time. No contracts, no monthly fees. And you see it before you pay."
-"I'll think about it" → "For sure. The preview isn't going anywhere — take a look tonight and text us if you like it."`,
+"I get referrals" → "Imagine if those referrals Googled you and saw THIS."
+"Send me info" → "Even better — I just sent you the actual site. Check your texts."
+"Not interested" → "Totally fair. The link stays active if you change your mind."`,
 
-  `OPENER (10 sec):
-"Hey {{firstName}}, [YOUR NAME] from Bright Automations. We've been building websites for {{industry}} businesses in {{location}} and I wanted to reach out to {{companyName}}. Got 30 seconds?"
+  `OPENER:
+"Hey {{firstName}}, this is [YOUR NAME] with Bright Automations. I was doing some research on {{industry}} in {{location}} and came across {{companyName}} — looks like you guys do great work. I actually already built a new website for you. Want me to text you the link?"
 
-HOOK:
-"We just finished a site for another {{industry}} business nearby and they started getting calls from it within the first week. Are you getting leads from online right now?"
+[SEND PREVIEW NOW — press P]
 
-PITCH:
-"We build professional websites specifically for businesses like yours — mobile-friendly, shows up on Google, $149 flat. I actually already built a mockup for {{companyName}} before I called. Want to see it?"
+WAIT & PROMPT:
+"Pull it up on your phone — takes 10 seconds."
+
+WALKTHROUGH:
+"See the homepage? That's {{companyName}} — professional, fast, mobile-friendly. Scroll down and you'll see your reviews featured."
 
 CLOSE:
-"I'll text it right now. Takes 10 seconds to look. If you like it, text us back and we go live in 48 hours. You don't pay until you approve it."
+"If you want it live, it's $149. No contracts. I can send the payment link right now."
 
 OBJECTIONS:
-"Sounds too good to be true" → "I get that. That's why we show you the site before you pay anything."
-"I need to talk to my partner" → "Totally — I'll text you the preview so you can both look at it together."
-"Call me next week" → "Sure. Mind if I text you the preview now so you have it ready?"`,
+"I'm busy" → "Takes 10 seconds to look. I'll wait."
+"How much?" → "$149 one-time, $39/month after the first month. Look at the preview first."
+"I'll think about it" → "The preview isn't going anywhere — take a look tonight and text us."`,
+
+  `OPENER:
+"Hey {{firstName}}, [YOUR NAME] from Bright Automations. We've been building websites for {{industry}} businesses in {{location}} and I already built one for {{companyName}}. Got 30 seconds to check it out? Let me text you the link."
+
+[SEND PREVIEW NOW — press P]
+
+WAIT & PROMPT:
+"Check your messages — I just sent it. Pull it up while we talk."
+
+WALKTHROUGH:
+"That's your site — custom for {{companyName}}. Clean, works on phones, shows up on Google. What do you think?"
+
+CLOSE:
+"Want it live? $149, up in 48 hours. I can send the payment link right now."
+
+OBJECTIONS:
+"Sounds too good to be true" → "That's why I sent the preview first — you see exactly what you're getting."
+"Need to talk to my partner" → "I'll text you the preview so you can both look at it together."
+"Call me next week" → "The preview stays up. Take a look and text us when you're ready."`,
 ]
 
 // ============================================
@@ -286,6 +291,13 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   const [previewMethod, setPreviewMethod] = useState<'sms' | 'email'>('sms')
   const [previewMessage, setPreviewMessage] = useState('')
 
+  // Preview status polling (during active call)
+  const [previewStatus, setPreviewStatus] = useState<{
+    sent: boolean; opened: boolean; viewDurationSeconds: number; ctaClicked: boolean; lastEventAt: Date | null
+  }>({ sent: false, opened: false, viewDurationSeconds: 0, ctaClicked: false, lastEventAt: null })
+  const [previewSentThisCall, setPreviewSentThisCall] = useState(false)
+  const previewPollRef = useRef<NodeJS.Timeout | null>(null)
+
   const currentLead = queue[currentIndex] || null
 
   // Compute lead temperature from events already in queue data
@@ -360,6 +372,30 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [callPhase])
 
+  // ============================================
+  // PREVIEW STATUS POLLING — every 5 sec during active call
+  // ============================================
+  useEffect(() => {
+    if ((callPhase === 'connected' || callPhase === 'on_hold') && currentLead?.id) {
+      const poll = async () => {
+        try {
+          const res = await fetch(`/api/dialer/preview-status?leadId=${currentLead.id}`)
+          if (res.ok) {
+            const data = await res.json()
+            setPreviewStatus(data)
+          }
+        } catch { /* ignore polling errors */ }
+      }
+      poll()
+      previewPollRef.current = setInterval(poll, 5000)
+    } else {
+      if (previewPollRef.current) clearInterval(previewPollRef.current)
+      setPreviewStatus({ sent: false, opened: false, viewDurationSeconds: 0, ctaClicked: false, lastEventAt: null })
+      setPreviewSentThisCall(false)
+    }
+    return () => { if (previewPollRef.current) clearInterval(previewPollRef.current) }
+  }, [callPhase, currentLead?.id])
+
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60)
     const s = seconds % 60
@@ -376,14 +412,16 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
 
       switch (e.key) {
-        case '1': e.preventDefault(); handleOutcome('interested'); break
+        case '1': e.preventDefault(); handleOutcome(previewStatus.opened ? 'interested_saw_preview' : 'interested_no_preview'); break
         case '2': e.preventDefault(); handleOutcome('not_interested'); break
         case '3': e.preventDefault(); setShowCallbackDialog(true); break
-        case '4': e.preventDefault(); handleOutcome('no_answer'); break
-        case '5': e.preventDefault(); handleOutcome('voicemail_left'); break
-        case '6': e.preventDefault(); handleOutcome('voicemail_skipped'); break
-        case '7': e.preventDefault(); handleOutcome('wrong_number'); break
-        case '8': e.preventDefault(); handleOutcome('dnc'); break
+        case '4': e.preventDefault(); handleOutcome('callback_reviewing'); break
+        case '5': e.preventDefault(); handleOutcome('payment_link_sent'); break
+        case '6': e.preventDefault(); handleOutcome('closed_paid'); break
+        case '7': e.preventDefault(); handleOutcome('wants_changes'); break
+        case '8': e.preventDefault(); handleOutcome('wrong_number'); break
+        case '9': e.preventDefault(); handleOutcome('dnc'); break
+        case 'p': case 'P': e.preventDefault(); if (currentLead?.previewUrl) { openPreviewDialog('sms'); setPreviewSentThisCall(true) }; break
         case 't': case 'T': e.preventDefault(); handleAutoText(); break
         case 'n': case 'N': e.preventDefault(); setShowNoteDialog(true); break
         case 'h': case 'H': e.preventDefault(); handleHold(); break
@@ -393,7 +431,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [callActive, processing, currentLead])
+  }, [callActive, processing, currentLead, previewStatus.opened])
 
   // ============================================
   // DIALING ACTIONS
@@ -553,22 +591,22 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
     // Log as Activity
     try {
       const dispositionMap: Record<string, string> = {
-        interested: 'INTERESTED',
+        interested: 'INTERESTED', interested_saw_preview: 'INTERESTED', interested_no_preview: 'INTERESTED',
         not_interested: 'NOT_INTERESTED',
-        callback: 'CALLBACK',
+        callback: 'CALLBACK', callback_reviewing: 'CALLBACK',
         no_answer: 'NO_ANSWER',
-        voicemail_left: 'VOICEMAIL',
-        voicemail_skipped: 'VOICEMAIL',
-        wrong_number: 'WRONG_NUMBER',
-        dnc: 'NOT_INTERESTED',
+        voicemail_left: 'VOICEMAIL', voicemail_skipped: 'VOICEMAIL', voicemail_preview_sent: 'VOICEMAIL',
+        wrong_number: 'WRONG_NUMBER', dnc: 'NOT_INTERESTED',
+        payment_link_sent: 'INTERESTED', closed_paid: 'INTERESTED', wants_changes: 'INTERESTED',
       }
+      const vmOutcomes = ['voicemail_left', 'voicemail_skipped', 'voicemail_preview_sent']
 
       await fetch('/api/activity', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           leadId: currentLead.id,
-          activityType: ['voicemail_left', 'voicemail_skipped'].includes(outcome) ? 'VOICEMAIL' : 'CALL',
+          activityType: vmOutcomes.includes(outcome) ? 'VOICEMAIL' : 'CALL',
           callDisposition: dispositionMap[outcome] || 'NO_ANSWER',
           notes,
           durationSeconds: duration,
@@ -580,10 +618,9 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
     // Update lead status
     const statusMap: Record<string, string> = {
-      interested: 'QUALIFIED',
-      not_interested: 'CLOSED_LOST',
-      wrong_number: 'CLOSED_LOST',
-      dnc: 'DO_NOT_CONTACT',
+      interested: 'QUALIFIED', interested_saw_preview: 'QUALIFIED', interested_no_preview: 'QUALIFIED',
+      not_interested: 'CLOSED_LOST', wrong_number: 'CLOSED_LOST', dnc: 'DO_NOT_CONTACT',
+      closed_paid: 'PAID', wants_changes: 'CLIENT_REVIEW', payment_link_sent: 'QUALIFIED',
     }
     if (statusMap[outcome]) {
       try {
@@ -596,12 +633,17 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
     }
 
     // Update session stats
-    const isConversation = ['interested', 'not_interested', 'callback'].includes(outcome)
+    const conversationOutcomes = [
+      'interested', 'interested_saw_preview', 'interested_no_preview',
+      'not_interested', 'callback', 'callback_reviewing',
+      'payment_link_sent', 'closed_paid', 'wants_changes',
+    ]
+    const closeOutcomes = ['interested', 'interested_saw_preview', 'closed_paid']
     setSessionStats(prev => ({
       ...prev,
       dials: prev.dials + 1,
-      conversations: isConversation ? prev.conversations + 1 : prev.conversations,
-      closes: outcome === 'interested' ? prev.closes + 1 : prev.closes,
+      conversations: conversationOutcomes.includes(outcome) ? prev.conversations + 1 : prev.conversations,
+      closes: closeOutcomes.includes(outcome) ? prev.closes + 1 : prev.closes,
     }))
 
     // Reset call state
@@ -613,7 +655,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
     setCallStartTime(null)
 
     // Remove lead from queue for terminal outcomes
-    const terminal = ['interested', 'not_interested', 'wrong_number', 'dnc']
+    const terminal = ['interested', 'interested_saw_preview', 'interested_no_preview', 'not_interested', 'wrong_number', 'dnc', 'closed_paid']
     if (terminal.includes(outcome)) {
       const newQueue = queue.filter((_: any, i: number) => i !== currentIndex)
       setQueue(newQueue)
@@ -693,8 +735,8 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
     if (!currentLead) return
     setPreviewMethod(method)
     const msg = method === 'sms'
-      ? `Hey ${currentLead.firstName}, this is ${userName} with Bright Automations. I just mocked up a preview of what a new website could look like for ${currentLead.companyName} — take a look: ${currentLead.previewUrl}\n\nIf you like it, just text us back and we'll make it live. You don't pay until you're happy with it!`
-      : `Hi ${currentLead.firstName},\n\nI put together a quick preview of what a professional website could look like for ${currentLead.companyName}.\n\n${currentLead.previewUrl}\n\nIt's mobile-friendly, loads fast, and designed specifically for ${currentLead.industry?.toLowerCase().replace(/_/g, ' ')}.\n\nIf you like what you see, reply and we'll get it live for you.\n\nBest,\n${userName}\nBright Automations`
+      ? `Hey ${currentLead.firstName}, this is ${userName} with Bright Automations. I already built a new website for ${currentLead.companyName} — check it out: ${currentLead.previewUrl}\n\nIf you like it we can have it live today. Just text me back!`
+      : `Hi ${currentLead.firstName},\n\nI already built a new website for ${currentLead.companyName}.\n\n${currentLead.previewUrl}\n\nIt's mobile-friendly, loads fast, and designed specifically for ${currentLead.industry?.toLowerCase().replace(/_/g, ' ')}.\n\nIf you like what you see, reply and we'll get it live for you.\n\nBest,\n${userName}\nBright Automations`
     setPreviewMessage(msg)
     setPreviewDialogOpen(true)
   }
@@ -713,6 +755,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       body: JSON.stringify({ leadId: currentLead.id, activityType: 'PREVIEW_SENT', notes: `Preview sent via ${previewMethod}` }),
     }).catch(() => {})
     setSessionStats(prev => ({ ...prev, previewLinksSent: prev.previewLinksSent + 1 }))
+    setPreviewSentThisCall(true)
     setPreviewDialogOpen(false)
   }
 
@@ -822,6 +865,55 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       scripts = VM_SCRIPTS_NO_WEBSITE
     }
     return personalizeScript(pickByLead(scripts))
+  }
+
+  // ============================================
+  // DYNAMIC PREVIEW-AWARE TIP (overrides server-side AI tip during active calls)
+  // ============================================
+  const getDynamicTip = (): string | null => {
+    if (!callActive || callPhase === 'idle' || callPhase === 'dialing') return null
+    if (previewStatus.ctaClicked) return 'They clicked the CTA — they want it. Send the payment link NOW.'
+    if (previewStatus.opened && previewStatus.viewDurationSeconds >= 30) return `They've been viewing for ${formatTime(previewStatus.viewDurationSeconds)}. They're interested. Ask what they think and close.`
+    if (previewStatus.opened && previewStatus.viewDurationSeconds < 30) return 'They just opened it. Walk them through it: "See the homepage? That\'s YOUR business featured."'
+    if (previewSentThisCall && !previewStatus.opened) return 'Preview sent but not opened yet. Ask: "Did you get that text? Pull it up on your phone — I\'ll wait."'
+    if (!previewSentThisCall && callTimer > 10) return 'Send the preview link NOW. Press [P] or tap TEXT PREVIEW.'
+    return null
+  }
+
+  // ============================================
+  // PREVIEW-AWARE LEAD SUMMARY
+  // ============================================
+  const getLeadSummary = (): { text: string, color: string } | null => {
+    if (!currentLead) return null
+    const events = currentLead.events || []
+    const previewViews = events.filter((e: any) => e.eventType === 'PREVIEW_VIEWED')
+    const ctaClicks = events.filter((e: any) => e.eventType === 'PREVIEW_CTA_CLICKED')
+    const returnVisits = events.filter((e: any) => e.eventType === 'PREVIEW_RETURN_VISIT')
+
+    // Get max duration from metadata
+    let maxDuration = 0
+    for (const pe of previewViews) {
+      try {
+        const meta = typeof pe.metadata === 'string' ? JSON.parse(pe.metadata) : pe.metadata
+        if (meta?.duration && meta.duration > maxDuration) maxDuration = meta.duration
+      } catch { /* ignore */ }
+    }
+
+    if (previewViews.length > 0 && returnVisits.length > 0) {
+      const lastVisit = events[0]
+      const hoursAgo = Math.round((Date.now() - new Date(lastVisit.createdAt).getTime()) / (1000 * 60 * 60))
+      return { text: `HOT — Viewed preview ${previewViews.length + returnVisits.length}x, last visit ${hoursAgo}h ago. They're thinking about it. Send preview and close.`, color: 'text-red-700 bg-red-100' }
+    }
+    if (previewViews.length > 0) {
+      const mins = Math.floor(maxDuration / 60)
+      const secs = maxDuration % 60
+      const timeStr = maxDuration > 0 ? `Spent ${mins}:${secs.toString().padStart(2, '0')} on site${ctaClicks.length > 0 ? ', clicked CTA' : ''}.` : ''
+      return { text: `PREVIEW VIEWED — ${timeStr} Send preview link and walk them through it on the call.`, color: 'text-purple-700 bg-purple-100' }
+    }
+    if (previewSentThisCall || currentLead.queueCategory === 'preview_engaged_no_payment') {
+      return { text: 'PREVIEW SENT, NOT OPENED — Resend and say "did you get a chance to check out that site I sent over?"', color: 'text-yellow-700 bg-yellow-100' }
+    }
+    return { text: 'FRESH — No preview sent yet. Lead with the preview immediately.', color: 'text-gray-600 bg-gray-100' }
   }
 
   // ============================================
@@ -1032,24 +1124,68 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                   </Button>
                 </div>
               ) : (
-                /* Connected / On Hold */
+                /* Connected / On Hold — Preview-First Layout */
                 <div className="space-y-2">
                   <p className={`text-sm font-medium ${callPhase === 'on_hold' ? 'text-yellow-600' : 'text-green-600'}`}>
                     {callPhase === 'on_hold' ? 'On Hold' : 'Connected'} — {formatTime(callTimer)}
                   </p>
 
-                  {/* Keyboard shortcut bar */}
+                  {/* Preview Status Indicator */}
+                  <div className={`flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-xl ${
+                    previewStatus.ctaClicked ? 'bg-green-100 text-green-700' :
+                    previewStatus.opened ? 'bg-purple-100 text-purple-700 animate-pulse' :
+                    previewSentThisCall ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    <span className={`w-2 h-2 rounded-full ${
+                      previewStatus.ctaClicked ? 'bg-green-500' :
+                      previewStatus.opened ? 'bg-purple-500' :
+                      previewSentThisCall ? 'bg-yellow-500' :
+                      'bg-red-500'
+                    }`} />
+                    {previewStatus.ctaClicked ? `CTA CLICKED (${formatTime(previewStatus.viewDurationSeconds)})` :
+                     previewStatus.opened ? `VIEWING — ${formatTime(previewStatus.viewDurationSeconds)} on page` :
+                     previewSentThisCall ? 'SENT — Waiting for open' :
+                     'NOT SENT YET'}
+                  </div>
+
+                  {/* PRIMARY: Text Preview */}
+                  {!previewSentThisCall && currentLead?.previewUrl && (
+                    <Button className="w-full bg-[#2E7D8A] hover:bg-[#236571] text-white rounded-xl text-sm font-bold" onClick={() => { openPreviewDialog('sms'); setPreviewSentThisCall(true) }}>
+                      <Send size={16} className="mr-2" /> [P] TEXT PREVIEW
+                    </Button>
+                  )}
+
+                  {/* SECONDARY: Send Pay Link */}
+                  {(previewStatus.opened || previewStatus.ctaClicked) && (
+                    <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold" onClick={handleCopyPayLink}>
+                      <CreditCard size={16} className="mr-2" /> {copiedPayLink ? 'PAY LINK COPIED!' : 'SEND PAY LINK ($149)'}
+                    </Button>
+                  )}
+
+                  {/* TERTIARY: Copy Link / Add Note */}
+                  <div className="flex gap-2">
+                    {currentLead?.previewUrl && (
+                      <Button size="sm" variant="outline" className="rounded-xl flex-1" onClick={handleCopyPreview}>
+                        {copiedPreview ? 'Copied!' : 'Copy Link'}
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" className="rounded-xl flex-1" onClick={() => setShowNoteDialog(true)}>
+                      [N] Note
+                    </Button>
+                  </div>
+
+                  {/* Outcome logging — keyboard shortcut bar */}
                   <div className="bg-gray-900 rounded-xl p-2.5 text-xs font-mono text-gray-300 grid grid-cols-4 gap-1">
-                    <button onClick={() => handleOutcome('interested')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-green-400">[1] Interest</button>
+                    <button onClick={() => handleOutcome(previewStatus.opened ? 'interested_saw_preview' : 'interested_no_preview')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-green-400">[1] Interest</button>
                     <button onClick={() => handleOutcome('not_interested')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-red-400">[2] No</button>
                     <button onClick={() => setShowCallbackDialog(true)} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-teal-400">[3] Callback</button>
-                    <button onClick={() => handleOutcome('no_answer')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1">[4] NoAns</button>
-                    <button onClick={() => handleOutcome('voicemail_left')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1">[5] VM</button>
-                    <button onClick={() => handleOutcome('voicemail_skipped')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1">[6] Skip</button>
-                    <button onClick={() => handleOutcome('wrong_number')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-orange-400">[7] Wrong#</button>
-                    <button onClick={() => handleOutcome('dnc')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-red-500">[8] DNC</button>
-                    <button onClick={handleAutoText} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-purple-400">[T] Text</button>
-                    <button onClick={() => setShowNoteDialog(true)} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-yellow-400">[N] Note</button>
+                    <button onClick={() => handleOutcome('callback_reviewing')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-cyan-400">[4] Reviewing</button>
+                    <button onClick={() => handleOutcome('payment_link_sent')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-emerald-400">[5] PaySent</button>
+                    <button onClick={() => handleOutcome('closed_paid')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-yellow-400 font-bold">[6] PAID</button>
+                    <button onClick={() => handleOutcome('wants_changes')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-purple-400">[7] Changes</button>
+                    <button onClick={() => handleOutcome('wrong_number')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-orange-400">[8] Wrong#</button>
+                    <button onClick={() => handleOutcome('dnc')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-red-500">[9] DNC</button>
                     <button onClick={handleHold} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-cyan-400">[H] Hold</button>
                     <button onClick={() => handleHangup()} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-red-500 font-bold">[X] Hangup</button>
                   </div>
@@ -1191,18 +1327,36 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
           {/* RIGHT: Script + AI Tip (7 cols) */}
           <div className="lg:col-span-7 space-y-4">
-            {/* AI Tip — enhanced with temperature reference */}
-            {currentLead.aiTip && (
-              <Card className="p-4 bg-gradient-to-r from-teal-50 to-emerald-50 border-teal-200 rounded-2xl">
-                <div className="flex items-start gap-2">
-                  <Flame size={16} className="text-teal-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wider">AI Tip</span>
-                    <p className="text-sm text-teal-800 mt-0.5">{currentLead.aiTip}</p>
-                  </div>
+            {/* Preview-Aware Lead Summary */}
+            {(() => {
+              const summary = getLeadSummary()
+              if (!summary) return null
+              return (
+                <div className={`px-3 py-2 rounded-xl text-xs font-semibold ${summary.color}`}>
+                  {summary.text}
                 </div>
-              </Card>
-            )}
+              )
+            })()}
+
+            {/* AI Tip — dynamic override during call, fallback to server-side tip */}
+            {(() => {
+              const dynamicTip = getDynamicTip()
+              const tipToShow = dynamicTip || currentLead.aiTip
+              if (!tipToShow) return null
+              return (
+                <Card className={`p-4 rounded-2xl ${dynamicTip ? 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200' : 'bg-gradient-to-r from-teal-50 to-emerald-50 border-teal-200'}`}>
+                  <div className="flex items-start gap-2">
+                    <Flame size={16} className={`${dynamicTip ? 'text-purple-600' : 'text-teal-600'} mt-0.5 flex-shrink-0`} />
+                    <div>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${dynamicTip ? 'text-purple-700' : 'text-teal-700'}`}>
+                        {dynamicTip ? 'LIVE TIP' : 'AI Tip'}
+                      </span>
+                      <p className={`text-sm mt-0.5 ${dynamicTip ? 'text-purple-800' : 'text-teal-800'}`}>{tipToShow}</p>
+                    </div>
+                  </div>
+                </Card>
+              )
+            })()}
 
             {/* Queue reason */}
             {currentLead.queueReason && (
@@ -1396,6 +1550,7 @@ function formatCurrency(amount: number): string {
 function getCategoryLabel(category: string): string {
   const labels: Record<string, string> = {
     overdue_callback: 'OVERDUE CALLBACK',
+    preview_engaged_no_payment: 'PREVIEW ENGAGED',
     hot: 'HOT',
     warm: 'WARM',
     scheduled_callback: 'CALLBACK TODAY',
@@ -1409,6 +1564,7 @@ function getCategoryLabel(category: string): string {
 function getCategoryBadgeClass(category: string): string {
   const classes: Record<string, string> = {
     overdue_callback: 'bg-red-100 text-red-700 border-red-200',
+    preview_engaged_no_payment: 'bg-purple-100 text-purple-700 border-purple-200',
     hot: 'bg-orange-100 text-orange-700 border-orange-200',
     warm: 'bg-yellow-100 text-yellow-700 border-yellow-200',
     scheduled_callback: 'bg-green-100 text-green-700 border-green-200',

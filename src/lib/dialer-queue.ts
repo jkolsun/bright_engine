@@ -39,6 +39,7 @@ export interface QueuedLead {
 
 export interface QueueSummary {
   overdueCallbacks: number
+  previewEngagedNoPayment: number
   hotLeads: number
   warmLeads: number
   scheduledCallbacks: number
@@ -180,6 +181,7 @@ export async function buildRepQueue(repId: string): Promise<{ leads: QueuedLead[
 
   const summary: QueueSummary = {
     overdueCallbacks: categorized.filter(l => l.queueCategory === 'overdue_callback').length,
+    previewEngagedNoPayment: categorized.filter(l => l.queueCategory === 'preview_engaged_no_payment').length,
     hotLeads: categorized.filter(l => l.queueCategory === 'hot').length,
     warmLeads: categorized.filter(l => l.queueCategory === 'warm').length,
     scheduledCallbacks: categorized.filter(l => l.queueCategory === 'scheduled_callback').length,
@@ -208,41 +210,57 @@ function categorizeLead(
     return { priority: 1, category: 'overdue_callback', reason: `Callback overdue since ${callbackDate.toLocaleDateString()}` }
   }
 
-  // Priority 2: Hot leads (preview engaged in last 2 hours)
+  // Priority 2: Preview engaged but no payment (viewed 30+ sec, highest conversion potential)
+  const longPreviewViews = lead.events?.filter((e: any) => {
+    if (e.eventType !== 'PREVIEW_VIEWED') return false
+    try {
+      const meta = typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata
+      return meta?.duration && meta.duration >= 30
+    } catch { return false }
+  })
+  const hasPaid = lead.events?.some((e: any) => e.eventType === 'PAYMENT_RECEIVED')
+  if (longPreviewViews?.length > 0 && !hasPaid) {
+    return {
+      priority: 2, category: 'preview_engaged_no_payment',
+      reason: `Viewed preview ${longPreviewViews.length}x (30+ sec) — no payment yet`,
+    }
+  }
+
+  // Priority 3: Hot leads (preview engaged in last 2 hours)
   const recentPreviewEvents = lead.events?.filter((e: any) =>
     ['PREVIEW_VIEWED', 'PREVIEW_CTA_CLICKED', 'PREVIEW_CALL_CLICKED'].includes(e.eventType) &&
     new Date(e.createdAt) > twoHoursAgo
   )
   if (recentPreviewEvents?.length > 0 || (engagementScore >= 16 && lead.status === 'HOT_LEAD')) {
     return {
-      priority: 2, category: 'hot',
+      priority: 3, category: 'hot',
       reason: recentPreviewEvents?.length > 0 ? 'Preview engaged in last 2 hours' : `Hot lead — engagement score ${engagementScore}`,
     }
   }
 
-  // Priority 3: Warm leads (email opened, preview clicked >2 hrs ago)
+  // Priority 4: Warm leads (email opened, preview clicked >2 hrs ago)
   const warmEvents = lead.events?.filter((e: any) =>
     ['EMAIL_OPENED', 'PREVIEW_VIEWED', 'PREVIEW_CTA_CLICKED'].includes(e.eventType)
   )
   const emailOpens = lead.outboundEvents?.filter((e: any) => e.status === 'OPENED' || e.openedAt)
   if ((warmEvents?.length > 0 || emailOpens?.length > 0) && engagementScore >= 6) {
-    return { priority: 3, category: 'warm', reason: `Warm — ${warmEvents?.length || 0} engagement events` }
+    return { priority: 4, category: 'warm', reason: `Warm — ${warmEvents?.length || 0} engagement events` }
   }
 
-  // Priority 4: Scheduled callbacks (due today, not overdue)
+  // Priority 5: Scheduled callbacks (due today, not overdue)
   if (callbackDate && callbackDate >= now && callbackDate <= todayEnd) {
     return {
-      priority: 4, category: 'scheduled_callback',
+      priority: 5, category: 'scheduled_callback',
       reason: `Callback at ${callbackDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
     }
   }
 
-  // Priority 5: Fresh leads (never contacted)
+  // Priority 6: Fresh leads (never contacted)
   if (callAttempts === 0) {
-    return { priority: 5, category: 'fresh', reason: 'Never contacted — first call attempt' }
+    return { priority: 6, category: 'fresh', reason: 'Never contacted — first call attempt' }
   }
 
-  // Priority 6: Retries (previous no-answer, within retry window)
+  // Priority 7: Retries (previous no-answer, within retry window)
   const lastOutcome = lead.calls?.[0]?.outcome || lead.activities?.[0]?.callDisposition
   if (['no_answer', 'NO_ANSWER', 'voicemail_skipped', 'VOICEMAIL'].includes(lastOutcome)) {
     if (lastCallAt) {
@@ -252,21 +270,21 @@ function categorizeLead(
         (callAttempts === 2 && daysSinceLast >= 2) ||
         (callAttempts >= 3 && daysSinceLast >= 3)
       ) {
-        return { priority: 6, category: 'retry', reason: `Retry attempt ${callAttempts + 1} — last tried ${Math.floor(daysSinceLast)}d ago` }
+        return { priority: 7, category: 'retry', reason: `Retry attempt ${callAttempts + 1} — last tried ${Math.floor(daysSinceLast)}d ago` }
       }
     }
-    return { priority: 8, category: 'retry_pending', reason: `Retry not due yet — attempt ${callAttempts}` }
+    return { priority: 9, category: 'retry_pending', reason: `Retry not due yet — attempt ${callAttempts}` }
   }
 
-  // Priority 7: Re-engage (warm leads revisit after 30 days)
+  // Priority 8: Re-engage (warm leads revisit after 30 days)
   if (lastCallAt) {
     const daysSinceLast = (now.getTime() - new Date(lastCallAt).getTime()) / (1000 * 60 * 60 * 24)
     if (daysSinceLast >= 30) {
-      return { priority: 7, category: 're_engage', reason: `Re-engage — last contact ${Math.floor(daysSinceLast)} days ago` }
+      return { priority: 8, category: 're_engage', reason: `Re-engage — last contact ${Math.floor(daysSinceLast)} days ago` }
     }
   }
 
-  return { priority: 8, category: 'other', reason: 'Standard queue position' }
+  return { priority: 9, category: 'other', reason: 'Standard queue position' }
 }
 
 /**
@@ -376,10 +394,17 @@ const TIPS_RE_ENGAGE = [
   'Re-engage attempt. Try a fresh angle — mention a seasonal pitch or new feature.',
 ]
 
+const TIPS_PREVIEW_ENGAGED_NO_PAYMENT = [
+  'They viewed the preview but haven\'t paid. Send it again and walk them through it: "Did you get a chance to look at that site?"',
+  'This lead already saw the preview. Skip the pitch — go straight to: "What did you think of the site I sent over?"',
+  'Preview viewed, no payment. They\'re warm. Ask: "Are you ready to get that site live? I can send the payment link right now."',
+  'They spent time on the preview. They know what they\'re getting. Be direct and close.',
+]
+
 const TIPS_DEFAULT = [
   'Follow the script and listen for buying signals. Mirror their energy.',
   'Focus on asking questions, not pitching. The best closers listen more than they talk.',
-  'Remember: the goal is to get them to look at the preview. That\'s the close.',
+  'Remember: send the preview in the first 30 seconds. Let it sell itself.',
   'Stay curious. Ask about their business before you pitch — people buy from people who care.',
 ]
 
@@ -397,6 +422,10 @@ export function generateAITip(lead: QueuedLead): string {
   // Pick the most relevant tip category
   if (lead.engagementScore >= 16) {
     return pickRandom(TIPS_HIGH_ENGAGEMENT)
+  }
+
+  if (lead.queueCategory === 'preview_engaged_no_payment') {
+    return pickRandom(TIPS_PREVIEW_ENGAGED_NO_PAYMENT)
   }
 
   if (lead.queueCategory === 'hot') {

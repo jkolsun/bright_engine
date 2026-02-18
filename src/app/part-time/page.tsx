@@ -51,8 +51,8 @@ export default function PartTimeDashboard() {
   const [saving, setSaving] = useState(false)
 
   // Dialer dashboard state
-  const [todayStats, setTodayStats] = useState({ dials: 0, conversations: 0, previewLinksSent: 0, closes: 0 })
-  const [weekStats, setWeekStats] = useState({ dials: 0, conversations: 0, previewsSent: 0, closes: 0, commissionEarned: 0 })
+  const [todayStats, setTodayStats] = useState({ dials: 0, conversations: 0, previewLinksSent: 0, previewsOpened: 0, paymentLinksSent: 0, closes: 0 })
+  const [weekStats, setWeekStats] = useState({ dials: 0, conversations: 0, previewsSent: 0, previewsOpened: 0, paymentLinksSent: 0, closes: 0, commissionEarned: 0 })
   const [monthStats, setMonthStats] = useState({ dials: 0, conversations: 0, closes: 0, commissionEarned: 0 })
   const [allTimeStats, setAllTimeStats] = useState({ commissionEarned: 0 })
   const [queueSummary, setQueueSummary] = useState<any>(null)
@@ -189,7 +189,7 @@ export default function PartTimeDashboard() {
           <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Today&apos;s Progress</h2>
           <span className="text-sm font-semibold text-teal-600 bg-teal-50 px-3 py-1 rounded-full">{progressPercent}% of target</span>
         </div>
-        <div className="grid grid-cols-3 gap-8 mb-5">
+        <div className="grid grid-cols-5 gap-6 mb-5">
           <div>
             <div className="flex items-baseline gap-2">
               <span className="text-4xl font-bold text-gray-900">{todayStats.dials}</span>
@@ -203,6 +203,14 @@ export default function PartTimeDashboard() {
               <span className="text-sm text-gray-400 font-medium">/ {dailyTarget.conversations}</span>
             </div>
             <p className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Conversations</p>
+          </div>
+          <div>
+            <span className="text-4xl font-bold text-purple-600">{todayStats.previewLinksSent}</span>
+            <p className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Previews Sent</p>
+          </div>
+          <div>
+            <span className="text-4xl font-bold text-emerald-600">{todayStats.previewsOpened}</span>
+            <p className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Previews Opened</p>
           </div>
           <div>
             <div className="flex items-baseline gap-2">
@@ -237,6 +245,10 @@ export default function PartTimeDashboard() {
             {(queueSummary?.overdueCallbacks || 0) > 0 && (
               <QueueRow icon={<AlertCircle size={16} />} color="text-red-500" bg="bg-red-50"
                 label="Overdue callbacks" count={queueSummary.overdueCallbacks} />
+            )}
+            {(queueSummary?.previewEngagedNoPayment || 0) > 0 && (
+              <QueueRow icon={<Eye size={16} />} color="text-purple-500" bg="bg-purple-50"
+                label="Preview engaged (no payment)" count={queueSummary.previewEngagedNoPayment} />
             )}
             {(queueSummary?.hotLeads || 0) > 0 && (
               <QueueRow icon={<Flame size={16} />} color="text-orange-500" bg="bg-orange-50"
@@ -314,6 +326,35 @@ export default function PartTimeDashboard() {
           </div>
         </Card>
       </div>
+
+      {/* Conversion Funnel */}
+      {weekStats.dials > 0 && (
+        <Card className="p-6 rounded-2xl border-0 shadow-medium bg-gradient-to-r from-purple-50 via-teal-50 to-emerald-50">
+          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-5">This Week&apos;s Funnel</h2>
+          <div className="flex items-center gap-2">
+            {[
+              { label: 'Calls', value: weekStats.dials, color: 'text-gray-900' },
+              { label: 'Previews Sent', value: weekStats.previewsSent, pct: weekStats.dials > 0 ? Math.round((weekStats.previewsSent / weekStats.dials) * 100) : 0, color: 'text-purple-700' },
+              { label: 'Opened', value: weekStats.previewsOpened, pct: weekStats.previewsSent > 0 ? Math.round((weekStats.previewsOpened / weekStats.previewsSent) * 100) : 0, color: 'text-teal-700' },
+              { label: 'Pay Link Sent', value: weekStats.paymentLinksSent, pct: weekStats.previewsOpened > 0 ? Math.round((weekStats.paymentLinksSent / weekStats.previewsOpened) * 100) : 0, color: 'text-amber-700' },
+              { label: 'Paid', value: weekStats.closes, pct: weekStats.paymentLinksSent > 0 ? Math.round((weekStats.closes / weekStats.paymentLinksSent) * 100) : 0, color: 'text-emerald-700' },
+            ].map((step, idx, arr) => (
+              <div key={step.label} className="flex items-center gap-2 flex-1">
+                <div className="text-center flex-1">
+                  <div className={`text-2xl font-bold ${step.color}`}>{step.value}</div>
+                  <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mt-0.5">{step.label}</div>
+                  {step.pct !== undefined && (
+                    <div className="text-[10px] font-semibold text-gray-400 mt-0.5">{step.pct}%</div>
+                  )}
+                </div>
+                {idx < arr.length - 1 && (
+                  <ChevronRight size={16} className="text-gray-300 flex-shrink-0" />
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Assigned Leads Table */}
       <Card className="rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm overflow-hidden">

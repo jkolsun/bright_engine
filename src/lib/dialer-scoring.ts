@@ -6,14 +6,16 @@ import { prisma } from './db'
 // ============================================
 
 interface ScoringResult {
-  connectToInterest: number  // /15
-  interestToClose: number    // /15
-  previewTextRate: number    // /10
-  callDuration: number       // /5
-  callbackShowRate: number   // /5
-  dncRate: number            // /5
-  volumeConsistency: number  // /5
-  totalScore: number         // /60
+  connectToInterest: number    // /15
+  interestToClose: number      // /15
+  previewSendRate: number      // /5
+  previewToOpenRate: number    // /5
+  openToCloseRate: number      // /5
+  callDuration: number         // /5
+  callbackShowRate: number     // /5
+  dncRate: number              // /5
+  volumeConsistency: number    // /5
+  totalScore: number           // /60 (15+15+5+5+5+5+5+5+5)
   coachingNotes: string[]
 }
 
@@ -93,11 +95,21 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
     interestToClose = Math.min(15, Math.round(interestToCloseRate * 30))
   }
 
-  // 3. Preview Text Rate (/10)
+  // 3. Preview Send Rate (/5) — % of conversations where rep sent preview (target 90%+)
   const totalDials = calls.length + activities.length
   const previewsSent = dailyStats.reduce((sum, d) => sum + d.previewLinksSent, 0)
-  const previewTextRate = totalConversations > 0 ? previewsSent / totalConversations : 0
-  const previewTextScore = Math.min(10, Math.round(previewTextRate * 10))
+  const previewSendRate = totalConversations > 0 ? previewsSent / totalConversations : 0
+  const previewSendScore = Math.min(5, Math.round(previewSendRate * 5 / 0.9)) // 90% = 5 pts
+
+  // 3b. Preview-to-Open Rate (/5) — % of sent previews that got opened
+  const previewsOpened = dailyStats.reduce((sum, d) => sum + ((d as any).previewsOpened || 0), 0)
+  const previewToOpenRate = previewsSent > 0 ? previewsOpened / previewsSent : 0
+  const previewToOpenScore = Math.min(5, Math.round(previewToOpenRate * 5 / 0.5)) // 50% = 5 pts
+
+  // 3c. Open-to-Close Rate (/5) — % of opened previews that resulted in payment
+  const paymentsClosed = dailyStats.reduce((sum, d) => sum + ((d as any).paymentsClosed || 0), 0)
+  const openToCloseRate = previewsOpened > 0 ? paymentsClosed / previewsOpened : 0
+  const openToCloseScore = Math.min(5, Math.round(openToCloseRate * 5 / 0.3)) // 30% = 5 pts
 
   // 4. Call Duration Sweet Spot (/5) — 2-4 min ideal
   const durations = [
@@ -149,7 +161,7 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
                       activeDays >= 2 ? 2 : activeDays >= 1 ? 1 : 0
 
   // Total
-  const totalScore = connectToInterest + interestToClose + previewTextScore + durationScore + callbackShowScore + dncScore + volumeScore
+  const totalScore = connectToInterest + interestToClose + previewSendScore + previewToOpenScore + openToCloseScore + durationScore + callbackShowScore + dncScore + volumeScore
 
   // Generate coaching notes
   const coachingNotes: string[] = []
@@ -159,8 +171,18 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
   if (interestToCloseRate < 0.3 && interested > 3) {
     coachingNotes.push('High interest but low close rate. Text the preview every time. Ask "want me to make it live?"')
   }
-  if (previewTextRate < 0.5 && totalConversations > 5) {
-    coachingNotes.push('Low preview text rate. Reps who text the preview close 3x more. Do it every call.')
+  // Preview-specific coaching (3 metrics)
+  if (previewSendRate < 0.8 && totalConversations > 5) {
+    coachingNotes.push('You\'re not sending the preview on every call. The preview IS the pitch — send it in the first 30 seconds, every time.')
+  }
+  if (previewSendRate >= 0.8 && previewToOpenRate < 0.5 && previewsSent > 5) {
+    coachingNotes.push('Leads aren\'t opening your preview. Make sure you say "pull it up on your phone right now — I\'ll wait." Don\'t just text and move on.')
+  }
+  if (previewToOpenRate >= 0.5 && openToCloseRate < 0.2 && previewsOpened > 3) {
+    coachingNotes.push('They\'re looking at the preview but not buying. Walk them through it live. Point out specific features. Then ask: "Want me to make it live for you?"')
+  }
+  if (openToCloseRate >= 0.3 && previewSendRate >= 0.8) {
+    coachingNotes.push('You\'re crushing it. High preview send rate AND strong close rate. Keep this exact flow going.')
   }
   if (durations.length > 5) {
     const avgDur = durations.reduce((a: number, b: number) => a + b, 0) / durations.length
@@ -187,12 +209,14 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
         create: {
           repId, weekStart: start,
           connectToInterest: connectToInterestRate, interestToClose: interestToCloseRate,
-          previewTextRate, avgDuration, callbackShowRate, dncRate, volumeScore, totalScore,
+          previewSendRate, previewToOpenRate, openToCloseRate,
+          avgDuration, callbackShowRate, dncRate, volumeScore, totalScore,
           coachingNotes: coachingNotes.join('\n'),
         },
         update: {
           connectToInterest: connectToInterestRate, interestToClose: interestToCloseRate,
-          previewTextRate, avgDuration, callbackShowRate, dncRate, volumeScore, totalScore,
+          previewSendRate, previewToOpenRate, openToCloseRate,
+          avgDuration, callbackShowRate, dncRate, volumeScore, totalScore,
           coachingNotes: coachingNotes.join('\n'),
         },
       })
@@ -202,7 +226,8 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
   }
 
   return {
-    connectToInterest, interestToClose, previewTextRate: previewTextScore,
+    connectToInterest, interestToClose,
+    previewSendRate: previewSendScore, previewToOpenRate: previewToOpenScore, openToCloseRate: openToCloseScore,
     callDuration: durationScore, callbackShowRate: callbackShowScore,
     dncRate: dncScore, volumeConsistency: volumeScore, totalScore, coachingNotes,
   }
@@ -288,6 +313,9 @@ export async function getRepStats(repId: string, period: 'today' | 'week' | 'mon
     dials: dailyStats.reduce((sum, d) => sum + d.dials, 0),
     conversations: dailyStats.reduce((sum, d) => sum + d.conversations, 0),
     previewsSent: dailyStats.reduce((sum, d) => sum + d.previewLinksSent, 0),
+    previewsOpened: dailyStats.reduce((sum, d) => sum + ((d as any).previewsOpened || 0), 0),
+    paymentLinksSent: dailyStats.reduce((sum, d) => sum + ((d as any).paymentLinksSent || 0), 0),
+    paymentsClosed: dailyStats.reduce((sum, d) => sum + ((d as any).paymentsClosed || 0), 0),
     closes: dailyStats.reduce((sum, d) => sum + d.closes, 0),
     commissionEarned: commissions.reduce((sum, c) => sum + c.amount, 0),
     activeDays: dailyStats.filter(d => d.dials > 0).length,

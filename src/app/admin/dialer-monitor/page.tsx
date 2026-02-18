@@ -37,6 +37,13 @@ interface LiveRep {
     closes: number
     previewsSent: number
   }
+  previewStatus?: {
+    opened: boolean
+    sent?: boolean
+    ctaClicked?: boolean
+    viewDurationSeconds?: number
+    lastViewedAt?: string
+  } | null
 }
 
 export default function DialerMonitorPage() {
@@ -201,6 +208,31 @@ export default function DialerMonitorPage() {
                         with <span className="font-medium">{rep.currentLead.firstName} {rep.currentLead.lastName}</span>
                         {' — '}{rep.currentLead.companyName}
                       </p>
+                    )}
+
+                    {/* Preview status indicator for on-call reps */}
+                    {rep.status === 'on_call' && rep.previewStatus && (
+                      <div className={`flex items-center gap-1.5 mt-1 text-xs font-medium ${
+                        rep.previewStatus.ctaClicked ? 'text-emerald-600' :
+                        rep.previewStatus.opened ? 'text-green-600' :
+                        rep.previewStatus.sent ? 'text-yellow-600' :
+                        'text-gray-400'
+                      }`}>
+                        <span>{
+                          rep.previewStatus.ctaClicked ? '🟢' :
+                          rep.previewStatus.opened ? '🟢' :
+                          rep.previewStatus.sent ? '🟡' :
+                          '🔴'
+                        }</span>
+                        <span>Preview: {
+                          rep.previewStatus.ctaClicked ? 'CTA CLICKED' :
+                          rep.previewStatus.opened && rep.previewStatus.viewDurationSeconds
+                            ? `OPENED (viewing for ${Math.floor(rep.previewStatus.viewDurationSeconds / 60)}:${(rep.previewStatus.viewDurationSeconds % 60).toString().padStart(2, '0')})`
+                            : rep.previewStatus.opened ? 'OPENED'
+                            : rep.previewStatus.sent ? 'SENT — waiting for open'
+                            : 'Not sent yet'
+                        }</span>
+                      </div>
                     )}
 
                     <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-500">

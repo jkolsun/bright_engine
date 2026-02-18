@@ -23,8 +23,11 @@ export async function POST(request: NextRequest) {
     }
 
     const validOutcomes = [
-      'interested', 'not_interested', 'callback', 'no_answer',
-      'voicemail_left', 'voicemail_skipped', 'wrong_number', 'dnc',
+      'interested', 'interested_saw_preview', 'interested_no_preview',
+      'not_interested', 'callback', 'callback_reviewing',
+      'no_answer', 'voicemail_left', 'voicemail_skipped', 'voicemail_preview_sent',
+      'wrong_number', 'dnc',
+      'payment_link_sent', 'closed_paid', 'wants_changes',
     ]
 
     if (!validOutcomes.includes(outcome)) {

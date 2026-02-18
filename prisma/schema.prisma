@@ -51,6 +51,7 @@ model User {
   calls              Call[]              @relation("RepCalls")
   callScorings       CallScoring[]       @relation("RepScoring")
   dialerSessions     DialerSession[]     @relation("DialerSessions")
+  clientsAsRep       Client[]            @relation("ClientRep")
 
   @@map("users")
 }
@@ -233,41 +234,63 @@ enum HostingStatus {
 model Client {
   id                   String        @id @default(cuid())
   leadId               String?       @unique @map("lead_id")
+  repId                String?       @map("rep_id")
   companyName          String        @map("company_name")
+  contactName          String?       @map("contact_name")
+  phone                String?
+  email                String?
   industry             String        @default("GENERAL_CONTRACTING")
+  location             String?
   siteUrl              String?       @map("site_url")
   stagingUrl           String?       @map("staging_url")
   domainStatus         String?       @map("domain_status") // 'none', 'client_owned', 'registered_by_us'
   hostingStatus        HostingStatus @default(ACTIVE)
-  
+
   // Stripe data
   stripeCustomerId     String?       @unique @map("stripe_customer_id")
   stripeSubscriptionId String?       @unique @map("stripe_subscription_id")
-  
+
   // Revenue tracking
   monthlyRevenue       Float         @default(39) @map("monthly_revenue")
+  plan                 String        @default("base") // base, seo, ads, premium
   upsells              Json?         // Array of active upsell products with prices
-  
+
+  // Health & engagement
+  healthScore          Int           @default(50) @map("health_score")
+  aiAutoRespond        Boolean       @default(true) @map("ai_auto_respond")
+  statReportFrequency  String        @default("monthly") @map("stat_report_frequency")
+  referralCode         String?       @unique @map("referral_code")
+  tags                 String[]      @default([])
+  notes                String?       @db.Text
+
   // Lifecycle
   siteLiveDate         DateTime?     @map("site_live_date")
   lastInteraction      DateTime?     @map("last_interaction")
-  nextTouchpoint       String?       @map("next_touchpoint") // 'day_3_tip', 'day_7_stats', etc.
+  nextTouchpoint       String?       @map("next_touchpoint")
   nextTouchpointDate   DateTime?     @map("next_touchpoint_date")
   churnRiskScore       Int           @default(0) @map("churn_risk_score")
-  
+  closedDate           DateTime?     @map("closed_date")
+  churnedDate          DateTime?     @map("churned_date")
+
   createdAt            DateTime      @default(now()) @map("created_at")
   updatedAt            DateTime      @updatedAt @map("updated_at")
 
   // Relations
   lead               Lead?               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  rep                User?               @relation("ClientRep", fields: [repId], references: [id])
   messages           Message[]
   commissions        Commission[]
   revenue            Revenue[]
   analytics          ClientAnalytics?
   clawdbotActivities ClawdbotActivity[]
+  editRequests       EditRequest[]
+  sequenceProgress   SequenceProgress[]
+  referralsGiven     Referral[]          @relation("ReferrerClient")
+  siteAnalytics      SiteAnalytic[]
 
   @@index([hostingStatus])
   @@index([churnRiskScore])
+  @@index([healthScore])
   @@index([nextTouchpointDate])
   @@map("clients")
 }
@@ -319,24 +342,27 @@ enum MessageChannel {
 }
 
 model Message {
-  id         String           @id @default(cuid())
-  leadId     String?          @map("lead_id")
-  clientId   String?          @map("client_id")
-  direction  MessageDirection
-  channel    MessageChannel   @default(SMS)
-  senderType String           @default("SYSTEM") @map("sender_type") // SYSTEM, ADMIN, REP, CLAWDBOT, LEAD
-  senderName String           @default("clawdbot") @map("sender_name")
-  senderId   String?          @map("sender_id")
-  recipient  String?          // Phone or email
-  content    String           @db.Text
-  trigger    String?          // 'qualification', 'nudge', 'sequence_day_7', etc.
-  escalated  Boolean          @default(false)
-  escalationReason String?     @map("escalation_reason")
-  
+  id              String           @id @default(cuid())
+  leadId          String?          @map("lead_id")
+  clientId        String?          @map("client_id")
+  direction       MessageDirection
+  channel         MessageChannel   @default(SMS)
+  senderType      String           @default("SYSTEM") @map("sender_type") // SYSTEM, ADMIN, REP, AI, LEAD, CLIENT
+  senderName      String           @default("clawdbot") @map("sender_name")
+  senderId        String?          @map("sender_id")
+  recipient       String?          // Phone or email
+  content         String           @db.Text
+  trigger         String?          // 'qualification', 'nudge', 'sequence_day_7', etc.
+  escalated       Boolean          @default(false)
+  escalationReason String?         @map("escalation_reason")
+  conversationType String?         @map("conversation_type") // pre_client, post_client
+  aiDelaySeconds  Int?             @map("ai_delay_seconds") // humanizing delay used
+  aiGenerated     Boolean          @default(false) @map("ai_generated")
+
   // Twilio data
   twilioSid  String?          @unique @map("twilio_sid")
   twilioStatus String?        @map("twilio_status")
-  
+
   createdAt  DateTime         @default(now()) @map("created_at")
 
   // Relations
@@ -348,6 +374,7 @@ model Message {
   @@index([clientId])
   @@index([createdAt])
   @@index([escalated])
+  @@index([conversationType])
   @@map("messages")
 }
 
@@ -405,6 +432,9 @@ model RepActivity {
   dials            Int      @default(0)
   conversations    Int      @default(0)
   previewLinksSent Int      @default(0) @map("preview_links_sent")
+  previewsOpened   Int      @default(0) @map("previews_opened")
+  paymentLinksSent Int      @default(0) @map("payment_links_sent")
+  paymentsClosed   Int      @default(0) @map("payments_closed")
   closes           Int      @default(0)
   commissionEarned Float    @default(0) @map("commission_earned")
   notes            String?  @db.Text
@@ -835,10 +865,15 @@ model Call {
   durationSeconds  Int?      @map("duration_seconds")
   notes            String?   @db.Text
   callbackDate     DateTime? @map("callback_date")
-  autoTexted       Boolean   @default(false) @map("auto_texted")
-  dialBatchId      String?   @map("dial_batch_id") // Groups parallel dial attempts
-  lineNumber       Int?      @map("line_number") // 1, 2, or 3 in parallel dial
-  createdAt        DateTime  @default(now()) @map("created_at")
+  autoTexted         Boolean   @default(false) @map("auto_texted")
+  previewSent        Boolean   @default(false) @map("preview_sent")
+  previewOpened      Boolean   @default(false) @map("preview_opened")
+  previewTimeSeconds Int?      @map("preview_time_seconds")
+  paymentLinkSent    Boolean   @default(false) @map("payment_link_sent")
+  paidOnCall         Boolean   @default(false) @map("paid_on_call")
+  dialBatchId        String?   @map("dial_batch_id") // Groups parallel dial attempts
+  lineNumber         Int?      @map("line_number") // 1, 2, or 3 in parallel dial
+  createdAt          DateTime  @default(now()) @map("created_at")
 
   lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
   rep  User @relation("RepCalls", fields: [repId], references: [id])
@@ -860,7 +895,10 @@ model CallScoring {
   weekStart           DateTime @map("week_start") @db.Date
   connectToInterest   Float    @default(0) @map("connect_to_interest")
   interestToClose     Float    @default(0) @map("interest_to_close")
-  previewTextRate     Float    @default(0) @map("preview_text_rate")
+  previewTextRate     Float    @default(0) @map("preview_text_rate") // deprecated — kept for migration compat
+  previewSendRate     Float    @default(0) @map("preview_send_rate")
+  previewToOpenRate   Float    @default(0) @map("preview_to_open_rate")
+  openToCloseRate     Float    @default(0) @map("open_to_close_rate")
   avgDuration         Int      @default(0) @map("avg_duration")
   callbackShowRate    Float    @default(0) @map("callback_show_rate")
   dncRate             Float    @default(0) @map("dnc_rate")
@@ -934,4 +972,202 @@ model InstantlyDailyReport {
   @@map("instantly_daily_reports")
   @@index([reportDate])
   @@index([createdAt])
+}
+
+// ============================================
+// EDIT REQUEST MODEL (Client site edit queue)
+// ============================================
+model EditRequest {
+  id                String    @id @default(cuid())
+  clientId          String    @map("client_id")
+  requestText       String    @db.Text @map("request_text")
+  requestChannel    String    @default("sms") @map("request_channel") // sms, email
+  aiInterpretation  String?   @db.Text @map("ai_interpretation")
+  complexityTier    String    @default("medium") @map("complexity_tier") // simple, medium, complex
+  stagingSnapshotUrl String?  @map("staging_snapshot_url")
+  imageUrls         Json?     @map("image_urls") // Array of attached image URLs
+  status            String    @default("new") @map("status") // new, ai_processing, ready_for_review, approved, rejected, live
+  approvedBy        String?   @map("approved_by")
+  approvedAt        DateTime? @map("approved_at")
+  pushedLiveAt      DateTime? @map("pushed_live_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("edit_requests")
+}
+
+// ============================================
+// SEQUENCE MODEL (Automated messaging sequences)
+// ============================================
+model Sequence {
+  id        String   @id @default(cuid())
+  name      String   @unique // onboarding, upsell, anti_churn, stat_report
+  steps     Json     // [{step: 1, delayDays: 0, channel: "sms", content: "...", active: true}]
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  progress SequenceProgress[]
+
+  @@map("sequences")
+}
+
+// ============================================
+// SEQUENCE PROGRESS (Per-client sequence tracking)
+// ============================================
+model SequenceProgress {
+  id          String    @id @default(cuid())
+  clientId    String    @map("client_id")
+  sequenceId  String    @map("sequence_id")
+  currentStep Int       @default(1) @map("current_step")
+  status      String    @default("active") // active, paused, completed, cancelled
+  startedAt   DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  nextStepAt  DateTime? @map("next_step_at")
+
+  client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  sequence Sequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, sequenceId])
+  @@index([clientId])
+  @@index([sequenceId])
+  @@index([status])
+  @@index([nextStepAt])
+  @@map("sequence_progress")
+}
+
+// ============================================
+// UPSELL MODEL (Available upsell products)
+// ============================================
+model UpsellProduct {
+  id           String  @id @default(cuid())
+  name         String  // SEO Add-on, Google Business Opt, etc.
+  price        Float
+  recurring    Boolean @default(true) // monthly vs one-time
+  stripeLink   String? @map("stripe_link")
+  active       Boolean @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  pitches UpsellPitch[]
+
+  @@map("upsell_products")
+}
+
+// ============================================
+// UPSELL PITCH (Track upsell attempts per client)
+// ============================================
+model UpsellPitch {
+  id             String    @id @default(cuid())
+  clientId       String    @map("client_id")
+  productId      String    @map("product_id")
+  status         String    @default("pitched") // pitched, opened, clicked, paid, declined
+  pitchedAt      DateTime  @default(now()) @map("pitched_at")
+  openedAt       DateTime? @map("opened_at")
+  clickedAt      DateTime? @map("clicked_at")
+  paidAt         DateTime? @map("paid_at")
+  pitchChannel   String    @default("sms") @map("pitch_channel")
+  sequenceDay    Int?      @map("sequence_day") // Which day of upsell sequence
+
+  product UpsellProduct @relation(fields: [productId], references: [id])
+
+  @@index([clientId])
+  @@index([productId])
+  @@index([status])
+  @@map("upsell_pitches")
+}
+
+// ============================================
+// REFERRAL MODEL (Client referral tracking)
+// ============================================
+model Referral {
+  id              String    @id @default(cuid())
+  referrerClientId String   @map("referrer_client_id")
+  referredName    String    @map("referred_name")
+  referredPhone   String?   @map("referred_phone")
+  referredEmail   String?   @map("referred_email")
+  referredCompany String?   @map("referred_company")
+  leadId          String?   @map("lead_id") // If lead was created
+  status          String    @default("pending") // pending, in_pipeline, closed, no_response
+  creditAmount    Float     @default(39) @map("credit_amount")
+  creditApplied   Boolean   @default(false) @map("credit_applied")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  referrerClient Client @relation("ReferrerClient", fields: [referrerClientId], references: [id], onDelete: Cascade)
+
+  @@index([referrerClientId])
+  @@index([status])
+  @@map("referrals")
+}
+
+// ============================================
+// SITE ANALYTICS EVENT MODEL (Self-hosted tracking)
+// ============================================
+model SiteAnalytic {
+  id             String   @id @default(cuid())
+  clientId       String   @map("client_id")
+  eventType      String   @map("event_type") // pageview, cta_click, return_visit
+  page           String?
+  device         String?  // mobile, desktop
+  referralSource String?  @map("referral_source")
+  sessionId      String?  @map("session_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("site_analytics")
+}
+
+// ============================================
+// STRIPE SYNC LOG (Daily reconciliation safety net)
+// ============================================
+model StripeSyncLog {
+  id              String   @id @default(cuid())
+  syncType        String   @map("sync_type") // daily_reconciliation, manual
+  mismatchesFound Int      @default(0) @map("mismatches_found")
+  correctionsMade Json?    @map("corrections_made") // [{clientId, field, oldValue, newValue}]
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("stripe_sync_log")
+}
+
+// ============================================
+// AI PERFORMANCE LOG (Learning loop)
+// ============================================
+model AiPerformanceLog {
+  id              String   @id @default(cuid())
+  conversationId  String?  @map("conversation_id")
+  messageId       String?  @map("message_id")
+  aiResponseText  String?  @db.Text @map("ai_response_text")
+  clientReaction  String?  @map("client_reaction") // positive, neutral, negative, escalated
+  outcome         String?  // converted, resolved, escalated, churned
+  editApproved    Boolean? @map("edit_approved")
+  promptVersion   Int      @default(1) @map("prompt_version")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([promptVersion])
+  @@index([outcome])
+  @@index([createdAt])
+  @@map("ai_performance_log")
+}
+
+// ============================================
+// PROMPT VERSION MODEL (AI prompt versioning)
+// ============================================
+model PromptVersion {
+  id          String   @id @default(cuid())
+  version     Int      @unique
+  content     String   @db.Text // Full system prompt
+  changeNotes String?  @db.Text @map("change_notes")
+  performance Json?    // {conversionRate, escalationRate, approvalRate}
+  active      Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("prompt_versions")
 }

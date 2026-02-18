@@ -350,10 +350,11 @@ export async function logCallOutcome(options: LogOutcomeOptions) {
 
   // Log as Activity (always works — this table exists)
   if (leadId && repId) {
+    const vmOutcomes = ['voicemail_left', 'voicemail_skipped', 'voicemail_preview_sent']
     await prisma.activity.create({
       data: {
         leadId, repId,
-        activityType: outcome === 'voicemail_left' || outcome === 'voicemail_skipped' ? 'VOICEMAIL' : 'CALL',
+        activityType: vmOutcomes.includes(outcome) ? 'VOICEMAIL' : 'CALL',
         callDisposition: mapOutcomeToDisposition(outcome) as any,
         notes, durationSeconds,
         callbackDate: callbackDate ? new Date(callbackDate) : undefined,
@@ -363,16 +364,32 @@ export async function logCallOutcome(options: LogOutcomeOptions) {
     // Update daily RepActivity counters
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const isConversation = ['interested', 'not_interested', 'callback'].includes(outcome)
-    const isClose = outcome === 'interested'
+    const conversationOutcomes = [
+      'interested', 'interested_saw_preview', 'interested_no_preview',
+      'not_interested', 'callback', 'callback_reviewing',
+      'payment_link_sent', 'closed_paid', 'wants_changes',
+    ]
+    const closeOutcomes = ['interested', 'interested_saw_preview', 'closed_paid']
+    const isConversation = conversationOutcomes.includes(outcome)
+    const isClose = closeOutcomes.includes(outcome)
+    const isPaymentLinkSent = outcome === 'payment_link_sent' || outcome === 'closed_paid'
+    const isPaid = outcome === 'closed_paid'
 
-    await prisma.repActivity.upsert({
+    await (prisma.repActivity.upsert as any)({
       where: { repId_date: { repId, date: today } },
-      create: { repId, date: today, dials: 1, conversations: isConversation ? 1 : 0, closes: isClose ? 1 : 0 },
+      create: {
+        repId, date: today, dials: 1,
+        conversations: isConversation ? 1 : 0,
+        closes: isClose ? 1 : 0,
+        paymentLinksSent: isPaymentLinkSent ? 1 : 0,
+        paymentsClosed: isPaid ? 1 : 0,
+      },
       update: {
         dials: { increment: 1 },
         ...(isConversation ? { conversations: { increment: 1 } } : {}),
         ...(isClose ? { closes: { increment: 1 } } : {}),
+        ...(isPaymentLinkSent ? { paymentLinksSent: { increment: 1 } } : {}),
+        ...(isPaid ? { paymentsClosed: { increment: 1 } } : {}),
       },
     }).catch(() => {})
   }
@@ -382,10 +399,13 @@ export async function logCallOutcome(options: LogOutcomeOptions) {
 
 function mapOutcomeToDisposition(outcome: string): string {
   const map: Record<string, string> = {
-    interested: 'INTERESTED', not_interested: 'NOT_INTERESTED',
-    callback: 'CALLBACK', no_answer: 'NO_ANSWER',
-    voicemail_left: 'VOICEMAIL', voicemail_skipped: 'VOICEMAIL',
+    interested: 'INTERESTED', interested_saw_preview: 'INTERESTED', interested_no_preview: 'INTERESTED',
+    not_interested: 'NOT_INTERESTED',
+    callback: 'CALLBACK', callback_reviewing: 'CALLBACK',
+    no_answer: 'NO_ANSWER',
+    voicemail_left: 'VOICEMAIL', voicemail_skipped: 'VOICEMAIL', voicemail_preview_sent: 'VOICEMAIL',
     wrong_number: 'WRONG_NUMBER', dnc: 'NOT_INTERESTED',
+    payment_link_sent: 'INTERESTED', closed_paid: 'INTERESTED', wants_changes: 'INTERESTED',
   }
   return map[outcome] || 'NO_ANSWER'
 }
@@ -627,7 +647,47 @@ export async function getLiveRepStatus() {
 
   const statsMap = new Map(repStats.map(s => [s.repId, s]))
 
-  return activeReps.map((rep: any) => {
+  // Get preview status for all connected leads in one batch
+  const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000)
+  const connectedLeadIds: string[] = []
+  for (const rep of activeReps as any[]) {
+    const connected = (rep.calls || []).find((c: any) => c.status === 'connected')
+    if (connected?.leadId) connectedLeadIds.push(connected.leadId)
+  }
+
+  let previewEventsMap = new Map<string, any[]>()
+  let previewSentMap = new Map<string, any>()
+  if (connectedLeadIds.length > 0) {
+    const previewEvents = await prisma.leadEvent.findMany({
+      where: {
+        leadId: { in: connectedLeadIds },
+        eventType: { in: ['PREVIEW_VIEWED', 'PREVIEW_CTA_CLICKED'] },
+        createdAt: { gte: thirtyMinAgo },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+    for (const evt of previewEvents) {
+      const existing = previewEventsMap.get(evt.leadId) || []
+      existing.push(evt)
+      previewEventsMap.set(evt.leadId, existing)
+    }
+
+    const sentActivities = await prisma.activity.findMany({
+      where: {
+        leadId: { in: connectedLeadIds },
+        activityType: 'PREVIEW_SENT' as any,
+        createdAt: { gte: thirtyMinAgo },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+    for (const act of sentActivities) {
+      if (act.leadId && !previewSentMap.has(act.leadId)) {
+        previewSentMap.set(act.leadId, act)
+      }
+    }
+  }
+
+  return (activeReps as any[]).map((rep: any) => {
     const session = rep.dialerSessions?.[0]
     const activeCalls = rep.calls || []
     const stats = statsMap.get(rep.id)
@@ -639,6 +699,27 @@ export async function getLiveRepStatus() {
 
     const connectedCall = activeCalls.find((c: any) => c.status === 'connected')
 
+    // Build preview status for connected lead
+    let previewStatus: any = null
+    if (connectedCall?.leadId) {
+      const events = previewEventsMap.get(connectedCall.leadId) || []
+      const sentActivity = previewSentMap.get(connectedCall.leadId)
+      if (events.length > 0) {
+        const lastView = events.find((e: any) => e.eventType === 'PREVIEW_VIEWED')
+        const ctaClicked = events.some((e: any) => e.eventType === 'PREVIEW_CTA_CLICKED')
+        let viewDuration = 0
+        if (lastView?.metadata) {
+          try {
+            const meta = typeof lastView.metadata === 'string' ? JSON.parse(lastView.metadata as string) : lastView.metadata
+            viewDuration = meta?.duration || 0
+          } catch { /* ignore */ }
+        }
+        previewStatus = { opened: true, ctaClicked, viewDurationSeconds: viewDuration, lastViewedAt: lastView?.createdAt }
+      } else if (sentActivity) {
+        previewStatus = { opened: false, sent: true, sentAt: sentActivity.createdAt }
+      }
+    }
+
     return {
       repId: rep.id, repName: rep.name, status,
       sessionActive: !!session,
@@ -649,6 +730,7 @@ export async function getLiveRepStatus() {
         dials: stats?.dials || 0, conversations: stats?.conversations || 0,
         closes: stats?.closes || 0, previewsSent: stats?.previewLinksSent || 0,
       },
+      previewStatus,
     }
   })
 }

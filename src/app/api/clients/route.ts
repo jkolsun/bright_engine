@@ -7,7 +7,6 @@ export const dynamic = 'force-dynamic'
 // POST /api/clients - Create new client
 export async function POST(request: NextRequest) {
   try {
-    // Admin-only access check
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
@@ -15,23 +14,33 @@ export async function POST(request: NextRequest) {
     }
     const data = await request.json()
 
-    // Create client
+    // Generate referral code
+    const referralCode = `BA-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+
     const client = await prisma.client.create({
       data: {
         companyName: data.companyName,
+        contactName: data.contactName,
+        phone: data.phone,
+        email: data.email,
         siteUrl: data.websiteUrl || data.siteUrl,
         industry: data.industry || 'GENERAL_CONTRACTING',
+        location: data.location,
         hostingStatus: 'ACTIVE',
         monthlyRevenue: data.monthlyRevenue || 39,
-        leadId: data.leadId, // Optional - if converting from lead
+        plan: data.plan || 'base',
+        leadId: data.leadId,
+        repId: data.repId,
+        referralCode,
+        tags: data.tags || [],
+        notes: data.notes,
+        closedDate: new Date(),
       }
     })
 
     // Create analytics record
     await prisma.clientAnalytics.create({
-      data: {
-        clientId: client.id,
-      }
+      data: { clientId: client.id }
     })
 
     // Log site build payment to revenue
@@ -61,17 +70,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ client })
   } catch (error) {
     console.error('Error creating client:', error)
-    return NextResponse.json(
-      { error: 'Failed to create client' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to create client' }, { status: 500 })
   }
 }
 
 // GET /api/clients - List clients with filters
 export async function GET(request: NextRequest) {
   try {
-    // Admin-only access check - financial/client data
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
@@ -80,11 +85,22 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams
     const status = searchParams.get('status')
-    const limit = parseInt(searchParams.get('limit') || '50')
+    const tag = searchParams.get('tag')
+    const search = searchParams.get('search')
+    const limit = parseInt(searchParams.get('limit') || '200')
     const offset = parseInt(searchParams.get('offset') || '0')
 
     const where: any = {}
     if (status) where.hostingStatus = status
+    if (tag) where.tags = { has: tag }
+    if (search) {
+      where.OR = [
+        { companyName: { contains: search, mode: 'insensitive' } },
+        { contactName: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+      ]
+    }
 
     const [clients, total] = await Promise.all([
       prisma.client.findMany({
@@ -98,9 +114,29 @@ export async function GET(request: NextRequest) {
               email: true,
               phone: true,
               industry: true,
+              city: true,
+              state: true,
+              enrichedRating: true,
+              enrichedReviews: true,
+            }
+          },
+          rep: {
+            select: {
+              id: true,
+              name: true,
             }
           },
           analytics: true,
+          editRequests: {
+            where: { status: { in: ['new', 'ai_processing', 'ready_for_review'] } },
+            select: { id: true, status: true },
+          },
+          _count: {
+            select: {
+              editRequests: true,
+              messages: true,
+            }
+          }
         },
         orderBy: { createdAt: 'desc' },
         take: limit,
@@ -112,9 +148,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ clients, total, limit, offset })
   } catch (error) {
     console.error('Error fetching clients:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch clients' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch clients' }, { status: 500 })
   }
 }
