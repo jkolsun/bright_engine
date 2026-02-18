@@ -7,6 +7,20 @@ import { logActivity } from './logging'
  */
 
 /**
+ * Check if a lead has viewed their preview at least once.
+ * Used to gate urgency texts — no point texting if they never opened it.
+ */
+export async function hasLeadViewedPreview(leadId: string): Promise<boolean> {
+  const viewCount = await prisma.leadEvent.count({
+    where: {
+      leadId,
+      eventType: 'PREVIEW_VIEWED',
+    },
+  })
+  return viewCount > 0
+}
+
+/**
  * PROFIT SYSTEM 1: PREVIEW URGENCY
  * Send urgency texts on Days 3, 5, 6, 7, 8, 10, 14 after preview generation
  * ~$20-30 ARPU per text campaign
@@ -213,24 +227,33 @@ export async function checkProfitSystemTriggers(clientId: string) {
 
   const triggers: Record<string, any> = {}
 
-  // Check urgency
-  const previewCreatedDate = client.lead?.previewExpiresAt
-    ? new Date(
-        new Date(client.lead.previewExpiresAt).getTime() -
-        30 * 24 * 60 * 60 * 1000
-      ) // 30 days prior
-    : null
+  // Check urgency — only if lead has actually viewed the preview
+  const hasViewedPreview = client.lead?.events.some(
+    (e) => e.eventType === 'PREVIEW_VIEWED'
+  )
 
-  if (previewCreatedDate) {
-    const daysAgo = Math.floor(
-      (new Date().getTime() - previewCreatedDate.getTime()) /
-      (1000 * 60 * 60 * 24)
-    )
-    const urgencyMsg = await generateUrgencyMessages(daysAgo)
-    if (urgencyMsg) {
-      triggers.urgency = {
-        daysAgo,
-        message: urgencyMsg.replace('{name}', client.lead?.firstName || 'there'),
+  if (!hasViewedPreview) {
+    // Never opened preview — skip urgency text, don't waste Twilio credit
+    console.log(`[PROFIT] Skipping urgency for ${client.lead?.companyName || clientId} — no preview views`)
+  } else {
+    const previewCreatedDate = client.lead?.previewExpiresAt
+      ? new Date(
+          new Date(client.lead.previewExpiresAt).getTime() -
+          30 * 24 * 60 * 60 * 1000
+        ) // 30 days prior
+      : null
+
+    if (previewCreatedDate) {
+      const daysAgo = Math.floor(
+        (new Date().getTime() - previewCreatedDate.getTime()) /
+        (1000 * 60 * 60 * 24)
+      )
+      const urgencyMsg = await generateUrgencyMessages(daysAgo)
+      if (urgencyMsg) {
+        triggers.urgency = {
+          daysAgo,
+          message: urgencyMsg.replace('{name}', client.lead?.firstName || 'there'),
+        }
       }
     }
   }
