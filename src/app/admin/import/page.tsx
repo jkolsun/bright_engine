@@ -530,6 +530,7 @@ export default function ImportPage() {
                           <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Email</th>
                           <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Phone</th>
                           <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Location</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Personalization</th>
                           <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
                           <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Rating</th>
                           <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Preview</th>
@@ -548,6 +549,32 @@ export default function ImportPage() {
                             <td className="py-3 px-4 text-sm text-gray-600">{lead.phone || '—'}</td>
                             <td className="py-3 px-4 text-sm text-gray-600">
                               {[lead.city, lead.state].filter(Boolean).join(', ') || '—'}
+                            </td>
+                            <td className="py-3 px-4">
+                              {(() => {
+                                try {
+                                  const p = typeof lead.personalization === 'string' ? JSON.parse(lead.personalization) : lead.personalization
+                                  if (p?.firstLine) {
+                                    return (
+                                      <div className="max-w-[280px]">
+                                        <p className="text-sm text-gray-900 leading-snug line-clamp-2">{p.firstLine}</p>
+                                        {p.tier && (
+                                          <span className={`inline-block mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                            p.tier === 'S' ? 'bg-yellow-100 text-yellow-700' :
+                                            p.tier === 'A' ? 'bg-blue-100 text-blue-700' :
+                                            'bg-gray-100 text-gray-600'
+                                          }`}>
+                                            Tier {p.tier}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )
+                                  }
+                                  return <span className="text-gray-300">—</span>
+                                } catch {
+                                  return <span className="text-gray-300">—</span>
+                                }
+                              })()}
                             </td>
                             <td className="py-3 px-4">
                               <Badge variant="outline" className="text-xs">{lead.status}</Badge>
