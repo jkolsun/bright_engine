@@ -902,7 +902,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       </div>
 
       {/* Session Stats Bar */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <MiniStat icon={<Phone size={16} />} color="teal" label="Dials" value={sessionStats.dials} />
         <MiniStat icon={<PhoneForwarded size={16} />} color="green" label="Connects" value={sessionStats.conversations} />
         <MiniStat icon={<MessageSquare size={16} />} color="purple" label="Previews Sent" value={sessionStats.previewLinksSent} />
@@ -997,14 +997,14 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
               {/* Action Buttons */}
               {callPhase === 'idle' ? (
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))} disabled={currentIndex <= 0}>
+                  <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))} disabled={currentIndex <= 0}>
                     <ArrowLeft size={16} />
                   </Button>
-                  <Button className="flex-1 bg-green-600 hover:bg-green-700 text-white" onClick={sessionActive ? handleDial : handleStartSession}>
+                  <Button className="flex-1 gradient-primary text-white shadow-teal hover:opacity-90 rounded-xl" onClick={sessionActive ? handleDial : handleStartSession}>
                     {!isPartTime && dialerMode === 'power' ? <Zap size={18} className="mr-2" /> : <Phone size={18} className="mr-2" />}
                     {sessionActive ? 'Dial' : isPartTime ? 'Start Calling' : `Start ${dialerMode === 'power' ? 'Power' : 'Single'} Dial`}
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => setCurrentIndex(Math.min(queue.length - 1, currentIndex + 1))} disabled={currentIndex >= queue.length - 1}>
+                  <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setCurrentIndex(Math.min(queue.length - 1, currentIndex + 1))} disabled={currentIndex >= queue.length - 1}>
                     <SkipForward size={16} />
                   </Button>
                 </div>
@@ -1014,20 +1014,20 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                     {isPartTime ? 'Call in progress...' : 'Ringing...'}
                   </p>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button onClick={handleConnect} className="bg-green-600 hover:bg-green-700 text-white">
+                    <Button onClick={handleConnect} className="gradient-primary text-white shadow-teal rounded-xl">
                       <PhoneForwarded size={16} className="mr-1" /> Connected
                     </Button>
-                    <Button onClick={() => handleOutcome('no_answer')} variant="outline" disabled={processing}>
+                    <Button onClick={() => handleOutcome('no_answer')} variant="outline" className="rounded-xl" disabled={processing}>
                       <PhoneMissed size={16} className="mr-1" /> No Answer
                     </Button>
-                    <Button onClick={() => handleOutcome('voicemail_left')} variant="outline" disabled={processing}>
+                    <Button onClick={() => handleOutcome('voicemail_left')} variant="outline" className="rounded-xl" disabled={processing}>
                       <Mic size={16} className="mr-1" /> VM - Left Pitch
                     </Button>
-                    <Button onClick={() => handleOutcome('voicemail_skipped')} variant="outline" disabled={processing}>
+                    <Button onClick={() => handleOutcome('voicemail_skipped')} variant="outline" className="rounded-xl" disabled={processing}>
                       <MicOff size={16} className="mr-1" /> VM - Skip
                     </Button>
                   </div>
-                  <Button className="w-full bg-red-600 hover:bg-red-700 text-white" onClick={() => handleHangup()}>
+                  <Button className="w-full bg-red-600 hover:bg-red-700 text-white rounded-xl" onClick={() => handleHangup()}>
                     <PhoneOff size={16} className="mr-1" /> Hang Up
                   </Button>
                 </div>
@@ -1224,12 +1224,12 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
             {/* VM Script (shown during call) */}
             {callActive && (
-              <Card className="p-5">
+              <Card className="p-5 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <Mic size={16} className="text-green-600" />
+                  <Mic size={16} className="text-emerald-600" />
                   Voicemail Script (15 sec)
                 </h3>
-                <div className="bg-green-50 p-4 rounded-lg text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                <div className="bg-emerald-50 p-4 rounded-xl text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                   {getVMScript()}
                 </div>
                 <p className="text-xs text-gray-400 mt-2">After leaving VM, press [T] to auto-text the preview link</p>
@@ -1245,30 +1245,30 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
       {/* Callback Dialog */}
       <Dialog open={showCallbackDialog} onOpenChange={setShowCallbackDialog}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[400px] rounded-2xl">
           <DialogHeader>
             <DialogTitle>Schedule Callback</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">Date</label>
-              <Input type="date" value={callbackDate} onChange={(e) => setCallbackDate(e.target.value)} />
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-1.5">Date</label>
+              <Input className="rounded-xl" type="date" value={callbackDate} onChange={(e) => setCallbackDate(e.target.value)} />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">Time</label>
-              <Input type="time" value={callbackTime} onChange={(e) => setCallbackTime(e.target.value)} />
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-1.5">Time</label>
+              <Input className="rounded-xl" type="time" value={callbackTime} onChange={(e) => setCallbackTime(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCallbackDialog(false)}>Cancel</Button>
-            <Button onClick={handleCallback} disabled={!callbackDate || !callbackTime}>Schedule</Button>
+            <Button variant="outline" className="rounded-xl" onClick={() => setShowCallbackDialog(false)}>Cancel</Button>
+            <Button className="rounded-xl gradient-primary text-white border-0" onClick={handleCallback} disabled={!callbackDate || !callbackTime}>Schedule</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Note Dialog */}
       <Dialog open={showNoteDialog} onOpenChange={setShowNoteDialog}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[400px] rounded-2xl">
           <DialogHeader>
             <DialogTitle>Add Note</DialogTitle>
           </DialogHeader>
@@ -1276,39 +1276,39 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
             placeholder="Type your note..."
-            className="w-full h-24 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full h-24 px-3 py-2 text-sm border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-teal-500"
             autoFocus
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNoteDialog(false)}>Cancel</Button>
-            <Button onClick={handleSaveNote} disabled={!noteText}>Save Note</Button>
+            <Button variant="outline" className="rounded-xl" onClick={() => setShowNoteDialog(false)}>Cancel</Button>
+            <Button className="rounded-xl gradient-primary text-white border-0" onClick={handleSaveNote} disabled={!noteText}>Save Note</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Preview Send Dialog */}
       <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {previewMethod === 'sms' ? <><MessageSquare size={18} className="text-blue-600" /> Text Preview</> : <><Mail size={18} className="text-purple-600" /> Email Preview</>}
+              {previewMethod === 'sms' ? <><MessageSquare size={18} className="text-teal-600" /> Text Preview</> : <><Mail size={18} className="text-purple-600" /> Email Preview</>}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span className="font-medium">To:</span>
+              <span className="font-semibold">To:</span>
               <span>{previewMethod === 'sms' ? currentLead?.phone : currentLead?.email || 'No email'}</span>
             </div>
             <textarea
               value={previewMessage}
               onChange={(e) => setPreviewMessage(e.target.value)}
-              className="w-full h-36 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full h-36 px-3 py-2 text-sm border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPreviewDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" className="rounded-xl" onClick={() => setPreviewDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSendPreview}
-              className={previewMethod === 'sms' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'}
+              className={previewMethod === 'sms' ? 'bg-[#2E7D8A] hover:bg-[#236571] text-white rounded-xl' : 'bg-purple-600 hover:bg-purple-700 text-white rounded-xl'}
               disabled={previewMethod === 'email' && !currentLead?.email}>
               <Send size={14} className="mr-1" /> Send
             </Button>
@@ -1318,47 +1318,47 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
       {/* Edit Lead Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[450px]">
+        <DialogContent className="sm:max-w-[450px] rounded-2xl">
           <DialogHeader>
             <DialogTitle>Edit Lead Info</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 py-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">First Name</label>
-                <Input value={editForm.firstName || ''} onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })} />
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">First Name</label>
+                <Input className="rounded-xl" value={editForm.firstName || ''} onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })} />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">Last Name</label>
-                <Input value={editForm.lastName || ''} onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })} />
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Last Name</label>
+                <Input className="rounded-xl" value={editForm.lastName || ''} onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })} />
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Company</label>
-              <Input value={editForm.companyName || ''} onChange={(e) => setEditForm({ ...editForm, companyName: e.target.value })} />
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Company</label>
+              <Input className="rounded-xl" value={editForm.companyName || ''} onChange={(e) => setEditForm({ ...editForm, companyName: e.target.value })} />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Phone</label>
-              <Input value={editForm.phone || ''} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Phone</label>
+              <Input className="rounded-xl" value={editForm.phone || ''} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Email</label>
-              <Input value={editForm.email || ''} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</label>
+              <Input className="rounded-xl" value={editForm.email || ''} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">City</label>
-                <Input value={editForm.city || ''} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} />
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">City</label>
+                <Input className="rounded-xl" value={editForm.city || ''} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">State</label>
-                <Input value={editForm.state || ''} maxLength={2} onChange={(e) => setEditForm({ ...editForm, state: e.target.value.toUpperCase() })} />
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">State</label>
+                <Input className="rounded-xl" value={editForm.state || ''} maxLength={2} onChange={(e) => setEditForm({ ...editForm, state: e.target.value.toUpperCase() })} />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveEdit} disabled={saving}>
+            <Button variant="outline" className="rounded-xl" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button className="rounded-xl gradient-primary text-white border-0" onClick={handleSaveEdit} disabled={saving}>
               <Save size={16} className="mr-1" /> {saving ? 'Saving...' : 'Save'}
             </Button>
           </DialogFooter>
@@ -1373,17 +1373,17 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 // ============================================
 
 function MiniStat({ icon, color, label, value }: { icon: React.ReactNode, color: string, label: string, value: number }) {
-  const bgMap: Record<string, string> = { blue: 'bg-blue-100', green: 'bg-green-100', purple: 'bg-purple-100', amber: 'bg-amber-100' }
-  const textMap: Record<string, string> = { blue: 'text-blue-600', green: 'text-green-600', purple: 'text-purple-600', amber: 'text-amber-600' }
+  const bgMap: Record<string, string> = { teal: 'bg-teal-50', green: 'bg-emerald-50', purple: 'bg-purple-50', amber: 'bg-amber-50' }
+  const textMap: Record<string, string> = { teal: 'text-teal-600', green: 'text-emerald-600', purple: 'text-purple-600', amber: 'text-amber-600' }
 
   return (
-    <Card className="p-3 flex items-center gap-3">
-      <div className={`w-8 h-8 rounded-lg ${bgMap[color]} flex items-center justify-center`}>
+    <Card className="p-3 flex items-center gap-3 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
+      <div className={`w-8 h-8 rounded-xl ${bgMap[color]} flex items-center justify-center`}>
         <span className={textMap[color]}>{icon}</span>
       </div>
       <div>
         <div className="text-xl font-bold text-gray-900">{value}</div>
-        <div className="text-xs text-gray-500">{label}</div>
+        <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{label}</div>
       </div>
     </Card>
   )
