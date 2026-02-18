@@ -15,7 +15,7 @@ function getResendClient(): Resend {
 }
 
 function getFromEmail(): string {
-  return process.env.RESEND_FROM_EMAIL || 'Bright Automations <hello@brightautomations.net>'
+  return process.env.RESEND_FROM_EMAIL || 'Bright Automations <support@brightautomations.net>'
 }
 
 // ── Types ──────────────────────────────────────────────
