@@ -5,14 +5,13 @@ import { verifySession } from '@/lib/session'
 export const dynamic = 'force-dynamic'
 
 /**
- * DELETE /api/leads/delete
- * Soft delete leads (mark deleted, preserve audit trail)
+ * POST /api/leads/delete
+ * Hard delete leads (permanently removes from database)
  * Accepts: { leadIds: string[] } for batch deletion
  * Or: { status?: string } to delete all leads with specific status
  */
 export async function POST(request: NextRequest) {
   try {
-    // Admin-only access check
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
@@ -30,29 +29,19 @@ export async function POST(request: NextRequest) {
     }
 
     let where: any = {}
-    
+
     if (all) {
-      // Delete ALL leads (careful!)
       where = {}
     } else if (leadIds && Array.isArray(leadIds)) {
-      // Delete specific leads
       where = { id: { in: leadIds } }
     } else if (status) {
-      // Delete by status (e.g., all CLOSED_LOST)
       where = { status }
     }
 
-    // Soft delete: mark as CLOSED_LOST instead of removing (preserves audit trail)
-    const result = await prisma.lead.updateMany({
-      where,
-      data: {
-        status: 'CLOSED_LOST', // Soft delete via status
-        updatedAt: new Date(),
-      }
-    })
+    const result = await prisma.lead.deleteMany({ where })
 
     return NextResponse.json({
-      message: 'Leads deleted successfully',
+      message: 'Leads permanently deleted',
       deletedCount: result.count,
       leadIds,
       status
@@ -72,7 +61,6 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    // Admin-only access check
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
@@ -80,7 +68,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const leadId = request.nextUrl.searchParams.get('leadId')
-    
+
     if (!leadId) {
       return NextResponse.json(
         { error: 'leadId query parameter required' },
@@ -88,16 +76,10 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    await prisma.lead.update({
-      where: { id: leadId },
-      data: {
-        status: 'CLOSED_LOST',
-        updatedAt: new Date(),
-      }
-    })
+    await prisma.lead.delete({ where: { id: leadId } })
 
     return NextResponse.json({
-      message: 'Lead deleted successfully',
+      message: 'Lead permanently deleted',
       leadId
     })
   } catch (error) {

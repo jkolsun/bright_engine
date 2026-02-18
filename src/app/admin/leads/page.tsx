@@ -18,7 +18,7 @@ import { formatPhone } from '@/lib/utils'
 import { useState, useEffect } from 'react'
 import {
   Search, Filter, Plus, Eye, TrendingUp, UserPlus, UserMinus, Users,
-  FolderOpen, FolderPlus, ArrowLeft, Target, Mail, X
+  FolderOpen, FolderPlus, ArrowLeft, Target, Mail, X, MoreVertical, Pencil, Trash2
 } from 'lucide-react'
 
 export default function LeadsPage() {
@@ -50,6 +50,10 @@ export default function LeadsPage() {
   const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
   const [creatingFolder, setCreatingFolder] = useState(false)
+  const [folderMenuOpen, setFolderMenuOpen] = useState<string | null>(null)
+  const [editFolderDialogOpen, setEditFolderDialogOpen] = useState(false)
+  const [editFolderId, setEditFolderId] = useState<string | null>(null)
+  const [editFolderName, setEditFolderName] = useState('')
 
   // Assignment destination state
   const [assignDestination, setAssignDestination] = useState<'rep-tracker' | 'instantly' | null>(null)
@@ -108,6 +112,41 @@ export default function LeadsPage() {
     finally { setCreatingFolder(false) }
   }
 
+  const handleEditFolder = async () => {
+    if (!editFolderId || !editFolderName.trim()) return
+    try {
+      const res = await fetch(`/api/folders/${editFolderId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editFolderName.trim() }),
+      })
+      if (res.ok) {
+        setEditFolderDialogOpen(false)
+        setEditFolderId(null)
+        setEditFolderName('')
+        fetchFolders()
+      }
+    } catch { /* ignore */ }
+  }
+
+  const handleDeleteFolder = async (folderId: string, folderName: string) => {
+    if (!confirm(`Delete folder "${folderName}"? Leads inside will become unorganized.`)) return
+    try {
+      const res = await fetch(`/api/folders/${folderId}`, { method: 'DELETE' })
+      if (res.ok) {
+        fetchFolders()
+        fetchLeads()
+      }
+    } catch { /* ignore */ }
+  }
+
+  const handleAssignFolder = (folderId: string) => {
+    setActiveFolder(folderId)
+    setSelectedLeads(new Set())
+    setStatusFilter('all')
+    setFolderMenuOpen(null)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -152,7 +191,7 @@ export default function LeadsPage() {
   }
 
   const handleDeleteLead = async (leadId: string, firstName: string) => {
-    if (!confirm(`Are you sure you want to delete ${firstName}? This marks them as CLOSED_LOST.`)) {
+    if (!confirm(`Are you sure you want to permanently delete ${firstName}? This cannot be undone.`)) {
       return
     }
 
@@ -240,7 +279,7 @@ export default function LeadsPage() {
     }
 
     const count = selectedLeads.size
-    if (!confirm(`Are you sure you want to delete ${count} selected lead${count !== 1 ? 's' : ''}? This marks them as CLOSED_LOST.`)) {
+    if (!confirm(`Are you sure you want to permanently delete ${count} selected lead${count !== 1 ? 's' : ''}? This cannot be undone.`)) {
       return
     }
 
@@ -351,6 +390,28 @@ export default function LeadsPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+
+            {/* Edit Folder Dialog */}
+            <Dialog open={editFolderDialogOpen} onOpenChange={(open) => { setEditFolderDialogOpen(open); if (!open) setFolderMenuOpen(null) }}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit Folder</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                  <label className="text-sm font-medium">Folder Name</label>
+                  <Input
+                    className="mt-2"
+                    value={editFolderName}
+                    onChange={(e) => setEditFolderName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleEditFolder()}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setEditFolderDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleEditFolder} disabled={!editFolderName.trim()}>Save</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -367,7 +428,7 @@ export default function LeadsPage() {
               return (
                 <Card
                   key={folder.id}
-                  className="p-6 cursor-pointer hover:shadow-md transition-all hover:border-blue-300"
+                  className="p-6 cursor-pointer hover:shadow-md transition-all hover:border-blue-300 relative"
                   onClick={() => { setActiveFolder(folder.id); setSelectedLeads(new Set()); setStatusFilter('all') }}
                 >
                   <div className="flex items-start gap-3">
@@ -381,6 +442,42 @@ export default function LeadsPage() {
                         {newCount > 0 && <Badge variant="secondary" className="text-xs">{newCount} new</Badge>}
                         {hotCount > 0 && <Badge variant="destructive" className="text-xs">{hotCount} hot</Badge>}
                       </div>
+                    </div>
+                    {/* Three-dot menu */}
+                    <div className="relative">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setFolderMenuOpen(folderMenuOpen === folder.id ? null : folder.id) }}
+                        className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        <MoreVertical size={18} />
+                      </button>
+                      {folderMenuOpen === folder.id && (
+                        <div className="absolute right-0 top-8 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-40" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                            onClick={() => {
+                              setEditFolderId(folder.id)
+                              setEditFolderName(folder.name)
+                              setEditFolderDialogOpen(true)
+                              setFolderMenuOpen(null)
+                            }}
+                          >
+                            <Pencil size={14} /> Edit
+                          </button>
+                          <button
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                            onClick={() => handleAssignFolder(folder.id)}
+                          >
+                            <UserPlus size={14} /> Assign Leads
+                          </button>
+                          <button
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                            onClick={() => { setFolderMenuOpen(null); handleDeleteFolder(folder.id, folder.name) }}
+                          >
+                            <Trash2 size={14} /> Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Card>

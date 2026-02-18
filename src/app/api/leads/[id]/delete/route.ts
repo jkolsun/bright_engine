@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
 
-// DELETE /api/leads/[id] - Soft delete (mark as CLOSED_LOST)
+// DELETE /api/leads/[id]/delete - Hard delete lead
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    // Admin-only access check
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
@@ -28,28 +27,11 @@ export async function DELETE(
       )
     }
 
-    // Soft delete: mark as CLOSED_LOST
-    const updated = await prisma.lead.update({
-      where: { id: leadId },
-      data: {
-        status: 'CLOSED_LOST'
-      }
-    })
-
-    // Log deletion event
-    await prisma.leadEvent.create({
-      data: {
-        leadId,
-        eventType: 'ESCALATED',
-        toStage: 'CLOSED_LOST',
-        actor: 'system',
-      }
-    })
+    await prisma.lead.delete({ where: { id: leadId } })
 
     return NextResponse.json({
       success: true,
-      message: 'Lead deleted successfully',
-      lead: updated
+      message: 'Lead permanently deleted',
     })
   } catch (error) {
     console.error('Error deleting lead:', error)

@@ -784,7 +784,7 @@ model ChannelPerformance {
 model RepTask {
   id          String    @id @default(cuid())
   leadId      String
-  lead        Lead      @relation(fields: [leadId], references: [id])
+  lead        Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
   repId       String?
   rep         User?     @relation("RepTasks", fields: [repId], references: [id])
   priority    String    @default("MEDIUM")

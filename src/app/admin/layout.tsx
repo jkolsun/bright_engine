@@ -13,7 +13,6 @@ import {
   LogOut,
   Upload,
   Target,
-  Zap,
   Mail,
   Radio,
   UserPlus,
@@ -84,9 +83,6 @@ export default function AdminLayout({
           </NavLink>
           <NavLink href="/admin/instantly" icon={<Mail size={20} />}>
             Instantly Campaigns
-          </NavLink>
-          <NavLink href="/admin/clawdbot-monitor" icon={<Zap size={20} />}>
-            Clawdbot Monitor
           </NavLink>
           <NavLink href="/admin/dialer-monitor" icon={<Radio size={20} />}>
             Live Dialer
