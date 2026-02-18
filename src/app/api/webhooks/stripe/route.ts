@@ -3,6 +3,7 @@ import { dispatchWebhook, WebhookEvents } from '@/lib/webhook-dispatcher'
 import type Stripe from 'stripe'
 import { prisma } from '@/lib/db'
 import { processRevenueCommission } from '@/lib/commissions'
+import { triggerOnboardingSequence, triggerWinBackSequence } from '@/lib/resend'
 
 export const dynamic = 'force-dynamic'
 
@@ -128,6 +129,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         amountTotal / 100,
         'stripe'
       ))
+
+      // Queue onboarding email sequence
+      try {
+        await triggerOnboardingSequence(client.id)
+      } catch (err) {
+        console.error('Onboarding email sequence failed to queue:', err)
+      }
     }
   }
 
@@ -252,5 +260,12 @@ async function handleSubscriptionCancelled(subscription: Stripe.Subscription) {
         metadata: { clientId: client.id },
       },
     })
+
+    // Queue win-back email sequence
+    try {
+      await triggerWinBackSequence(client.id)
+    } catch (err) {
+      console.error('Win-back email sequence failed to queue:', err)
+    }
   }
 }

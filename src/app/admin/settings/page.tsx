@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import {
   Building, Target, Zap, Users, Key, DollarSign,
   CheckCircle2, AlertTriangle, XCircle, RefreshCw, Loader2,
-  Save, Plus, Trash2, Phone, Link, Brain,
+  Save, Plus, Trash2, Phone, Link, Brain, Sparkles,
   BarChart3, ExternalLink, Eye, Search, ChevronDown
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
@@ -84,15 +84,17 @@ const DEFAULT_SEQUENCES = {
 }
 const DEFAULT_CLIENT_SEQUENCES = {
   touchpointDays: [7, 14, 30, 60, 90, 180, 365],
-  touchpointTemplates: {
-    7: 'Hey {name}! Your site for {company} has been live for a week. How\'s everything looking? Any changes you\'d like? Reply and we\'ll take care of it.',
-    14: 'Hi {name}, quick 2-week check-in on your {company} site. We\'re seeing {pageViews} page views so far. Want a full performance report?',
-    30: '{name}, your site has been live for a month! Time for a review. Have you claimed your Google Business Profile yet? We can set that up for $49 — huge for local visibility.',
-    60: 'Hey {name}, month 2 update for {company}. Your site is performing well. Interested in adding a review widget ($69/mo) to build social proof?',
-    90: '{name}, 3-month milestone! Let\'s talk about boosting {company}\'s online presence. Our SEO package ($149/mo) could help you rank higher for local searches.',
-    180: 'Half-year check-in, {name}! {company}\'s site has been solid. Want to explore our social media management ($99/mo) to drive even more traffic?',
-    365: 'Happy 1-year anniversary, {name}! Thanks for being a Bright Automations client. Let\'s schedule a call to review {company}\'s growth and plan for next year.',
+  touchpointGuidance: {
+    7: 'Check-in + quick win. Use their site stats to show early traction. Suggest one actionable thing (Google Business Profile, share link on social) based on what their data is missing.',
+    14: 'Performance report. Share real numbers (visits, forms, calls). If traffic is low, suggest how to drive it. If traffic is good, celebrate it.',
+    30: 'Month milestone + first upsell. Use their actual data to recommend ONE upsell that would help the most: low traffic → SEO, no reviews → Review Widget.',
+    60: 'Growth opportunity. Compare current stats to first month. Identify the biggest growth lever based on data.',
+    90: 'Quarterly review + strategic upsell. Full quarter review. Use data to pitch the upsell that makes the most sense for their situation.',
+    180: 'Half-year check. Share cumulative stats. Suggest a refresh or seasonal update. If they haven\'t purchased any upsells, make a tailored pitch.',
+    365: 'Anniversary + expansion. Total year stats. Ask about goals for next year. Suggest premium plan based on what data says they need most.',
   } as Record<number, string>,
+  // Keep legacy templates as fallback
+  touchpointTemplates: {} as Record<number, string>,
   upsellProducts: [
     { name: 'Google Business Profile', price: '$49 one-time', key: 'GBP' },
     { name: 'Review Widget', price: '$69/mo', key: 'REVIEW_WIDGET' },
@@ -209,6 +211,12 @@ export default function SettingsPage() {
   const [previewDropdownOpen, setPreviewDropdownOpen] = useState(false)
   const [previewOpenMessages, setPreviewOpenMessages] = useState<Set<string>>(new Set())
 
+  // AI retention preview state
+  const [retentionClients, setRetentionClients] = useState<any[]>([])
+  const [retentionSelectedClient, setRetentionSelectedClient] = useState<any>(null)
+  const [retentionPreviews, setRetentionPreviews] = useState<Record<number, string>>({})
+  const [retentionGenerating, setRetentionGenerating] = useState<number | null>(null)
+
   // ── Load all settings on mount ─────────────────────────────
   useEffect(() => {
     loadAllSettings()
@@ -269,7 +277,8 @@ export default function SettingsPage() {
       if (s.client_sequences) {
         setClientSequences({
           touchpointDays: s.client_sequences.touchpointDays || DEFAULT_CLIENT_SEQUENCES.touchpointDays,
-          touchpointTemplates: { ...DEFAULT_CLIENT_SEQUENCES.touchpointTemplates, ...s.client_sequences.touchpointTemplates },
+          touchpointGuidance: { ...DEFAULT_CLIENT_SEQUENCES.touchpointGuidance, ...s.client_sequences.touchpointGuidance },
+          touchpointTemplates: { ...DEFAULT_CLIENT_SEQUENCES.touchpointTemplates, ...(s.client_sequences.touchpointTemplates || {}) },
           upsellProducts: s.client_sequences.upsellProducts || DEFAULT_CLIENT_SEQUENCES.upsellProducts,
           enabled: s.client_sequences.enabled ?? true,
         })
@@ -353,19 +362,53 @@ export default function SettingsPage() {
     const day = parseInt(newClientDay)
     if (!day || day < 1 || day > 730 || clientSequences.touchpointDays.includes(day)) return
     const newDays = [...clientSequences.touchpointDays, day].sort((a, b) => a - b)
-    const newTemplates = { ...clientSequences.touchpointTemplates }
-    if (!newTemplates[day]) {
-      newTemplates[day] = `Hey {name}, day ${day} check-in for {company}. How's everything going with your site?`
+    const newGuidance = { ...clientSequences.touchpointGuidance }
+    if (!newGuidance[day]) {
+      newGuidance[day] = `Day ${day} check-in. Use their site stats to suggest one improvement.`
     }
-    setClientSequences({ ...clientSequences, touchpointDays: newDays, touchpointTemplates: newTemplates })
+    setClientSequences({ ...clientSequences, touchpointDays: newDays, touchpointGuidance: newGuidance })
     setNewClientDay('')
   }
 
   const removeClientDay = (day: number) => {
     const newDays = clientSequences.touchpointDays.filter(d => d !== day)
-    const newTemplates = { ...clientSequences.touchpointTemplates }
-    delete newTemplates[day]
-    setClientSequences({ ...clientSequences, touchpointDays: newDays, touchpointTemplates: newTemplates })
+    const newGuidance = { ...clientSequences.touchpointGuidance }
+    delete newGuidance[day]
+    setClientSequences({ ...clientSequences, touchpointDays: newDays, touchpointGuidance: newGuidance })
+  }
+
+  const fetchRetentionClients = async () => {
+    try {
+      const res = await fetch('/api/clients')
+      if (res.ok) {
+        const data = await res.json()
+        setRetentionClients(data.clients || [])
+      }
+    } catch { /* ignore */ }
+  }
+
+  const generateRetentionPreview = async (day: number) => {
+    if (!retentionSelectedClient) {
+      fetchRetentionClients()
+      return
+    }
+    setRetentionGenerating(day)
+    try {
+      const res = await fetch('/api/retention-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: retentionSelectedClient.id,
+          touchpointDay: day,
+          guidance: clientSequences.touchpointGuidance[day] || undefined,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setRetentionPreviews(prev => ({ ...prev, [day]: data.message }))
+      }
+    } catch { /* ignore */ }
+    finally { setRetentionGenerating(null) }
   }
 
   // ── Sync Instantly campaigns ───────────────────────────────
@@ -943,7 +986,7 @@ export default function SettingsPage() {
               {/* Enable/Disable + Description */}
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-2">
-                  <SectionHeader title="Client Retention Sequences" description="Automated touchpoints after a client goes live — check-ins, upsells, and performance reviews" />
+                  <SectionHeader title="AI-Adaptive Retention Messages" description="Each message is generated by AI using the client's real site stats — visits, forms, calls, bounce rate, and more" />
                   <button
                     onClick={() => setClientSequences({ ...clientSequences, enabled: !clientSequences.enabled })}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -955,17 +998,20 @@ export default function SettingsPage() {
                     }`} />
                   </button>
                 </div>
-                <div className="p-3 bg-emerald-50 rounded-lg">
+                <div className="p-3 bg-emerald-50 rounded-lg space-y-2">
                   <p className="text-sm text-emerald-800">
-                    These messages are sent based on <strong>days since the client&apos;s site went live</strong>.
-                    Use them to check in, share performance data, and introduce upsell services at the right time.
+                    Messages are <strong>generated at send time</strong> using Claude AI + the client&apos;s actual site analytics.
+                    Each client gets a unique, data-driven message — not a template.
+                  </p>
+                  <p className="text-xs text-emerald-600">
+                    The guidance below tells the AI what angle to take for each touchpoint. The AI uses the client&apos;s real stats (page views, form submissions, calls, bounce rate, traffic sources) to write a personalized message.
                   </p>
                 </div>
               </Card>
 
               {/* Touchpoint Schedule */}
               <Card className="p-6">
-                <SectionHeader title="Touchpoint Schedule" description="Days after site goes live when messages are sent" />
+                <SectionHeader title="Touchpoint Schedule" description="Days after site goes live when AI generates and sends a message" />
 
                 {/* Day pills */}
                 <div className="flex flex-wrap gap-2 mb-4">
@@ -1000,61 +1046,80 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Templates per day */}
-                <div className="space-y-3">
+                {/* Client selector for AI preview */}
+                <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles size={14} className="text-purple-600" />
+                    <span className="text-xs font-semibold text-purple-700 uppercase tracking-wider">AI Preview — Select a client to generate sample messages</span>
+                  </div>
+                  <select
+                    className="w-full h-9 px-3 text-sm border border-purple-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    value={retentionSelectedClient?.id || ''}
+                    onChange={(e) => {
+                      const c = retentionClients.find((c: any) => c.id === e.target.value)
+                      setRetentionSelectedClient(c || null)
+                      setRetentionPreviews({})
+                    }}
+                    onFocus={() => { if (retentionClients.length === 0) fetchRetentionClients() }}
+                  >
+                    <option value="">Choose a client to preview AI messages...</option>
+                    {retentionClients.map((c: any) => (
+                      <option key={c.id} value={c.id}>{c.companyName} — {c.contactName || 'No contact'}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Guidance per day */}
+                <div className="space-y-4">
                   {clientSequences.touchpointDays.map((day) => {
-                    const msgKey = `retention-${day}`
-                    const isOpen = previewOpenMessages.has(msgKey)
-                    const rendered = previewSelectedLead ? fillTemplate(clientSequences.touchpointTemplates[day] || '', previewMergeVars) : null
+                    const aiPreview = retentionPreviews[day]
+                    const isGenerating = retentionGenerating === day
                     return (
-                      <div key={day} className="space-y-1">
+                      <div key={day} className="border border-gray-200 rounded-lg p-4 space-y-2">
                         <div className="flex items-center justify-between">
                           <FieldLabel>
-                            {day < 30 ? `Day ${day}` : day < 365 ? `Month ${Math.round(day / 30)}` : `Year ${Math.round(day / 365)}`} Message
-                            <span className="text-xs text-gray-400 font-normal ml-2">(day {day})</span>
+                            {day < 30 ? `Day ${day}` : day < 365 ? `Month ${Math.round(day / 30)}` : `Year ${Math.round(day / 365)}`}
+                            <span className="text-xs text-gray-400 font-normal ml-2">AI Guidance</span>
                           </FieldLabel>
                           <button
-                            onClick={() => {
-                              const next = new Set(previewOpenMessages)
-                              if (next.has(msgKey)) next.delete(msgKey); else next.add(msgKey)
-                              setPreviewOpenMessages(next)
-                              if (!previewSelectedLead) { fetchPreviewLeads(); setPreviewDropdownOpen(true) }
-                            }}
-                            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                              isOpen ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500 hover:bg-purple-50 hover:text-purple-600'
+                            onClick={() => generateRetentionPreview(day)}
+                            disabled={isGenerating || !retentionSelectedClient}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                              retentionSelectedClient
+                                ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             }`}
                           >
-                            <Eye size={12} />
-                            Preview
+                            {isGenerating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                            {isGenerating ? 'Generating...' : 'Generate Preview'}
                           </button>
                         </div>
                         <textarea
-                          value={clientSequences.touchpointTemplates[day] || ''}
+                          value={clientSequences.touchpointGuidance[day] || ''}
                           onChange={(e) => setClientSequences({
                             ...clientSequences,
-                            touchpointTemplates: { ...clientSequences.touchpointTemplates, [day]: e.target.value }
+                            touchpointGuidance: { ...clientSequences.touchpointGuidance, [day]: e.target.value }
                           })}
-                          className="w-full h-20 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                          placeholder="Use {name}, {company}, {pageViews} as variables"
+                          className="w-full h-16 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          placeholder="Tell the AI what angle to take for this touchpoint..."
                         />
-                        {isOpen && (
-                          rendered ? (
-                            <div className="flex items-start gap-2 p-2.5 bg-purple-50 border border-purple-200 rounded-md">
-                              <Eye size={13} className="text-purple-500 mt-0.5 flex-shrink-0" />
-                              <p className="text-sm text-purple-900 whitespace-pre-wrap">{rendered}</p>
+                        {aiPreview && (
+                          <div className="flex items-start gap-2 p-3 bg-purple-50 border border-purple-200 rounded-md">
+                            <Sparkles size={13} className="text-purple-500 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-xs font-medium text-purple-600 mb-1">AI-generated for {retentionSelectedClient?.companyName}:</p>
+                              <p className="text-sm text-purple-900 whitespace-pre-wrap">{aiPreview}</p>
                             </div>
-                          ) : (
-                            <div className="p-2.5 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-400 italic">
-                              Select a lead above to see the preview with real data
-                            </div>
-                          )
+                          </div>
                         )}
                       </div>
                     )
                   })}
                 </div>
 
-                <p className="text-xs text-gray-400 mt-3">Variables: {'{name}'}, {'{company}'}, {'{pageViews}'}, {'{siteUrl}'}, {'{upsellName}'}, {'{upsellPrice}'}, {'{upsellPhone}'}, {'{paymentLink}'}</p>
+                <p className="text-xs text-gray-400 mt-3">
+                  The AI uses each client&apos;s real data: page views, form submissions, calls, missed calls, bounce rate, traffic sources, active upsells, and days since launch.
+                </p>
               </Card>
 
               {/* Upsell Products */}

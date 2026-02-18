@@ -7,8 +7,10 @@ import { generatePreview } from '../lib/preview-generator'
 import { generateRepScript } from '../lib/rep-scripts'
 import { distributeLead } from '../lib/distribution'
 import { calculateEngagementScore } from '../lib/engagement-scoring'
+import { generateRetentionMessage } from '../lib/retention-messages'
 import { prisma } from '../lib/db'
 import { sendSMS } from '../lib/twilio'
+import { sendEmail, getEmailTemplate, triggerReferralSequence } from '../lib/resend'
 import { canSendMessage } from '../lib/utils'
 import { addPreviewGenerationJob, addPersonalizationJob, addScriptGenerationJob, addDistributionJob, getSharedConnection } from './queue'
 
@@ -184,7 +186,48 @@ async function startWorkers() {
           case 'referral-day-45':
             await sendReferralDay45(job.data.clientId)
             break
-            
+
+          // ── Email Sequences ───────────────────────────
+          case 'onboarding-welcome-email':
+            await sendOnboardingWelcomeEmail(job.data.clientId)
+            break
+          case 'onboarding-nudge-email':
+            await sendOnboardingNudgeEmail(job.data.clientId)
+            break
+          case 'post-launch-day-3-email':
+            await sendPostLaunchDay3Email(job.data.clientId)
+            break
+          case 'post-launch-day-7-email':
+            await sendPostLaunchDay7Email(job.data.clientId)
+            break
+          case 'post-launch-day-14-email':
+            await sendPostLaunchDay14Email(job.data.clientId)
+            break
+          case 'post-launch-day-21-email':
+            await sendPostLaunchDay21Email(job.data.clientId)
+            break
+          case 'post-launch-day-28-email':
+            await sendPostLaunchDay28Email(job.data.clientId)
+            break
+          case 'win-back-day-7-email':
+            await sendWinBackDay7Email(job.data.clientId)
+            break
+          case 'win-back-day-14-email':
+            await sendWinBackDay14Email(job.data.clientId)
+            break
+          case 'win-back-day-30-email':
+            await sendWinBackDay30Email(job.data.clientId)
+            break
+          case 'referral-day-45-email':
+            await sendReferralDay45Email(job.data.clientId)
+            break
+          case 'referral-day-90-email':
+            await sendReferralDay90Email(job.data.clientId)
+            break
+          case 'referral-day-180-email':
+            await sendReferralDay180Email(job.data.clientId)
+            break
+
           default:
             console.log(`Unknown sequence: ${job.name}`)
         }
@@ -290,7 +333,8 @@ async function startWorkers() {
 // SEQUENCE FUNCTIONS
 // ============================================
 
-async function sendPostLaunchDay3(clientId: string) {
+// Generic AI-powered touchpoint sender
+async function sendAdaptiveTouchpoint(clientId: string, touchpointDay: number, nextTouchpoint?: string, nextDaysOffset?: number) {
   const client = await prisma.client.findUnique({
     where: { id: clientId },
     include: { lead: true },
@@ -298,51 +342,47 @@ async function sendPostLaunchDay3(clientId: string) {
 
   if (!client || !client.lead) return
 
-  const lead = client.lead
-  
-  if (!canSendMessage(lead.timezone || 'America/New_York')) {
-    // Reschedule for next hour
-    return
-  }
-
-  await sendSMS({
-    to: lead.phone,
-    message: `Quick tip: Add your site link to your Google Business Profile. That alone can double your local visibility.`,
-    clientId: client.id,
-    trigger: 'post_launch_day_3',
-  })
-
-  await prisma.client.update({
-    where: { id: clientId },
-    data: { nextTouchpoint: 'day_7', nextTouchpointDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000) },
-  })
-}
-
-async function sendPostLaunchDay7(clientId: string) {
-  // Get analytics and send stats
-  const client = await prisma.client.findUnique({
-    where: { id: clientId },
-    include: { lead: true, analytics: true },
-  })
-
-  if (!client || !client.lead) return
-
   if (!canSendMessage(client.lead.timezone || 'America/New_York')) return
 
-  const analytics = client.analytics
-  
-  if (analytics) {
+  try {
+    // Load custom guidance from settings if available
+    const settings = await prisma.settings.findFirst({ where: { key: 'client_sequences' } })
+    const clientSeq = settings?.value
+      ? (typeof settings.value === 'string' ? JSON.parse(settings.value as string) : settings.value)
+      : null
+    const guidance = clientSeq?.touchpointGuidance?.[touchpointDay] || undefined
+
+    const { message } = await generateRetentionMessage(clientId, touchpointDay, guidance)
+
     await sendSMS({
       to: client.lead.phone,
-      message: `Your first week: ${analytics.totalVisits} visitors, ${analytics.totalForms} form submissions. Traffic picks up as Google indexes your pages.`,
+      message,
       clientId: client.id,
-      trigger: 'post_launch_day_7',
+      trigger: `post_launch_day_${touchpointDay}`,
+    })
+  } catch (error) {
+    console.error(`[RETENTION] AI message failed for day ${touchpointDay}:`, error)
+  }
+
+  if (nextTouchpoint && nextDaysOffset) {
+    await prisma.client.update({
+      where: { id: clientId },
+      data: { nextTouchpoint, nextTouchpointDate: new Date(Date.now() + nextDaysOffset * 24 * 60 * 60 * 1000) },
     })
   }
 }
 
+async function sendPostLaunchDay3(clientId: string) {
+  await sendAdaptiveTouchpoint(clientId, 3, 'day_7', 4)
+}
+
+async function sendPostLaunchDay7(clientId: string) {
+  await sendAdaptiveTouchpoint(clientId, 7, 'day_14', 7)
+}
+
 async function sendPostLaunchDay28(clientId: string) {
-  // Hand off to Andrew for upsell conversation
+  await sendAdaptiveTouchpoint(clientId, 30)
+  // Also notify for upsell conversation
   await prisma.notification.create({
     data: {
       type: 'DAILY_AUDIT',
@@ -382,6 +422,316 @@ async function sendReferralDay45(clientId: string) {
     message: `Know a business owner who needs a site? Refer them, you both get a free month of hosting.`,
     clientId: client.id,
     trigger: 'referral_day_45',
+  })
+}
+
+// ============================================
+// EMAIL SEQUENCE FUNCTIONS
+// ============================================
+
+async function sendOnboardingWelcomeEmail(clientId: string) {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true },
+  })
+  if (!client || !client.lead || !client.lead.email) return
+
+  const template = await getEmailTemplate('onboarding_welcome', {
+    first_name: client.lead.firstName,
+    company_name: client.companyName,
+  })
+  if (!template) return
+
+  await sendEmail({
+    to: client.lead.email,
+    subject: template.subject,
+    html: template.body,
+    clientId: client.id,
+    trigger: 'onboarding_welcome',
+  })
+}
+
+async function sendOnboardingNudgeEmail(clientId: string) {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true },
+  })
+  if (!client || !client.lead || !client.lead.email) return
+
+  const template = await getEmailTemplate('onboarding_nudge', {
+    first_name: client.lead.firstName,
+    company_name: client.companyName,
+  })
+  if (!template) return
+
+  await sendEmail({
+    to: client.lead.email,
+    subject: template.subject,
+    html: template.body,
+    clientId: client.id,
+    trigger: 'onboarding_nudge',
+  })
+}
+
+async function sendPostLaunchDay3Email(clientId: string) {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true },
+  })
+  if (!client || !client.lead || !client.lead.email) return
+
+  const template = await getEmailTemplate('post_launch_day_3', {
+    first_name: client.lead.firstName,
+    company_name: client.companyName,
+  })
+  if (!template) return
+
+  await sendEmail({
+    to: client.lead.email,
+    subject: template.subject,
+    html: template.body,
+    clientId: client.id,
+    trigger: 'post_launch_day_3',
+  })
+}
+
+async function sendPostLaunchDay7Email(clientId: string) {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true, analytics: true },
+  })
+  if (!client || !client.lead || !client.lead.email) return
+
+  const analytics = client.analytics
+  const template = await getEmailTemplate('post_launch_day_7', {
+    first_name: client.lead.firstName,
+    company_name: client.companyName,
+    visits: String(analytics?.totalVisits ?? '—'),
+    forms: String(analytics?.totalForms ?? '—'),
+  })
+  if (!template) return
+
+  await sendEmail({
+    to: client.lead.email,
+    subject: template.subject,
+    html: template.body,
+    clientId: client.id,
+    trigger: 'post_launch_day_7',
+  })
+}
+
+async function sendPostLaunchDay14Email(clientId: string) {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true, analytics: true },
+  })
+  if (!client || !client.lead || !client.lead.email) return
+
+  const source = client.analytics?.topTrafficSource || 'Google'
+  const template = await getEmailTemplate('post_launch_day_14', {
+    first_name: client.lead.firstName,
+    company_name: client.companyName,
+    source,
+  })
+  if (!template) return
+
+  await sendEmail({
+    to: client.lead.email,
+    subject: template.subject,
+    html: template.body,
+    clientId: client.id,
+    trigger: 'post_launch_day_14',
+  })
+}
+
+async function sendPostLaunchDay21Email(clientId: string) {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true, analytics: true },
+  })
+  if (!client || !client.lead || !client.lead.email) return
+
+  const analytics = client.analytics
+  const avgTime = analytics?.avgResponseTime
+    ? `${analytics.avgResponseTime} minutes`
+    : 'over an hour'
+  const template = await getEmailTemplate('post_launch_day_21', {
+    first_name: client.lead.firstName,
+    company_name: client.companyName,
+    leads: String(analytics?.totalForms ?? '—'),
+    time: avgTime,
+  })
+  if (!template) return
+
+  await sendEmail({
+    to: client.lead.email,
+    subject: template.subject,
+    html: template.body,
+    clientId: client.id,
+    trigger: 'post_launch_day_21',
+  })
+}
+
+async function sendPostLaunchDay28Email(clientId: string) {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true, analytics: true },
+  })
+  if (!client || !client.lead || !client.lead.email) return
+
+  const analytics = client.analytics
+  const template = await getEmailTemplate('post_launch_day_28', {
+    first_name: client.lead.firstName,
+    company_name: client.companyName,
+    visits: String(analytics?.totalVisits ?? '—'),
+    forms: String(analytics?.totalForms ?? '—'),
+    calls: String(analytics?.totalCalls ?? '—'),
+  })
+  if (!template) return
+
+  await sendEmail({
+    to: client.lead.email,
+    subject: template.subject,
+    html: template.body,
+    clientId: client.id,
+    trigger: 'post_launch_day_28',
+  })
+
+  // Kick off referral sequence after day-28 email
+  await triggerReferralSequence(clientId)
+}
+
+async function sendWinBackDay7Email(clientId: string) {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true },
+  })
+  if (!client || !client.lead || !client.lead.email) return
+
+  const template = await getEmailTemplate('win_back_day_7', {
+    first_name: client.lead.firstName,
+    company_name: client.companyName,
+  })
+  if (!template) return
+
+  await sendEmail({
+    to: client.lead.email,
+    subject: template.subject,
+    html: template.body,
+    clientId: client.id,
+    trigger: 'win_back_day_7',
+  })
+}
+
+async function sendWinBackDay14Email(clientId: string) {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true },
+  })
+  if (!client || !client.lead || !client.lead.email) return
+
+  const template = await getEmailTemplate('win_back_day_14', {
+    first_name: client.lead.firstName,
+    company_name: client.companyName,
+  })
+  if (!template) return
+
+  await sendEmail({
+    to: client.lead.email,
+    subject: template.subject,
+    html: template.body,
+    clientId: client.id,
+    trigger: 'win_back_day_14',
+  })
+}
+
+async function sendWinBackDay30Email(clientId: string) {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true },
+  })
+  if (!client || !client.lead || !client.lead.email) return
+
+  const template = await getEmailTemplate('win_back_day_30', {
+    first_name: client.lead.firstName,
+    company_name: client.companyName,
+  })
+  if (!template) return
+
+  await sendEmail({
+    to: client.lead.email,
+    subject: template.subject,
+    html: template.body,
+    clientId: client.id,
+    trigger: 'win_back_day_30',
+  })
+}
+
+async function sendReferralDay45Email(clientId: string) {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true },
+  })
+  if (!client || !client.lead || !client.lead.email) return
+
+  const template = await getEmailTemplate('referral_day_45', {
+    first_name: client.lead.firstName,
+    company_name: client.companyName,
+  })
+  if (!template) return
+
+  await sendEmail({
+    to: client.lead.email,
+    subject: template.subject,
+    html: template.body,
+    clientId: client.id,
+    trigger: 'referral_day_45',
+  })
+}
+
+async function sendReferralDay90Email(clientId: string) {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true },
+  })
+  if (!client || !client.lead || !client.lead.email) return
+
+  const template = await getEmailTemplate('referral_day_90', {
+    first_name: client.lead.firstName,
+    company_name: client.companyName,
+    industry: client.industry,
+  })
+  if (!template) return
+
+  await sendEmail({
+    to: client.lead.email,
+    subject: template.subject,
+    html: template.body,
+    clientId: client.id,
+    trigger: 'referral_day_90',
+  })
+}
+
+async function sendReferralDay180Email(clientId: string) {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true, analytics: true },
+  })
+  if (!client || !client.lead || !client.lead.email) return
+
+  const template = await getEmailTemplate('referral_day_180', {
+    first_name: client.lead.firstName,
+    company_name: client.companyName,
+    leads: String(client.analytics?.totalForms ?? '—'),
+  })
+  if (!template) return
+
+  await sendEmail({
+    to: client.lead.email,
+    subject: template.subject,
+    html: template.body,
+    clientId: client.id,
+    trigger: 'referral_day_180',
   })
 }
 

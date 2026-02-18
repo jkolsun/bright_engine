@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
       checkInstantly(),
       checkStripe(),
       checkTwilio(),
+      checkResend(),
       checkAnthropic(),
       checkSerper(),
       checkSerpApi(),
@@ -104,6 +105,25 @@ async function checkTwilio(): Promise<ServiceStatus> {
     return { key: 'twilio', label: 'Twilio', configured: true, connected: false, detail: `API returned ${res.status}` }
   } catch (e) {
     return { key: 'twilio', label: 'Twilio', configured: true, connected: false, detail: (e as Error).message }
+  }
+}
+
+// ── Resend ──────────────────────────────────────────────────
+async function checkResend(): Promise<ServiceStatus> {
+  const key = process.env.RESEND_API_KEY
+  if (!key) return { key: 'resend', label: 'Resend', configured: false, connected: null, detail: 'RESEND_API_KEY not set' }
+
+  try {
+    const res = await fetch('https://api.resend.com/domains', {
+      headers: { Authorization: `Bearer ${key}` },
+      signal: AbortSignal.timeout(8000),
+    })
+    if (res.ok) {
+      return { key: 'resend', label: 'Resend', configured: true, connected: true, detail: 'API key valid' }
+    }
+    return { key: 'resend', label: 'Resend', configured: true, connected: false, detail: `API returned ${res.status}` }
+  } catch (e) {
+    return { key: 'resend', label: 'Resend', configured: true, connected: false, detail: (e as Error).message }
   }
 }
 

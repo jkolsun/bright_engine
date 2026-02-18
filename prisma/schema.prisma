@@ -363,6 +363,11 @@ model Message {
   twilioSid  String?          @unique @map("twilio_sid")
   twilioStatus String?        @map("twilio_status")
 
+  // Resend data
+  resendId     String?        @unique @map("resend_id")
+  resendStatus String?        @map("resend_status")
+  emailSubject String?        @map("email_subject")
+
   createdAt  DateTime         @default(now()) @map("created_at")
 
   // Relations
