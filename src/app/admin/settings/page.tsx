@@ -72,13 +72,13 @@ const DEFAULT_PRICING = { siteBuild: 149, monthlyHosting: 39, annualHosting: 349
 const DEFAULT_SEQUENCES = {
   urgencyDays: [3, 5, 6, 7, 8, 10, 14],
   urgencyTemplates: {
-    3: '🔥 Hey {name}, previews expire in 11 days. Let\'s finalize your site so it goes live. Reply YES.',
-    5: '⏰ {name}, 9 days left on your preview. Don\'t want to miss your window. Can we schedule a call?',
-    6: '⚡ Quick question {name} - is time the only thing holding you back from launching?',
-    7: '🚨 {name}, 7 days left. We\'re holding your spot, but can\'t wait forever. Ready to move forward?',
-    8: 'Last chance to save your spot at this price, {name}. Preview expires in 6 days.',
-    10: 'Your preview from {date} is ending soon. We can have you live TODAY if you say yes.',
-    14: '{name}, your preview is ending in 24 hours! This is your final notice.',
+    3: '🔥 Hey {name}, your preview expires in {days_left} days. Take another look: {preview_url}',
+    5: '⏰ {name}, {days_left} days left on your preview. Don\'t want to miss your window. Can we schedule a call?',
+    6: '⚡ Quick question {name} — is time the only thing holding you back from launching?',
+    7: '🚨 {name}, {days_left} days left. We\'re holding your spot but can\'t wait forever. Ready to move forward?',
+    8: 'Last chance to save your spot at this price, {name}. Preview expires in {days_left} days: {preview_url}',
+    10: 'Your {company} preview is ending soon. We can have you live TODAY if you say yes: {preview_url}',
+    14: '{name}, your preview is gone in 24 hours. This is your final notice: {preview_url}',
   } as Record<number, string>,
   safetyBuffer: 0.85,
 }
@@ -500,6 +500,9 @@ export default function SettingsPage() {
     siteUrl: previewSelectedLead.previewUrl || '[no site]',
     pageViews: '127',
     date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    days_left: previewSelectedLead.previewExpiresAt
+      ? Math.max(0, Math.ceil((new Date(previewSelectedLead.previewExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))).toString()
+      : '7',
   } : {}
 
   const filteredPreviewLeads = previewLeads.filter(l => {
@@ -928,7 +931,7 @@ export default function SettingsPage() {
                             urgencyTemplates: { ...sequences.urgencyTemplates, [day]: e.target.value }
                           })}
                           className="w-full h-16 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Use {name}, {company}, {date} as variables"
+                          placeholder="Variables: {name}, {company}, {date}, {preview_url}, {days_left}"
                         />
                         {isOpen && (
                           rendered ? (
@@ -947,7 +950,7 @@ export default function SettingsPage() {
                   })}
                 </div>
 
-                <p className="text-xs text-gray-400 mt-3">Variables: {'{name}'}, {'{company}'}, {'{date}'}</p>
+                <p className="text-xs text-gray-400 mt-3">Variables: {'{name}'}, {'{company}'}, {'{date}'}, {'{preview_url}'}, {'{days_left}'}</p>
               </Card>
 
               {/* Send Settings */}

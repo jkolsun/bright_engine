@@ -25,24 +25,59 @@ export async function hasLeadViewedPreview(leadId: string): Promise<boolean> {
  * Send urgency texts on Days 3, 5, 6, 7, 8, 10, 14 after preview generation
  * ~$20-30 ARPU per text campaign
  */
-export async function generateUrgencyMessages(previewCreatedDaysAgo: number) {
+export async function generateUrgencyMessages(
+  previewCreatedDaysAgo: number,
+  lead?: {
+    firstName?: string
+    companyName?: string
+    previewUrl?: string
+    previewExpiresAt?: Date | null
+    previewCreatedAt?: Date | null
+  }
+) {
   const urgencyDays = [3, 5, 6, 7, 8, 10, 14]
   if (!urgencyDays.includes(previewCreatedDaysAgo)) {
     return null
   }
 
-  // Templates by day
+  // Templates by day — uses {name}, {company}, {date}, {preview_url}, {days_left}
   const templates: Record<number, string> = {
-    3: '🔥 Hey {name}, previews expire in 11 days. Let\'s finalize your site so it goes live. Reply YES.',
-    5: '⏰ {name}, 9 days left on your preview. Don\'t want to miss your window. Can we schedule a call?',
-    6: '⚡ Quick question {name} - is time the only thing holding you back from launching?',
-    7: '🚨 {name}, 7 days left. We\'re holding your spot, but can\'t wait forever. Ready to move forward?',
-    8: 'Last chance to save your spot at this price, {name}. Preview expires in 6 days.',
-    10: 'Your preview from {date} is ending soon. We can have you live TODAY if you say yes.',
-    14: '{name}, your preview is ending in 24 hours! This is your final notice.',
+    3: '🔥 Hey {name}, your preview expires in {days_left} days. Take another look: {preview_url}',
+    5: '⏰ {name}, {days_left} days left on your preview. Don\'t want to miss your window. Can we schedule a call?',
+    6: '⚡ Quick question {name} — is time the only thing holding you back from launching?',
+    7: '🚨 {name}, {days_left} days left. We\'re holding your spot but can\'t wait forever. Ready to move forward?',
+    8: 'Last chance to save your spot at this price, {name}. Preview expires in {days_left} days: {preview_url}',
+    10: 'Your {company} preview is ending soon. We can have you live TODAY if you say yes: {preview_url}',
+    14: '{name}, your preview is gone in 24 hours. This is your final notice: {preview_url}',
   }
 
-  return templates[previewCreatedDaysAgo] || null
+  let message = templates[previewCreatedDaysAgo]
+  if (!message) return null
+
+  // Calculate days_left from expiration date
+  let daysLeft = '0'
+  if (lead?.previewExpiresAt) {
+    const msLeft = new Date(lead.previewExpiresAt).getTime() - Date.now()
+    daysLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24))).toString()
+  }
+
+  // Format preview created date
+  let dateStr = ''
+  if (lead?.previewCreatedAt) {
+    dateStr = new Date(lead.previewCreatedAt).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
+    })
+  }
+
+  // Replace all template variables
+  message = message
+    .replace(/\{name\}/g, lead?.firstName || 'there')
+    .replace(/\{company\}/g, lead?.companyName || 'your company')
+    .replace(/\{date\}/g, dateStr)
+    .replace(/\{preview_url\}/g, lead?.previewUrl || '')
+    .replace(/\{days_left\}/g, daysLeft)
+
+  return message
 }
 
 /**
@@ -234,7 +269,10 @@ export async function checkProfitSystemTriggers(clientId: string) {
 
   if (!hasViewedPreview) {
     // Never opened preview — skip urgency text, don't waste Twilio credit
-    console.log(`[PROFIT] Skipping urgency for ${client.lead?.companyName || clientId} — no preview views`)
+    console.log(`[URGENCY] Skipping for ${client.lead?.companyName || clientId} — no preview views`)
+  } else if (client.lead?.previewExpiresAt && new Date(client.lead.previewExpiresAt) < new Date()) {
+    // Preview already expired — link is dead, skip
+    console.log(`[URGENCY] Skipping for ${client.lead?.companyName || clientId} — preview expired`)
   } else {
     const previewCreatedDate = client.lead?.previewExpiresAt
       ? new Date(
@@ -248,11 +286,17 @@ export async function checkProfitSystemTriggers(clientId: string) {
         (new Date().getTime() - previewCreatedDate.getTime()) /
         (1000 * 60 * 60 * 24)
       )
-      const urgencyMsg = await generateUrgencyMessages(daysAgo)
+      const urgencyMsg = await generateUrgencyMessages(daysAgo, {
+        firstName: client.lead?.firstName || undefined,
+        companyName: client.lead?.companyName || client.companyName,
+        previewUrl: client.lead?.previewUrl || undefined,
+        previewExpiresAt: client.lead?.previewExpiresAt,
+        previewCreatedAt: previewCreatedDate,
+      })
       if (urgencyMsg) {
         triggers.urgency = {
           daysAgo,
-          message: urgencyMsg.replace('{name}', client.lead?.firstName || 'there'),
+          message: urgencyMsg,
         }
       }
     }
