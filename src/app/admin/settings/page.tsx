@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import {
   Building, Target, Zap, Users, Key, DollarSign,
   CheckCircle2, AlertTriangle, XCircle, RefreshCw, Loader2,
-  Save, Plus, Trash2, Phone, Link, FileText, Brain,
+  Save, Plus, Trash2, Phone, Link, Brain,
   BarChart3, ExternalLink, Eye, Search, ChevronDown
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
@@ -130,121 +130,6 @@ const DEFAULT_TARGETS = {
   monthlyRevenueTarget: 50000,
 }
 
-// ── Email Preview Sequences ─────────────────────────────────────
-const SEQUENCE_A = [
-  {
-    step: 1, delay: 0,
-    subject: "{{company_name}}'s website",
-    body: `Hey {{first_name}},
-
-I came across {{company_name}} and pulled up your site. Looks like it could use a refresh — not loading great on mobile and the design is dated.
-
-That matters because 70% of people searching for {{industry}} services are on their phone. If your site doesn't look right, they're calling your competitor.
-
-I actually already mocked up what a new site would look like for {{company_name}}: {{preview_url}}
-
-$149 to make it live. No contracts, no hassle.
-
-Andrew
-Bright Automations`,
-  },
-  {
-    step: 2, delay: 2,
-    subject: "Re: {{company_name}}'s website",
-    body: `Hey {{first_name}},
-
-Quick follow-up — did you get a chance to look at the preview I built for you? {{preview_url}}
-
-The businesses we've built sites for are seeing more calls and form fills within the first week.
-
-$149, live by {{delivery_date}}. Takes 10 minutes of your time.
-
-Andrew`,
-  },
-  {
-    step: 3, delay: 2,
-    subject: "Re: {{company_name}}'s website",
-    body: `{{first_name}},
-
-Just wrapped a site for a {{industry}} company in {{location}}. They got 3 new leads in the first week.
-
-Your preview is still live: {{preview_url}} — but it expires in a few days.
-
-$149 to make it permanent. I handle everything.
-
-Andrew`,
-  },
-  {
-    step: 4, delay: 2,
-    subject: "Re: {{company_name}}'s website",
-    body: `Hey {{first_name}},
-
-Your preview site expires tomorrow. If a $149 professional website isn't on your radar right now, no worries at all.
-
-But if it ever is, just reply to this email and we'll rebuild it in 48 hours.
-
-Good luck with {{company_name}}.
-
-Andrew`,
-  },
-]
-
-const SEQUENCE_B = [
-  {
-    step: 1, delay: 0,
-    subject: "Found {{company_name}} on Google but no website",
-    body: `Hey {{first_name}},
-
-I searched for {{industry}} in {{location}} and found {{company_name}} on Google Maps — but no website. Most people won't call a business with no site.
-
-I put together a preview of what a site could look like for you: {{preview_url}}
-
-$149 to go live with your own domain. You'd have a real site showing up on Google by this weekend.
-
-Andrew
-Bright Automations`,
-  },
-  {
-    step: 2, delay: 2,
-    subject: "Re: Found {{company_name}} on Google but no website",
-    body: `{{first_name}},
-
-97% of people search online before hiring a local service company. Without a website, you're invisible to almost all of them.
-
-Your preview is still live: {{preview_url}}
-
-$149. We handle everything. No maintenance headaches.
-
-Andrew`,
-  },
-  {
-    step: 3, delay: 2,
-    subject: "Re: Found {{company_name}} on Google but no website",
-    body: `{{first_name}},
-
-I searched '{{industry}} in {{location}}' and the top 5 results all have sites with reviews and click-to-call. They're getting calls that should go to you.
-
-Your preview expires in 2 days: {{preview_url}}
-
-Reply 'yes' and I'll get started today. $149.
-
-Andrew`,
-  },
-  {
-    step: 4, delay: 2,
-    subject: "Re: Found {{company_name}} on Google but no website",
-    body: `Hey {{first_name}},
-
-Last note. Your preview expires today. If you ever want a website for {{company_name}}, just reply.
-
-$149, 48 hours, we handle everything.
-
-Good luck.
-
-Andrew`,
-  },
-]
-
 const INDUSTRY_MAP: Record<string, string> = {
   RESTORATION: 'restoration', WATER_DAMAGE: 'water damage restoration',
   ROOFING: 'roofing', PLUMBING: 'plumbing', HVAC: 'HVAC',
@@ -266,7 +151,9 @@ function getDeliveryDate(): string {
 function fillTemplate(template: string, vars: Record<string, string>): string {
   let result = template
   for (const [key, value] of Object.entries(vars)) {
+    // Handle both {{key}} (email sequences) and {key} (urgency/retention templates)
     result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value || '')
+    result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), value || '')
   }
   return result
 }
@@ -1018,74 +905,6 @@ export default function SettingsPage() {
                 </div>
 
                 <p className="text-xs text-gray-400 mt-3">Variables: {'{name}'}, {'{company}'}, {'{date}'}</p>
-              </Card>
-
-              {/* Email Sequences A/B */}
-              <Card className="p-6">
-                <SectionHeader title="Email Sequences" description="Pre-acquisition email steps sent via Instantly" />
-                <div className="space-y-4">
-                  {[
-                    { label: 'Campaign A — Bad Website', seq: SEQUENCE_A },
-                    { label: 'Campaign B — No Website', seq: SEQUENCE_B },
-                  ].map(({ label, seq }) => (
-                    <div key={label}>
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">{label}</h4>
-                      <div className="space-y-3">
-                        {seq.map((step) => {
-                          const msgKey = `email-${label}-${step.step}`
-                          const isOpen = previewOpenMessages.has(msgKey)
-                          const renderedSubject = previewSelectedLead ? fillTemplate(step.subject, previewMergeVars) : null
-                          const renderedBody = previewSelectedLead ? fillTemplate(step.body, previewMergeVars) : null
-                          return (
-                            <div key={step.step} className="border border-gray-200 rounded-lg overflow-hidden">
-                              <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-                                <span className="text-xs font-semibold text-gray-500">
-                                  Step {step.step} {step.delay === 0 ? '(Day 0)' : `(+${step.delay} days)`}
-                                </span>
-                                <div className="flex items-center gap-3">
-                                  <span className="text-xs text-gray-400">Subject: {step.subject}</span>
-                                  <button
-                                    onClick={() => {
-                                      const next = new Set(previewOpenMessages)
-                                      if (next.has(msgKey)) next.delete(msgKey); else next.add(msgKey)
-                                      setPreviewOpenMessages(next)
-                                      if (!previewSelectedLead) { fetchPreviewLeads(); setPreviewDropdownOpen(true) }
-                                    }}
-                                    className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                                      isOpen ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500 hover:bg-purple-50 hover:text-purple-600'
-                                    }`}
-                                  >
-                                    <Eye size={12} />
-                                    Preview
-                                  </button>
-                                </div>
-                              </div>
-                              <div className="px-4 py-3">
-                                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{step.body}</p>
-                              </div>
-                              {isOpen && (
-                                renderedSubject && renderedBody ? (
-                                  <div className="px-4 py-3 bg-purple-50 border-t border-purple-200">
-                                    <div className="flex items-center gap-1.5 mb-2">
-                                      <Eye size={13} className="text-purple-500" />
-                                      <span className="text-xs font-semibold text-purple-600">Preview with {previewSelectedLead.firstName}&apos;s data</span>
-                                    </div>
-                                    <div className="text-xs text-purple-700 mb-1"><strong>Subject:</strong> {renderedSubject}</div>
-                                    <p className="text-sm text-purple-900 whitespace-pre-wrap leading-relaxed">{renderedBody}</p>
-                                  </div>
-                                ) : (
-                                  <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-400 italic">
-                                    Select a lead above to see the preview with real data
-                                  </div>
-                                )
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </Card>
 
               {/* Send Settings */}

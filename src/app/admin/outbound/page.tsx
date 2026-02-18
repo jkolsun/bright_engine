@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { useState, useEffect } from 'react'
 import {
-  Mail, Phone, Eye, TrendingUp, Search, UserPlus, UserMinus, Users
+  Mail, Phone, Eye, TrendingUp, Search, UserPlus, UserMinus, Users, RefreshCw
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -21,6 +21,7 @@ export default function SalesRepTrackerPage() {
   const [leads, setLeads] = useState<any[]>([])
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterView, setFilterView] = useState('all')
   const [engagementScores, setEngagementScores] = useState<Record<string, any>>({})
@@ -30,6 +31,7 @@ export default function SalesRepTrackerPage() {
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set())
   const [assignDialogOpen, setAssignDialogOpen] = useState(false)
   const [assigning, setAssigning] = useState(false)
+  const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
     loadData()
@@ -52,21 +54,36 @@ export default function SalesRepTrackerPage() {
   }, [])
 
   const loadData = async () => {
-    try {
-      const [leadsRes, eventsRes, scoresRes] = await Promise.all([
-        fetch('/api/leads?limit=100'),
-        fetch('/api/dashboard/stats'),
-        fetch('/api/engagement-score?all=true')
-      ])
+    setLoadError(null)
+    const errors: string[] = []
 
+    // Fetch leads
+    try {
+      const leadsRes = await fetch('/api/leads?limit=100')
       if (leadsRes.ok) {
         const data = await leadsRes.json()
         setLeads(data.leads || [])
+      } else {
+        errors.push('leads')
       }
+    } catch {
+      errors.push('leads')
+    }
+
+    // Fetch stats (non-critical)
+    try {
+      const eventsRes = await fetch('/api/dashboard/stats')
       if (eventsRes.ok) {
         const data = await eventsRes.json()
         setStats(data)
       }
+    } catch {
+      // Stats are non-critical, ignore
+    }
+
+    // Fetch engagement scores (non-critical)
+    try {
+      const scoresRes = await fetch('/api/engagement-score?all=true')
       if (scoresRes.ok) {
         const data = await scoresRes.json()
         const scoresMap: Record<string, any> = {}
@@ -77,11 +94,14 @@ export default function SalesRepTrackerPage() {
         }
         setEngagementScores(scoresMap)
       }
-    } catch (error) {
-      console.error('Failed to load data:', error)
-    } finally {
-      setLoading(false)
+    } catch {
+      // Scores are non-critical, ignore
     }
+
+    if (errors.length > 0) {
+      setLoadError('Failed to load data. Please try again.')
+    }
+    setLoading(false)
   }
 
   const fetchReps = async () => {
@@ -126,17 +146,20 @@ export default function SalesRepTrackerPage() {
       if (res.ok) {
         const data = await res.json()
         const repName = repId ? reps.find(r => r.id === repId)?.name : null
-        alert(`${data.updated} lead${data.updated !== 1 ? 's' : ''} ${repName ? `assigned to ${repName}` : 'unassigned'}`)
+        setFeedbackMsg({ type: 'success', text: `${data.updated} lead${data.updated !== 1 ? 's' : ''} ${repName ? `assigned to ${repName}` : 'unassigned'}` })
+        setTimeout(() => setFeedbackMsg(null), 4000)
         setSelectedLeads(new Set())
         setAssignDialogOpen(false)
         loadData()
         fetchReps()
       } else {
-        alert('Failed to assign leads')
+        setFeedbackMsg({ type: 'error', text: 'Failed to assign leads' })
+        setTimeout(() => setFeedbackMsg(null), 4000)
       }
     } catch (error) {
       console.error('Error assigning leads:', error)
-      alert('Failed to assign leads')
+      setFeedbackMsg({ type: 'error', text: 'Failed to assign leads' })
+      setTimeout(() => setFeedbackMsg(null), 4000)
     } finally {
       setAssigning(false)
     }
@@ -178,6 +201,17 @@ export default function SalesRepTrackerPage() {
     return <div className="p-8 text-center">Loading sales rep tracker...</div>
   }
 
+  if (loadError && leads.length === 0) {
+    return (
+      <div className="p-8 text-center space-y-4">
+        <p className="text-red-600">{loadError}</p>
+        <Button onClick={() => { setLoading(true); loadData(); fetchReps() }}>
+          Retry
+        </Button>
+      </div>
+    )
+  }
+
   const defaultStats = {
     totalLeads: leads.length,
     previewViews: 0,
@@ -196,15 +230,44 @@ export default function SalesRepTrackerPage() {
             Track every touchpoint across email, calls, texts, and previews with AI-powered recommendations
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => setAssignDialogOpen(true)}
-          disabled={selectedLeads.size === 0}
-        >
-          <UserPlus size={18} className="mr-2" />
-          Assign to Rep {selectedLeads.size > 0 && `(${selectedLeads.size})`}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { setLoading(true); loadData(); fetchReps() }}
+            title="Refresh data"
+          >
+            <RefreshCw size={18} />
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setAssignDialogOpen(true)}
+            disabled={selectedLeads.size === 0}
+          >
+            <UserPlus size={18} className="mr-2" />
+            Assign to Rep {selectedLeads.size > 0 && `(${selectedLeads.size})`}
+          </Button>
+        </div>
       </div>
+
+      {loadError && leads.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg flex items-center justify-between">
+          <span className="text-sm">Some data may be incomplete. {loadError}</span>
+          <Button variant="ghost" size="sm" onClick={() => { setLoading(true); loadData(); fetchReps() }}>
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {feedbackMsg && (
+        <div className={`px-4 py-3 rounded-lg text-sm font-medium ${
+          feedbackMsg.type === 'success'
+            ? 'bg-green-50 border border-green-200 text-green-800'
+            : 'bg-red-50 border border-red-200 text-red-800'
+        }`}>
+          {feedbackMsg.text}
+        </div>
+      )}
 
       {/* Assign to Rep Dialog — includes both full-time and part-time reps */}
       <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
