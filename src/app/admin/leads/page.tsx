@@ -19,7 +19,8 @@ import React, { useState, useEffect } from 'react'
 import {
   Search, Filter, Plus, Eye, TrendingUp, UserPlus, UserMinus, Users,
   FolderOpen, FolderPlus, ArrowLeft, Target, Mail, MoreVertical, Pencil, Trash2,
-  ChevronDown, ChevronRight, Sparkles, Globe, Star, MapPin, Clock, Wrench, MessageSquare, ExternalLink
+  ChevronDown, ChevronRight, Sparkles, Globe, Star, MapPin, Clock, Wrench, MessageSquare, ExternalLink,
+  LayoutGrid, List, ChevronLeft
 } from 'lucide-react'
 
 export default function LeadsPage() {
@@ -67,6 +68,11 @@ export default function LeadsPage() {
 
   // Expanded lead row state
   const [expandedLead, setExpandedLead] = useState<string | null>(null)
+
+  // View mode & pagination
+  const [viewMode, setViewMode] = useState<'folders' | 'leads'>('folders')
+  const [currentPage, setCurrentPage] = useState(0)
+  const LEADS_PER_PAGE = 50
 
   useEffect(() => {
     fetchLeads()
@@ -349,7 +355,9 @@ export default function LeadsPage() {
 
   // Filter leads: if a folder is active, only show leads in that folder
   const folderFilteredLeads = activeFolder
-    ? leads.filter(l => l.folderId === activeFolder)
+    ? (activeFolder === 'unfoldered'
+        ? leads.filter(l => !l.folderId)
+        : leads.filter(l => l.folderId === activeFolder))
     : leads
 
   const filteredLeads = folderFilteredLeads.filter(lead => {
@@ -372,6 +380,11 @@ export default function LeadsPage() {
     return matchesSearch && matchesStatus && matchesRep
   })
 
+  // Pagination
+  const totalPages = Math.ceil(filteredLeads.length / LEADS_PER_PAGE)
+  const safePage = Math.min(currentPage, Math.max(0, totalPages - 1))
+  const paginatedLeads = filteredLeads.slice(safePage * LEADS_PER_PAGE, (safePage + 1) * LEADS_PER_PAGE)
+
   const stats = {
     total: folderFilteredLeads.length,
     new: folderFilteredLeads.filter(l => l.status === 'NEW').length,
@@ -384,8 +397,8 @@ export default function LeadsPage() {
   const activeFolderData = folders.find(f => f.id === activeFolder)
   const unfolderedCount = leads.filter(l => !l.folderId).length
 
-  // ===== FOLDER VIEW (no active folder selected) =====
-  if (!activeFolder) {
+  // ===== FOLDER VIEW (no active folder selected, folder mode) =====
+  if (!activeFolder && viewMode === 'folders') {
     return (
       <div className="p-8 space-y-6">
         <div className="flex items-center justify-between">
@@ -394,6 +407,21 @@ export default function LeadsPage() {
             <p className="text-gray-500 mt-1">{leads.length} total leads in {folders.length} folders</p>
           </div>
           <div className="flex gap-3">
+            {/* View Mode Toggle */}
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+              <button
+                onClick={() => setViewMode('folders')}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-gray-100 text-gray-900 border-r border-gray-200"
+              >
+                <LayoutGrid size={16} /> Folders
+              </button>
+              <button
+                onClick={() => { setViewMode('leads'); setCurrentPage(0); setStatusFilter('all'); setSearchTerm('') }}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                <List size={16} /> All Leads
+              </button>
+            </div>
             <Link href="/admin/import">
               <Button variant="outline">
                 <Filter size={18} className="mr-2" />
@@ -567,21 +595,47 @@ export default function LeadsPage() {
     )
   }
 
-  // ===== LEAD LIST VIEW (inside a folder) =====
+  // ===== LEAD LIST VIEW (inside a folder OR "All Leads" mode) =====
+  const isAllLeadsView = !activeFolder && viewMode === 'leads'
+
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => { setActiveFolder(null); setSelectedLeads(new Set()) }}>
+          <Button variant="ghost" size="sm" onClick={() => {
+            if (isAllLeadsView) {
+              setViewMode('folders')
+            } else {
+              setActiveFolder(null)
+            }
+            setSelectedLeads(new Set())
+            setCurrentPage(0)
+          }}>
             <ArrowLeft size={18} />
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              {activeFolderData?.name || 'Unorganized'}
+              {isAllLeadsView ? 'All Leads' : (activeFolderData?.name || 'Unorganized')}
             </h1>
             <p className="text-gray-500 mt-1">{stats.total} leads</p>
           </div>
+          {/* View toggle in All Leads mode */}
+          {isAllLeadsView && (
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden ml-4">
+              <button
+                onClick={() => { setViewMode('folders'); setSelectedLeads(new Set()) }}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors border-r border-gray-200"
+              >
+                <LayoutGrid size={16} /> Folders
+              </button>
+              <button
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-gray-100 text-gray-900"
+              >
+                <List size={16} /> All Leads
+              </button>
+            </div>
+          )}
         </div>
         <div className="flex gap-3">
           {/* Assignment button — opens destination picker */}
@@ -829,12 +883,12 @@ export default function LeadsPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-        <StatCard label="Total Leads" value={stats.total} variant="default" onClick={() => { setStatusFilter('all'); setSelectedLeads(new Set()) }} active={statusFilter === 'all'} />
-        <StatCard label="New" value={stats.new} variant="default" onClick={() => { setStatusFilter('NEW'); setSelectedLeads(new Set()) }} active={statusFilter === 'NEW'} />
-        <StatCard label="Hot Leads" value={stats.hot} variant="danger" onClick={() => { setStatusFilter('HOT_LEAD'); setSelectedLeads(new Set()) }} active={statusFilter === 'HOT_LEAD'} />
-        <StatCard label="Qualified" value={stats.qualified} variant="success" onClick={() => { setStatusFilter('QUALIFIED'); setSelectedLeads(new Set()) }} active={statusFilter === 'QUALIFIED'} />
-        <StatCard label="Building" value={stats.building} variant="warning" onClick={() => { setStatusFilter('BUILDING'); setSelectedLeads(new Set()) }} active={statusFilter === 'BUILDING'} />
-        <StatCard label="Closed" value={folderFilteredLeads.filter(l => l.status === 'PAID').length} variant="success" onClick={() => { setStatusFilter('PAID'); setSelectedLeads(new Set()) }} active={statusFilter === 'PAID'} />
+        <StatCard label="Total Leads" value={stats.total} variant="default" onClick={() => { setStatusFilter('all'); setSelectedLeads(new Set()); setCurrentPage(0) }} active={statusFilter === 'all'} />
+        <StatCard label="New" value={stats.new} variant="default" onClick={() => { setStatusFilter('NEW'); setSelectedLeads(new Set()); setCurrentPage(0) }} active={statusFilter === 'NEW'} />
+        <StatCard label="Hot Leads" value={stats.hot} variant="danger" onClick={() => { setStatusFilter('HOT_LEAD'); setSelectedLeads(new Set()); setCurrentPage(0) }} active={statusFilter === 'HOT_LEAD'} />
+        <StatCard label="Qualified" value={stats.qualified} variant="success" onClick={() => { setStatusFilter('QUALIFIED'); setSelectedLeads(new Set()); setCurrentPage(0) }} active={statusFilter === 'QUALIFIED'} />
+        <StatCard label="Building" value={stats.building} variant="warning" onClick={() => { setStatusFilter('BUILDING'); setSelectedLeads(new Set()); setCurrentPage(0) }} active={statusFilter === 'BUILDING'} />
+        <StatCard label="Closed" value={folderFilteredLeads.filter(l => l.status === 'PAID').length} variant="success" onClick={() => { setStatusFilter('PAID'); setSelectedLeads(new Set()); setCurrentPage(0) }} active={statusFilter === 'PAID'} />
       </div>
 
       {/* Search & Filters */}
@@ -846,12 +900,12 @@ export default function LeadsPage() {
               className="pl-10"
               placeholder="Search leads..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(0) }}
             />
           </div>
           <select
             value={repFilter}
-            onChange={(e) => { setRepFilter(e.target.value); setSelectedLeads(new Set()) }}
+            onChange={(e) => { setRepFilter(e.target.value); setSelectedLeads(new Set()); setCurrentPage(0) }}
             className="h-10 px-3 rounded-md border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Reps</option>
@@ -923,7 +977,7 @@ export default function LeadsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredLeads.map((lead) => {
+                {paginatedLeads.map((lead) => {
                   const isSelected = selectedLeads.has(lead.id)
                   const isExpanded = expandedLead === lead.id
                   const rowBg = isSelected ? 'bg-blue-50' : 'bg-white'
@@ -1218,6 +1272,36 @@ export default function LeadsPage() {
           </div>
         )}
       </Card>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-500">
+            Showing {safePage * LEADS_PER_PAGE + 1}–{Math.min((safePage + 1) * LEADS_PER_PAGE, filteredLeads.length)} of {filteredLeads.length} leads
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage === 0}
+              onClick={() => setCurrentPage(p => p - 1)}
+            >
+              <ChevronLeft size={16} className="mr-1" /> Previous
+            </Button>
+            <span className="text-sm text-gray-600 px-2">
+              Page {safePage + 1} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={safePage >= totalPages - 1}
+              onClick={() => setCurrentPage(p => p + 1)}
+            >
+              Next <ChevronRight size={16} className="ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Edit Lead Dialog */}
       <Dialog open={editLeadDialogOpen} onOpenChange={setEditLeadDialogOpen}>
