@@ -31,6 +31,7 @@ export interface SerperResearchData {
   artifacts: Artifact[]
   snippets: string[]
   queriesRun: number
+  bestTier?: 'S' | 'A' | 'B'
 }
 
 // Known tools in home services
@@ -41,6 +42,32 @@ const KNOWN_TOOLS = [
   'Kickserv', 'mHelpDesk', 'WorkWave', 'Leap', 'AccuLynx', 'JobNimbus',
   'CompanyCam', 'SalesRabbit', 'EagleView', 'GAF', 'Owens Corning',
   'CertainTeed', 'Daikin', 'Carrier', 'Trane', 'Lennox', 'Rheem',
+  // Additional platforms & manufacturers
+  'Salesforce', 'HubSpot', 'Zoho', 'SuccessWare', 'ServiceFusion',
+  'Service Fusion', 'Payzerware', 'Payzer', 'SmartService', 'Smart Service',
+  'Simpro', 'simPRO', 'Fergus', 'GorillaDesk', 'Gorilla Desk',
+  'FieldPulse', 'Field Pulse', 'ServiceBridge', 'Synchroteam',
+  // Brands/certifications that signal quality
+  'Mitsubishi Electric', 'Goodman', 'York', 'Ruud', 'Amana', 'Heil',
+  'Armstrong', 'Bryant', 'Maytag', 'Bosch', 'Navien', 'Rinnai',
+  'Generac', 'Kohler', 'James Hardie', 'LP SmartSide', 'Pella',
+  'Andersen', 'Marvin', 'Milgard',
+]
+
+// Known certifications (S-tier signals)
+const KNOWN_CERTIFICATIONS = [
+  'GAF Master Elite', 'GAF Certified', 'Owens Corning Preferred',
+  'Owens Corning Platinum', 'CertainTeed SELECT ShingleMaster',
+  'CertainTeed Master Shingle Applicator', 'NATE Certified', 'NATE-Certified',
+  'EPA Certified', 'EPA 608', 'LEED Certified', 'LEED',
+  'BBB A+', 'BBB Accredited', 'Better Business Bureau',
+  'Angi Super Service', 'Angi Top Pro', 'HomeAdvisor Elite',
+  'HomeAdvisor Top Rated', 'Carrier Factory Authorized',
+  'Trane Comfort Specialist', 'Lennox Premier Dealer',
+  'Rheem Pro Partner', 'Daikin Comfort Pro', 'Mitsubishi Diamond Contractor',
+  'ACCA Member', 'PHCC Member', 'NARI Member', 'NAHB Member',
+  'Energy Star Partner', 'BPI Certified', 'IICRC Certified',
+  'Master Plumber', 'Master Electrician', 'Journeyman',
 ]
 
 // Generic phrases to reject as artifacts
@@ -56,17 +83,29 @@ const GENERIC_PHRASES = [
 // SERPER QUERY BUILDER
 // ============================================
 
-function buildQueries(companyName: string, city?: string, state?: string): Array<{ q: string; type: string }> {
+function buildQueries(companyName: string, city?: string, state?: string, website?: string): Array<{ q: string; type: string; num?: number }> {
   const location = [city, state].filter(Boolean).join(', ')
 
-  return [
-    // Query 1: Main company search (quoted name for exact match)
-    { q: `"${companyName}" ${location}`.trim(), type: 'main' },
+  const queries: Array<{ q: string; type: string; num?: number }> = [
+    // Query 1: Main company search (quoted name, more results)
+    { q: `"${companyName}" ${location}`.trim(), type: 'main', num: 8 },
     // Query 2: Reviews and ratings
     { q: `"${companyName}" reviews OR "google reviews" OR stars ${location}`.trim(), type: 'reviews' },
-    // Query 3: Awards, recognition, press
-    { q: `"${companyName}" award OR "best of" OR featured OR recognized ${location}`.trim(), type: 'awards' },
+    // Query 3: Awards, certifications, credentials
+    { q: `"${companyName}" award OR certified OR "best of" OR accredited OR "master elite" OR "top pro" ${location}`.trim(), type: 'awards' },
+    // Query 4: Projects, clients, portfolio work (S-tier hunting)
+    { q: `"${companyName}" project OR portfolio OR "worked on" OR client OR completed ${location}`.trim(), type: 'projects' },
+    // Query 5: News, press, community involvement
+    { q: `"${companyName}" news OR press OR featured OR sponsor OR community OR charity ${location}`.trim(), type: 'news' },
   ]
+
+  // Query 6: Site-specific search for tools/certifications (if website known)
+  if (website) {
+    const domain = website.replace(/^https?:\/\//, '').replace(/\/.*$/, '')
+    queries.push({ q: `site:${domain} certified OR warranty OR guarantee OR partner OR award`, type: 'site', num: 5 })
+  }
+
+  return queries
 }
 
 // ============================================
@@ -128,16 +167,32 @@ function extractArtifacts(results: any[], companyName: string, industry?: string
       }
     }
 
+    // --- TIER S: Certifications ---
+    if (mentionsCompany) {
+      for (const cert of KNOWN_CERTIFICATIONS) {
+        if (combinedLower.includes(cert.toLowerCase())) {
+          artifacts.push({ type: 'EXACT_PHRASE', text: cert, source: 'serper', url: link, score: 9, tier: 'S' })
+        }
+      }
+    }
+
     // --- TIER S: Client/Project names ---
     if (mentionsCompany) {
       const clientPatterns = [
+        // Named buildings/landmarks
         /(?:worked with|project for|partnered with|completed.*?for|built.*?for|served|renovated|installed.*?at|restored)\s+(?:the\s+)?([A-Z][a-zA-Z\s'&-]+?(?:Hotel|School|Center|Hospital|Church|Building|Tower|Mall|Plaza|University|College|Restaurant|Club|Inn|Resort|Office|Facility|Complex|Park|Stadium|Arena|Museum|Library|Theater|Theatre))/gi,
+        // "worked on the [Project Name]" or "completed the [Project Name]"
+        /(?:worked on|completed|finished|delivered)\s+(?:the\s+)?([A-Z][a-zA-Z\s'&-]{3,35})\s+(?:project|renovation|installation|remodel|restoration|build|construction)/gi,
+        // "[Company] served [Client]" pattern
+        /(?:provided|delivered|performed)\s+(?:\w+\s+){0,3}(?:for|to)\s+(?:the\s+)?([A-Z][a-zA-Z\s'&-]{5,40})/gi,
+        // "featured project: [Name]" or "portfolio: [Name]"
+        /(?:featured project|portfolio|case study|showcase)[:\s]+([A-Z][a-zA-Z\s'&-]{5,40})/gi,
       ]
       for (const pattern of clientPatterns) {
         pattern.lastIndex = 0
         for (const match of combined.matchAll(pattern)) {
           const text = (match[1] || '').trim()
-          if (text.length >= 4 && text.length <= 40) {
+          if (text.length >= 4 && text.length <= 40 && !GENERIC_PHRASES.some(g => text.toLowerCase().includes(g))) {
             artifacts.push({ type: 'CLIENT_OR_PROJECT', text, source: 'serper', url: link, score: 9, tier: 'S' })
           }
         }
@@ -145,17 +200,40 @@ function extractArtifacts(results: any[], companyName: string, industry?: string
     }
 
     // --- TIER S: Awards/Recognition ---
-    if (/(?:award|best of|top \d+|winner|recognized|featured in|as seen on|named)/i.test(combined) && mentionsCompany) {
+    if (/(?:award|best of|top \d+|winner|recognized|featured in|as seen on|named|certified|accredited)/i.test(combined) && mentionsCompany) {
       const awardPatterns = [
         /(Best of (?:Yelp|Houzz|Angi|HomeAdvisor|Google|BBB|\w+)(?:\s+\d{4})?)/i,
         /(BBB\s+A\+?\s*(?:rated|rating|accredited)?)/i,
         /(Angi\s+(?:Super Service|Top Pro)(?:\s+Award)?(?:\s+\d{4})?)/i,
-        /(?:won|received|awarded|named|voted)\s+["']?(.{5,50}?)["']?(?:\.|,|$)/i,
+        /(?:won|received|awarded|named|voted|earned)\s+["']?(.{5,50}?)["']?(?:\.|,|$)/i,
+        // "Top 10/50/100" lists
+        /(Top\s+\d+\s+(?:\w+\s+){0,3}(?:in|of)\s+\w+(?:\s+\d{4})?)/i,
+        // "Featured in [Publication]"
+        /(?:featured in|as seen (?:on|in)|profiled (?:by|in))\s+(?:the\s+)?([A-Z][a-zA-Z\s&]{3,30})/i,
+        // "#1 rated" or "highest rated"
+        /(#1\s+(?:rated|ranked)?\s*\w+(?:\s+\w+){0,3})/i,
+        /(highest[- ]rated\s+\w+(?:\s+\w+){0,3}(?:\s+in\s+\w+)?)/i,
       ]
       for (const pattern of awardPatterns) {
         const match = combined.match(pattern)
         if (match && match[1] && match[1].trim().length >= 5 && match[1].trim().length <= 50) {
           artifacts.push({ type: 'EXACT_PHRASE', text: match[1].trim(), source: 'serper', url: link, score: 8, tier: 'S' })
+        }
+      }
+    }
+
+    // --- TIER A: Community Involvement / Sponsorship ---
+    if (/(?:sponsor|donat|volunteer|community|habitat|charity|give back|non-?profit)/i.test(combined) && mentionsCompany) {
+      const communityPatterns = [
+        /(?:sponsor(?:s|ed|ing)?|support(?:s|ed|ing)?|partner(?:s|ed|ing)?\s+with)\s+(?:the\s+)?([A-Z][a-zA-Z\s'&-]{5,40})/gi,
+        /(Habitat for Humanity)/i,
+        /(?:donated|raised|contributed)\s+(?:\$[\d,]+\s+(?:to|for)\s+)?([A-Z][a-zA-Z\s'&-]{5,40})/gi,
+      ]
+      for (const pattern of communityPatterns) {
+        pattern.lastIndex = 0
+        const match = combined.match(pattern)
+        if (match && match[1] && match[1].trim().length >= 5) {
+          artifacts.push({ type: 'SERVICE_PROGRAM', text: `sponsors ${match[1].trim()}`, source: 'serper', url: link, score: 7, tier: 'A' })
         }
       }
     }
@@ -281,7 +359,7 @@ export async function fetchSerperResearch(leadId: string): Promise<string> {
   }
 
   try {
-    const queries = buildQueries(lead.companyName, lead.city || undefined, lead.state || undefined)
+    const queries = buildQueries(lead.companyName, lead.city || undefined, lead.state || undefined, lead.website || undefined)
 
     // Run all queries in parallel
     const allResults: any[] = []
@@ -289,7 +367,7 @@ export async function fetchSerperResearch(leadId: string): Promise<string> {
     let queriesRun = 0
 
     const searchResults = await Promise.allSettled(
-      queries.map(q => runSerperSearch(q.q, 5))
+      queries.map(q => runSerperSearch(q.q, q.num || 5))
     )
 
     for (const result of searchResults) {
@@ -328,12 +406,16 @@ export async function fetchSerperResearch(leadId: string): Promise<string> {
 
     const rankedArtifacts = rankArtifacts(artifacts)
 
+    // Determine best tier found
+    const bestTier = rankedArtifacts.length > 0 ? rankedArtifacts[0].tier : 'B'
+
     // Store research data for personalization.ts to consume
     const researchData: SerperResearchData = {
       _research: true,
-      artifacts: rankedArtifacts.slice(0, 10),
-      snippets: allSnippets.slice(0, 5),
+      artifacts: rankedArtifacts.slice(0, 15),
+      snippets: allSnippets.slice(0, 8),
       queriesRun,
+      bestTier,
     }
 
     await prisma.lead.update({

@@ -1129,6 +1129,13 @@ export default function LeadsPage() {
                         <td className="p-3 text-sm text-gray-700 max-w-[250px]">
                           {personalizationData?.firstLine ? (
                             <div className="flex items-center gap-1.5">
+                              {personalizationData.tier && (
+                                <span className={`flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                  personalizationData.tier === 'S' ? 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-300' :
+                                  personalizationData.tier === 'A' ? 'bg-blue-100 text-blue-800 ring-1 ring-blue-300' :
+                                  'bg-gray-100 text-gray-600 ring-1 ring-gray-300'
+                                }`}>{personalizationData.tier}</span>
+                              )}
                               <Sparkles size={13} className="text-purple-500 flex-shrink-0" />
                               <span className="truncate">{personalizationData.firstLine}</span>
                             </div>
@@ -1215,6 +1222,13 @@ export default function LeadsPage() {
                                       <Sparkles size={15} className="text-purple-600" />
                                     </div>
                                     <h4 className="font-semibold text-gray-900 text-sm">AI Personalization</h4>
+                                    {personalizationData?.tier && (
+                                      <span className={`ml-auto text-xs font-bold px-2 py-0.5 rounded-full ${
+                                        personalizationData.tier === 'S' ? 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-300' :
+                                        personalizationData.tier === 'A' ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-300' :
+                                        'bg-gray-100 text-gray-600 ring-1 ring-gray-300'
+                                      }`}>Tier {personalizationData.tier}</span>
+                                    )}
                                   </div>
                                   {personalizationData ? (
                                     <div className="space-y-3">

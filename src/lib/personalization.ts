@@ -18,6 +18,7 @@ export interface PersonalizationResult {
   firstLine: string
   hook: string
   angle: string
+  tier: 'S' | 'A' | 'B'
   tokensCost: number
   websiteCopy?: WebsiteCopy
 }
@@ -100,31 +101,47 @@ const SYSTEM_PROMPT = `You write one cold email opening line. This line appears 
 
 You're writing TO the business owner. Use "you/your."
 
-EXAMPLES OF GREAT OPENERS:
+TIER PRIORITY — always use the HIGHEST tier data available:
+S-TIER (USE FIRST — the perfect hook):
+  - Client/project names: "Your work on the Hilton renovation..."
+  - Certifications: "GAF Master Elite with 200 reviews..."
+  - Awards: "Angi Super Service three years running..."
+  - Specific tools: "Your team runs ServiceTitan..."
+  - Star ratings + review counts: "4.9 stars across 300 reviews..."
+A-TIER (use only if NO S-tier data):
+  - Service programs: "Your 24/7 emergency response..."
+  - Hiring signals: "Scaling your crew..."
+  - Community involvement: "Sponsoring Habitat for Humanity..."
+B-TIER (LAST RESORT — avoid if possible):
+  - Location only, years in business, generic services
+
+EXAMPLES OF S-TIER OPENERS (this is the quality bar):
 - "Your 4.9 stars across 200+ reviews — that's rare for HVAC in Dallas."
-- "Saw your crew handles both residential and commercial roofing, that range is hard to pull off."
-- "BBB A+ rated with same-day service — you're running a tight ship."
+- "GAF Master Elite certified and still holding a 4.8 — your crew doesn't cut corners."
+- "Your Hilton Plaza project shows the caliber of commercial work you take on."
 - "ServiceTitan, Angi Super Service, and 150 reviews — you're not messing around."
-- "17 years in the Phoenix heat and still growing, that says everything."
+- "BBB A+ rated with same-day service — you're running a tight ship."
 
 EXAMPLES OF BAD OPENERS (never write like this):
 - "Building your reputation in X takes time, you've clearly earned it." ← generic, says nothing specific
 - "This stood out on your site: [random fragment]." ← lazy, often broken
 - "Your focus on X really sets you apart from the generalists." ← vague, could apply to anyone
+- "Your services in Dallas show your dedication to the community." ← empty, could be anyone
 
 RULES:
-1. Open with a SPECIFIC detail — a number, a service, a credential, an award. Something only THEY have.
-2. 8-18 words. Punchy. Conversational.
-3. Use "you/your" in the first 6 words.
-4. NEVER use: recently, just, new, latest, launched, impressive, amazing, innovative, incredible, outstanding, excellent, fantastic, great, awesome, cutting-edge, world-class, best-in-class, leading, premier, remarkable
-5. NEVER start with "This stood out" or "Building your reputation" — find a better angle.
-6. ONE data point. Don't cram multiple facts.
-7. Do NOT start with the company name as subject.
-8. If you reference a quote or award, make sure it reads as a COMPLETE thought — never a fragment.
+1. ALWAYS use the highest-tier artifact provided. S > A > B. Never use B-tier data when S-tier is available.
+2. Open with a SPECIFIC detail — a number, a service, a credential, an award. Something only THEY have.
+3. 8-18 words. Punchy. Conversational.
+4. Use "you/your" in the first 6 words.
+5. NEVER use: recently, just, new, latest, launched, impressive, amazing, innovative, incredible, outstanding, excellent, fantastic, great, awesome, cutting-edge, world-class, best-in-class, leading, premier, remarkable
+6. NEVER start with "This stood out" or "Building your reputation" — find a better angle.
+7. ONE data point. Don't cram multiple facts.
+8. Do NOT start with the company name as subject.
+9. If you reference a quote or award, make sure it reads as a COMPLETE thought — never a fragment.
 
 OUTPUT FORMAT:
 LINE: [your opener]
-TIER: [S/A/B]
+TIER: [S/A/B — must match the tier of the data you referenced]
 TYPE: [artifact type used]
 ARTIFACT: [exact data referenced]
 
@@ -286,35 +303,58 @@ function buildPrompt(companyName: string, artifact: Artifact | null, research: S
   const industry = (lead.industry || '').toLowerCase().replace(/_/g, ' ')
   if (industry) parts.push(`INDUSTRY: ${industry}`)
 
-  // Collect ALL data points for Claude to pick from
-  parts.push(`\n--- DATA POINTS (use the most SPECIFIC one) ---`)
+  // Group artifacts by tier for Claude
+  const sTier: string[] = []
+  const aTier: string[] = []
+  const bTier: string[] = []
 
-  // Rating/Reviews — most concrete
+  // Rating/Reviews — S-tier if strong
   if (lead.enrichedRating) {
     const ratingText = lead.enrichedReviews
       ? `${lead.enrichedRating} stars across ${lead.enrichedReviews} Google reviews`
       : `${lead.enrichedRating}-star Google rating`
-    parts.push(`REVIEWS: ${ratingText}`)
+    if (lead.enrichedRating >= 4.0) {
+      sTier.push(`REVIEWS: ${ratingText}`)
+    } else {
+      aTier.push(`REVIEWS: ${ratingText}`)
+    }
   }
 
-  // Best artifact
-  if (artifact && artifact.type !== 'FALLBACK' && isArtifactTextUsable(artifact.text)) {
-    parts.push(`ARTIFACT [${artifact.tier}/${artifact.type}]: ${artifact.text}`)
-  }
-
-  // Other usable artifacts for more options
+  // Organize research artifacts by tier
   if (research) {
-    const otherArtifacts = research.artifacts
-      .filter(a => a.type !== 'FALLBACK' && a !== artifact && isArtifactTextUsable(a.text))
-      .slice(0, 3)
-    for (const a of otherArtifacts) {
-      parts.push(`ALSO FOUND [${a.type}]: ${a.text}`)
+    for (const a of research.artifacts.filter(a => a.type !== 'FALLBACK' && isArtifactTextUsable(a.text))) {
+      const label = `${a.type}: ${a.text}`
+      if (a.tier === 'S') sTier.push(label)
+      else if (a.tier === 'A') aTier.push(label)
+      else bTier.push(label)
+    }
+  }
+
+  // Present data grouped by tier — S first, clearly labeled
+  if (sTier.length > 0) {
+    parts.push(`\n=== S-TIER DATA (USE THIS — highest priority) ===`)
+    for (const s of sTier.slice(0, 5)) {
+      parts.push(`  ★ ${s}`)
+    }
+  }
+
+  if (aTier.length > 0) {
+    parts.push(`\n--- A-TIER DATA (use only if no S-tier is usable) ---`)
+    for (const a of aTier.slice(0, 3)) {
+      parts.push(`  ${a}`)
+    }
+  }
+
+  if (bTier.length > 0) {
+    parts.push(`\n--- B-TIER DATA (last resort) ---`)
+    for (const b of bTier.slice(0, 2)) {
+      parts.push(`  ${b}`)
     }
   }
 
   const services = Array.isArray(lead.enrichedServices) ? (lead.enrichedServices as string[]) : []
   if (services.length > 0) {
-    parts.push(`SERVICES: ${services.slice(0, 5).join(', ')}`)
+    parts.push(`\nSERVICES: ${services.slice(0, 5).join(', ')}`)
   }
 
   if (lead.city && lead.state) {
@@ -324,13 +364,19 @@ function buildPrompt(companyName: string, artifact: Artifact | null, research: S
   // Research snippets for context
   if (research && research.snippets.length > 0) {
     parts.push(`\nWEB SNIPPETS:`)
-    for (const snippet of research.snippets.slice(0, 3)) {
+    for (const snippet of research.snippets.slice(0, 4)) {
       parts.push(`  - ${snippet.substring(0, 200)}`)
     }
   }
 
-  parts.push(`\nPick the MOST SPECIFIC data point above and write one cold email opener (8-18 words).`)
-  parts.push(`Prefer numbers, credentials, or awards over generic location/service mentions.`)
+  // Explicit instruction based on available data
+  if (sTier.length > 0) {
+    parts.push(`\nYou MUST use one of the S-TIER data points above. Write a punchy 8-18 word opener using the most compelling S-tier fact.`)
+  } else if (aTier.length > 0) {
+    parts.push(`\nNo S-tier data available. Use the best A-TIER data point above for your opener.`)
+  } else {
+    parts.push(`\nOnly B-tier data available. Write the best opener you can with what's here.`)
+  }
   parts.push(`Do NOT write "This stood out" or "Building your reputation" — be more creative.`)
 
   return parts.join('\n')
@@ -353,14 +399,14 @@ function generateSmartFallback(companyName: string, lead: any, artifact: Artifac
   const reviews = lead.enrichedReviews as number | null
   const industry = (lead.industry || '').toLowerCase().replace(/_/g, ' ')
 
-  // --- Priority 1: Rating + Reviews (most concrete data) ---
+  // --- Priority 1: Rating + Reviews (S-tier) ---
   if (rating && rating >= 4.0 && reviews && reviews > 5) {
     const line = pick([
       `Your ${rating} stars across ${reviews}+ reviews — that's not easy to maintain in ${industry || 'this space'}.`,
       `${reviews} reviews and still holding ${rating} stars, your customers clearly trust you.`,
       `${rating}-star average with ${reviews} reviews — you're doing something your competitors aren't.`,
     ])
-    return { firstLine: line, hook: `${rating} stars / ${reviews} reviews`, angle: 'social-proof', tokensCost: 0 }
+    return { firstLine: line, hook: `${rating} stars / ${reviews} reviews`, angle: 'social-proof', tier: 'S', tokensCost: 0 }
   }
 
   if (rating && rating >= 4.0) {
@@ -368,38 +414,39 @@ function generateSmartFallback(companyName: string, lead: any, artifact: Artifac
       `Your ${rating}-star rating caught my attention — that's well above average for ${industry || 'your industry'}.`,
       `Holding a ${rating}-star rating in ${industry || 'this business'} says a lot about how you operate.`,
     ])
-    return { firstLine: line, hook: `${rating} stars`, angle: 'social-proof', tokensCost: 0 }
+    return { firstLine: line, hook: `${rating} stars`, angle: 'social-proof', tier: 'S', tokensCost: 0 }
   }
 
-  // --- Priority 2: Artifact-based (only if text passes quality check) ---
+  // --- Priority 2: Artifact-based (tier from artifact) ---
   if (artifact && artifact.type !== 'FALLBACK' && isArtifactTextUsable(artifact.text)) {
     const text = artifact.text
+    const artifactTier = artifact.tier
     switch (artifact.type) {
       case 'TOOL_PLATFORM':
         return { firstLine: pick([
           `Your team runs on ${text} — that's a sign you take operations seriously.`,
           `Saw you're using ${text}, that puts you ahead of most ${industry} companies.`,
-        ]), hook: text, angle: 'tool-platform', tokensCost: 0 }
+        ]), hook: text, angle: 'tool-platform', tier: artifactTier, tokensCost: 0 }
       case 'CLIENT_OR_PROJECT':
         return { firstLine: pick([
           `Your work on ${text} caught my eye — that's a solid portfolio piece.`,
           `The ${text} project on your profile shows the caliber of work you do.`,
-        ]), hook: text, angle: 'client-project', tokensCost: 0 }
+        ]), hook: text, angle: 'client-project', tier: artifactTier, tokensCost: 0 }
       case 'EXACT_PHRASE':
-        return { firstLine: `${text} — that's a credential most ${industry} companies can't claim.`, hook: text, angle: 'exact-phrase', tokensCost: 0 }
+        return { firstLine: `${text} — that's a credential most ${industry} companies can't claim.`, hook: text, angle: 'exact-phrase', tier: artifactTier, tokensCost: 0 }
       case 'SERVICE_PROGRAM':
         return { firstLine: pick([
           `Your ${text} is the kind of thing that wins repeat customers.`,
           `Offering ${text} — that's a smart move most of your competitors skip.`,
-        ]), hook: text, angle: 'service-program', tokensCost: 0 }
+        ]), hook: text, angle: 'service-program', tier: artifactTier, tokensCost: 0 }
       case 'HIRING_SIGNAL':
-        return { firstLine: `Scaling up with ${text} — looks like business is moving in the right direction.`, hook: text, angle: 'hiring-signal', tokensCost: 0 }
+        return { firstLine: `Scaling up with ${text} — looks like business is moving in the right direction.`, hook: text, angle: 'hiring-signal', tier: artifactTier, tokensCost: 0 }
       case 'COMPANY_DESCRIPTION':
-        return { firstLine: `${text} — that kind of focus is rare in ${industry || 'this market'}.`, hook: text, angle: 'description', tokensCost: 0 }
+        return { firstLine: `${text} — that kind of focus is rare in ${industry || 'this market'}.`, hook: text, angle: 'description', tier: artifactTier, tokensCost: 0 }
     }
   }
 
-  // --- Priority 3: Services + Location combo ---
+  // --- Priority 3: Services + Location combo (B-tier) ---
   if (services.length > 0 && services[0].length > 5 && location) {
     const svc = services[0]
     const line = pick([
@@ -407,38 +454,39 @@ function generateSmartFallback(companyName: string, lead: any, artifact: Artifac
       `Your ${svc.toLowerCase()} work in ${location} keeps coming up in searches, that's a good sign.`,
       `Handling ${svc.toLowerCase()} in the ${location} market — you clearly know the area.`,
     ])
-    return { firstLine: line, hook: `${svc} / ${location}`, angle: 'service-location', tokensCost: 0 }
+    return { firstLine: line, hook: `${svc} / ${location}`, angle: 'service-location', tier: 'B', tokensCost: 0 }
   }
 
-  // --- Priority 4: Services only ---
+  // --- Priority 4: Services only (B-tier) ---
   if (services.length >= 2) {
     const line = pick([
       `Covering both ${services[0].toLowerCase()} and ${services[1].toLowerCase()} — that range gives your customers one less call to make.`,
       `Your ${services[0].toLowerCase()} and ${services[1].toLowerCase()} work shows you're not a one-trick operation.`,
     ])
-    return { firstLine: line, hook: services.slice(0, 2).join(', '), angle: 'specialization', tokensCost: 0 }
+    return { firstLine: line, hook: services.slice(0, 2).join(', '), angle: 'specialization', tier: 'B', tokensCost: 0 }
   }
 
   if (services.length > 0 && services[0].length > 5) {
     const svc = services[0]
-    return { firstLine: `Your ${svc.toLowerCase()} work keeps showing up in my research — clearly doing something right.`, hook: svc, angle: 'specialization', tokensCost: 0 }
+    return { firstLine: `Your ${svc.toLowerCase()} work keeps showing up in my research — clearly doing something right.`, hook: svc, angle: 'specialization', tier: 'B', tokensCost: 0 }
   }
 
-  // --- Priority 5: Location only ---
+  // --- Priority 5: Location only (B-tier) ---
   if (location) {
     const line = pick([
       `Running a ${industry || 'service'} business in ${location} means competing with a lot of noise — and you're standing out.`,
       `${location} has no shortage of ${industry || 'service'} companies, but your name keeps coming up.`,
       `Your presence in the ${location} ${industry || 'service'} market is hard to miss.`,
     ])
-    return { firstLine: line, hook: location, angle: 'location', tokensCost: 0 }
+    return { firstLine: line, hook: location, angle: 'location', tier: 'B', tokensCost: 0 }
   }
 
-  // --- Last resort ---
+  // --- Last resort (B-tier) ---
   return {
     firstLine: `Your online presence stood out while I was researching ${industry || 'local service'} companies — wanted to reach out.`,
     hook: companyName,
     angle: 'general',
+    tier: 'B',
     tokensCost: 0,
   }
 }
@@ -580,6 +628,7 @@ export async function generatePersonalization(
             firstLine: parsed.line,
             hook: parsed.artifact || (bestArtifact?.text ?? ''),
             angle: parsed.type.toLowerCase().replace(/_/g, '-'),
+            tier: (parsed.tier as 'S' | 'A' | 'B') || bestArtifact?.tier || 'B',
             tokensCost: tokensCost + copyCost,
             websiteCopy: websiteCopy || undefined,
           }
@@ -816,6 +865,7 @@ async function storeResult(leadId: string, companyName: string, result: Personal
         firstLine: result.firstLine,
         hook: result.hook,
         angle: result.angle,
+        tier: result.tier,
         ...(result.websiteCopy ? { websiteCopy: result.websiteCopy } : {}),
       }),
     },
@@ -823,13 +873,14 @@ async function storeResult(leadId: string, companyName: string, result: Personal
 
   await logActivity(
     'PERSONALIZATION',
-    `Personalized ${companyName}: "${result.firstLine}"`,
+    `[${result.tier}] Personalized ${companyName}: "${result.firstLine}"`,
     {
       leadId,
       tokenCost: result.tokensCost,
       metadata: {
         hook: result.hook,
         angle: result.angle,
+        tier: result.tier,
       },
     }
   )

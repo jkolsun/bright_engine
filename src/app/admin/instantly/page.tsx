@@ -155,32 +155,65 @@ function InstantlyDashboard() {
   const [assignSuccess, setAssignSuccess] = useState('')
   const [showAssignBanner, setShowAssignBanner] = useState(assignLeadIds.length > 0)
 
-  const handleAssignToCampaign = async (campaignId: string, campaignName: string) => {
+  const [assignError, setAssignError] = useState<string | null>(null)
+
+  const handleAssignToCampaign = async (campaignId: string, campaignName: string, retries = 3) => {
     if (assignLeadIds.length === 0) return
     setAssigningToCampaign(true)
-    try {
-      const res = await fetch('/api/instantly/assign-campaign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leadIds: assignLeadIds, campaignId, campaignName }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        const skippedMsg = data.skipped > 0 ? ` (${data.skipped} skipped — missing email or preview URL)` : ''
-        setAssignSuccess(`${data.updated} leads assigned to "${campaignName}"${skippedMsg}`)
-        setShowAssignBanner(false)
-        // Remove query params from URL
-        window.history.replaceState({}, '', '/admin/instantly')
-        setTimeout(() => setAssignSuccess(''), 7000)
-        fetchStats()
-      } else {
-        alert(data.error || 'Failed to assign leads to campaign')
+    setAssignError(null)
+
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 15000)
+
+        const res = await fetch('/api/instantly/assign-campaign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ leadIds: assignLeadIds, campaignId, campaignName }),
+          signal: controller.signal,
+        })
+        clearTimeout(timeout)
+
+        const data = await res.json()
+        if (res.ok) {
+          const skippedMsg = data.skipped > 0 ? ` (${data.skipped} skipped — missing email or preview URL)` : ''
+          setAssignSuccess(`${data.updated} leads assigned to "${campaignName}"${skippedMsg}`)
+          setShowAssignBanner(false)
+          window.history.replaceState({}, '', '/admin/instantly')
+          setTimeout(() => setAssignSuccess(''), 7000)
+          fetchStats()
+          setAssigningToCampaign(false)
+          return
+        }
+
+        // 4xx errors are not retryable (validation failures)
+        if (res.status < 500) {
+          setAssignError(data.error || 'Failed to assign leads to campaign')
+          setAssigningToCampaign(false)
+          return
+        }
+
+        // 5xx — retry after backoff
+        if (attempt < retries) {
+          await new Promise((r) => setTimeout(r, 1000 * attempt))
+          continue
+        }
+        setAssignError(data.error || `Failed after ${retries} attempts — try again`)
+      } catch (err) {
+        // Network / timeout error — retry with backoff
+        if (attempt < retries) {
+          await new Promise((r) => setTimeout(r, 1000 * attempt))
+          continue
+        }
+        setAssignError(
+          err instanceof DOMException && err.name === 'AbortError'
+            ? 'Request timed out — try again'
+            : `Network error after ${retries} attempts — try again`
+        )
       }
-    } catch {
-      alert('Failed to assign leads to campaign')
-    } finally {
-      setAssigningToCampaign(false)
     }
+    setAssigningToCampaign(false)
   }
 
   const fetchStats = async (retries = 2) => {
@@ -210,22 +243,43 @@ function InstantlyDashboard() {
     }
   }
 
-  const triggerSync = async () => {
-    try {
-      setSyncing(true)
-      const res = await fetch('/api/instantly/manual-sync', { method: 'POST' })
-      if (res.ok) {
-        // Refresh stats after sync completes
-        await fetchStats()
-      } else {
-        const data = await res.json().catch(() => ({}))
-        alert(`Sync failed: ${data.details || data.error || 'Unknown error'}`)
+  const [syncError, setSyncError] = useState<string | null>(null)
+
+  const triggerSync = async (retries = 2) => {
+    setSyncing(true)
+    setSyncError(null)
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 30000)
+        const res = await fetch('/api/instantly/manual-sync', { method: 'POST', signal: controller.signal })
+        clearTimeout(timeout)
+        if (res.ok) {
+          await fetchStats()
+          setSyncing(false)
+          return
+        }
+        if (res.status < 500 || attempt === retries) {
+          const data = await res.json().catch(() => ({}))
+          setSyncError(data.details || data.error || 'Sync failed — try again')
+          setSyncing(false)
+          return
+        }
+        await new Promise((r) => setTimeout(r, 1500 * attempt))
+      } catch (err) {
+        if (attempt === retries) {
+          setSyncError(
+            err instanceof DOMException && err.name === 'AbortError'
+              ? 'Sync timed out — try again'
+              : 'Sync request failed — try again'
+          )
+          setSyncing(false)
+          return
+        }
+        await new Promise((r) => setTimeout(r, 1500 * attempt))
       }
-    } catch {
-      alert('Sync request failed — check console for details')
-    } finally {
-      setSyncing(false)
     }
+    setSyncing(false)
   }
 
   useEffect(() => {
@@ -300,7 +354,7 @@ function InstantlyDashboard() {
             Refresh
           </button>
           <button
-            onClick={triggerSync}
+            onClick={() => triggerSync()}
             disabled={syncing}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50"
           >
@@ -350,6 +404,38 @@ function InstantlyDashboard() {
         <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-2">
           <CheckCircle2 size={20} className="text-green-600" />
           <span className="font-medium text-green-900">{assignSuccess}</span>
+        </div>
+      )}
+
+      {/* Assignment Error */}
+      {assignError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={20} className="text-red-600" />
+            <span className="font-medium text-red-900">{assignError}</span>
+          </div>
+          <button
+            onClick={() => setAssignError(null)}
+            className="text-red-400 hover:text-red-600"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
+      {/* Sync Error */}
+      {syncError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={20} className="text-red-600" />
+            <span className="font-medium text-red-900">{syncError}</span>
+          </div>
+          <button
+            onClick={() => setSyncError(null)}
+            className="text-red-400 hover:text-red-600"
+          >
+            <X size={18} />
+          </button>
         </div>
       )}
 
