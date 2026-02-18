@@ -360,8 +360,10 @@ export default function LeadsPage() {
     const matchesRep = repFilter === 'all'
       ? true
       : repFilter === 'unassigned'
-        ? !lead.assignedTo
-        : lead.assignedTo?.id === repFilter
+        ? !lead.assignedTo && !lead.instantlyCampaignId
+        : repFilter === 'instantly'
+          ? !!lead.instantlyCampaignId
+          : lead.assignedTo?.id === repFilter
 
     return matchesSearch && matchesStatus && matchesRep
   })
@@ -855,6 +857,7 @@ export default function LeadsPage() {
           >
             <option value="all">All Reps</option>
             <option value="unassigned">Unassigned</option>
+            <option value="instantly">Instantly Campaigns</option>
             {activeReps.map((rep) => (
               <option key={rep.id} value={rep.id}>{rep.name}</option>
             ))}
@@ -862,8 +865,8 @@ export default function LeadsPage() {
         </div>
       </Card>
 
-      {/* Leads Table */}
-      <Card>
+      {/* Leads Table — horizontally scrollable with frozen columns */}
+      <Card className="overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-gray-500">Loading leads...</div>
         ) : filteredLeads.length === 0 ? (
@@ -887,11 +890,12 @@ export default function LeadsPage() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="overflow-x-auto relative">
+            <table className="w-max min-w-full border-collapse">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="text-center p-4 w-12">
+                  {/* Sticky left: checkbox */}
+                  <th className="sticky left-0 z-20 bg-gray-50 text-center p-3 w-12 border-r border-gray-200">
                     <input
                       type="checkbox"
                       checked={selectedLeads.size === filteredLeads.length && filteredLeads.length > 0}
@@ -900,91 +904,142 @@ export default function LeadsPage() {
                       title="Select all"
                     />
                   </th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Name</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Company</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Phone</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Location</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Assigned To</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Status</th>
-                  <th className="text-right p-4 text-sm font-semibold text-gray-700">Actions</th>
+                  {/* Scrollable columns */}
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Name</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Company</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Phone</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Email</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Location</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Industry</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Source</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Website</th>
+                  <th className="text-center p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Rating</th>
+                  <th className="text-center p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Reviews</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Personalization</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Notes</th>
+                  {/* Sticky right: Assigned To, Status, Actions */}
+                  <th className="sticky right-[200px] z-20 bg-gray-50 text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap border-l border-gray-200 shadow-[-2px_0_4px_rgba(0,0,0,0.06)]">Assigned To</th>
+                  <th className="sticky right-[100px] z-20 bg-gray-50 text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                  <th className="sticky right-0 z-20 bg-gray-50 text-center p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap w-[100px]">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredLeads.map((lead) => (
-                  <tr key={lead.id} className={`hover:bg-gray-50 ${selectedLeads.has(lead.id) ? 'bg-blue-50' : ''}`}>
-                    <td className="text-center p-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedLeads.has(lead.id)}
-                        onChange={() => handleSelectLead(lead.id)}
-                        className="w-4 h-4 cursor-pointer"
-                      />
-                    </td>
-                    <td className="p-4">
-                      <div className="font-medium text-gray-900">{lead.firstName} {lead.lastName}</div>
-                      {lead.email && <div className="text-sm text-gray-500">{lead.email}</div>}
-                    </td>
-                    <td className="p-4 text-gray-700">{lead.companyName}</td>
-                    <td className="p-4 text-gray-700">{lead.phone && formatPhone(lead.phone)}</td>
-                    <td className="p-4 text-gray-700">{lead.city}{lead.city && lead.state ? ', ' : ''}{lead.state}</td>
-                    <td className="p-4">
-                      {lead.assignedTo ? (
-                        <span className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-full">
-                          <span className="w-5 h-5 rounded-full bg-blue-200 flex items-center justify-center text-[10px] font-bold text-blue-800">
-                            {lead.assignedTo.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
-                          </span>
-                          {lead.assignedTo.name}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-gray-400">&mdash;</span>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      <Badge variant={
-                        lead.status === 'HOT_LEAD' ? 'destructive' :
-                        lead.status === 'QUALIFIED' ? 'default' :
-                        lead.status === 'BUILDING' ? 'secondary' :
-                        lead.status === 'PAID' ? 'default' :
-                        'secondary'
-                      }>
-                        {lead.status}
-                      </Badge>
-                    </td>
-                    <td className="p-4 text-right space-x-2 flex justify-end">
-                      {lead.previewUrl && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                          onClick={() => window.open(lead.previewUrl, '_blank')}
-                          title="Preview the personalized website"
-                        >
-                          <Eye size={16} className="mr-1" />
-                          Preview
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        onClick={() => openEditLeadDialog(lead)}
-                      >
-                        <Pencil size={14} className="mr-1" /> Edit
-                      </Button>
-                      <Link href={`/admin/leads/${lead.id}`}>
-                        <Button variant="ghost" size="sm">View</Button>
-                      </Link>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => handleDeleteLead(lead.id, lead.firstName)}
-                      >
-                        <Trash2 size={14} className="mr-1" /> Delete
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-gray-100">
+                {filteredLeads.map((lead) => {
+                  const isSelected = selectedLeads.has(lead.id)
+                  const rowBg = isSelected ? 'bg-blue-50' : 'bg-white'
+                  const hoverBg = isSelected ? 'hover:bg-blue-100' : 'hover:bg-gray-50'
+
+                  return (
+                    <tr key={lead.id} className={`${hoverBg} ${rowBg}`}>
+                      {/* Sticky left: checkbox */}
+                      <td className={`sticky left-0 z-10 ${rowBg} text-center p-3 border-r border-gray-100`}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleSelectLead(lead.id)}
+                          className="w-4 h-4 cursor-pointer"
+                        />
+                      </td>
+                      {/* Scrollable data columns */}
+                      <td className="p-3 whitespace-nowrap">
+                        <div className="font-medium text-gray-900 text-sm">{lead.firstName} {lead.lastName}</div>
+                      </td>
+                      <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.companyName || '—'}</td>
+                      <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.phone ? formatPhone(lead.phone) : '—'}</td>
+                      <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.email || '—'}</td>
+                      <td className="p-3 whitespace-nowrap text-sm text-gray-700">
+                        {lead.city || lead.state ? `${lead.city || ''}${lead.city && lead.state ? ', ' : ''}${lead.state || ''}` : '—'}
+                      </td>
+                      <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.industry || '—'}</td>
+                      <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.source || '—'}</td>
+                      <td className="p-3 whitespace-nowrap text-sm">
+                        {lead.website ? (
+                          <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline max-w-[180px] truncate block">
+                            {lead.website.replace(/^https?:\/\//, '')}
+                          </a>
+                        ) : '—'}
+                      </td>
+                      <td className="p-3 whitespace-nowrap text-sm text-center text-gray-700">
+                        {lead.enrichedRating ? (
+                          <span className="font-medium">{Number(lead.enrichedRating).toFixed(1)}</span>
+                        ) : '—'}
+                      </td>
+                      <td className="p-3 whitespace-nowrap text-sm text-center text-gray-700">
+                        {lead.enrichedReviews ?? '—'}
+                      </td>
+                      <td className="p-3 text-sm text-gray-700 max-w-[200px]">
+                        <div className="truncate" title={lead.personalizationData?.firstLine || ''}>
+                          {lead.personalizationData?.firstLine || '—'}
+                        </div>
+                      </td>
+                      <td className="p-3 text-sm text-gray-700 max-w-[150px]">
+                        <div className="truncate" title={lead.notes || ''}>{lead.notes || '—'}</div>
+                      </td>
+                      {/* Sticky right: Assigned To */}
+                      <td className={`sticky right-[200px] z-10 ${rowBg} p-3 whitespace-nowrap border-l border-gray-100 shadow-[-2px_0_4px_rgba(0,0,0,0.06)]`}>
+                        <div className="flex flex-col gap-1">
+                          {lead.assignedTo && (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-full">
+                              <span className="w-5 h-5 rounded-full bg-blue-200 flex items-center justify-center text-[10px] font-bold text-blue-800">
+                                {lead.assignedTo.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                              </span>
+                              {lead.assignedTo.name}
+                            </span>
+                          )}
+                          {lead.instantlyCampaignId && (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-700 bg-purple-50 px-2 py-1 rounded-full">
+                              <Mail size={12} />
+                              Instantly
+                            </span>
+                          )}
+                          {!lead.assignedTo && !lead.instantlyCampaignId && (
+                            <span className="text-xs text-gray-400">&mdash;</span>
+                          )}
+                        </div>
+                      </td>
+                      {/* Sticky right: Status */}
+                      <td className={`sticky right-[100px] z-10 ${rowBg} p-3 whitespace-nowrap`}>
+                        <Badge variant={
+                          lead.status === 'HOT_LEAD' ? 'destructive' :
+                          lead.status === 'QUALIFIED' ? 'default' :
+                          lead.status === 'BUILDING' ? 'secondary' :
+                          lead.status === 'PAID' ? 'default' :
+                          'secondary'
+                        } className="text-xs">
+                          {lead.status}
+                        </Badge>
+                      </td>
+                      {/* Sticky right: Actions */}
+                      <td className={`sticky right-0 z-10 ${rowBg} p-3 whitespace-nowrap w-[100px]`}>
+                        <div className="flex items-center justify-center gap-1">
+                          {lead.previewUrl && (
+                            <button
+                              onClick={() => window.open(lead.previewUrl, '_blank')}
+                              title="Preview"
+                              className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 transition-colors"
+                            >
+                              <Eye size={15} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => openEditLeadDialog(lead)}
+                            title="Edit"
+                            className="p-1.5 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteLead(lead.id, lead.firstName)}
+                            title="Delete"
+                            className="p-1.5 rounded-md text-red-500 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

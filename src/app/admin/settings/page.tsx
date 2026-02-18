@@ -146,8 +146,20 @@ export default function SettingsPage() {
   const [personalization, setPersonalization] = useState(DEFAULT_PERSONALIZATION)
   const [targets, setTargets] = useState(DEFAULT_TARGETS)
 
+  // Per-rep targets
+  const [reps, setReps] = useState<{ id: string; name: string; status: string }[]>([])
+  const [repTargets, setRepTargets] = useState<Record<string, typeof DEFAULT_TARGETS>>({})
+  const [loadingReps, setLoadingReps] = useState(false)
+
   // Instantly campaigns (from existing key)
-  const [campaigns, setCampaigns] = useState({ campaign_a: '', campaign_b: '' })
+  const [campaigns, setCampaigns] = useState<Record<string, string>>({ campaign_a: '', campaign_b: '' })
+  const [addCampaignOpen, setAddCampaignOpen] = useState(false)
+  const [newCampaignName, setNewCampaignName] = useState('')
+  const [newCampaignId, setNewCampaignId] = useState('')
+
+  // Upsell management
+  const [addUpsellOpen, setAddUpsellOpen] = useState(false)
+  const [newUpsell, setNewUpsell] = useState({ name: '', price: '', key: '', phone: '', paymentLink: '' })
 
   // Save state per section
   const [savingKey, setSavingKey] = useState<string | null>(null)
@@ -165,7 +177,43 @@ export default function SettingsPage() {
   // ── Load all settings on mount ─────────────────────────────
   useEffect(() => {
     loadAllSettings()
+    fetchReps()
   }, [])
+
+  const fetchReps = async () => {
+    setLoadingReps(true)
+    try {
+      const res = await fetch('/api/reps')
+      if (res.ok) {
+        const data = await res.json()
+        setReps((data.reps || []).filter((r: any) => r.status === 'ACTIVE'))
+      }
+    } catch { /* ignore */ }
+    finally { setLoadingReps(false) }
+  }
+
+  const getRepTarget = (repId: string, field: keyof typeof DEFAULT_TARGETS) => {
+    return repTargets[repId]?.[field] ?? targets[field]
+  }
+
+  const setRepTarget = (repId: string, field: keyof typeof DEFAULT_TARGETS, value: number) => {
+    setRepTargets(prev => ({
+      ...prev,
+      [repId]: {
+        ...DEFAULT_TARGETS,
+        ...prev[repId],
+        [field]: value,
+      }
+    }))
+  }
+
+  const resetRepTargets = (repId: string) => {
+    setRepTargets(prev => {
+      const updated = { ...prev }
+      delete updated[repId]
+      return updated
+    })
+  }
 
   const loadAllSettings = async () => {
     try {
@@ -194,6 +242,7 @@ export default function SettingsPage() {
       if (s.personalization) setPersonalization({ ...DEFAULT_PERSONALIZATION, ...s.personalization })
       if (s.targets) setTargets({ ...DEFAULT_TARGETS, ...s.targets })
       if (s.instantly_campaigns) setCampaigns(s.instantly_campaigns)
+      if (s.rep_targets) setRepTargets(s.rep_targets)
 
       setSettingsLoaded(true)
     } catch (e) {
@@ -244,7 +293,7 @@ export default function SettingsPage() {
     }
   }, [activeTab, services, apiLoading, checkApiStatus])
 
-  // ── Urgency day helpers ────────────────────────────────────
+  // ── Urgency day helpers ────────────────────────────────���───
   const addUrgencyDay = () => {
     const day = parseInt(newDay)
     if (!day || day < 1 || day > 30 || sequences.urgencyDays.includes(day)) return
@@ -300,6 +349,44 @@ export default function SettingsPage() {
       }
     } catch (e) { console.error('Sync failed:', e) }
     finally { setSyncing(false) }
+  }
+
+  const addCampaign = async () => {
+    if (!newCampaignName.trim() || !newCampaignId.trim()) return
+    const key = newCampaignName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_')
+    const updated = { ...campaigns, [key]: newCampaignId.trim() }
+    setCampaigns(updated)
+    await saveSetting('instantly_campaigns', updated)
+    setNewCampaignName('')
+    setNewCampaignId('')
+    setAddCampaignOpen(false)
+  }
+
+  const removeCampaign = async (key: string) => {
+    const updated = { ...campaigns }
+    delete updated[key]
+    setCampaigns(updated)
+    await saveSetting('instantly_campaigns', updated)
+  }
+
+  // ── Upsell helpers ─────────────────────────────────────────
+  const addUpsellProduct = () => {
+    if (!newUpsell.name.trim() || !newUpsell.price.trim() || !newUpsell.key.trim()) return
+    const updated = {
+      ...clientSequences,
+      upsellProducts: [...clientSequences.upsellProducts, { ...newUpsell }],
+    }
+    setClientSequences(updated)
+    setNewUpsell({ name: '', price: '', key: '', phone: '', paymentLink: '' })
+    setAddUpsellOpen(false)
+  }
+
+  const removeUpsellProduct = (key: string) => {
+    const updated = {
+      ...clientSequences,
+      upsellProducts: clientSequences.upsellProducts.filter((p: any) => p.key !== key),
+    }
+    setClientSequences(updated)
   }
 
   // ── Tab config ─────────────────────────────────────────────
@@ -521,20 +608,62 @@ export default function SettingsPage() {
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <SectionHeader title="Instantly Campaigns" description="Email campaign mapping for lead distribution" />
-                  <Button variant="outline" onClick={syncCampaigns} disabled={syncing}>
-                    {syncing ? <Loader2 size={14} className="mr-1 animate-spin" /> : <RefreshCw size={14} className="mr-1" />}
-                    {syncing ? 'Syncing...' : 'Sync Campaigns'}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setAddCampaignOpen(!addCampaignOpen)}>
+                      <Plus size={14} className="mr-1" />
+                      Add Campaign
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={syncCampaigns} disabled={syncing}>
+                      {syncing ? <Loader2 size={14} className="mr-1 animate-spin" /> : <RefreshCw size={14} className="mr-1" />}
+                      {syncing ? 'Syncing...' : 'Sync Campaigns'}
+                    </Button>
+                  </div>
                 </div>
+
+                {/* Add Campaign Form */}
+                {addCampaignOpen && (
+                  <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <FieldLabel>Campaign Name</FieldLabel>
+                        <Input
+                          placeholder="e.g., Campaign C"
+                          value={newCampaignName}
+                          onChange={(e) => setNewCampaignName(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <FieldLabel>Campaign ID</FieldLabel>
+                        <Input
+                          placeholder="Paste Instantly campaign ID"
+                          value={newCampaignId}
+                          onChange={(e) => setNewCampaignId(e.target.value)}
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="outline" size="sm" onClick={() => { setAddCampaignOpen(false); setNewCampaignName(''); setNewCampaignId('') }}>Cancel</Button>
+                      <Button size="sm" onClick={addCampaign} disabled={!newCampaignName.trim() || !newCampaignId.trim()}>Add Campaign</Button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <div className="text-sm font-medium text-gray-700 mb-1">Campaign A — Bad Website</div>
-                    <p className="text-xs text-gray-400 font-mono truncate">{campaigns.campaign_a || 'Not configured'}</p>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <div className="text-sm font-medium text-gray-700 mb-1">Campaign B — No Website</div>
-                    <p className="text-xs text-gray-400 font-mono truncate">{campaigns.campaign_b || 'Not configured'}</p>
-                  </div>
+                  {Object.entries(campaigns).map(([key, id]) => (
+                    <div key={key} className="p-4 bg-gray-50 rounded-lg group relative">
+                      <div className="text-sm font-medium text-gray-700 mb-1 capitalize">{key.replace(/_/g, ' ')}</div>
+                      <p className="text-xs text-gray-400 font-mono truncate">{id || 'Not configured'}</p>
+                      {!['campaign_a', 'campaign_b'].includes(key) && (
+                        <button
+                          onClick={() => removeCampaign(key)}
+                          className="absolute top-2 right-2 p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </Card>
 
@@ -707,15 +836,77 @@ export default function SettingsPage() {
                   ))}
                 </div>
 
-                <p className="text-xs text-gray-400 mt-3">Variables: {'{name}'}, {'{company}'}, {'{pageViews}'}, {'{siteUrl}'}</p>
+                <p className="text-xs text-gray-400 mt-3">Variables: {'{name}'}, {'{company}'}, {'{pageViews}'}, {'{siteUrl}'}, {'{upsellName}'}, {'{upsellPrice}'}, {'{upsellPhone}'}, {'{paymentLink}'}</p>
               </Card>
 
               {/* Upsell Products */}
               <Card className="p-6">
-                <SectionHeader title="Upsell Products" description="Services to promote in retention touchpoints" />
+                <div className="flex items-center justify-between mb-4">
+                  <SectionHeader title="Upsell Products" description="Services to promote in retention touchpoints" />
+                  <Button variant="outline" size="sm" onClick={() => setAddUpsellOpen(!addUpsellOpen)}>
+                    <Plus size={14} className="mr-1" />
+                    Add Upsell
+                  </Button>
+                </div>
+
+                {/* Add Upsell Form */}
+                {addUpsellOpen && (
+                  <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <FieldLabel>Name</FieldLabel>
+                        <Input
+                          placeholder="e.g., SEO Package"
+                          value={newUpsell.name}
+                          onChange={(e) => setNewUpsell({ ...newUpsell, name: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <FieldLabel>Price</FieldLabel>
+                        <Input
+                          placeholder="e.g., $149/mo"
+                          value={newUpsell.price}
+                          onChange={(e) => setNewUpsell({ ...newUpsell, price: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <FieldLabel>Key</FieldLabel>
+                        <Input
+                          placeholder="e.g., SEO"
+                          value={newUpsell.key}
+                          onChange={(e) => setNewUpsell({ ...newUpsell, key: e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '_') })}
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <FieldLabel>Phone Number</FieldLabel>
+                        <Input
+                          placeholder="e.g., +1 (555) 123-4567"
+                          value={newUpsell.phone}
+                          onChange={(e) => setNewUpsell({ ...newUpsell, phone: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <FieldLabel>Payment Link</FieldLabel>
+                        <Input
+                          placeholder="Stripe payment link URL"
+                          value={newUpsell.paymentLink}
+                          onChange={(e) => setNewUpsell({ ...newUpsell, paymentLink: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="outline" size="sm" onClick={() => { setAddUpsellOpen(false); setNewUpsell({ name: '', price: '', key: '', phone: '', paymentLink: '' }) }}>Cancel</Button>
+                      <Button size="sm" onClick={addUpsellProduct} disabled={!newUpsell.name.trim() || !newUpsell.price.trim() || !newUpsell.key.trim()}>Add Upsell</Button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2">
-                  {clientSequences.upsellProducts.map((product, idx) => (
-                    <div key={product.key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  {clientSequences.upsellProducts.map((product: any, idx: number) => (
+                    <div key={product.key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg group">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-sm">
                           {idx + 1}
@@ -725,11 +916,31 @@ export default function SettingsPage() {
                           <div className="text-xs text-gray-500">{product.price}</div>
                         </div>
                       </div>
-                      <span className="text-xs text-gray-400 font-mono">{product.key}</span>
+                      <div className="flex items-center gap-3">
+                        {product.phone && (
+                          <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <Phone size={12} /> {product.phone}
+                          </span>
+                        )}
+                        {product.paymentLink && (
+                          <a href={product.paymentLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 flex items-center gap-1 hover:underline">
+                            <Link size={12} /> Payment Link
+                          </a>
+                        )}
+                        <span className="text-xs text-gray-400 font-mono">{product.key}</span>
+                        <button
+                          onClick={() => removeUpsellProduct(product.key)}
+                          className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-gray-400 mt-3">Products are configured via Stripe payment links in the Company tab.</p>
+                <p className="text-xs text-gray-400 mt-3">
+                  Use these in templates: {'{upsellName}'}, {'{upsellPrice}'}, {'{upsellPhone}'}, {'{paymentLink}'}
+                </p>
               </Card>
 
               {/* Save */}
@@ -853,7 +1064,7 @@ export default function SettingsPage() {
         <div className="space-y-6">
           {/* Daily Rep Targets */}
           <Card className="p-6">
-            <SectionHeader title="Daily Rep Targets" description="Performance benchmarks for your sales team" />
+            <SectionHeader title="Default Targets" description="Global benchmarks — overridden per rep below" />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <FieldLabel>Dials / Day</FieldLabel>
@@ -898,6 +1109,95 @@ export default function SettingsPage() {
                 onClick={() => saveSetting('targets', targets)}
                 saving={savingKey === 'targets'}
                 saved={savedKey === 'targets'}
+              />
+            </div>
+          </Card>
+
+          {/* Per-Rep Targets */}
+          <Card className="p-6">
+            <SectionHeader title="Individual Rep Targets" description="Override default targets for specific reps" />
+            {loadingReps ? (
+              <div className="text-center py-6 text-gray-500 text-sm">Loading reps...</div>
+            ) : reps.length === 0 ? (
+              <div className="text-center py-6 text-gray-400 text-sm">No active reps found. Add reps in Team settings.</div>
+            ) : (
+              <div className="space-y-4">
+                {reps.map((rep) => {
+                  const hasCustom = !!repTargets[rep.id]
+                  return (
+                    <div key={rep.id} className={`p-4 rounded-lg border ${hasCustom ? 'border-blue-200 bg-blue-50/50' : 'border-gray-200 bg-gray-50'}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">
+                            {rep.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="font-medium text-gray-900 text-sm">{rep.name}</span>
+                          {hasCustom && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Custom</span>
+                          )}
+                        </div>
+                        {hasCustom && (
+                          <button
+                            onClick={() => resetRepTargets(rep.id)}
+                            className="text-xs text-gray-500 hover:text-red-500 transition-colors"
+                          >
+                            Reset to defaults
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-1">Dials/Day</label>
+                          <Input
+                            type="number"
+                            min={0}
+                            className="h-8 text-sm"
+                            value={getRepTarget(rep.id, 'dailyDials')}
+                            onChange={(e) => setRepTarget(rep.id, 'dailyDials', parseInt(e.target.value) || 0)}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-1">Conversations/Day</label>
+                          <Input
+                            type="number"
+                            min={0}
+                            className="h-8 text-sm"
+                            value={getRepTarget(rep.id, 'dailyConversations')}
+                            onChange={(e) => setRepTarget(rep.id, 'dailyConversations', parseInt(e.target.value) || 0)}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-1">Closes/Day</label>
+                          <Input
+                            type="number"
+                            min={0}
+                            className="h-8 text-sm"
+                            value={getRepTarget(rep.id, 'dailyCloses')}
+                            onChange={(e) => setRepTarget(rep.id, 'dailyCloses', parseInt(e.target.value) || 0)}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-1">Lead Cap/Day</label>
+                          <Input
+                            type="number"
+                            min={0}
+                            className="h-8 text-sm"
+                            value={getRepTarget(rep.id, 'dailyLeadCap')}
+                            onChange={(e) => setRepTarget(rep.id, 'dailyLeadCap', parseInt(e.target.value) || 0)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <div className="mt-6 flex items-center justify-between">
+              <p className="text-xs text-gray-400">Reps without custom targets use the defaults above.</p>
+              <SaveButton
+                onClick={() => saveSetting('rep_targets', repTargets)}
+                saving={savingKey === 'rep_targets'}
+                saved={savedKey === 'rep_targets'}
               />
             </div>
           </Card>

@@ -285,6 +285,13 @@ function InstantlyDashboard() {
           </p>
         </div>
         <div className="flex gap-2">
+          <a
+            href="/admin/email-preview"
+            className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
+          >
+            <Eye size={14} />
+            Email Preview
+          </a>
           <button
             onClick={() => fetchStats()}
             className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
