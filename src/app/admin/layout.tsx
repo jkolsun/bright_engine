@@ -16,7 +16,6 @@ import {
   Mail,
   Radio,
   UserPlus,
-  Eye,
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -84,9 +83,6 @@ export default function AdminLayout({
           </NavLink>
           <NavLink href="/admin/instantly" icon={<Mail size={20} />}>
             Instantly Campaigns
-          </NavLink>
-          <NavLink href="/admin/email-preview" icon={<Eye size={20} />}>
-            Email Preview
           </NavLink>
           <NavLink href="/admin/dialer-monitor" icon={<Radio size={20} />}>
             Live Dialer
