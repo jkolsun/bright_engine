@@ -66,6 +66,10 @@ export default function LeadsPage() {
   // Assignment destination state
   const [assignDestination, setAssignDestination] = useState<'rep-tracker' | 'instantly' | null>(null)
 
+  // Add to folder state
+  const [folderAssignDialogOpen, setFolderAssignDialogOpen] = useState(false)
+  const [assigningFolder, setAssigningFolder] = useState(false)
+
   // Expanded lead row state
   const [expandedLead, setExpandedLead] = useState<string | null>(null)
 
@@ -310,6 +314,33 @@ export default function LeadsPage() {
       alert('Failed to assign leads')
     } finally {
       setAssigning(false)
+    }
+  }
+
+  const handleAssignToFolder = async (folderId: string | null) => {
+    if (selectedLeads.size === 0) return
+    setAssigningFolder(true)
+    try {
+      const res = await fetch('/api/folders/assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadIds: Array.from(selectedLeads), folderId }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const folderName = folderId ? folders.find(f => f.id === folderId)?.name : null
+        alert(`${data.updated} lead${data.updated !== 1 ? 's' : ''} ${folderName ? `moved to "${folderName}"` : 'removed from folder'}`)
+        setSelectedLeads(new Set())
+        setFolderAssignDialogOpen(false)
+        fetchLeads()
+        fetchFolders()
+      } else {
+        alert('Failed to move leads')
+      }
+    } catch {
+      alert('Failed to move leads')
+    } finally {
+      setAssigningFolder(false)
     }
   }
 
@@ -638,6 +669,15 @@ export default function LeadsPage() {
           )}
         </div>
         <div className="flex gap-3">
+          {/* Add to Folder button */}
+          <Button
+            variant="outline"
+            onClick={() => setFolderAssignDialogOpen(true)}
+            disabled={selectedLeads.size === 0}
+          >
+            <FolderPlus size={18} className="mr-2" />
+            Add to Folder {selectedLeads.size > 0 && `(${selectedLeads.size})`}
+          </Button>
           {/* Assignment button — opens destination picker */}
           <Button
             variant="outline"
@@ -878,6 +918,62 @@ export default function LeadsPage() {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add to Folder Dialog */}
+      <Dialog open={folderAssignDialogOpen} onOpenChange={setFolderAssignDialogOpen}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle>Move {selectedLeads.size} Lead{selectedLeads.size !== 1 ? 's' : ''} to Folder</DialogTitle>
+            <DialogDescription>
+              Choose a folder to organize the selected leads.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2 max-h-[400px] overflow-y-auto">
+            {/* Remove from folder option */}
+            <button
+              onClick={() => handleAssignToFolder(null)}
+              disabled={assigningFolder}
+              className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-left disabled:opacity-50"
+            >
+              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                <FolderOpen size={18} className="text-gray-400" />
+              </div>
+              <div className="flex-1">
+                <div className="font-medium text-gray-900">Remove from Folder</div>
+                <div className="text-sm text-gray-500">Move to Unorganized</div>
+              </div>
+            </button>
+
+            {folders.map((folder) => {
+              const count = leads.filter(l => l.folderId === folder.id).length
+              return (
+                <button
+                  key={folder.id}
+                  onClick={() => handleAssignToFolder(folder.id)}
+                  disabled={assigningFolder}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors text-left disabled:opacity-50"
+                >
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: folder.color + '20' }}>
+                    <FolderOpen size={18} style={{ color: folder.color }} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">{folder.name}</div>
+                    <div className="text-sm text-gray-500">{count} leads</div>
+                  </div>
+                </button>
+              )
+            })}
+
+            {folders.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                <FolderOpen size={32} className="mx-auto mb-2 text-gray-300" />
+                <p>No folders yet.</p>
+                <p className="text-sm">Create a folder from the Folders view first.</p>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
