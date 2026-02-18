@@ -100,7 +100,7 @@ export async function getCampaignFunnelStats(): Promise<CampaignFunnelStats[]> {
       if (c.instantlyCampaignId) {
         campaignIds.push({
           id: c.instantlyCampaignId,
-          name: c.instantlyCampaignId.includes('A') ? 'Campaign A' : 'Campaign B',
+          name: `Campaign (${c.instantlyCampaignId.slice(0, 8)})`,
         })
       }
     }
@@ -163,7 +163,8 @@ export async function getCampaignFunnelStats(): Promise<CampaignFunnelStats[]> {
 
     const sentLeads = total - queued // Leads actually sent (not just queued)
     const openRate = sentLeads > 0 ? emailsOpened / sentLeads : 0
-    const previewClickRate = sentLeads > 0 ? previewsClicked / sentLeads : 0
+    // KB: "Preview click rate: 15-25% of opens" — calculated relative to opens, not sends
+    const previewClickRate = emailsOpened > 0 ? previewsClicked / emailsOpened : 0
     const replyRate = sentLeads > 0 ? replied / sentLeads : 0
     const positiveReplyRate = sentLeads > 0 ? repliedPositive / sentLeads : 0
     const conversionRate = replied > 0 ? convertedToPaid / replied : 0

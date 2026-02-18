@@ -293,10 +293,17 @@ export async function recordCampaignSnapshot(campaignId: string) {
     const perf = await getCampaignPerformance(campaignId)
 
     // Store as drip_log entry with performance metadata
+    // Look up stored campaign IDs to determine A vs B
+    const campaignSettings = await prisma.settings.findUnique({
+      where: { key: 'instantly_campaigns' },
+    })
+    const storedCampaigns = campaignSettings?.value as any
+    const campaignLabel = storedCampaigns?.campaign_a === campaignId ? 'A' : 'B'
+
     await prisma.instantlyDripLog.create({
       data: {
         date: new Date(),
-        campaign: campaignId.includes('A') ? 'A' : 'B',
+        campaign: campaignLabel,
         totalLimit: 0, // Placeholder — would be filled by sync job
         usableSends: 0,
         followupObligations: 0,

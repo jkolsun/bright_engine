@@ -18,17 +18,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'leadIds and campaignId required' }, { status: 400 })
     }
 
-    const updated = await prisma.lead.updateMany({
+    // Validate leads have required fields for Instantly (email + preview URL)
+    const leads = await prisma.lead.findMany({
       where: { id: { in: leadIds } },
+      select: { id: true, email: true, previewUrl: true, firstName: true, companyName: true },
+    })
+
+    const validLeadIds = leads
+      .filter((l) => l.email && l.previewUrl)
+      .map((l) => l.id)
+
+    const skipped = leads.filter((l) => !l.email || !l.previewUrl)
+
+    if (validLeadIds.length === 0) {
+      return NextResponse.json({
+        error: 'No leads have both email and preview URL — required for Instantly campaigns',
+        skipped: skipped.length,
+      }, { status: 400 })
+    }
+
+    // Queue valid leads — instantlyAddedDate is set later when actually pushed to Instantly
+    const updated = await prisma.lead.updateMany({
+      where: { id: { in: validLeadIds } },
       data: {
         instantlyCampaignId: campaignId,
         instantlyStatus: 'QUEUED',
-        instantlyAddedDate: new Date(),
       },
     })
 
     return NextResponse.json({
       updated: updated.count,
+      skipped: skipped.length,
+      skippedReason: skipped.length > 0 ? 'Missing email or preview URL' : undefined,
       campaignName: campaignName || campaignId,
     })
   } catch (error) {

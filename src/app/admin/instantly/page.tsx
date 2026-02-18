@@ -162,16 +162,17 @@ function InstantlyDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ leadIds: assignLeadIds, campaignId, campaignName }),
       })
+      const data = await res.json()
       if (res.ok) {
-        const data = await res.json()
-        setAssignSuccess(`${data.updated} leads assigned to "${campaignName}"`)
+        const skippedMsg = data.skipped > 0 ? ` (${data.skipped} skipped — missing email or preview URL)` : ''
+        setAssignSuccess(`${data.updated} leads assigned to "${campaignName}"${skippedMsg}`)
         setShowAssignBanner(false)
         // Remove query params from URL
         window.history.replaceState({}, '', '/admin/instantly')
-        setTimeout(() => setAssignSuccess(''), 5000)
+        setTimeout(() => setAssignSuccess(''), 7000)
         fetchStats()
       } else {
-        alert('Failed to assign leads to campaign')
+        alert(data.error || 'Failed to assign leads to campaign')
       }
     } catch {
       alert('Failed to assign leads to campaign')
@@ -198,13 +199,16 @@ function InstantlyDashboard() {
   const triggerSync = async () => {
     try {
       setSyncing(true)
-      const res = await fetch('/api/instantly/init', { method: 'POST' })
+      const res = await fetch('/api/instantly/manual-sync', { method: 'POST' })
       if (res.ok) {
-        // Wait a moment then refresh stats
-        setTimeout(fetchStats, 3000)
+        // Refresh stats after sync completes
+        await fetchStats()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        alert(`Sync failed: ${data.details || data.error || 'Unknown error'}`)
       }
     } catch {
-      // Ignore sync errors
+      alert('Sync request failed — check console for details')
     } finally {
       setSyncing(false)
     }

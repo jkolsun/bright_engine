@@ -82,6 +82,25 @@ const DEFAULT_SEQUENCES = {
   } as Record<number, string>,
   safetyBuffer: 0.85,
 }
+const DEFAULT_CLIENT_SEQUENCES = {
+  touchpointDays: [7, 14, 30, 60, 90, 180, 365],
+  touchpointTemplates: {
+    7: 'Hey {name}! Your site for {company} has been live for a week. How\'s everything looking? Any changes you\'d like? Reply and we\'ll take care of it.',
+    14: 'Hi {name}, quick 2-week check-in on your {company} site. We\'re seeing {pageViews} page views so far. Want a full performance report?',
+    30: '{name}, your site has been live for a month! Time for a review. Have you claimed your Google Business Profile yet? We can set that up for $49 — huge for local visibility.',
+    60: 'Hey {name}, month 2 update for {company}. Your site is performing well. Interested in adding a review widget ($69/mo) to build social proof?',
+    90: '{name}, 3-month milestone! Let\'s talk about boosting {company}\'s online presence. Our SEO package ($149/mo) could help you rank higher for local searches.',
+    180: 'Half-year check-in, {name}! {company}\'s site has been solid. Want to explore our social media management ($99/mo) to drive even more traffic?',
+    365: 'Happy 1-year anniversary, {name}! Thanks for being a Bright Automations client. Let\'s schedule a call to review {company}\'s growth and plan for next year.',
+  } as Record<number, string>,
+  upsellProducts: [
+    { name: 'Google Business Profile', price: '$49 one-time', key: 'GBP' },
+    { name: 'Review Widget', price: '$69/mo', key: 'REVIEW_WIDGET' },
+    { name: 'SEO Package', price: '$149/mo', key: 'SEO' },
+    { name: 'Social Media Management', price: '$99/mo', key: 'SOCIAL' },
+  ],
+  enabled: true,
+}
 const DEFAULT_PERSONALIZATION = {
   model: 'claude-3-5-haiku-20241022',
   enabled: true,
@@ -122,6 +141,8 @@ export default function SettingsPage() {
   const [companyInfo, setCompanyInfo] = useState(DEFAULT_COMPANY)
   const [pricing, setPricing] = useState(DEFAULT_PRICING)
   const [sequences, setSequences] = useState(DEFAULT_SEQUENCES)
+  const [clientSequences, setClientSequences] = useState(DEFAULT_CLIENT_SEQUENCES)
+  const [sequenceMode, setSequenceMode] = useState<'pre_acquisition' | 'client_retention'>('pre_acquisition')
   const [personalization, setPersonalization] = useState(DEFAULT_PERSONALIZATION)
   const [targets, setTargets] = useState(DEFAULT_TARGETS)
 
@@ -137,8 +158,9 @@ export default function SettingsPage() {
   const [apiLoading, setApiLoading] = useState(false)
   const [lastChecked, setLastChecked] = useState<string | null>(null)
 
-  // New urgency day input
+  // New day inputs
   const [newDay, setNewDay] = useState('')
+  const [newClientDay, setNewClientDay] = useState('')
 
   // ── Load all settings on mount ─────────────────────────────
   useEffect(() => {
@@ -159,6 +181,14 @@ export default function SettingsPage() {
           urgencyDays: s.sequences.urgencyDays || DEFAULT_SEQUENCES.urgencyDays,
           urgencyTemplates: { ...DEFAULT_SEQUENCES.urgencyTemplates, ...s.sequences.urgencyTemplates },
           safetyBuffer: s.sequences.safetyBuffer ?? DEFAULT_SEQUENCES.safetyBuffer,
+        })
+      }
+      if (s.client_sequences) {
+        setClientSequences({
+          touchpointDays: s.client_sequences.touchpointDays || DEFAULT_CLIENT_SEQUENCES.touchpointDays,
+          touchpointTemplates: { ...DEFAULT_CLIENT_SEQUENCES.touchpointTemplates, ...s.client_sequences.touchpointTemplates },
+          upsellProducts: s.client_sequences.upsellProducts || DEFAULT_CLIENT_SEQUENCES.upsellProducts,
+          enabled: s.client_sequences.enabled ?? true,
         })
       }
       if (s.personalization) setPersonalization({ ...DEFAULT_PERSONALIZATION, ...s.personalization })
@@ -232,6 +262,26 @@ export default function SettingsPage() {
     const newTemplates = { ...sequences.urgencyTemplates }
     delete newTemplates[day]
     setSequences({ ...sequences, urgencyDays: newDays, urgencyTemplates: newTemplates })
+  }
+
+  // ── Client sequence day helpers ──────────────────────────────
+  const addClientDay = () => {
+    const day = parseInt(newClientDay)
+    if (!day || day < 1 || day > 730 || clientSequences.touchpointDays.includes(day)) return
+    const newDays = [...clientSequences.touchpointDays, day].sort((a, b) => a - b)
+    const newTemplates = { ...clientSequences.touchpointTemplates }
+    if (!newTemplates[day]) {
+      newTemplates[day] = `Hey {name}, day ${day} check-in for {company}. How's everything going with your site?`
+    }
+    setClientSequences({ ...clientSequences, touchpointDays: newDays, touchpointTemplates: newTemplates })
+    setNewClientDay('')
+  }
+
+  const removeClientDay = (day: number) => {
+    const newDays = clientSequences.touchpointDays.filter(d => d !== day)
+    const newTemplates = { ...clientSequences.touchpointTemplates }
+    delete newTemplates[day]
+    setClientSequences({ ...clientSequences, touchpointDays: newDays, touchpointTemplates: newTemplates })
   }
 
   // ── Sync Instantly campaigns ───────────────────────────────
@@ -436,109 +486,262 @@ export default function SettingsPage() {
          ═══════════════════════════════════════════════════════════ */}
       {activeTab === 'sequences' && (
         <div className="space-y-6">
-          {/* Instantly Campaigns */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <SectionHeader title="Instantly Campaigns" description="Email campaign mapping for lead distribution" />
-              <Button variant="outline" onClick={syncCampaigns} disabled={syncing}>
-                {syncing ? <Loader2 size={14} className="mr-1 animate-spin" /> : <RefreshCw size={14} className="mr-1" />}
-                {syncing ? 'Syncing...' : 'Sync Campaigns'}
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="text-sm font-medium text-gray-700 mb-1">Campaign A — Bad Website</div>
-                <p className="text-xs text-gray-400 font-mono truncate">{campaigns.campaign_a || 'Not configured'}</p>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="text-sm font-medium text-gray-700 mb-1">Campaign B — No Website</div>
-                <p className="text-xs text-gray-400 font-mono truncate">{campaigns.campaign_b || 'Not configured'}</p>
-              </div>
+          {/* Sequence Type Toggle */}
+          <Card className="p-1">
+            <div className="flex gap-1">
+              <button
+                onClick={() => setSequenceMode('pre_acquisition')}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded text-sm font-medium transition-colors ${
+                  sequenceMode === 'pre_acquisition'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <Target size={16} />
+                Pre-Acquisition
+              </button>
+              <button
+                onClick={() => setSequenceMode('client_retention')}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded text-sm font-medium transition-colors ${
+                  sequenceMode === 'client_retention'
+                    ? 'bg-emerald-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <Users size={16} />
+                Client Retention
+              </button>
             </div>
           </Card>
 
-          {/* Urgency Schedule */}
-          <Card className="p-6">
-            <SectionHeader title="Urgency Message Schedule" description="Days after preview creation when urgency texts are sent" />
-
-            {/* Day pills */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {sequences.urgencyDays.map((day) => (
-                <div key={day} className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full text-sm">
-                  <span className="font-medium text-blue-700">Day {day}</span>
-                  <button
-                    onClick={() => removeUrgencyDay(day)}
-                    className="text-blue-400 hover:text-red-500 ml-1"
-                  >
-                    <Trash2 size={12} />
-                  </button>
+          {/* ── PRE-ACQUISITION SEQUENCES ─────────────────────────── */}
+          {sequenceMode === 'pre_acquisition' && (
+            <>
+              {/* Instantly Campaigns */}
+              <Card className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <SectionHeader title="Instantly Campaigns" description="Email campaign mapping for lead distribution" />
+                  <Button variant="outline" onClick={syncCampaigns} disabled={syncing}>
+                    {syncing ? <Loader2 size={14} className="mr-1 animate-spin" /> : <RefreshCw size={14} className="mr-1" />}
+                    {syncing ? 'Syncing...' : 'Sync Campaigns'}
+                  </Button>
                 </div>
-              ))}
-              <div className="flex items-center gap-1">
-                <Input
-                  type="number"
-                  min={1}
-                  max={30}
-                  placeholder="Day"
-                  className="w-20 h-8 text-sm"
-                  value={newDay}
-                  onChange={(e) => setNewDay(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addUrgencyDay()}
-                />
-                <Button variant="outline" size="sm" onClick={addUrgencyDay} className="h-8">
-                  <Plus size={14} />
-                </Button>
-              </div>
-            </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <div className="text-sm font-medium text-gray-700 mb-1">Campaign A — Bad Website</div>
+                    <p className="text-xs text-gray-400 font-mono truncate">{campaigns.campaign_a || 'Not configured'}</p>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <div className="text-sm font-medium text-gray-700 mb-1">Campaign B — No Website</div>
+                    <p className="text-xs text-gray-400 font-mono truncate">{campaigns.campaign_b || 'Not configured'}</p>
+                  </div>
+                </div>
+              </Card>
 
-            {/* Templates per day */}
-            <div className="space-y-3">
-              {sequences.urgencyDays.map((day) => (
-                <div key={day} className="space-y-1">
-                  <FieldLabel>Day {day} Message</FieldLabel>
-                  <textarea
-                    value={sequences.urgencyTemplates[day] || ''}
-                    onChange={(e) => setSequences({
-                      ...sequences,
-                      urgencyTemplates: { ...sequences.urgencyTemplates, [day]: e.target.value }
-                    })}
-                    className="w-full h-16 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Use {name}, {company}, {date} as variables"
+              {/* Urgency Schedule */}
+              <Card className="p-6">
+                <SectionHeader title="Urgency Message Schedule" description="Days after preview creation when urgency texts are sent" />
+
+                {/* Day pills */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {sequences.urgencyDays.map((day) => (
+                    <div key={day} className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full text-sm">
+                      <span className="font-medium text-blue-700">Day {day}</span>
+                      <button
+                        onClick={() => removeUrgencyDay(day)}
+                        className="text-blue-400 hover:text-red-500 ml-1"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={30}
+                      placeholder="Day"
+                      className="w-20 h-8 text-sm"
+                      value={newDay}
+                      onChange={(e) => setNewDay(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && addUrgencyDay()}
+                    />
+                    <Button variant="outline" size="sm" onClick={addUrgencyDay} className="h-8">
+                      <Plus size={14} />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Templates per day */}
+                <div className="space-y-3">
+                  {sequences.urgencyDays.map((day) => (
+                    <div key={day} className="space-y-1">
+                      <FieldLabel>Day {day} Message</FieldLabel>
+                      <textarea
+                        value={sequences.urgencyTemplates[day] || ''}
+                        onChange={(e) => setSequences({
+                          ...sequences,
+                          urgencyTemplates: { ...sequences.urgencyTemplates, [day]: e.target.value }
+                        })}
+                        className="w-full h-16 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Use {name}, {company}, {date} as variables"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-xs text-gray-400 mt-3">Variables: {'{name}'}, {'{company}'}, {'{date}'}</p>
+              </Card>
+
+              {/* Send Settings */}
+              <Card className="p-6">
+                <SectionHeader title="Send Settings" description="Controls for email campaign capacity" />
+                <div>
+                  <FieldLabel>Safety Buffer</FieldLabel>
+                  <div className="flex items-center gap-3">
+                    <Input
+                      type="number"
+                      min={0.5}
+                      max={1.0}
+                      step={0.05}
+                      className="w-24"
+                      value={sequences.safetyBuffer}
+                      onChange={(e) => setSequences({ ...sequences, safetyBuffer: parseFloat(e.target.value) || 0.85 })}
+                    />
+                    <span className="text-sm text-gray-500">({Math.round(sequences.safetyBuffer * 100)}% of Instantly daily limit)</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Conservative margin to avoid hitting Instantly rate limits. 0.85 = use 85% of capacity.</p>
+                </div>
+                <div className="mt-6 flex justify-end">
+                  <SaveButton
+                    onClick={() => saveSetting('sequences', sequences)}
+                    saving={savingKey === 'sequences'}
+                    saved={savedKey === 'sequences'}
                   />
                 </div>
-              ))}
-            </div>
+              </Card>
+            </>
+          )}
 
-            <p className="text-xs text-gray-400 mt-3">Variables: {'{name}'}, {'{company}'}, {'{date}'}</p>
-          </Card>
+          {/* ── CLIENT RETENTION SEQUENCES ────────────────────────── */}
+          {sequenceMode === 'client_retention' && (
+            <>
+              {/* Enable/Disable + Description */}
+              <Card className="p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <SectionHeader title="Client Retention Sequences" description="Automated touchpoints after a client goes live — check-ins, upsells, and performance reviews" />
+                  <button
+                    onClick={() => setClientSequences({ ...clientSequences, enabled: !clientSequences.enabled })}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      clientSequences.enabled ? 'bg-emerald-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      clientSequences.enabled ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+                <div className="p-3 bg-emerald-50 rounded-lg">
+                  <p className="text-sm text-emerald-800">
+                    These messages are sent based on <strong>days since the client&apos;s site went live</strong>.
+                    Use them to check in, share performance data, and introduce upsell services at the right time.
+                  </p>
+                </div>
+              </Card>
 
-          {/* Send Settings */}
-          <Card className="p-6">
-            <SectionHeader title="Send Settings" description="Controls for email campaign capacity" />
-            <div>
-              <FieldLabel>Safety Buffer</FieldLabel>
-              <div className="flex items-center gap-3">
-                <Input
-                  type="number"
-                  min={0.5}
-                  max={1.0}
-                  step={0.05}
-                  className="w-24"
-                  value={sequences.safetyBuffer}
-                  onChange={(e) => setSequences({ ...sequences, safetyBuffer: parseFloat(e.target.value) || 0.85 })}
+              {/* Touchpoint Schedule */}
+              <Card className="p-6">
+                <SectionHeader title="Touchpoint Schedule" description="Days after site goes live when messages are sent" />
+
+                {/* Day pills */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {clientSequences.touchpointDays.map((day) => (
+                    <div key={day} className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full text-sm">
+                      <span className="font-medium text-emerald-700">
+                        {day < 30 ? `Day ${day}` : day < 365 ? `Month ${Math.round(day / 30)}` : `Year ${Math.round(day / 365)}`}
+                      </span>
+                      <span className="text-xs text-emerald-500">(d{day})</span>
+                      <button
+                        onClick={() => removeClientDay(day)}
+                        className="text-emerald-400 hover:text-red-500 ml-1"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={730}
+                      placeholder="Day"
+                      className="w-20 h-8 text-sm"
+                      value={newClientDay}
+                      onChange={(e) => setNewClientDay(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && addClientDay()}
+                    />
+                    <Button variant="outline" size="sm" onClick={addClientDay} className="h-8">
+                      <Plus size={14} />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Templates per day */}
+                <div className="space-y-3">
+                  {clientSequences.touchpointDays.map((day) => (
+                    <div key={day} className="space-y-1">
+                      <FieldLabel>
+                        {day < 30 ? `Day ${day}` : day < 365 ? `Month ${Math.round(day / 30)}` : `Year ${Math.round(day / 365)}`} Message
+                        <span className="text-xs text-gray-400 font-normal ml-2">(day {day})</span>
+                      </FieldLabel>
+                      <textarea
+                        value={clientSequences.touchpointTemplates[day] || ''}
+                        onChange={(e) => setClientSequences({
+                          ...clientSequences,
+                          touchpointTemplates: { ...clientSequences.touchpointTemplates, [day]: e.target.value }
+                        })}
+                        className="w-full h-20 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        placeholder="Use {name}, {company}, {pageViews} as variables"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-xs text-gray-400 mt-3">Variables: {'{name}'}, {'{company}'}, {'{pageViews}'}, {'{siteUrl}'}</p>
+              </Card>
+
+              {/* Upsell Products */}
+              <Card className="p-6">
+                <SectionHeader title="Upsell Products" description="Services to promote in retention touchpoints" />
+                <div className="space-y-2">
+                  {clientSequences.upsellProducts.map((product, idx) => (
+                    <div key={product.key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-sm">
+                          {idx + 1}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                          <div className="text-xs text-gray-500">{product.price}</div>
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-400 font-mono">{product.key}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-3">Products are configured via Stripe payment links in the Company tab.</p>
+              </Card>
+
+              {/* Save */}
+              <div className="flex justify-end">
+                <SaveButton
+                  onClick={() => saveSetting('client_sequences', clientSequences)}
+                  saving={savingKey === 'client_sequences'}
+                  saved={savedKey === 'client_sequences'}
                 />
-                <span className="text-sm text-gray-500">({Math.round(sequences.safetyBuffer * 100)}% of Instantly daily limit)</span>
               </div>
-              <p className="text-xs text-gray-400 mt-1">Conservative margin to avoid hitting Instantly rate limits. 0.85 = use 85% of capacity.</p>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <SaveButton
-                onClick={() => saveSetting('sequences', sequences)}
-                saving={savingKey === 'sequences'}
-                saved={savedKey === 'sequences'}
-              />
-            </div>
-          </Card>
+            </>
+          )}
         </div>
       )}
 

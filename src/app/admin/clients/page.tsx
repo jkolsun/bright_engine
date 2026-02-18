@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -15,7 +15,34 @@ import {
 } from '@/components/ui/dialog'
 import { formatCurrency } from '@/lib/utils'
 import { useState, useEffect } from 'react'
-import { Search, Filter, Download, Plus, TrendingUp, TrendingDown, ExternalLink, Users } from 'lucide-react'
+import {
+  Search, Download, Plus, ExternalLink, Users,
+  Globe, Clock, AlertTriangle, CheckCircle2, XCircle,
+  ChevronDown, ChevronUp, Calendar, DollarSign, Activity
+} from 'lucide-react'
+
+// Derive client journey stage from available data
+function getClientStage(client: any) {
+  if (client.hostingStatus === 'CANCELLED') return { label: 'Cancelled', color: 'bg-gray-100 text-gray-700', icon: XCircle }
+  if (client.hostingStatus === 'FAILED_PAYMENT') return { label: 'Payment Failed', color: 'bg-red-100 text-red-700', icon: AlertTriangle }
+  if (client.hostingStatus === 'GRACE_PERIOD') return { label: 'Grace Period', color: 'bg-amber-100 text-amber-700', icon: Clock }
+  if (!client.siteUrl && !client.siteLiveDate) return { label: 'Onboarding', color: 'bg-blue-100 text-blue-700', icon: Clock }
+  if (client.churnRiskScore >= 70) return { label: 'At Risk', color: 'bg-red-100 text-red-700', icon: AlertTriangle }
+  if (client.churnRiskScore >= 40) return { label: 'Needs Attention', color: 'bg-amber-100 text-amber-700', icon: AlertTriangle }
+
+  // Check if recent (< 30 days since live)
+  if (client.siteLiveDate) {
+    const daysSinceLive = Math.floor((Date.now() - new Date(client.siteLiveDate).getTime()) / (1000 * 60 * 60 * 24))
+    if (daysSinceLive <= 30) return { label: 'New Client', color: 'bg-green-100 text-green-700', icon: CheckCircle2 }
+  }
+
+  return { label: 'Active', color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle2 }
+}
+
+function getDaysSince(date: string | null) {
+  if (!date) return null
+  return Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24))
+}
 
 export default function ClientsPage() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -23,16 +50,16 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [expandedClient, setExpandedClient] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     companyName: '',
     siteUrl: '',
     industry: 'GENERAL_CONTRACTING',
-    monthlyRevenue: 39,    // Keep — this IS the hosting rate
-    siteBuildFee: 149,     // FIX — was 0
-    chargeSiteBuildFee: true,  // FIX — was false
+    monthlyRevenue: 39,
+    siteBuildFee: 149,
+    chargeSiteBuildFee: true,
   })
 
-  // Load clients from API
   useEffect(() => {
     fetchClients()
   }, [])
@@ -51,7 +78,7 @@ export default function ClientsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     try {
       const res = await fetch('/api/clients', {
         method: 'POST',
@@ -68,11 +95,11 @@ export default function ClientsPage() {
           companyName: '',
           siteUrl: '',
           industry: 'GENERAL_CONTRACTING',
-          monthlyRevenue: 39,    // Keep — this IS the hosting rate
-          siteBuildFee: 149,     // FIX — was 0
-          chargeSiteBuildFee: true,  // FIX — was false
+          monthlyRevenue: 39,
+          siteBuildFee: 149,
+          chargeSiteBuildFee: true,
         })
-        fetchClients() // Reload list
+        fetchClients()
       } else {
         alert('Failed to create client')
       }
@@ -116,14 +143,18 @@ export default function ClientsPage() {
   }
 
   const filteredClients = clients.filter(client => {
-    const matchesSearch = 
+    const matchesSearch =
       client.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (client.siteUrl && client.siteUrl.toLowerCase().includes(searchTerm.toLowerCase()))
-    
-    const matchesStatus = 
-      statusFilter === 'all' || 
+
+    const matchesStatus =
+      statusFilter === 'all' ||
       (statusFilter === 'ACTIVE' && client.hostingStatus === 'ACTIVE') ||
-      (statusFilter === 'CANCELLED' && client.hostingStatus === 'CANCELLED')
+      (statusFilter === 'CANCELLED' && client.hostingStatus === 'CANCELLED') ||
+      (statusFilter === 'FAILED_PAYMENT' && client.hostingStatus === 'FAILED_PAYMENT') ||
+      (statusFilter === 'GRACE_PERIOD' && client.hostingStatus === 'GRACE_PERIOD') ||
+      (statusFilter === 'AT_RISK' && client.churnRiskScore >= 40 && client.hostingStatus === 'ACTIVE') ||
+      (statusFilter === 'ONBOARDING' && !client.siteUrl && !client.siteLiveDate && client.hostingStatus === 'ACTIVE')
 
     return matchesSearch && matchesStatus
   })
@@ -131,8 +162,10 @@ export default function ClientsPage() {
   const stats = {
     total: clients.length,
     active: clients.filter(c => c.hostingStatus === 'ACTIVE').length,
-    cancelled: clients.filter(c => c.hostingStatus === 'CANCELLED').length,
-    totalMRR: clients.reduce((sum, c) => sum + (c.monthlyRevenue || 0), 0)
+    atRisk: clients.filter(c => c.churnRiskScore >= 40 && c.hostingStatus === 'ACTIVE').length,
+    onboarding: clients.filter(c => !c.siteUrl && !c.siteLiveDate && c.hostingStatus === 'ACTIVE').length,
+    failedPayment: clients.filter(c => c.hostingStatus === 'FAILED_PAYMENT' || c.hostingStatus === 'GRACE_PERIOD').length,
+    totalMRR: clients.filter(c => c.hostingStatus === 'ACTIVE').reduce((sum, c) => sum + (c.monthlyRevenue || 0), 0)
   }
 
   return (
@@ -142,7 +175,7 @@ export default function ClientsPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Clients</h1>
           <p className="text-gray-500 mt-1">
-            {stats.total} total clients • {formatCurrency(stats.totalMRR)} MRR
+            {stats.total} total clients
           </p>
         </div>
         <div className="flex gap-3">
@@ -150,11 +183,12 @@ export default function ClientsPage() {
             variant="outline"
             onClick={() => {
               const csv = [
-                'Company,Site URL,Status,Industry,MRR',
-                ...clients.map(
-                  c =>
-                    `"${c.companyName}","${c.siteUrl || ''}","${c.hostingStatus}","${c.industry}","${c.monthlyRevenue}"`
-                ),
+                'Company,Site URL,Status,Stage,Industry,MRR,Days Active,Churn Risk,Domain',
+                ...clients.map(c => {
+                  const stage = getClientStage(c)
+                  const daysActive = getDaysSince(c.siteLiveDate)
+                  return `"${c.companyName}","${c.siteUrl || ''}","${c.hostingStatus}","${stage.label}","${c.industry}","${c.monthlyRevenue}","${daysActive ?? 'N/A'}","${c.churnRiskScore || 0}","${c.domainStatus || 'none'}"`
+                }),
               ].join('\n')
               const blob = new Blob([csv], { type: 'text/csv' })
               const url = URL.createObjectURL(blob)
@@ -210,7 +244,7 @@ export default function ClientsPage() {
                     <label htmlFor="industry" className="text-sm font-medium">
                       Industry *
                     </label>
-                    <select 
+                    <select
                       id="industry"
                       value={formData.industry}
                       onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))}
@@ -233,7 +267,7 @@ export default function ClientsPage() {
                     <label htmlFor="package" className="text-sm font-medium">
                       Package
                     </label>
-                    <select 
+                    <select
                       id="package"
                       onChange={handlePackageChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
@@ -244,9 +278,9 @@ export default function ClientsPage() {
                     </select>
                   </div>
                   <div className="flex items-center gap-2">
-                    <input 
-                      type="checkbox" 
-                      id="setup" 
+                    <input
+                      type="checkbox"
+                      id="setup"
                       className="rounded"
                       checked={formData.chargeSiteBuildFee}
                       onChange={(e) => setFormData(prev => ({ ...prev, chargeSiteBuildFee: e.target.checked }))}
@@ -271,27 +305,48 @@ export default function ClientsPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard 
-          label="Total MRR" 
-          value={formatCurrency(stats.totalMRR)} 
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+        <StatCard
+          label="MRR"
+          value={formatCurrency(stats.totalMRR)}
           variant="primary"
+          onClick={() => setStatusFilter('all')}
+          active={statusFilter === 'all'}
         />
-        <StatCard 
-          label="Active Clients" 
-          value={stats.active} 
+        <StatCard
+          label="Active"
+          value={stats.active}
           variant="success"
-          subtitle={`${stats.cancelled} cancelled`}
+          onClick={() => setStatusFilter('ACTIVE')}
+          active={statusFilter === 'ACTIVE'}
         />
-        <StatCard 
-          label="Total Clients" 
-          value={stats.total} 
+        <StatCard
+          label="Onboarding"
+          value={stats.onboarding}
           variant="default"
+          onClick={() => setStatusFilter('ONBOARDING')}
+          active={statusFilter === 'ONBOARDING'}
         />
-        <StatCard 
-          label="Avg Rev/Client" 
-          value={stats.total > 0 ? formatCurrency(Math.round(stats.totalMRR / stats.total)) : '$0'} 
+        <StatCard
+          label="At Risk"
+          value={stats.atRisk}
+          variant={stats.atRisk > 0 ? 'warning' : 'default'}
+          onClick={() => setStatusFilter('AT_RISK')}
+          active={statusFilter === 'AT_RISK'}
+        />
+        <StatCard
+          label="Payment Issues"
+          value={stats.failedPayment}
+          variant={stats.failedPayment > 0 ? 'danger' : 'default'}
+          onClick={() => setStatusFilter('FAILED_PAYMENT')}
+          active={statusFilter === 'FAILED_PAYMENT'}
+        />
+        <StatCard
+          label="Cancelled"
+          value={clients.filter(c => c.hostingStatus === 'CANCELLED').length}
           variant="default"
+          onClick={() => setStatusFilter('CANCELLED')}
+          active={statusFilter === 'CANCELLED'}
         />
       </div>
 
@@ -300,24 +355,13 @@ export default function ClientsPage() {
         <div className="flex items-center gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <Input 
-              className="pl-10" 
+            <Input
+              className="pl-10"
               placeholder="Search clients..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <select 
-            className="px-4 py-2 border border-gray-300 rounded-md"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">All Status</option>
-            <option value="ACTIVE">Active</option>
-            <option value="CANCELLED">Cancelled</option>
-            <option value="FAILED_PAYMENT">Failed Payment</option>
-            <option value="GRACE_PERIOD">Grace Period</option>
-          </select>
         </div>
       </Card>
 
@@ -343,70 +387,217 @@ export default function ClientsPage() {
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Company</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Site URL</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Status</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Industry</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Stage</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Site</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Hosting</th>
                   <th className="text-right p-4 text-sm font-semibold text-gray-700">MRR</th>
+                  <th className="text-right p-4 text-sm font-semibold text-gray-700">Days Active</th>
                   <th className="text-right p-4 text-sm font-semibold text-gray-700">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredClients.map((client) => (
-                  <tr key={client.id} className="hover:bg-gray-50">
-                    <td className="p-4">
-                      <div className="font-medium text-gray-900">{client.companyName}</div>
-                      {client.siteLiveDate && (
-                        <div className="text-sm text-gray-500">
-                          Live: {new Date(client.siteLiveDate).toLocaleDateString()}
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      {client.siteUrl ? (
-                        <a 
-                          href={`https://${client.siteUrl}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline flex items-center gap-1"
-                        >
-                          {client.siteUrl}
-                          <ExternalLink size={14} />
-                        </a>
-                      ) : (
-                        <span className="text-gray-400">In progress</span>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      <Badge variant={client.hostingStatus === 'ACTIVE' ? 'default' : 'secondary'}>
-                        {client.hostingStatus}
-                      </Badge>
-                    </td>
-                    <td className="p-4 text-gray-700">{client.industry.replace(/_/g, ' ')}</td>
-                    <td className="p-4 text-right font-semibold text-gray-900">
-                      {formatCurrency(client.monthlyRevenue)}
-                    </td>
-                    <td className="p-4 text-right space-x-2 flex justify-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (client.siteUrl) window.open(`https://${client.siteUrl}`, '_blank')
-                          else alert('No site URL set for this client')
-                        }}
+                {filteredClients.map((client) => {
+                  const stage = getClientStage(client)
+                  const StageIcon = stage.icon
+                  const daysActive = getDaysSince(client.siteLiveDate)
+                  const daysSinceInteraction = getDaysSince(client.lastInteraction)
+                  const isExpanded = expandedClient === client.id
+
+                  return (
+                    <>
+                      <tr
+                        key={client.id}
+                        className={`hover:bg-gray-50 cursor-pointer ${isExpanded ? 'bg-blue-50/50' : ''}`}
+                        onClick={() => setExpandedClient(isExpanded ? null : client.id)}
                       >
-                        View Site
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => handleDeleteClient(client.id, client.companyName)}
-                      >
-                        Delete
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                        <td className="p-4">
+                          <div className="font-medium text-gray-900">{client.companyName}</div>
+                          <div className="text-sm text-gray-500">{client.industry.replace(/_/g, ' ')}</div>
+                        </td>
+                        <td className="p-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${stage.color}`}>
+                            <StageIcon size={12} />
+                            {stage.label}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          {client.siteUrl ? (
+                            <a
+                              href={`https://${client.siteUrl}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline flex items-center gap-1 text-sm"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {client.siteUrl}
+                              <ExternalLink size={12} />
+                            </a>
+                          ) : (
+                            <span className="text-gray-400 text-sm">Not live yet</span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <Badge variant={client.hostingStatus === 'ACTIVE' ? 'default' : client.hostingStatus === 'CANCELLED' ? 'secondary' : 'destructive'}>
+                            {client.hostingStatus}
+                          </Badge>
+                        </td>
+                        <td className="p-4 text-right font-semibold text-gray-900">
+                          {formatCurrency(client.monthlyRevenue)}
+                        </td>
+                        <td className="p-4 text-right text-sm text-gray-600">
+                          {daysActive !== null ? `${daysActive}d` : '\u2014'}
+                        </td>
+                        <td className="p-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {isExpanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+                          </div>
+                        </td>
+                      </tr>
+                      {/* Expanded Status Panel */}
+                      {isExpanded && (
+                        <tr key={`${client.id}-detail`}>
+                          <td colSpan={7} className="p-0">
+                            <div className="bg-gray-50 border-t border-b border-gray-200 px-6 py-4">
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                {/* Site Status */}
+                                <div className="bg-white rounded-lg p-3 border border-gray-200">
+                                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                                    <Globe size={14} />
+                                    Site Status
+                                  </div>
+                                  <div className="space-y-1 text-sm">
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Domain</span>
+                                      <span className="font-medium text-gray-900">
+                                        {client.domainStatus === 'client_owned' ? 'Client Owned' :
+                                         client.domainStatus === 'registered_by_us' ? 'We Registered' : 'None'}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Live URL</span>
+                                      <span className="font-medium text-gray-900">{client.siteUrl || 'Pending'}</span>
+                                    </div>
+                                    {client.stagingUrl && (
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-500">Staging</span>
+                                        <a href={client.stagingUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 text-xs hover:underline">{client.stagingUrl}</a>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Engagement */}
+                                <div className="bg-white rounded-lg p-3 border border-gray-200">
+                                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                                    <Activity size={14} />
+                                    Engagement
+                                  </div>
+                                  <div className="space-y-1 text-sm">
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Last Interaction</span>
+                                      <span className={`font-medium ${daysSinceInteraction !== null && daysSinceInteraction > 30 ? 'text-amber-600' : 'text-gray-900'}`}>
+                                        {daysSinceInteraction !== null ? `${daysSinceInteraction}d ago` : 'Never'}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Churn Risk</span>
+                                      <span className={`font-medium ${
+                                        (client.churnRiskScore || 0) >= 70 ? 'text-red-600' :
+                                        (client.churnRiskScore || 0) >= 40 ? 'text-amber-600' : 'text-green-600'
+                                      }`}>
+                                        {client.churnRiskScore || 0}/100
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Next Touchpoint</span>
+                                      <span className="font-medium text-gray-900">
+                                        {client.nextTouchpoint ? client.nextTouchpoint.replace(/_/g, ' ') : 'None scheduled'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Revenue */}
+                                <div className="bg-white rounded-lg p-3 border border-gray-200">
+                                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                                    <DollarSign size={14} />
+                                    Revenue
+                                  </div>
+                                  <div className="space-y-1 text-sm">
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Monthly</span>
+                                      <span className="font-medium text-gray-900">{formatCurrency(client.monthlyRevenue)}/mo</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Upsells</span>
+                                      <span className="font-medium text-gray-900">
+                                        {client.upsells && Array.isArray(client.upsells) ? client.upsells.length : 0} active
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Lifetime Est.</span>
+                                      <span className="font-medium text-gray-900">
+                                        {daysActive !== null ? formatCurrency(Math.round((client.monthlyRevenue || 0) * (daysActive / 30))) : '\u2014'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Timeline */}
+                                <div className="bg-white rounded-lg p-3 border border-gray-200">
+                                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                                    <Calendar size={14} />
+                                    Timeline
+                                  </div>
+                                  <div className="space-y-1 text-sm">
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Created</span>
+                                      <span className="font-medium text-gray-900">{new Date(client.createdAt).toLocaleDateString()}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Site Live</span>
+                                      <span className="font-medium text-gray-900">
+                                        {client.siteLiveDate ? new Date(client.siteLiveDate).toLocaleDateString() : 'Not yet'}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Stripe</span>
+                                      <span className={`font-medium ${client.stripeCustomerId ? 'text-green-600' : 'text-gray-400'}`}>
+                                        {client.stripeCustomerId ? 'Connected' : 'Not linked'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Action buttons */}
+                              <div className="flex gap-2">
+                                {client.siteUrl && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={(e) => { e.stopPropagation(); window.open(`https://${client.siteUrl}`, '_blank') }}
+                                  >
+                                    <Globe size={14} className="mr-1" />
+                                    View Site
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteClient(client.id, client.companyName) }}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -416,16 +607,18 @@ export default function ClientsPage() {
   )
 }
 
-function StatCard({ 
-  label, 
-  value, 
+function StatCard({
+  label,
+  value,
   variant = 'default',
-  subtitle
-}: { 
+  onClick,
+  active
+}: {
   label: string
   value: string | number
   variant?: 'default' | 'primary' | 'success' | 'danger' | 'warning'
-  subtitle?: string
+  onClick?: () => void
+  active?: boolean
 }) {
   const colors = {
     default: 'bg-white border-gray-200',
@@ -436,10 +629,12 @@ function StatCard({
   }
 
   return (
-    <Card className={`p-6 ${colors[variant]}`}>
-      <div className="text-sm text-gray-600 mb-1">{label}</div>
-      <div className="text-2xl font-bold text-gray-900">{value}</div>
-      {subtitle && <div className="text-xs text-gray-500 mt-1">{subtitle}</div>}
+    <Card
+      className={`p-4 cursor-pointer transition-all ${colors[variant]} ${active ? 'ring-2 ring-blue-500' : ''}`}
+      onClick={onClick}
+    >
+      <div className="text-xs text-gray-600 mb-1">{label}</div>
+      <div className="text-xl font-bold text-gray-900">{value}</div>
     </Card>
   )
 }

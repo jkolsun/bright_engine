@@ -500,14 +500,21 @@ async function logSyncResults(
 ) {
   const totalPushed = Object.values(calculations).reduce((sum: number, c: any) => sum + (c as any).pushing, 0)
 
+  // Look up stored campaign IDs to determine A vs B
+  const campaignSettings = await prisma.settings.findUnique({
+    where: { key: 'instantly_campaigns' },
+  })
+  const storedCampaigns = campaignSettings?.value as any
+
   try {
     // Log to drip_log
     for (const [campaignId, calc] of Object.entries(calculations)) {
       const calcData = calc as any
+      const campaignLabel = storedCampaigns?.campaign_a === campaignId ? 'A' : 'B'
       await prisma.instantlyDripLog.create({
         data: {
           date: new Date(),
-          campaign: (campaignId as string).includes('A') ? 'A' : 'B',
+          campaign: campaignLabel,
           totalLimit: syncReport.inboxes.total_inbox_capacity,
           usableSends: Math.floor(syncReport.inboxes.total_inbox_capacity * SAFETY_BUFFER),
           followupObligations: calcData.followup_estimate || 0,
@@ -679,14 +686,15 @@ function classifyReplySentiment(text: string): string {
 
   const text_lower = text.toLowerCase()
 
-  // Positive keywords
-  if (/interested|great|good|yes|let's|sounds|perfect|love|wow/i.test(text_lower)) {
-    return 'positive'
+  // Negative keywords — check first since "not interested" contains "interested"
+  // Use word boundaries to avoid false positives ("no" matching "know", "notice", etc.)
+  if (/\bnot interested\b|\bno thanks\b|\bno thank you\b|\bnot right now\b|\bremove me\b|\bunsubscribe\b|\bstop\b|\bspam\b|\bnope\b|\bdon't\b|\bno\b/i.test(text_lower)) {
+    return 'negative'
   }
 
-  // Negative keywords
-  if (/not interested|no|nope|don't|stop|remove|unsubscribe|spam/i.test(text_lower)) {
-    return 'negative'
+  // Positive keywords
+  if (/\binterested\b|\bgreat\b|\byes\b|\blet's\b|\bsounds good\b|\bperfect\b|\blove\b|\btell me more\b|\bsign me up\b/i.test(text_lower)) {
+    return 'positive'
   }
 
   // Question
@@ -732,6 +740,14 @@ async function ensureCampaignsExist() {
         name: 'Campaign A - Bad Website',
         description: 'Leads with bad or outdated websites — 4-email sequence with preview links',
         email_list: [],
+        // KB settings: 8-11 AM local time, weekdays only, open tracking ON, link tracking OFF
+        daily_limit: 150,
+        send_window: { start: '08:00', end: '11:00' },
+        timezone_mode: 'recipient', // Send in recipient's local timezone
+        days_of_week: [1, 2, 3, 4, 5], // Mon-Fri only
+        open_tracking: true,
+        link_tracking: false,
+        prioritize_new_leads: false,
         sequences: [
           {
             name: 'Bad Website Sequence',
@@ -765,6 +781,14 @@ async function ensureCampaignsExist() {
         name: 'Campaign B - No Website',
         description: 'Leads without websites — 4-email sequence with preview links',
         email_list: [],
+        // KB settings: 8-11 AM local time, weekdays only, open tracking ON, link tracking OFF
+        daily_limit: 150,
+        send_window: { start: '08:00', end: '11:00' },
+        timezone_mode: 'recipient',
+        days_of_week: [1, 2, 3, 4, 5],
+        open_tracking: true,
+        link_tracking: false,
+        prioritize_new_leads: false,
         sequences: [
           {
             name: 'No Website Sequence',
@@ -807,6 +831,7 @@ async function ensureCampaignsExist() {
 
 /**
  * Auto-register webhook on first sync
+ * Checks Settings table first to avoid duplicate registrations
  * Reads BASE_URL from env to construct webhook URL
  */
 async function ensureWebhookRegistered() {
@@ -816,6 +841,16 @@ async function ensureWebhookRegistered() {
 
     if (!apiKey || !baseUrl) {
       console.warn('[Instantly] Missing INSTANTLY_API_KEY or BASE_URL, skipping webhook registration')
+      return
+    }
+
+    // Check if webhook already registered
+    const existing = await prisma.settings.findUnique({
+      where: { key: 'instantly_webhook' },
+    })
+
+    if (existing) {
+      console.log('[Instantly] Webhook already registered:', (existing.value as any)?.webhook_id)
       return
     }
 
@@ -838,6 +873,17 @@ async function ensureWebhookRegistered() {
 
     if (webhookRes.ok) {
       const webhookData = await webhookRes.json()
+      // Store webhook ID so we don't re-register on every sync
+      await prisma.settings.upsert({
+        where: { key: 'instantly_webhook' },
+        create: {
+          key: 'instantly_webhook',
+          value: { webhook_id: webhookData.id, url: webhookUrl, registered_at: new Date().toISOString() },
+        },
+        update: {
+          value: { webhook_id: webhookData.id, url: webhookUrl, registered_at: new Date().toISOString() },
+        },
+      })
       console.log('[Instantly] Webhook registered:', webhookData.id)
     } else {
       console.warn('[Instantly] Webhook registration failed:', webhookRes.statusText)

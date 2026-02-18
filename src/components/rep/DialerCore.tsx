@@ -827,7 +827,14 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   // ============================================
   // RENDER
   // ============================================
-  if (loading) return <div className="p-8 text-center text-gray-500">Loading dialer queue...</div>
+  if (loading) return (
+    <div className="p-8 text-center">
+      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-primary shadow-teal mb-4 animate-pulse">
+        <Phone size={28} className="text-white" />
+      </div>
+      <p className="text-gray-500 font-medium">Loading dialer queue...</p>
+    </div>
+  )
 
   return (
     <div className="p-4 lg:p-6 space-y-4 max-w-[1600px] mx-auto">
@@ -835,13 +842,13 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <Link href={basePath}>
-            <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700">
+            <Button variant="ghost" size="sm" className="text-gray-500 hover:text-teal-600 rounded-xl">
               <ChevronLeft size={18} className="mr-1" /> Dashboard
             </Button>
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-gray-900 font-[family-name:var(--font-space-grotesk),_'Space_Grotesk',_sans-serif]">
                 {isPartTime ? 'Dialer' : 'Power Dialer'}
               </h1>
               {callPhase === 'connected' && (
@@ -851,7 +858,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                 <Badge className="bg-yellow-500 text-white">ON HOLD {formatTime(callTimer)}</Badge>
               )}
               {callPhase === 'dialing' && (
-                <Badge className="bg-blue-500 text-white animate-pulse">DIALING...</Badge>
+                <Badge className="gradient-primary text-white animate-pulse">DIALING...</Badge>
               )}
             </div>
             <p className="text-sm text-gray-500">
@@ -865,15 +872,15 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         {/* Mode selector — hide for part-time */}
         {!isPartTime && (
           <div className="flex items-center gap-2">
-            <div className="flex border rounded-lg overflow-hidden">
+            <div className="flex border rounded-xl overflow-hidden">
               <button
-                className={`px-3 py-1.5 text-xs font-medium ${dialerMode === 'power' ? 'bg-orange-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                className={`px-3 py-1.5 text-xs font-medium ${dialerMode === 'power' ? 'gradient-primary text-white' : 'bg-white text-gray-600 hover:bg-teal-50/30'}`}
                 onClick={() => setDialerMode('power')}
               >
                 <Zap size={12} className="inline mr-1" /> Power ({linesPerDial})
               </button>
               <button
-                className={`px-3 py-1.5 text-xs font-medium ${dialerMode === 'single' ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                className={`px-3 py-1.5 text-xs font-medium ${dialerMode === 'single' ? 'bg-[#2E7D8A] text-white' : 'bg-white text-gray-600 hover:bg-teal-50/30'}`}
                 onClick={() => setDialerMode('single')}
               >
                 <PhoneCall size={12} className="inline mr-1" /> Single
@@ -881,7 +888,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
             </div>
             {dialerMode === 'power' && (
               <select
-                className="text-xs border rounded-lg px-2 py-1.5 bg-white"
+                className="text-xs border rounded-xl px-2 py-1.5 bg-white focus:ring-teal-500 focus:ring-2 focus:outline-none"
                 value={linesPerDial}
                 onChange={(e) => setLinesPerDial(Number(e.target.value))}
               >
@@ -896,20 +903,22 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
       {/* Session Stats Bar */}
       <div className="grid grid-cols-4 gap-3">
-        <MiniStat icon={<Phone size={16} />} color="blue" label="Dials" value={sessionStats.dials} />
+        <MiniStat icon={<Phone size={16} />} color="teal" label="Dials" value={sessionStats.dials} />
         <MiniStat icon={<PhoneForwarded size={16} />} color="green" label="Connects" value={sessionStats.conversations} />
         <MiniStat icon={<MessageSquare size={16} />} color="purple" label="Previews Sent" value={sessionStats.previewLinksSent} />
         <MiniStat icon={<Target size={16} />} color="amber" label="Interested" value={sessionStats.closes} />
       </div>
 
       {!currentLead ? (
-        <Card className="p-12 text-center">
-          <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-900">Queue Complete!</h3>
+        <Card className="p-12 text-center rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl gradient-primary shadow-teal mb-4">
+            <CheckCircle size={40} className="text-white" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 font-[family-name:var(--font-space-grotesk),_'Space_Grotesk',_sans-serif]">Queue Complete!</h3>
           <p className="text-gray-600 mt-2">No more leads to call right now.</p>
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg inline-block">
-            <p className="text-sm text-gray-500">Session Summary</p>
-            <p className="text-lg font-semibold">
+          <div className="mt-6 p-4 bg-teal-50/50 rounded-2xl inline-block">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-teal-600 mb-1">Session Summary</p>
+            <p className="text-lg font-semibold text-gray-900">
               {sessionStats.dials} dials / {sessionStats.conversations} connects / {sessionStats.closes} closes
             </p>
           </div>
@@ -919,7 +928,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           {/* LEFT: Lead Info + Actions (5 cols) */}
           <div className="lg:col-span-5 space-y-4">
             {/* Lead Card */}
-            <Card className="p-5">
+            <Card className="p-5 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">{currentLead.companyName}</h2>
@@ -945,7 +954,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
               </div>
 
               {/* Company Summary */}
-              <div className="bg-gray-50 rounded-lg p-3 mb-3 space-y-1">
+              <div className="bg-gray-50/70 rounded-xl p-3 mb-3 space-y-1">
                 <div className="flex items-center gap-3 text-sm text-gray-700 flex-wrap">
                   <span className="flex items-center gap-1">
                     <Building size={13} className="text-gray-400" />
@@ -967,7 +976,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                 {currentLead.website && (
                   <a href={currentLead.website.startsWith('http') ? currentLead.website : `https://${currentLead.website}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-sm text-blue-600 hover:underline">
+                    className="flex items-center gap-1 text-sm text-teal-600 hover:underline">
                     <Globe size={13} /> {currentLead.website.replace(/^https?:\/\//, '')}
                   </a>
                 )}
@@ -978,11 +987,11 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
               {/* Phone — tel: link for part-time */}
               {isPartTime ? (
-                <a href={`tel:${currentLead.phone}`} className="block text-2xl font-bold text-blue-600 font-mono mb-3 hover:underline">
+                <a href={`tel:${currentLead.phone}`} className="block text-2xl font-bold text-teal-600 font-mono mb-3 hover:underline">
                   {currentLead.phone}
                 </a>
               ) : (
-                <div className="text-2xl font-bold text-blue-600 font-mono mb-3">{currentLead.phone}</div>
+                <div className="text-2xl font-bold text-teal-600 font-mono mb-3">{currentLead.phone}</div>
               )}
 
               {/* Action Buttons */}
@@ -1001,7 +1010,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                 </div>
               ) : callPhase === 'dialing' ? (
                 <div className="space-y-2">
-                  <p className="text-sm text-blue-600 font-medium animate-pulse">
+                  <p className="text-sm text-teal-600 font-medium animate-pulse">
                     {isPartTime ? 'Call in progress...' : 'Ringing...'}
                   </p>
                   <div className="grid grid-cols-2 gap-2">
@@ -1030,19 +1039,19 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                   </p>
 
                   {/* Keyboard shortcut bar */}
-                  <div className="bg-gray-900 rounded-lg p-2.5 text-xs font-mono text-gray-300 grid grid-cols-4 gap-1">
-                    <button onClick={() => handleOutcome('interested')} className="hover:bg-gray-700 rounded px-1.5 py-1 text-green-400">[1] Interest</button>
-                    <button onClick={() => handleOutcome('not_interested')} className="hover:bg-gray-700 rounded px-1.5 py-1 text-red-400">[2] No</button>
-                    <button onClick={() => setShowCallbackDialog(true)} className="hover:bg-gray-700 rounded px-1.5 py-1 text-blue-400">[3] Callback</button>
-                    <button onClick={() => handleOutcome('no_answer')} className="hover:bg-gray-700 rounded px-1.5 py-1">[4] NoAns</button>
-                    <button onClick={() => handleOutcome('voicemail_left')} className="hover:bg-gray-700 rounded px-1.5 py-1">[5] VM</button>
-                    <button onClick={() => handleOutcome('voicemail_skipped')} className="hover:bg-gray-700 rounded px-1.5 py-1">[6] Skip</button>
-                    <button onClick={() => handleOutcome('wrong_number')} className="hover:bg-gray-700 rounded px-1.5 py-1 text-orange-400">[7] Wrong#</button>
-                    <button onClick={() => handleOutcome('dnc')} className="hover:bg-gray-700 rounded px-1.5 py-1 text-red-500">[8] DNC</button>
-                    <button onClick={handleAutoText} className="hover:bg-gray-700 rounded px-1.5 py-1 text-purple-400">[T] Text</button>
-                    <button onClick={() => setShowNoteDialog(true)} className="hover:bg-gray-700 rounded px-1.5 py-1 text-yellow-400">[N] Note</button>
-                    <button onClick={handleHold} className="hover:bg-gray-700 rounded px-1.5 py-1 text-cyan-400">[H] Hold</button>
-                    <button onClick={() => handleHangup()} className="hover:bg-gray-700 rounded px-1.5 py-1 text-red-500 font-bold">[X] Hangup</button>
+                  <div className="bg-gray-900 rounded-xl p-2.5 text-xs font-mono text-gray-300 grid grid-cols-4 gap-1">
+                    <button onClick={() => handleOutcome('interested')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-green-400">[1] Interest</button>
+                    <button onClick={() => handleOutcome('not_interested')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-red-400">[2] No</button>
+                    <button onClick={() => setShowCallbackDialog(true)} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-teal-400">[3] Callback</button>
+                    <button onClick={() => handleOutcome('no_answer')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1">[4] NoAns</button>
+                    <button onClick={() => handleOutcome('voicemail_left')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1">[5] VM</button>
+                    <button onClick={() => handleOutcome('voicemail_skipped')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1">[6] Skip</button>
+                    <button onClick={() => handleOutcome('wrong_number')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-orange-400">[7] Wrong#</button>
+                    <button onClick={() => handleOutcome('dnc')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-red-500">[8] DNC</button>
+                    <button onClick={handleAutoText} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-purple-400">[T] Text</button>
+                    <button onClick={() => setShowNoteDialog(true)} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-yellow-400">[N] Note</button>
+                    <button onClick={handleHold} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-cyan-400">[H] Hold</button>
+                    <button onClick={() => handleHangup()} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-red-500 font-bold">[X] Hangup</button>
                   </div>
                 </div>
               )}
@@ -1054,7 +1063,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                     value={callNotes}
                     onChange={(e) => setCallNotes(e.target.value)}
                     placeholder="Call notes..."
-                    className="w-full h-16 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full h-16 px-3 py-2 text-sm border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
               )}
@@ -1062,13 +1071,13 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
             {/* Parallel Line Status — hide for part-time */}
             {!isPartTime && parallelLines.length > 1 && (
-              <Card className="p-3">
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Parallel Lines</p>
+              <Card className="p-3 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Parallel Lines</p>
                 {parallelLines.map((line, idx) => (
                   <div key={idx} className="flex items-center gap-2 py-1 text-sm">
                     <span className={`w-2 h-2 rounded-full ${
                       line.status === 'connected' ? 'bg-green-500' :
-                      line.status === 'ringing' ? 'bg-blue-500 animate-pulse' :
+                      line.status === 'ringing' ? 'bg-teal-500 animate-pulse' :
                       'bg-gray-400'
                     }`} />
                     <span className="font-medium text-gray-700">Line {line.lineNumber}:</span>
@@ -1094,9 +1103,9 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
             {/* Lead Engagement Summary */}
             {temperature.signals.length > 0 && (
-              <Card className="p-4">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2 flex items-center gap-1.5">
-                  <Thermometer size={14} className="text-gray-400" /> Lead Engagement
+              <Card className="p-4 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
+                <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Thermometer size={14} className="text-teal-500" /> Lead Engagement
                 </h3>
                 <div className="space-y-1.5">
                   {temperature.signals.map((signal, idx) => (
@@ -1113,16 +1122,16 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
             )}
 
             {/* Preview & Website Actions */}
-            <Card className="p-4 space-y-3">
+            <Card className="p-4 space-y-3 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
               {currentLead.website && (
                 <div>
-                  <span className="text-xs font-medium text-gray-500 uppercase">Their Website</span>
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Their Website</span>
                   <div className="flex items-center gap-2 mt-1">
                     <a href={currentLead.website.startsWith('http') ? currentLead.website : `https://${currentLead.website}`}
-                      target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline truncate flex-1">
+                      target="_blank" rel="noopener noreferrer" className="text-sm text-teal-600 hover:underline truncate flex-1">
                       {currentLead.website.replace(/^https?:\/\//, '')}
                     </a>
-                    <Button size="sm" variant="outline" onClick={() => window.open(currentLead.website.startsWith('http') ? currentLead.website : `https://${currentLead.website}`, '_blank')}>
+                    <Button size="sm" variant="outline" className="rounded-xl" onClick={() => window.open(currentLead.website.startsWith('http') ? currentLead.website : `https://${currentLead.website}`, '_blank')}>
                       <ExternalLink size={14} className="mr-1" /> View
                     </Button>
                   </div>
@@ -1130,18 +1139,18 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
               )}
               {currentLead.previewUrl && (
                 <div className={currentLead.website ? 'border-t pt-3' : ''}>
-                  <span className="text-xs font-medium text-gray-500 uppercase">Our Preview</span>
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Our Preview</span>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <Button size="sm" variant="outline" onClick={() => window.open(currentLead.previewUrl, '_blank')}>
+                    <Button size="sm" variant="outline" className="rounded-xl" onClick={() => window.open(currentLead.previewUrl, '_blank')}>
                       <Eye size={14} className="mr-1" /> View
                     </Button>
-                    <Button size="sm" variant="outline" onClick={handleCopyPreview}>
+                    <Button size="sm" variant="outline" className="rounded-xl" onClick={handleCopyPreview}>
                       {copiedPreview ? <><CheckCircle size={14} className="mr-1 text-green-600" /> Copied!</> : <><Copy size={14} className="mr-1" /> Copy</>}
                     </Button>
-                    <Button size="sm" onClick={() => openPreviewDialog('sms')} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button size="sm" onClick={() => openPreviewDialog('sms')} className="bg-[#2E7D8A] hover:bg-[#236571] text-white rounded-xl">
                       <MessageSquare size={14} className="mr-1" /> Text
                     </Button>
-                    <Button size="sm" onClick={() => openPreviewDialog('email')} className="bg-purple-600 hover:bg-purple-700 text-white">
+                    <Button size="sm" onClick={() => openPreviewDialog('email')} className="bg-[#4AABB8] hover:bg-[#3a9aa7] text-white rounded-xl">
                       <Mail size={14} className="mr-1" /> Email
                     </Button>
                   </div>
@@ -1149,10 +1158,10 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
               )}
               {/* Send Pay Link */}
               <div className={currentLead.previewUrl || currentLead.website ? 'border-t pt-3' : ''}>
-                <span className="text-xs font-medium text-gray-500 uppercase">Payment</span>
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Payment</span>
                 <div className="flex items-center gap-2 mt-1.5">
                   <Button size="sm" variant="outline" onClick={handleCopyPayLink}
-                    className={copiedPayLink ? 'border-green-300 text-green-600' : ''}>
+                    className={`rounded-xl ${copiedPayLink ? 'border-green-300 text-green-600' : ''}`}>
                     {copiedPayLink
                       ? <><CheckCircle size={14} className="mr-1" /> Pay Link Copied!</>
                       : <><CreditCard size={14} className="mr-1" /> Copy Pay Link ($149)</>}
@@ -1162,8 +1171,8 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
             </Card>
 
             {/* History Panel */}
-            <Card className="p-4">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">History</h3>
+            <Card className="p-4 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
+              <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">History</h3>
               {leadHistory.length > 0 ? (
                 <div className="space-y-1.5 max-h-48 overflow-y-auto">
                   {leadHistory.slice(0, 10).map((item, idx) => (
@@ -1184,12 +1193,12 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           <div className="lg:col-span-7 space-y-4">
             {/* AI Tip — enhanced with temperature reference */}
             {currentLead.aiTip && (
-              <Card className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
+              <Card className="p-4 bg-gradient-to-r from-teal-50 to-emerald-50 border-teal-200 rounded-2xl">
                 <div className="flex items-start gap-2">
-                  <Flame size={16} className="text-orange-500 mt-0.5 flex-shrink-0" />
+                  <Flame size={16} className="text-teal-600 mt-0.5 flex-shrink-0" />
                   <div>
-                    <span className="text-xs font-semibold text-orange-700 uppercase">AI Tip</span>
-                    <p className="text-sm text-orange-800 mt-0.5">{currentLead.aiTip}</p>
+                    <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wider">AI Tip</span>
+                    <p className="text-sm text-teal-800 mt-0.5">{currentLead.aiTip}</p>
                   </div>
                 </div>
               </Card>
@@ -1203,12 +1212,12 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
             )}
 
             {/* Call Script */}
-            <Card className="p-5">
+            <Card className="p-5 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
               <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <AlertCircle size={16} className="text-blue-600" />
+                <AlertCircle size={16} className="text-teal-600" />
                 Call Script
               </h3>
-              <div className="bg-blue-50 p-4 rounded-lg text-sm text-gray-700 whitespace-pre-wrap leading-relaxed max-h-[400px] overflow-y-auto">
+              <div className="bg-teal-50/60 p-4 rounded-xl text-sm text-gray-700 whitespace-pre-wrap leading-relaxed max-h-[400px] overflow-y-auto">
                 {getScript()}
               </div>
             </Card>

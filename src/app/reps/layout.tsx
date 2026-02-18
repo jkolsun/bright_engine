@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -14,6 +15,7 @@ import {
   Send,
   CheckCircle,
   X,
+  Loader2,
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -24,6 +26,7 @@ export default function RepsLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [feedbackMessage, setFeedbackMessage] = useState('')
@@ -67,54 +70,78 @@ export default function RepsLayout({
     finally { setFeedbackSending(false) }
   }
 
+  const navItems = [
+    { href: '/reps', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+    { href: '/reps/dialer', icon: Phone, label: 'Dialer' },
+    { href: '/reps/earnings', icon: DollarSign, label: 'Earnings' },
+    { href: '/reps/tasks', icon: Target, label: 'Tasks' },
+    { href: '/reps/leaderboard', icon: Award, label: 'Leaderboard' },
+  ]
+
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="flex h-screen bg-mesh-teal" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f0fdfa 40%, #ecfdf5 70%, #f0f9ff 100%)' }}>
       {/* Sidebar */}
-      <aside className="w-72 gradient-dark text-white hidden md:flex flex-col shadow-large border-r border-slate-700/50">
-        <div className="p-6 border-b border-white/10">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center shadow-medium">
-              <span className="text-white font-bold text-lg">B</span>
+      <aside className="w-[280px] gradient-dark-teal text-white hidden md:flex flex-col shadow-2xl relative overflow-hidden">
+        {/* Ambient glow */}
+        <div className="absolute top-0 left-0 w-full h-full bg-mesh-dark pointer-events-none" />
+
+        {/* Logo */}
+        <div className="relative z-10 px-6 py-7 border-b border-white/[0.08]">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 gradient-primary rounded-2xl flex items-center justify-center shadow-teal">
+              <span className="text-white font-bold text-lg tracking-tight">B</span>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white tracking-tight">Bright Automations</h1>
-              <p className="text-xs text-blue-300">Sales Rep Portal</p>
+              <h1 className="text-[17px] font-bold text-white tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Bright Automations
+              </h1>
+              <p className="text-[11px] text-teal-300/80 font-medium tracking-wide uppercase mt-0.5">Sales Rep Portal</p>
             </div>
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1">
-          <NavLink href="/reps" icon={<LayoutDashboard size={20} />}>
-            Dashboard
-          </NavLink>
-          <NavLink href="/reps/dialer" icon={<Phone size={20} />}>
-            Dialer
-          </NavLink>
-          <NavLink href="/reps/earnings" icon={<DollarSign size={20} />}>
-            Earnings
-          </NavLink>
-          <NavLink href="/reps/tasks" icon={<Target size={20} />}>
-            Tasks
-          </NavLink>
-          <NavLink href="/reps/leaderboard" icon={<Award size={20} />}>
-            Leaderboard
-          </NavLink>
+        {/* Navigation */}
+        <nav className="relative z-10 flex-1 px-4 py-5 space-y-1">
+          {navItems.map((item) => {
+            const isActive = item.exact
+              ? pathname === item.href
+              : pathname.startsWith(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 px-4 py-3 text-[13px] font-semibold rounded-xl transition-all duration-200 group
+                  ${isActive
+                    ? 'bg-white/[0.12] text-white shadow-lg shadow-white/[0.04] border border-white/[0.08]'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.06]'
+                  }`}
+              >
+                <item.icon size={19} className={`transition-colors ${isActive ? 'text-teal-300' : 'text-slate-500 group-hover:text-teal-400'}`} />
+                {item.label}
+                {isActive && (
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-teal-400" />
+                )}
+              </Link>
+            )
+          })}
         </nav>
 
-        <div className="p-4 border-t border-slate-700 space-y-1">
+        {/* Footer Actions */}
+        <div className="relative z-10 px-4 pb-5 space-y-1">
+          <div className="border-t border-white/[0.06] mb-3" />
           <button
             onClick={() => { setFeedbackOpen(true); setFeedbackSent(false) }}
-            className="flex items-center gap-2 text-sm text-slate-300 hover:text-white w-full transition-colors px-3 py-2 rounded-lg hover:bg-slate-700/50"
+            className="flex items-center gap-3 w-full px-4 py-2.5 text-[13px] font-medium text-slate-400 rounded-xl hover:text-white hover:bg-white/[0.06] transition-all duration-200"
           >
-            <MessageCircle size={18} />
+            <MessageCircle size={17} />
             Feedback
           </button>
           <button
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="flex items-center gap-2 text-sm text-slate-300 hover:text-white w-full transition-colors px-3 py-2 rounded-lg hover:bg-slate-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-3 w-full px-4 py-2.5 text-[13px] font-medium text-slate-400 rounded-xl hover:text-red-300 hover:bg-red-500/[0.08] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <LogOut size={18} />
+            {isLoggingOut ? <Loader2 size={17} className="animate-spin" /> : <LogOut size={17} />}
             {isLoggingOut ? 'Signing out...' : 'Sign Out'}
           </button>
         </div>
@@ -127,84 +154,69 @@ export default function RepsLayout({
 
       {/* Feedback Dialog */}
       {feedbackOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setFeedbackOpen(false)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Send Feedback</h3>
-              <button onClick={() => setFeedbackOpen(false)} className="text-gray-400 hover:text-gray-600">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setFeedbackOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            {/* Dialog Header */}
+            <div className="gradient-primary px-6 py-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Send Feedback</h3>
+              <button onClick={() => setFeedbackOpen(false)} className="text-white/70 hover:text-white transition-colors rounded-lg p-1 hover:bg-white/10">
                 <X size={20} />
               </button>
             </div>
 
-            {feedbackSent ? (
-              <div className="text-center py-8">
-                <CheckCircle size={48} className="text-green-500 mx-auto mb-3" />
-                <p className="text-lg font-medium text-gray-900">Thanks for your feedback!</p>
-                <p className="text-sm text-gray-500 mt-1">We&apos;ll review it shortly.</p>
-              </div>
-            ) : (
-              <>
-                <p className="text-sm text-gray-500 mb-4">
-                  Have a question, suggestion, or issue? Let us know and we&apos;ll get back to you.
-                </p>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 block mb-1">Category</label>
-                    <select
-                      value={feedbackCategory}
-                      onChange={(e) => setFeedbackCategory(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    >
-                      <option value="general">General</option>
-                      <option value="bug">Bug Report</option>
-                      <option value="feature">Feature Request</option>
-                      <option value="help">Need Help</option>
-                      <option value="leads">Lead Quality</option>
-                    </select>
+            <div className="p-6">
+              {feedbackSent ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle size={32} className="text-emerald-600" />
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 block mb-1">Message</label>
-                    <textarea
-                      value={feedbackMessage}
-                      onChange={(e) => setFeedbackMessage(e.target.value)}
-                      placeholder="Type your feedback here..."
-                      className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  <button
-                    onClick={handleSubmitFeedback}
-                    disabled={feedbackSending || !feedbackMessage.trim()}
-                    className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    <Send size={16} />
-                    {feedbackSending ? 'Sending...' : 'Send Feedback'}
-                  </button>
+                  <p className="text-lg font-bold text-gray-900">Thanks for your feedback!</p>
+                  <p className="text-sm text-gray-500 mt-1">We&apos;ll review it shortly.</p>
                 </div>
-              </>
-            )}
+              ) : (
+                <>
+                  <p className="text-sm text-gray-500 mb-5">
+                    Have a question, suggestion, or issue? Let us know and we&apos;ll get back to you.
+                  </p>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-1.5">Category</label>
+                      <select
+                        value={feedbackCategory}
+                        onChange={(e) => setFeedbackCategory(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50/50 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+                      >
+                        <option value="general">General</option>
+                        <option value="bug">Bug Report</option>
+                        <option value="feature">Feature Request</option>
+                        <option value="help">Need Help</option>
+                        <option value="leads">Lead Quality</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-1.5">Message</label>
+                      <textarea
+                        value={feedbackMessage}
+                        onChange={(e) => setFeedbackMessage(e.target.value)}
+                        placeholder="Type your feedback here..."
+                        className="w-full h-32 px-4 py-3 border border-gray-200 rounded-xl text-sm bg-gray-50/50 resize-none focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+                      />
+                    </div>
+                    <button
+                      onClick={handleSubmitFeedback}
+                      disabled={feedbackSending || !feedbackMessage.trim()}
+                      className="w-full py-3 gradient-primary text-white rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-teal transition-all duration-200"
+                    >
+                      <Send size={16} />
+                      {feedbackSending ? 'Sending...' : 'Send Feedback'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
     </div>
-  )
-}
-
-function NavLink({
-  href,
-  icon,
-  children
-}: {
-  href: string
-  icon: React.ReactNode
-  children: React.ReactNode
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-300 rounded-lg hover:bg-slate-700/50 hover:text-white transition-all duration-200"
-    >
-      {icon}
-      {children}
-    </Link>
   )
 }
