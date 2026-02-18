@@ -55,6 +55,12 @@ export default function LeadsPage() {
   const [editFolderId, setEditFolderId] = useState<string | null>(null)
   const [editFolderName, setEditFolderName] = useState('')
 
+  // Edit lead state
+  const [editLeadDialogOpen, setEditLeadDialogOpen] = useState(false)
+  const [editLeadId, setEditLeadId] = useState<string | null>(null)
+  const [editLeadForm, setEditLeadForm] = useState<any>({})
+  const [savingLead, setSavingLead] = useState(false)
+
   // Assignment destination state
   const [assignDestination, setAssignDestination] = useState<'rep-tracker' | 'instantly' | null>(null)
 
@@ -145,6 +151,37 @@ export default function LeadsPage() {
     setSelectedLeads(new Set())
     setStatusFilter('all')
     setFolderMenuOpen(null)
+  }
+
+  const openEditLeadDialog = (lead: any) => {
+    setEditLeadId(lead.id)
+    setEditLeadForm({
+      firstName: lead.firstName || '', lastName: lead.lastName || '',
+      companyName: lead.companyName || '', phone: lead.phone || '',
+      email: lead.email || '', city: lead.city || '', state: lead.state || '',
+      industry: lead.industry || '', status: lead.status || 'NEW',
+    })
+    setEditLeadDialogOpen(true)
+  }
+
+  const handleSaveLeadEdit = async () => {
+    if (!editLeadId) return
+    setSavingLead(true)
+    try {
+      const res = await fetch(`/api/leads/${editLeadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editLeadForm),
+      })
+      if (res.ok) {
+        setEditLeadDialogOpen(false)
+        setEditLeadId(null)
+        fetchLeads()
+      } else {
+        alert('Failed to save lead')
+      }
+    } catch { alert('Failed to save lead') }
+    finally { setSavingLead(false) }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -926,6 +963,14 @@ export default function LeadsPage() {
                           Preview
                         </Button>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={() => openEditLeadDialog(lead)}
+                      >
+                        <Pencil size={14} className="mr-1" /> Edit
+                      </Button>
                       <Link href={`/admin/leads/${lead.id}`}>
                         <Button variant="ghost" size="sm">View</Button>
                       </Link>
@@ -935,7 +980,7 @@ export default function LeadsPage() {
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         onClick={() => handleDeleteLead(lead.id, lead.firstName)}
                       >
-                        Delete
+                        <Trash2 size={14} className="mr-1" /> Delete
                       </Button>
                     </td>
                   </tr>
@@ -945,6 +990,73 @@ export default function LeadsPage() {
           </div>
         )}
       </Card>
+
+      {/* Edit Lead Dialog */}
+      <Dialog open={editLeadDialogOpen} onOpenChange={setEditLeadDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Lead</DialogTitle>
+            <DialogDescription>Update lead information.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">First Name</label>
+                <Input value={editLeadForm.firstName || ''} onChange={(e) => setEditLeadForm({ ...editLeadForm, firstName: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Last Name</label>
+                <Input value={editLeadForm.lastName || ''} onChange={(e) => setEditLeadForm({ ...editLeadForm, lastName: e.target.value })} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Company</label>
+              <Input value={editLeadForm.companyName || ''} onChange={(e) => setEditLeadForm({ ...editLeadForm, companyName: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Phone</label>
+                <Input value={editLeadForm.phone || ''} onChange={(e) => setEditLeadForm({ ...editLeadForm, phone: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</label>
+                <Input value={editLeadForm.email || ''} onChange={(e) => setEditLeadForm({ ...editLeadForm, email: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">City</label>
+                <Input value={editLeadForm.city || ''} onChange={(e) => setEditLeadForm({ ...editLeadForm, city: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">State</label>
+                <Input value={editLeadForm.state || ''} maxLength={2} onChange={(e) => setEditLeadForm({ ...editLeadForm, state: e.target.value.toUpperCase() })} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</label>
+              <select
+                value={editLeadForm.status || 'NEW'}
+                onChange={(e) => setEditLeadForm({ ...editLeadForm, status: e.target.value })}
+                className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="NEW">New</option>
+                <option value="HOT_LEAD">Hot Lead</option>
+                <option value="QUALIFIED">Qualified</option>
+                <option value="BUILDING">Building</option>
+                <option value="PAID">Paid</option>
+                <option value="CLOSED_LOST">Closed Lost</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditLeadDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveLeadEdit} disabled={savingLead}>
+              {savingLead ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

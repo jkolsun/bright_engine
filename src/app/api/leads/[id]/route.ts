@@ -107,16 +107,14 @@ export async function PUT(
   }
 }
 
-// DELETE /api/leads/[id] - Soft delete (mark as CLOSED_LOST)
+// DELETE /api/leads/[id] - Hard delete
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const leadId = params.id
-
     const lead = await prisma.lead.findUnique({
-      where: { id: leadId }
+      where: { id: params.id }
     })
 
     if (!lead) {
@@ -126,28 +124,11 @@ export async function DELETE(
       )
     }
 
-    // Soft delete: mark as CLOSED_LOST
-    const updated = await prisma.lead.update({
-      where: { id: leadId },
-      data: {
-        status: 'CLOSED_LOST'
-      }
-    })
-
-    // Log deletion event
-    await prisma.leadEvent.create({
-      data: {
-        leadId,
-        eventType: 'ESCALATED',
-        toStage: 'CLOSED_LOST',
-        actor: 'system',
-      }
-    })
+    await prisma.lead.delete({ where: { id: params.id } })
 
     return NextResponse.json({
       success: true,
-      message: 'Lead deleted successfully',
-      lead: updated
+      message: 'Lead permanently deleted',
     })
   } catch (error) {
     console.error('Error deleting lead:', error)
