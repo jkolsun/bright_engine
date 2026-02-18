@@ -678,6 +678,15 @@ export default function LeadsPage() {
             <FolderPlus size={18} className="mr-2" />
             Add to Folder {selectedLeads.size > 0 && `(${selectedLeads.size})`}
           </Button>
+          {/* Unassign button */}
+          <Button
+            variant="outline"
+            onClick={() => handleBulkAssign(null)}
+            disabled={selectedLeads.size === 0 || assigning}
+          >
+            <UserMinus size={18} className="mr-2" />
+            Unassign {selectedLeads.size > 0 && `(${selectedLeads.size})`}
+          </Button>
           {/* Assignment button — opens destination picker */}
           <Button
             variant="outline"

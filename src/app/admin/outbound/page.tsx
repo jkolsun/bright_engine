@@ -166,6 +166,9 @@ export default function SalesRepTrackerPage() {
   }
 
   const filteredLeads = leads.filter(lead => {
+    // Only show leads that are assigned to a rep — unassigned leads don't belong here
+    if (!lead.assignedTo) return false
+
     const matchesSearch =
       lead.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
