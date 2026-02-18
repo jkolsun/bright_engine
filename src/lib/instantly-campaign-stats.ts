@@ -309,6 +309,18 @@ export async function getInstantlyDashboardStats() {
     } as PersonalizationStats)),
   ])
 
+  // Check if API key is configured (for readiness indicator)
+  const apiKeyConfigured = !!process.env.INSTANTLY_API_KEY
+
+  // Check if campaigns are stored in settings (means API was successfully contacted)
+  let campaignsStored = false
+  try {
+    const campaignSettings = await prisma.settings.findUnique({
+      where: { key: 'instantly_campaigns' },
+    })
+    campaignsStored = !!campaignSettings
+  } catch { /* settings table may not exist */ }
+
   // These tables may not exist yet — gracefully handle
   let recentDrips: any[] = []
   let recentSync: any = null
@@ -369,5 +381,8 @@ export async function getInstantlyDashboardStats() {
       total_capacity: recentSync.totalCapacity,
       total_pushed: recentSync.totalPushed,
     } : null,
+    // API connection status (for readiness check — doesn't require a sync to have run)
+    api_connected: apiKeyConfigured && campaignsStored,
+    api_key_configured: apiKeyConfigured,
   }
 }

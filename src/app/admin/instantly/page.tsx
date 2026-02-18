@@ -98,6 +98,8 @@ interface DashboardStats {
     total_capacity: number
     total_pushed: number
   } | null
+  api_connected: boolean
+  api_key_configured: boolean
 }
 
 function pct(value: number): string {
@@ -181,15 +183,27 @@ function InstantlyDashboard() {
     }
   }
 
-  const fetchStats = async () => {
+  const fetchStats = async (retries = 2) => {
     try {
       setLoading(true)
       const res = await fetch('/api/instantly/preview-stats')
-      if (!res.ok) throw new Error(`Failed: ${res.statusText}`)
+      if (!res.ok) {
+        // Auto-retry on server errors (cold start / DB connection pool warming)
+        if (res.status >= 500 && retries > 0) {
+          await new Promise((r) => setTimeout(r, 1000))
+          return fetchStats(retries - 1)
+        }
+        throw new Error(`Failed: ${res.statusText}`)
+      }
       const data = await res.json()
       setStats(data)
       setError(null)
     } catch (err) {
+      // Auto-retry on network errors (cold start)
+      if (retries > 0) {
+        await new Promise((r) => setTimeout(r, 1000))
+        return fetchStats(retries - 1)
+      }
       setError(err instanceof Error ? err.message : 'Failed to load')
     } finally {
       setLoading(false)
@@ -240,7 +254,7 @@ function InstantlyDashboard() {
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
           <AlertTriangle className="mx-auto text-red-500 mb-2" size={32} />
           <p className="text-red-700 font-medium">{error}</p>
-          <button onClick={fetchStats} className="mt-3 px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm hover:bg-red-200">
+          <button onClick={() => fetchStats()} className="mt-3 px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm hover:bg-red-200">
             Retry
           </button>
         </div>
@@ -272,7 +286,7 @@ function InstantlyDashboard() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={fetchStats}
+            onClick={() => fetchStats()}
             className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
           >
             <RefreshCw size={14} />
@@ -520,7 +534,7 @@ function InstantlyDashboard() {
               />
               <ReadinessItem
                 label="Instantly API connected"
-                ready={stats.last_sync !== null}
+                ready={stats.api_connected}
               />
               <ReadinessItem
                 label="Campaigns created (A + B)"
