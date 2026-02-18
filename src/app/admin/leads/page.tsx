@@ -967,10 +967,18 @@ export default function LeadsPage() {
                       <td className="p-3 whitespace-nowrap text-sm text-center text-gray-700">
                         {lead.enrichedReviews ?? '—'}
                       </td>
-                      <td className="p-3 text-sm text-gray-700 max-w-[200px]">
-                        <div className="truncate" title={lead.personalizationData?.firstLine || ''}>
-                          {lead.personalizationData?.firstLine || '—'}
-                        </div>
+                      <td className="p-3 text-sm text-gray-700 max-w-[250px]">
+                        {(() => {
+                          try {
+                            const p = lead.personalization ? JSON.parse(lead.personalization) : null
+                            if (!p?.firstLine) return <span className="text-gray-400">—</span>
+                            return (
+                              <div className="truncate" title={`${p.firstLine}${p.hook ? `\nHook: ${p.hook}` : ''}${p.angle ? `\nAngle: ${p.angle}` : ''}`}>
+                                {p.firstLine}
+                              </div>
+                            )
+                          } catch { return <span className="text-gray-400">—</span> }
+                        })()}
                       </td>
                       <td className="p-3 text-sm text-gray-700 max-w-[150px]">
                         <div className="truncate" title={lead.notes || ''}>{lead.notes || '—'}</div>
