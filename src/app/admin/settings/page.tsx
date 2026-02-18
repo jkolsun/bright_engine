@@ -4,10 +4,18 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
+import {
   Building, Target, Zap, Users, Key, DollarSign,
   CheckCircle2, AlertTriangle, XCircle, RefreshCw, Loader2,
   Save, Plus, Trash2, Phone, Link, FileText, Brain,
-  BarChart3, ExternalLink
+  BarChart3, ExternalLink, Eye, Mail, Send, Search,
+  ArrowLeft, ArrowRight, ChevronDown, User, MapPin, Globe
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 
@@ -130,6 +138,147 @@ const DEFAULT_TARGETS = {
   monthlyRevenueTarget: 50000,
 }
 
+// ── Email Preview Sequences ─────────────────────────────────────
+const SEQUENCE_A = [
+  {
+    step: 1, delay: 0,
+    subject: "{{company_name}}'s website",
+    body: `Hey {{first_name}},
+
+I came across {{company_name}} and pulled up your site. Looks like it could use a refresh — not loading great on mobile and the design is dated.
+
+That matters because 70% of people searching for {{industry}} services are on their phone. If your site doesn't look right, they're calling your competitor.
+
+I actually already mocked up what a new site would look like for {{company_name}}: {{preview_url}}
+
+$149 to make it live. No contracts, no hassle.
+
+Andrew
+Bright Automations`,
+  },
+  {
+    step: 2, delay: 2,
+    subject: "Re: {{company_name}}'s website",
+    body: `Hey {{first_name}},
+
+Quick follow-up — did you get a chance to look at the preview I built for you? {{preview_url}}
+
+The businesses we've built sites for are seeing more calls and form fills within the first week.
+
+$149, live by {{delivery_date}}. Takes 10 minutes of your time.
+
+Andrew`,
+  },
+  {
+    step: 3, delay: 2,
+    subject: "Re: {{company_name}}'s website",
+    body: `{{first_name}},
+
+Just wrapped a site for a {{industry}} company in {{location}}. They got 3 new leads in the first week.
+
+Your preview is still live: {{preview_url}} — but it expires in a few days.
+
+$149 to make it permanent. I handle everything.
+
+Andrew`,
+  },
+  {
+    step: 4, delay: 2,
+    subject: "Re: {{company_name}}'s website",
+    body: `Hey {{first_name}},
+
+Your preview site expires tomorrow. If a $149 professional website isn't on your radar right now, no worries at all.
+
+But if it ever is, just reply to this email and we'll rebuild it in 48 hours.
+
+Good luck with {{company_name}}.
+
+Andrew`,
+  },
+]
+
+const SEQUENCE_B = [
+  {
+    step: 1, delay: 0,
+    subject: "Found {{company_name}} on Google but no website",
+    body: `Hey {{first_name}},
+
+I searched for {{industry}} in {{location}} and found {{company_name}} on Google Maps — but no website. Most people won't call a business with no site.
+
+I put together a preview of what a site could look like for you: {{preview_url}}
+
+$149 to go live with your own domain. You'd have a real site showing up on Google by this weekend.
+
+Andrew
+Bright Automations`,
+  },
+  {
+    step: 2, delay: 2,
+    subject: "Re: Found {{company_name}} on Google but no website",
+    body: `{{first_name}},
+
+97% of people search online before hiring a local service company. Without a website, you're invisible to almost all of them.
+
+Your preview is still live: {{preview_url}}
+
+$149. We handle everything. No maintenance headaches.
+
+Andrew`,
+  },
+  {
+    step: 3, delay: 2,
+    subject: "Re: Found {{company_name}} on Google but no website",
+    body: `{{first_name}},
+
+I searched '{{industry}} in {{location}}' and the top 5 results all have sites with reviews and click-to-call. They're getting calls that should go to you.
+
+Your preview expires in 2 days: {{preview_url}}
+
+Reply 'yes' and I'll get started today. $149.
+
+Andrew`,
+  },
+  {
+    step: 4, delay: 2,
+    subject: "Re: Found {{company_name}} on Google but no website",
+    body: `Hey {{first_name}},
+
+Last note. Your preview expires today. If you ever want a website for {{company_name}}, just reply.
+
+$149, 48 hours, we handle everything.
+
+Good luck.
+
+Andrew`,
+  },
+]
+
+const INDUSTRY_MAP: Record<string, string> = {
+  RESTORATION: 'restoration', WATER_DAMAGE: 'water damage restoration',
+  ROOFING: 'roofing', PLUMBING: 'plumbing', HVAC: 'HVAC',
+  PAINTING: 'painting', LANDSCAPING: 'landscaping', ELECTRICAL: 'electrical',
+  GENERAL_CONTRACTING: 'general contracting', CLEANING: 'cleaning',
+  PEST_CONTROL: 'pest control', CONSTRUCTION: 'construction',
+}
+
+function formatIndustry(industry: string): string {
+  return INDUSTRY_MAP[industry] || industry?.toLowerCase().replace(/_/g, ' ') || ''
+}
+
+function getDeliveryDate(): string {
+  const d = new Date()
+  d.setDate(d.getDate() + 3)
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+}
+
+function fillTemplate(template: string, vars: Record<string, string>): string {
+  let result = template
+  for (const [key, value] of Object.entries(vars)) {
+    result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value || '')
+  }
+  return result
+}
+
 // ── Main Component ─────────────────────────────────────────────
 
 export default function SettingsPage() {
@@ -173,6 +322,18 @@ export default function SettingsPage() {
   // New day inputs
   const [newDay, setNewDay] = useState('')
   const [newClientDay, setNewClientDay] = useState('')
+
+  // Email preview state
+  const [emailPreviewOpen, setEmailPreviewOpen] = useState(false)
+  const [emailPreviewMode, setEmailPreviewMode] = useState<'pre_acquisition' | 'client_retention'>('pre_acquisition')
+  const [previewLeads, setPreviewLeads] = useState<any[]>([])
+  const [previewSelectedLead, setPreviewSelectedLead] = useState<any>(null)
+  const [previewStep, setPreviewStep] = useState(0)
+  const [previewSearchTerm, setPreviewSearchTerm] = useState('')
+  const [previewDropdownOpen, setPreviewDropdownOpen] = useState(false)
+  const [previewSendTo, setPreviewSendTo] = useState('')
+  const [previewSending, setPreviewSending] = useState(false)
+  const [previewSendResult, setPreviewSendResult] = useState<string | null>(null)
 
   // ── Load all settings on mount ─────────────────────────────
   useEffect(() => {
@@ -388,6 +549,114 @@ export default function SettingsPage() {
     }
     setClientSequences(updated)
   }
+
+  // ── Email Preview helpers ─────────────────────────────────────
+  const openEmailPreview = async (mode: 'pre_acquisition' | 'client_retention') => {
+    setEmailPreviewMode(mode)
+    setPreviewStep(0)
+    setPreviewSelectedLead(null)
+    setPreviewSearchTerm('')
+    setPreviewDropdownOpen(false)
+    setPreviewSendTo('')
+    setPreviewSendResult(null)
+    setEmailPreviewOpen(true)
+
+    // Fetch leads for preview
+    if (previewLeads.length === 0) {
+      try {
+        const res = await fetch('/api/leads?limit=500')
+        const data = await res.json()
+        setPreviewLeads(data.leads || [])
+      } catch { /* ignore */ }
+    }
+  }
+
+  const selectPreviewLead = (lead: any) => {
+    setPreviewSelectedLead(lead)
+    setPreviewDropdownOpen(false)
+    setPreviewSearchTerm('')
+    setPreviewStep(0)
+    setPreviewSendResult(null)
+  }
+
+  // Build merge vars for selected lead
+  const previewMergeVars: Record<string, string> = previewSelectedLead ? {
+    first_name: previewSelectedLead.firstName || '',
+    last_name: previewSelectedLead.lastName || '',
+    company_name: previewSelectedLead.companyName || '',
+    name: previewSelectedLead.firstName || '',
+    company: previewSelectedLead.companyName || '',
+    email: previewSelectedLead.email || '',
+    phone: previewSelectedLead.phone || '',
+    website: previewSelectedLead.website || '',
+    preview_url: previewSelectedLead.previewUrl || '[no preview]',
+    industry: formatIndustry(previewSelectedLead.industry || ''),
+    location: [previewSelectedLead.city, previewSelectedLead.state].filter(Boolean).join(', '),
+    delivery_date: getDeliveryDate(),
+    siteUrl: previewSelectedLead.previewUrl || '[no site]',
+    pageViews: '127',
+    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+  } : {}
+
+  // Get the right sequence based on mode and lead
+  const getPreviewSequence = () => {
+    if (emailPreviewMode === 'pre_acquisition') {
+      const hasWebsite = previewSelectedLead?.website && previewSelectedLead.website.trim().length > 0
+      return hasWebsite ? SEQUENCE_A : SEQUENCE_B
+    } else {
+      // Client retention — build from touchpoint templates
+      return clientSequences.touchpointDays.map((day, idx) => ({
+        step: idx + 1,
+        delay: day,
+        subject: `Check-in: Day ${day}`,
+        body: clientSequences.touchpointTemplates[day] || `Day ${day} check-in message`,
+      }))
+    }
+  }
+
+  const previewSequence = getPreviewSequence()
+  const previewEmail = previewSequence[previewStep]
+  const previewRenderedSubject = previewEmail ? fillTemplate(previewEmail.subject, previewMergeVars) : ''
+  const previewRenderedBody = previewEmail ? fillTemplate(previewEmail.body, previewMergeVars) : ''
+
+  const handlePreviewSendTest = async () => {
+    if (!previewSendTo.trim() || !previewSelectedLead) return
+    setPreviewSending(true)
+    setPreviewSendResult(null)
+    try {
+      const res = await fetch('/api/email-preview/send-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: previewSendTo.trim(),
+          subject: previewRenderedSubject,
+          body: previewRenderedBody,
+          leadId: previewSelectedLead.id,
+        }),
+      })
+      if (res.ok) {
+        setPreviewSendResult('Test email sent!')
+      } else {
+        const data = await res.json()
+        setPreviewSendResult(`Failed: ${data.error || 'Unknown error'}`)
+      }
+    } catch {
+      setPreviewSendResult('Failed to send test email')
+    } finally {
+      setPreviewSending(false)
+    }
+  }
+
+  const filteredPreviewLeads = previewLeads.filter(l => {
+    if (!previewSearchTerm) return true
+    const term = previewSearchTerm.toLowerCase()
+    return (
+      l.firstName?.toLowerCase().includes(term) ||
+      l.lastName?.toLowerCase().includes(term) ||
+      l.companyName?.toLowerCase().includes(term) ||
+      l.email?.toLowerCase().includes(term)
+    )
+  }).slice(0, 20)
 
   // ── Tab config ─────────────────────────────────────────────
   const tabs = [
@@ -722,6 +991,17 @@ export default function SettingsPage() {
                 <p className="text-xs text-gray-400 mt-3">Variables: {'{name}'}, {'{company}'}, {'{date}'}</p>
               </Card>
 
+              {/* Email Preview */}
+              <Card className="p-6">
+                <div className="flex items-center justify-between">
+                  <SectionHeader title="Email Preview" description="Preview how your sequences look with real lead data" />
+                  <Button onClick={() => openEmailPreview('pre_acquisition')}>
+                    <Eye size={16} className="mr-2" />
+                    Preview Emails
+                  </Button>
+                </div>
+              </Card>
+
               {/* Send Settings */}
               <Card className="p-6">
                 <SectionHeader title="Send Settings" description="Controls for email campaign capacity" />
@@ -941,6 +1221,17 @@ export default function SettingsPage() {
                 <p className="text-xs text-gray-400 mt-3">
                   Use these in templates: {'{upsellName}'}, {'{upsellPrice}'}, {'{upsellPhone}'}, {'{paymentLink}'}
                 </p>
+              </Card>
+
+              {/* Email Preview */}
+              <Card className="p-6">
+                <div className="flex items-center justify-between">
+                  <SectionHeader title="Email Preview" description="Preview how your retention touchpoints look with real client data" />
+                  <Button onClick={() => openEmailPreview('client_retention')} className="bg-emerald-600 hover:bg-emerald-700">
+                    <Eye size={16} className="mr-2" />
+                    Preview Emails
+                  </Button>
+                </div>
               </Card>
 
               {/* Save */}
@@ -1347,6 +1638,233 @@ export default function SettingsPage() {
           </div>
         </Card>
       )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          EMAIL PREVIEW DIALOG
+         ═══════════════════════════════════════════════════════════ */}
+      <Dialog open={emailPreviewOpen} onOpenChange={setEmailPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye size={20} />
+              Email Preview
+              <Badge variant="secondary" className="ml-2 text-xs">
+                {emailPreviewMode === 'pre_acquisition' ? 'Pre-Acquisition' : 'Client Retention'}
+              </Badge>
+              {previewSelectedLead && emailPreviewMode === 'pre_acquisition' && (
+                <Badge variant="outline" className="ml-1 text-xs">
+                  {previewSelectedLead.website?.trim() ? 'Campaign A — Bad Website' : 'Campaign B — No Website'}
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex gap-4 flex-1 overflow-hidden">
+            {/* Left: Lead selector + variables */}
+            <div className="w-[260px] flex-shrink-0 border-r border-gray-200 pr-4 flex flex-col overflow-hidden">
+              <div className="mb-3">
+                <label className="text-xs font-medium text-gray-500 block mb-1.5">Load data for lead:</label>
+                <div className="relative">
+                  <div
+                    className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-blue-300 transition-colors text-sm"
+                    onClick={() => setPreviewDropdownOpen(!previewDropdownOpen)}
+                  >
+                    {previewSelectedLead ? (
+                      <span className="text-gray-900 truncate flex-1">
+                        {previewSelectedLead.firstName} {previewSelectedLead.lastName}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 flex-1">Select a lead...</span>
+                    )}
+                    <ChevronDown size={14} className="text-gray-400" />
+                  </div>
+
+                  {previewDropdownOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-[260px] overflow-hidden">
+                      <div className="p-2 border-b border-gray-100">
+                        <div className="relative">
+                          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input
+                            type="text"
+                            value={previewSearchTerm}
+                            onChange={(e) => setPreviewSearchTerm(e.target.value)}
+                            placeholder="Search leads..."
+                            className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            autoFocus
+                          />
+                        </div>
+                      </div>
+                      <div className="max-h-[200px] overflow-y-auto">
+                        {filteredPreviewLeads.map((lead) => (
+                          <button
+                            key={lead.id}
+                            onClick={() => selectPreviewLead(lead)}
+                            className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-0"
+                          >
+                            <div className="text-sm font-medium text-gray-900">{lead.firstName} {lead.lastName}</div>
+                            <div className="text-xs text-gray-500">{lead.companyName} {lead.email ? `· ${lead.email}` : ''}</div>
+                          </button>
+                        ))}
+                        {filteredPreviewLeads.length === 0 && (
+                          <div className="px-3 py-4 text-sm text-gray-400 text-center">No leads found</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Lead info */}
+              {previewSelectedLead && (
+                <div className="flex-1 overflow-y-auto space-y-2 text-xs">
+                  <div className="border-t border-dashed border-gray-200 pt-2">
+                    <span className="font-semibold text-gray-700">Variables</span>
+                  </div>
+                  {Object.entries(previewMergeVars).slice(0, 12).map(([key, value]) => (
+                    <div key={key}>
+                      <span className="text-gray-400 block">{key}</span>
+                      <span className="text-gray-800 break-words">{value || <span className="text-gray-300 italic">empty</span>}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Right: Email preview */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {!previewSelectedLead ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <Mail size={40} className="text-gray-300 mx-auto mb-3" />
+                    <h3 className="text-base font-semibold text-gray-900 mb-1">Select a lead to preview</h3>
+                    <p className="text-gray-500 text-sm">Choose a lead from the sidebar to see the emails with their data filled in.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 overflow-y-auto">
+                  {/* Step tabs */}
+                  <div className="flex gap-1.5 mb-4 flex-wrap">
+                    {previewSequence.map((email, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setPreviewStep(idx)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                          previewStep === idx
+                            ? emailPreviewMode === 'pre_acquisition'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-emerald-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        {emailPreviewMode === 'pre_acquisition' ? (
+                          <>Email {email.step} <span className="opacity-70 ml-1">{email.delay === 0 ? '(Day 0)' : `(+${email.delay}d)`}</span></>
+                        ) : (
+                          <>
+                            {email.delay < 30 ? `Day ${email.delay}` : email.delay < 365 ? `Month ${Math.round(email.delay / 30)}` : `Year ${Math.round(email.delay / 365)}`}
+                          </>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Email card */}
+                  {previewEmail && (
+                    <Card className="mb-4">
+                      <div className="p-4 border-b border-gray-100 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-gray-400 w-14">Subject:</span>
+                          <span className="text-sm font-medium text-gray-900">{previewRenderedSubject}</span>
+                        </div>
+                        {previewSelectedLead?.email && (
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-gray-400 w-14">To:</span>
+                            <span className="text-sm text-gray-600">{previewSelectedLead.email}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-5">
+                        <div className="whitespace-pre-wrap text-sm text-gray-800 leading-relaxed">
+                          {previewRenderedBody}
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+
+                  {/* Lead summary bar */}
+                  <Card className="p-3 mb-4">
+                    <div className="flex items-center gap-4 text-xs text-gray-600 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <User size={13} className="text-gray-400" />
+                        {previewSelectedLead.firstName} {previewSelectedLead.lastName}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Building size={13} className="text-gray-400" />
+                        {previewSelectedLead.companyName || '—'}
+                      </div>
+                      {(previewSelectedLead.city || previewSelectedLead.state) && (
+                        <div className="flex items-center gap-1.5">
+                          <MapPin size={13} className="text-gray-400" />
+                          {[previewSelectedLead.city, previewSelectedLead.state].filter(Boolean).join(', ')}
+                        </div>
+                      )}
+                      {previewSelectedLead.website && (
+                        <div className="flex items-center gap-1.5">
+                          <Globe size={13} className="text-gray-400" />
+                          <span className="truncate max-w-[150px]">{previewSelectedLead.website.replace(/^https?:\/\//, '')}</span>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+
+                  {/* Actions: nav + send test */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={previewStep === 0}
+                        onClick={() => setPreviewStep(previewStep - 1)}
+                      >
+                        <ArrowLeft size={14} className="mr-1" /> Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={previewStep === previewSequence.length - 1}
+                        onClick={() => setPreviewStep(previewStep + 1)}
+                      >
+                        Next <ArrowRight size={14} className="ml-1" />
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {previewSendResult && (
+                        <span className={`text-xs ${previewSendResult.startsWith('Failed') ? 'text-red-600' : 'text-green-600'}`}>
+                          {previewSendResult}
+                        </span>
+                      )}
+                      <Input
+                        placeholder="test@email.com"
+                        value={previewSendTo}
+                        onChange={(e) => setPreviewSendTo(e.target.value)}
+                        className="w-44 h-8 text-xs"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handlePreviewSendTest}
+                        disabled={previewSending || !previewSendTo.trim()}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Send size={13} className="mr-1" />
+                        {previewSending ? 'Sending...' : 'Send Test'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

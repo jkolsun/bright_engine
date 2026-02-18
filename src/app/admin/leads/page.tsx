@@ -15,10 +15,11 @@ import {
 } from '@/components/ui/dialog'
 import Link from 'next/link'
 import { formatPhone } from '@/lib/utils'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Search, Filter, Plus, Eye, TrendingUp, UserPlus, UserMinus, Users,
-  FolderOpen, FolderPlus, ArrowLeft, Target, Mail, X, MoreVertical, Pencil, Trash2
+  FolderOpen, FolderPlus, ArrowLeft, Target, Mail, MoreVertical, Pencil, Trash2,
+  ChevronDown, ChevronRight, Sparkles, Globe, Star, MapPin, Clock, Wrench, MessageSquare, ExternalLink
 } from 'lucide-react'
 
 export default function LeadsPage() {
@@ -63,6 +64,9 @@ export default function LeadsPage() {
 
   // Assignment destination state
   const [assignDestination, setAssignDestination] = useState<'rep-tracker' | 'instantly' | null>(null)
+
+  // Expanded lead row state
+  const [expandedLead, setExpandedLead] = useState<string | null>(null)
 
   useEffect(() => {
     fetchLeads()
@@ -564,11 +568,6 @@ export default function LeadsPage() {
   }
 
   // ===== LEAD LIST VIEW (inside a folder) =====
-  // If activeFolder === 'unfoldered', show leads with no folder
-  const folderLeadsForView = activeFolder === 'unfoldered'
-    ? leads.filter(l => !l.folderId)
-    : leads.filter(l => l.folderId === activeFolder)
-
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
@@ -926,126 +925,292 @@ export default function LeadsPage() {
               <tbody className="divide-y divide-gray-100">
                 {filteredLeads.map((lead) => {
                   const isSelected = selectedLeads.has(lead.id)
+                  const isExpanded = expandedLead === lead.id
                   const rowBg = isSelected ? 'bg-blue-50' : 'bg-white'
                   const hoverBg = isSelected ? 'hover:bg-blue-100' : 'hover:bg-gray-50'
 
+                  let personalizationData: any = null
+                  try {
+                    personalizationData = lead.personalization ? JSON.parse(lead.personalization) : null
+                  } catch { /* ignore */ }
+
                   return (
-                    <tr key={lead.id} className={`${hoverBg} ${rowBg}`}>
-                      {/* Sticky left: checkbox */}
-                      <td className={`sticky left-0 z-10 ${rowBg} text-center p-3 border-r border-gray-100`}>
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleSelectLead(lead.id)}
-                          className="w-4 h-4 cursor-pointer"
-                        />
-                      </td>
-                      {/* Scrollable data columns */}
-                      <td className="p-3 whitespace-nowrap">
-                        <div className="font-medium text-gray-900 text-sm">{lead.firstName} {lead.lastName}</div>
-                      </td>
-                      <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.companyName || '—'}</td>
-                      <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.phone ? formatPhone(lead.phone) : '—'}</td>
-                      <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.email || '—'}</td>
-                      <td className="p-3 whitespace-nowrap text-sm text-gray-700">
-                        {lead.city || lead.state ? `${lead.city || ''}${lead.city && lead.state ? ', ' : ''}${lead.state || ''}` : '—'}
-                      </td>
-                      <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.industry || '—'}</td>
-                      <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.source || '—'}</td>
-                      <td className="p-3 whitespace-nowrap text-sm">
-                        {lead.website ? (
-                          <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline max-w-[180px] truncate block">
-                            {lead.website.replace(/^https?:\/\//, '')}
-                          </a>
-                        ) : '—'}
-                      </td>
-                      <td className="p-3 whitespace-nowrap text-sm text-center text-gray-700">
-                        {lead.enrichedRating ? (
-                          <span className="font-medium">{Number(lead.enrichedRating).toFixed(1)}</span>
-                        ) : '—'}
-                      </td>
-                      <td className="p-3 whitespace-nowrap text-sm text-center text-gray-700">
-                        {lead.enrichedReviews ?? '—'}
-                      </td>
-                      <td className="p-3 text-sm text-gray-700 max-w-[250px]">
-                        {(() => {
-                          try {
-                            const p = lead.personalization ? JSON.parse(lead.personalization) : null
-                            if (!p?.firstLine) return <span className="text-gray-400">—</span>
-                            return (
-                              <div className="truncate" title={`${p.firstLine}${p.hook ? `\nHook: ${p.hook}` : ''}${p.angle ? `\nAngle: ${p.angle}` : ''}`}>
-                                {p.firstLine}
-                              </div>
-                            )
-                          } catch { return <span className="text-gray-400">—</span> }
-                        })()}
-                      </td>
-                      <td className="p-3 text-sm text-gray-700 max-w-[150px]">
-                        <div className="truncate" title={lead.notes || ''}>{lead.notes || '—'}</div>
-                      </td>
-                      {/* Sticky right: Assigned To */}
-                      <td className={`sticky right-[200px] z-10 ${rowBg} p-3 whitespace-nowrap border-l border-gray-100 shadow-[-2px_0_4px_rgba(0,0,0,0.06)]`}>
-                        <div className="flex flex-col gap-1">
-                          {lead.assignedTo && (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-full">
-                              <span className="w-5 h-5 rounded-full bg-blue-200 flex items-center justify-center text-[10px] font-bold text-blue-800">
-                                {lead.assignedTo.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                    <React.Fragment key={lead.id}>
+                      <tr className={`${hoverBg} ${rowBg} cursor-pointer`} onClick={() => setExpandedLead(isExpanded ? null : lead.id)}>
+                        {/* Sticky left: checkbox */}
+                        <td className={`sticky left-0 z-10 ${rowBg} text-center p-3 border-r border-gray-100`} onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleSelectLead(lead.id)}
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                        </td>
+                        {/* Scrollable data columns */}
+                        <td className="p-3 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            {isExpanded ? <ChevronDown size={14} className="text-gray-400 flex-shrink-0" /> : <ChevronRight size={14} className="text-gray-400 flex-shrink-0" />}
+                            <div className="font-medium text-gray-900 text-sm">{lead.firstName} {lead.lastName}</div>
+                          </div>
+                        </td>
+                        <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.companyName || '—'}</td>
+                        <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.phone ? formatPhone(lead.phone) : '—'}</td>
+                        <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.email || '���'}</td>
+                        <td className="p-3 whitespace-nowrap text-sm text-gray-700">
+                          {lead.city || lead.state ? `${lead.city || ''}${lead.city && lead.state ? ', ' : ''}${lead.state || ''}` : '—'}
+                        </td>
+                        <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.industry || '—'}</td>
+                        <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.source || '—'}</td>
+                        <td className="p-3 whitespace-nowrap text-sm">
+                          {lead.website ? (
+                            <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline max-w-[180px] truncate block" onClick={(e) => e.stopPropagation()}>
+                              {lead.website.replace(/^https?:\/\//, '')}
+                            </a>
+                          ) : '—'}
+                        </td>
+                        <td className="p-3 whitespace-nowrap text-sm text-center text-gray-700">
+                          {lead.enrichedRating ? (
+                            <span className="font-medium">{Number(lead.enrichedRating).toFixed(1)}</span>
+                          ) : '—'}
+                        </td>
+                        <td className="p-3 whitespace-nowrap text-sm text-center text-gray-700">
+                          {lead.enrichedReviews ?? '—'}
+                        </td>
+                        <td className="p-3 text-sm text-gray-700 max-w-[250px]">
+                          {personalizationData?.firstLine ? (
+                            <div className="flex items-center gap-1.5">
+                              <Sparkles size={13} className="text-purple-500 flex-shrink-0" />
+                              <span className="truncate">{personalizationData.firstLine}</span>
+                            </div>
+                          ) : <span className="text-gray-400">—</span>}
+                        </td>
+                        <td className="p-3 text-sm text-gray-700 max-w-[150px]">
+                          <div className="truncate" title={lead.notes || ''}>{lead.notes || '—'}</div>
+                        </td>
+                        {/* Sticky right: Assigned To */}
+                        <td className={`sticky right-[200px] z-10 ${rowBg} p-3 whitespace-nowrap border-l border-gray-100 shadow-[-2px_0_4px_rgba(0,0,0,0.06)]`}>
+                          <div className="flex flex-col gap-1">
+                            {lead.assignedTo && (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-full">
+                                <span className="w-5 h-5 rounded-full bg-blue-200 flex items-center justify-center text-[10px] font-bold text-blue-800">
+                                  {lead.assignedTo.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                                </span>
+                                {lead.assignedTo.name}
                               </span>
-                              {lead.assignedTo.name}
-                            </span>
-                          )}
-                          {lead.instantlyCampaignId && (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-700 bg-purple-50 px-2 py-1 rounded-full">
-                              <Mail size={12} />
-                              Instantly
-                            </span>
-                          )}
-                          {!lead.assignedTo && !lead.instantlyCampaignId && (
-                            <span className="text-xs text-gray-400">&mdash;</span>
-                          )}
-                        </div>
-                      </td>
-                      {/* Sticky right: Status */}
-                      <td className={`sticky right-[100px] z-10 ${rowBg} p-3 whitespace-nowrap`}>
-                        <Badge variant={
-                          lead.status === 'HOT_LEAD' ? 'destructive' :
-                          lead.status === 'QUALIFIED' ? 'default' :
-                          lead.status === 'BUILDING' ? 'secondary' :
-                          lead.status === 'PAID' ? 'default' :
-                          'secondary'
-                        } className="text-xs">
-                          {lead.status}
-                        </Badge>
-                      </td>
-                      {/* Sticky right: Actions */}
-                      <td className={`sticky right-0 z-10 ${rowBg} p-3 whitespace-nowrap w-[100px]`}>
-                        <div className="flex items-center justify-center gap-1">
-                          {lead.previewUrl && (
+                            )}
+                            {lead.instantlyCampaignId && (
+                              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-700 bg-purple-50 px-2 py-1 rounded-full">
+                                <Mail size={12} />
+                                Instantly
+                              </span>
+                            )}
+                            {!lead.assignedTo && !lead.instantlyCampaignId && (
+                              <span className="text-xs text-gray-400">&mdash;</span>
+                            )}
+                          </div>
+                        </td>
+                        {/* Sticky right: Status */}
+                        <td className={`sticky right-[100px] z-10 ${rowBg} p-3 whitespace-nowrap`}>
+                          <Badge variant={
+                            lead.status === 'HOT_LEAD' ? 'destructive' :
+                            lead.status === 'QUALIFIED' ? 'default' :
+                            lead.status === 'BUILDING' ? 'secondary' :
+                            lead.status === 'PAID' ? 'default' :
+                            'secondary'
+                          } className="text-xs">
+                            {lead.status}
+                          </Badge>
+                        </td>
+                        {/* Sticky right: Actions */}
+                        <td className={`sticky right-0 z-10 ${rowBg} p-3 whitespace-nowrap w-[100px]`} onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-1">
+                            {lead.previewUrl && (
+                              <button
+                                onClick={() => window.open(lead.previewUrl, '_blank')}
+                                title="Preview"
+                                className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 transition-colors"
+                              >
+                                <Eye size={15} />
+                              </button>
+                            )}
                             <button
-                              onClick={() => window.open(lead.previewUrl, '_blank')}
-                              title="Preview"
-                              className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 transition-colors"
+                              onClick={() => openEditLeadDialog(lead)}
+                              title="Edit"
+                              className="p-1.5 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
                             >
-                              <Eye size={15} />
+                              <Pencil size={15} />
                             </button>
-                          )}
-                          <button
-                            onClick={() => openEditLeadDialog(lead)}
-                            title="Edit"
-                            className="p-1.5 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
-                          >
-                            <Pencil size={15} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteLead(lead.id, lead.firstName)}
-                            title="Delete"
-                            className="p-1.5 rounded-md text-red-500 hover:bg-red-50 transition-colors"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                            <button
+                              onClick={() => handleDeleteLead(lead.id, lead.firstName)}
+                              title="Delete"
+                              className="p-1.5 rounded-md text-red-500 hover:bg-red-50 transition-colors"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Expanded detail row */}
+                      {isExpanded && (
+                        <tr className="bg-gray-50/70">
+                          <td colSpan={16} className="p-0">
+                            <div className="px-6 py-5 space-y-4 border-t border-b border-gray-200">
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                                {/* Personalization Panel */}
+                                <div className="bg-white rounded-lg border border-purple-200 p-4 shadow-sm">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <div className="w-7 h-7 rounded-md bg-purple-100 flex items-center justify-center">
+                                      <Sparkles size={15} className="text-purple-600" />
+                                    </div>
+                                    <h4 className="font-semibold text-gray-900 text-sm">AI Personalization</h4>
+                                  </div>
+                                  {personalizationData ? (
+                                    <div className="space-y-3">
+                                      <div>
+                                        <div className="text-xs font-medium text-purple-600 uppercase tracking-wider mb-1">First Line</div>
+                                        <p className="text-sm text-gray-800 leading-relaxed">{personalizationData.firstLine || '—'}</p>
+                                      </div>
+                                      {personalizationData.hook && (
+                                        <div>
+                                          <div className="text-xs font-medium text-purple-600 uppercase tracking-wider mb-1">Hook</div>
+                                          <p className="text-sm text-gray-700">{personalizationData.hook}</p>
+                                        </div>
+                                      )}
+                                      {personalizationData.angle && (
+                                        <div>
+                                          <div className="text-xs font-medium text-purple-600 uppercase tracking-wider mb-1">Angle</div>
+                                          <p className="text-sm text-gray-700">{personalizationData.angle}</p>
+                                        </div>
+                                      )}
+                                      {personalizationData.websiteCopy && (
+                                        <div>
+                                          <div className="text-xs font-medium text-purple-600 uppercase tracking-wider mb-1">Website Copy</div>
+                                          <p className="text-sm text-gray-600 italic">{personalizationData.websiteCopy}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-gray-400 italic">No personalization generated yet</p>
+                                  )}
+                                </div>
+
+                                {/* Enrichment Panel */}
+                                <div className="bg-white rounded-lg border border-teal-200 p-4 shadow-sm">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <div className="w-7 h-7 rounded-md bg-teal-100 flex items-center justify-center">
+                                      <Globe size={15} className="text-teal-600" />
+                                    </div>
+                                    <h4 className="font-semibold text-gray-900 text-sm">Enrichment Data</h4>
+                                  </div>
+                                  {(lead.enrichedRating || lead.enrichedAddress || lead.enrichedServices) ? (
+                                    <div className="space-y-3">
+                                      {lead.enrichedRating && (
+                                        <div className="flex items-center gap-2">
+                                          <Star size={14} className="text-amber-500" />
+                                          <span className="text-sm font-medium text-gray-900">{Number(lead.enrichedRating).toFixed(1)}</span>
+                                          <span className="text-xs text-gray-500">({lead.enrichedReviews || 0} reviews)</span>
+                                        </div>
+                                      )}
+                                      {lead.enrichedAddress && (
+                                        <div className="flex items-start gap-2">
+                                          <MapPin size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                                          <span className="text-sm text-gray-700">{lead.enrichedAddress}</span>
+                                        </div>
+                                      )}
+                                      {lead.enrichedServices && Array.isArray(lead.enrichedServices) && lead.enrichedServices.length > 0 && (
+                                        <div>
+                                          <div className="flex items-center gap-1.5 mb-1.5">
+                                            <Wrench size={13} className="text-gray-400" />
+                                            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Services</span>
+                                          </div>
+                                          <div className="flex flex-wrap gap-1">
+                                            {(lead.enrichedServices as string[]).slice(0, 8).map((svc: string, i: number) => (
+                                              <span key={i} className="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full">{svc}</span>
+                                            ))}
+                                            {(lead.enrichedServices as string[]).length > 8 && (
+                                              <span className="text-xs text-gray-400">+{(lead.enrichedServices as string[]).length - 8} more</span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {lead.enrichedHours && typeof lead.enrichedHours === 'object' && (
+                                        <div className="flex items-start gap-2">
+                                          <Clock size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                                          <div className="text-xs text-gray-600">
+                                            {Array.isArray(lead.enrichedHours) ? (
+                                              lead.enrichedHours.slice(0, 3).map((h: string, i: number) => (
+                                                <div key={i}>{h}</div>
+                                              ))
+                                            ) : (
+                                              <span>Hours available</span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-gray-400 italic">No enrichment data yet</p>
+                                  )}
+                                </div>
+
+                                {/* Lead Details Panel */}
+                                <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <div className="w-7 h-7 rounded-md bg-gray-100 flex items-center justify-center">
+                                      <MessageSquare size={15} className="text-gray-600" />
+                                    </div>
+                                    <h4 className="font-semibold text-gray-900 text-sm">Details</h4>
+                                  </div>
+                                  <div className="space-y-3">
+                                    {lead.campaign && (
+                                      <div>
+                                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Campaign</div>
+                                        <p className="text-sm text-gray-800">{lead.campaign}</p>
+                                      </div>
+                                    )}
+                                    {lead.sourceDetail && (
+                                      <div>
+                                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Source Detail</div>
+                                        <p className="text-sm text-gray-800">{lead.sourceDetail}</p>
+                                      </div>
+                                    )}
+                                    {lead.notes && (
+                                      <div>
+                                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Notes</div>
+                                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{lead.notes}</p>
+                                      </div>
+                                    )}
+                                    {lead.previewUrl && (
+                                      <div>
+                                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Preview</div>
+                                        <a href={lead.previewUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
+                                          <ExternalLink size={13} />
+                                          View Preview Site
+                                        </a>
+                                      </div>
+                                    )}
+                                    {lead.priority && (
+                                      <div>
+                                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Priority</div>
+                                        <Badge variant={lead.priority === 'HOT' ? 'destructive' : lead.priority === 'WARM' ? 'secondary' : 'outline'} className="text-xs">
+                                          {lead.priority}
+                                        </Badge>
+                                      </div>
+                                    )}
+                                    {!lead.campaign && !lead.sourceDetail && !lead.notes && !lead.previewUrl && (
+                                      <p className="text-sm text-gray-400 italic">No additional details</p>
+                                    )}
+                                  </div>
+                                </div>
+
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   )
                 })}
               </tbody>
