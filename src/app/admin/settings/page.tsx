@@ -320,6 +320,7 @@ export default function SettingsPage() {
   const [previewSelectedLead, setPreviewSelectedLead] = useState<any>(null)
   const [previewSearchTerm, setPreviewSearchTerm] = useState('')
   const [previewDropdownOpen, setPreviewDropdownOpen] = useState(false)
+  const [previewOpenMessages, setPreviewOpenMessages] = useState<Set<string>>(new Set())
 
   // ── Load all settings on mount ─────────────────────────────
   useEffect(() => {
@@ -968,10 +969,28 @@ export default function SettingsPage() {
                 {/* Templates per day */}
                 <div className="space-y-3">
                   {sequences.urgencyDays.map((day) => {
+                    const msgKey = `urgency-${day}`
+                    const isOpen = previewOpenMessages.has(msgKey)
                     const rendered = previewSelectedLead ? fillTemplate(sequences.urgencyTemplates[day] || '', previewMergeVars) : null
                     return (
                       <div key={day} className="space-y-1">
-                        <FieldLabel>Day {day} Message</FieldLabel>
+                        <div className="flex items-center justify-between">
+                          <FieldLabel>Day {day} Message</FieldLabel>
+                          <button
+                            onClick={() => {
+                              const next = new Set(previewOpenMessages)
+                              if (next.has(msgKey)) next.delete(msgKey); else next.add(msgKey)
+                              setPreviewOpenMessages(next)
+                              if (!previewSelectedLead) { fetchPreviewLeads(); setPreviewDropdownOpen(true) }
+                            }}
+                            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                              isOpen ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500 hover:bg-purple-50 hover:text-purple-600'
+                            }`}
+                          >
+                            <Eye size={12} />
+                            Preview
+                          </button>
+                        </div>
                         <textarea
                           value={sequences.urgencyTemplates[day] || ''}
                           onChange={(e) => setSequences({
@@ -981,11 +1000,17 @@ export default function SettingsPage() {
                           className="w-full h-16 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="Use {name}, {company}, {date} as variables"
                         />
-                        {rendered && (
-                          <div className="flex items-start gap-2 p-2.5 bg-purple-50 border border-purple-200 rounded-md">
-                            <Eye size={13} className="text-purple-500 mt-0.5 flex-shrink-0" />
-                            <p className="text-sm text-purple-900 whitespace-pre-wrap">{rendered}</p>
-                          </div>
+                        {isOpen && (
+                          rendered ? (
+                            <div className="flex items-start gap-2 p-2.5 bg-purple-50 border border-purple-200 rounded-md">
+                              <Eye size={13} className="text-purple-500 mt-0.5 flex-shrink-0" />
+                              <p className="text-sm text-purple-900 whitespace-pre-wrap">{rendered}</p>
+                            </div>
+                          ) : (
+                            <div className="p-2.5 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-400 italic">
+                              Select a lead above to see the preview with real data
+                            </div>
+                          )
                         )}
                       </div>
                     )
@@ -1007,6 +1032,8 @@ export default function SettingsPage() {
                       <h4 className="text-sm font-semibold text-gray-700 mb-2">{label}</h4>
                       <div className="space-y-3">
                         {seq.map((step) => {
+                          const msgKey = `email-${label}-${step.step}`
+                          const isOpen = previewOpenMessages.has(msgKey)
                           const renderedSubject = previewSelectedLead ? fillTemplate(step.subject, previewMergeVars) : null
                           const renderedBody = previewSelectedLead ? fillTemplate(step.body, previewMergeVars) : null
                           return (
@@ -1015,20 +1042,42 @@ export default function SettingsPage() {
                                 <span className="text-xs font-semibold text-gray-500">
                                   Step {step.step} {step.delay === 0 ? '(Day 0)' : `(+${step.delay} days)`}
                                 </span>
-                                <span className="text-xs text-gray-400">Subject: {step.subject}</span>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-xs text-gray-400">Subject: {step.subject}</span>
+                                  <button
+                                    onClick={() => {
+                                      const next = new Set(previewOpenMessages)
+                                      if (next.has(msgKey)) next.delete(msgKey); else next.add(msgKey)
+                                      setPreviewOpenMessages(next)
+                                      if (!previewSelectedLead) { fetchPreviewLeads(); setPreviewDropdownOpen(true) }
+                                    }}
+                                    className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                      isOpen ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500 hover:bg-purple-50 hover:text-purple-600'
+                                    }`}
+                                  >
+                                    <Eye size={12} />
+                                    Preview
+                                  </button>
+                                </div>
                               </div>
                               <div className="px-4 py-3">
                                 <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{step.body}</p>
                               </div>
-                              {renderedSubject && renderedBody && (
-                                <div className="px-4 py-3 bg-purple-50 border-t border-purple-200">
-                                  <div className="flex items-center gap-1.5 mb-2">
-                                    <Eye size={13} className="text-purple-500" />
-                                    <span className="text-xs font-semibold text-purple-600">Preview</span>
+                              {isOpen && (
+                                renderedSubject && renderedBody ? (
+                                  <div className="px-4 py-3 bg-purple-50 border-t border-purple-200">
+                                    <div className="flex items-center gap-1.5 mb-2">
+                                      <Eye size={13} className="text-purple-500" />
+                                      <span className="text-xs font-semibold text-purple-600">Preview with {previewSelectedLead.firstName}&apos;s data</span>
+                                    </div>
+                                    <div className="text-xs text-purple-700 mb-1"><strong>Subject:</strong> {renderedSubject}</div>
+                                    <p className="text-sm text-purple-900 whitespace-pre-wrap leading-relaxed">{renderedBody}</p>
                                   </div>
-                                  <div className="text-xs text-purple-700 mb-1"><strong>Subject:</strong> {renderedSubject}</div>
-                                  <p className="text-sm text-purple-900 whitespace-pre-wrap leading-relaxed">{renderedBody}</p>
-                                </div>
+                                ) : (
+                                  <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-400 italic">
+                                    Select a lead above to see the preview with real data
+                                  </div>
+                                )
                               )}
                             </div>
                           )
@@ -1135,13 +1184,31 @@ export default function SettingsPage() {
                 {/* Templates per day */}
                 <div className="space-y-3">
                   {clientSequences.touchpointDays.map((day) => {
+                    const msgKey = `retention-${day}`
+                    const isOpen = previewOpenMessages.has(msgKey)
                     const rendered = previewSelectedLead ? fillTemplate(clientSequences.touchpointTemplates[day] || '', previewMergeVars) : null
                     return (
                       <div key={day} className="space-y-1">
-                        <FieldLabel>
-                          {day < 30 ? `Day ${day}` : day < 365 ? `Month ${Math.round(day / 30)}` : `Year ${Math.round(day / 365)}`} Message
-                          <span className="text-xs text-gray-400 font-normal ml-2">(day {day})</span>
-                        </FieldLabel>
+                        <div className="flex items-center justify-between">
+                          <FieldLabel>
+                            {day < 30 ? `Day ${day}` : day < 365 ? `Month ${Math.round(day / 30)}` : `Year ${Math.round(day / 365)}`} Message
+                            <span className="text-xs text-gray-400 font-normal ml-2">(day {day})</span>
+                          </FieldLabel>
+                          <button
+                            onClick={() => {
+                              const next = new Set(previewOpenMessages)
+                              if (next.has(msgKey)) next.delete(msgKey); else next.add(msgKey)
+                              setPreviewOpenMessages(next)
+                              if (!previewSelectedLead) { fetchPreviewLeads(); setPreviewDropdownOpen(true) }
+                            }}
+                            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                              isOpen ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500 hover:bg-purple-50 hover:text-purple-600'
+                            }`}
+                          >
+                            <Eye size={12} />
+                            Preview
+                          </button>
+                        </div>
                         <textarea
                           value={clientSequences.touchpointTemplates[day] || ''}
                           onChange={(e) => setClientSequences({
@@ -1151,11 +1218,17 @@ export default function SettingsPage() {
                           className="w-full h-20 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
                           placeholder="Use {name}, {company}, {pageViews} as variables"
                         />
-                        {rendered && (
-                          <div className="flex items-start gap-2 p-2.5 bg-purple-50 border border-purple-200 rounded-md">
-                            <Eye size={13} className="text-purple-500 mt-0.5 flex-shrink-0" />
-                            <p className="text-sm text-purple-900 whitespace-pre-wrap">{rendered}</p>
-                          </div>
+                        {isOpen && (
+                          rendered ? (
+                            <div className="flex items-start gap-2 p-2.5 bg-purple-50 border border-purple-200 rounded-md">
+                              <Eye size={13} className="text-purple-500 mt-0.5 flex-shrink-0" />
+                              <p className="text-sm text-purple-900 whitespace-pre-wrap">{rendered}</p>
+                            </div>
+                          ) : (
+                            <div className="p-2.5 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-400 italic">
+                              Select a lead above to see the preview with real data
+                            </div>
+                          )
                         )}
                       </div>
                     )
