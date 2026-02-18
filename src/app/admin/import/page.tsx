@@ -8,7 +8,7 @@ import {
   Upload, X, AlertCircle, Loader2,
   CheckCircle, XCircle, Clock,
   FolderPlus, FolderOpen, Plus, History,
-  Info, Search, Eye, Brain
+  Info, Search, Eye, Brain, Download, ChevronRight, ArrowLeft
 } from 'lucide-react'
 
 type ProcessOptions = {
@@ -46,7 +46,7 @@ const PROCESS_INFO: Record<keyof ProcessOptions, { icon: React.ReactNode; title:
 }
 
 export default function ImportPage() {
-  const [step, setStep] = useState<'upload' | 'feed' | 'complete'>('upload')
+  const [step, setStep] = useState<'upload' | 'configure' | 'feed' | 'complete'>('upload')
   const [uploading, setUploading] = useState(false)
   const [importResult, setImportResult] = useState<any>(null)
 
@@ -77,6 +77,11 @@ export default function ImportPage() {
   // Import history state
   const [importHistory, setImportHistory] = useState<any[]>([])
   const [loadingHistory, setLoadingHistory] = useState(true)
+
+  // Import detail view state
+  const [viewingImport, setViewingImport] = useState<string | null>(null)
+  const [importDetail, setImportDetail] = useState<{ import: any; leads: any[] } | null>(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
 
   const fetchImportHistory = async () => {
     try {
@@ -138,6 +143,50 @@ export default function ImportPage() {
     finally { setAddingToFolder(false) }
   }
 
+  // Fetch import detail
+  const viewImportDetail = async (importId: string) => {
+    setViewingImport(importId)
+    setLoadingDetail(true)
+    setImportDetail(null)
+    try {
+      const res = await fetch(`/api/imports/${importId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setImportDetail(data)
+      }
+    } catch { /* ignore */ }
+    finally { setLoadingDetail(false) }
+  }
+
+  // Download leads as CSV
+  const downloadCSV = (leads: any[]) => {
+    if (!leads.length) return
+    const headers = ['First Name', 'Last Name', 'Company', 'Email', 'Phone', 'City', 'State', 'Industry', 'Website', 'Status', 'Rating', 'Reviews', 'Preview URL']
+    const rows = leads.map(l => [
+      l.firstName || '',
+      l.lastName || '',
+      l.companyName || '',
+      l.email || '',
+      l.phone || '',
+      l.city || '',
+      l.state || '',
+      l.industry || '',
+      l.website || '',
+      l.status || '',
+      l.enrichedRating || '',
+      l.enrichedReviews || '',
+      l.previewUrl || '',
+    ])
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `import-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   // Process leads one by one in the live feed
   const processNextLead = useCallback(async (leads: LeadEntry[], index: number, options: ProcessOptions) => {
     if (index >= leads.length) {
@@ -149,10 +198,8 @@ export default function ImportPage() {
     processingRef.current = true
     const lead = leads[index]
 
-    // Mark current lead as processing
     setFeedLeads(prev => prev.map((l, i) => i === index ? { ...l, status: 'processing' } : l))
 
-    // Scroll to current lead
     setTimeout(() => {
       feedRef.current?.querySelector(`[data-lead-index="${index}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }, 100)
@@ -160,7 +207,6 @@ export default function ImportPage() {
     try {
       const anyEnabled = options.enrichment || options.preview || options.personalization
       if (!anyEnabled) {
-        // No processing steps enabled, just mark as done
         setFeedLeads(prev => prev.map((l, i) => i === index ? { ...l, status: 'done' } : l))
       } else {
         const res = await fetch(`/api/leads/${lead.id}/process`, {
@@ -200,7 +246,6 @@ export default function ImportPage() {
       setFeedStats(prev => ({ ...prev, errors: prev.errors + 1 }))
     }
 
-    // Process next lead
     processNextLead(leads, index + 1, options)
   }, [])
 
@@ -210,7 +255,6 @@ export default function ImportPage() {
       const formData = new FormData()
       formData.append('file', file)
 
-      // Step 1: Create leads only (no processing)
       const res = await fetch('/api/leads/import-create', {
         method: 'POST',
         body: formData,
@@ -219,16 +263,13 @@ export default function ImportPage() {
       const data = await res.json()
 
       if (res.ok) {
-        const anyProcessing = processOptions.enrichment || processOptions.preview || processOptions.personalization
-
         if (data.created.length === 0) {
-          // All leads were duplicates
           setImportResult({ created: 0, skipped: data.skipped })
           setStep('complete')
           return
         }
 
-        // Initialize feed leads
+        // Initialize feed leads and go to configure step
         const leads: LeadEntry[] = data.created.map((l: any) => ({
           id: l.id,
           name: l.name,
@@ -237,15 +278,10 @@ export default function ImportPage() {
         }))
 
         setFeedLeads(leads)
-        setFeedDone(!anyProcessing)
+        setFeedDone(false)
         setFeedStats({ enriched: 0, previews: 0, personalized: 0, errors: 0 })
         setImportResult({ created: data.created.length, skipped: data.skipped, total: data.total })
-        setStep('feed')
-
-        // If processing is enabled, start processing
-        if (anyProcessing) {
-          processNextLead(leads, 0, processOptions)
-        }
+        setStep('configure')
       } else {
         alert(`Import failed: ${data.error}`)
       }
@@ -254,6 +290,17 @@ export default function ImportPage() {
       alert('Failed to upload file')
     } finally {
       setUploading(false)
+    }
+  }
+
+  const startProcessing = () => {
+    const anyProcessing = processOptions.enrichment || processOptions.preview || processOptions.personalization
+    if (!anyProcessing) {
+      setFeedDone(true)
+    }
+    setStep('feed')
+    if (anyProcessing) {
+      processNextLead(feedLeads, 0, processOptions)
     }
   }
 
@@ -272,61 +319,9 @@ export default function ImportPage() {
         <p className="text-gray-500 mt-1">Upload Apollo CSV, choose processing steps, and watch the live feed</p>
       </div>
 
-      {step === 'upload' && (
+      {/* ── STEP 1: UPLOAD ────────────────────────────────────────── */}
+      {step === 'upload' && !viewingImport && (
         <div className="max-w-4xl mx-auto">
-          {/* Processing Options */}
-          <Card className="p-6 mb-6">
-            <h4 className="font-semibold text-gray-900 mb-1">Processing Steps</h4>
-            <p className="text-sm text-gray-500 mb-4">Choose which steps to run on each imported lead</p>
-            <div className="space-y-3">
-              {(Object.keys(PROCESS_INFO) as (keyof ProcessOptions)[]).map((key) => {
-                const info = PROCESS_INFO[key]
-                const enabled = processOptions[key]
-                return (
-                  <div key={key}>
-                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-white">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${enabled ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}>
-                          {info.icon}
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-900 text-sm">{info.title}</span>
-                        </div>
-                        <button
-                          onClick={() => setShowInfo(showInfo === key ? null : key)}
-                          className="p-1 rounded-full text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-                          title="What does this do?"
-                        >
-                          <Info size={16} />
-                        </button>
-                      </div>
-                      <button
-                        onClick={() => toggleOption(key)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          enabled ? 'bg-blue-600' : 'bg-gray-300'
-                        }`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          enabled ? 'translate-x-6' : 'translate-x-1'
-                        }`} />
-                      </button>
-                    </div>
-                    {showInfo === key && (
-                      <div className="mt-1 ml-12 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-sm text-blue-800">{info.description}</p>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            {!processOptions.enrichment && !processOptions.preview && !processOptions.personalization && (
-              <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-xs text-yellow-800">No processing steps selected. Leads will be created but not enriched.</p>
-              </div>
-            )}
-          </Card>
-
           {/* Upload Zone */}
           <Card className="p-12">
             <div className="text-center">
@@ -334,17 +329,7 @@ export default function ImportPage() {
                 <Upload size={48} className="text-blue-600" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2">Drop Apollo CSV Here</h3>
-              <p className="text-gray-600 mb-4">or click to browse</p>
-
-              {/* Active steps summary */}
-              <div className="flex items-center justify-center gap-2 mb-6">
-                {processOptions.enrichment && <Badge className="bg-green-100 text-green-800">Enrichment</Badge>}
-                {processOptions.preview && <Badge className="bg-purple-100 text-purple-800">Preview</Badge>}
-                {processOptions.personalization && <Badge className="bg-amber-100 text-amber-800">Personalization</Badge>}
-                {!processOptions.enrichment && !processOptions.preview && !processOptions.personalization && (
-                  <Badge variant="outline">Create Only</Badge>
-                )}
-              </div>
+              <p className="text-gray-600 mb-6">or click to browse</p>
 
               <label className="inline-block">
                 <input
@@ -359,7 +344,7 @@ export default function ImportPage() {
                 />
                 <span className="cursor-pointer inline-flex items-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-lg font-semibold">
                   {uploading ? <Loader2 size={24} className="animate-spin" /> : <Upload size={24} />}
-                  {uploading ? 'Uploading...' : 'Import & Process'}
+                  {uploading ? 'Uploading...' : 'Upload CSV'}
                 </span>
               </label>
 
@@ -396,6 +381,7 @@ export default function ImportPage() {
                       <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Enriched</th>
                       <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Previews</th>
                       <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Skipped</th>
+                      <th className="w-8"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -409,7 +395,11 @@ export default function ImportPage() {
                       const successRate = total > 0 ? Math.round((created / total) * 100) : 100
 
                       return (
-                        <tr key={imp.id} className="hover:bg-gray-50">
+                        <tr
+                          key={imp.id}
+                          className="hover:bg-blue-50 cursor-pointer transition-colors"
+                          onClick={() => viewImportDetail(imp.id)}
+                        >
                           <td className="py-3 px-4">
                             <div className="text-sm font-medium text-gray-900">
                               {new Date(imp.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -441,6 +431,9 @@ export default function ImportPage() {
                           <td className="py-3 px-4 text-right">
                             <span className="text-sm text-gray-500">{skipped}</span>
                           </td>
+                          <td className="py-3 px-1">
+                            <ChevronRight size={16} className="text-gray-400" />
+                          </td>
                         </tr>
                       )
                     })}
@@ -452,7 +445,243 @@ export default function ImportPage() {
         </div>
       )}
 
-      {/* ── LIVE PROCESSING FEED ──────────────────────────────────── */}
+      {/* ── IMPORT DETAIL VIEW ────────────────────────────────────── */}
+      {step === 'upload' && viewingImport && (
+        <div className="max-w-5xl mx-auto">
+          <button
+            onClick={() => { setViewingImport(null); setImportDetail(null) }}
+            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+          >
+            <ArrowLeft size={16} />
+            Back to Import History
+          </button>
+
+          {loadingDetail ? (
+            <Card className="p-12">
+              <div className="flex items-center justify-center gap-3 text-gray-500">
+                <Loader2 size={24} className="animate-spin" />
+                <span>Loading import details...</span>
+              </div>
+            </Card>
+          ) : importDetail ? (
+            <>
+              {/* Import Summary */}
+              <Card className="p-6 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">
+                      Import from {new Date(importDetail.import.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">{importDetail.import.description}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => downloadCSV(importDetail.leads)}
+                    disabled={importDetail.leads.length === 0}
+                  >
+                    <Download size={16} className="mr-2" />
+                    Download CSV
+                  </Button>
+                </div>
+
+                {/* Stats */}
+                {(() => {
+                  const meta = (importDetail.import.metadata as any) || {}
+                  return (
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
+                      <div className="text-center p-3 bg-blue-50 rounded-lg">
+                        <p className="text-xl font-bold text-blue-600">{meta.created || importDetail.leads.length}</p>
+                        <p className="text-xs text-gray-600">Created</p>
+                      </div>
+                      <div className="text-center p-3 bg-green-50 rounded-lg">
+                        <p className="text-xl font-bold text-green-600">{meta.enriched || 0}</p>
+                        <p className="text-xs text-gray-600">Enriched</p>
+                      </div>
+                      <div className="text-center p-3 bg-purple-50 rounded-lg">
+                        <p className="text-xl font-bold text-purple-600">{meta.previews || 0}</p>
+                        <p className="text-xs text-gray-600">Previews</p>
+                      </div>
+                      <div className="text-center p-3 bg-amber-50 rounded-lg">
+                        <p className="text-xl font-bold text-amber-600">{meta.personalized || 0}</p>
+                        <p className="text-xs text-gray-600">Personalized</p>
+                      </div>
+                      <div className="text-center p-3 bg-gray-50 rounded-lg">
+                        <p className="text-xl font-bold text-gray-600">{meta.skipped || 0}</p>
+                        <p className="text-xs text-gray-600">Skipped</p>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </Card>
+
+              {/* Leads Table */}
+              <Card className="p-0 overflow-hidden">
+                {importDetail.leads.length === 0 ? (
+                  <div className="text-center py-12 text-gray-400 text-sm">
+                    No lead data stored for this import. Older imports may not have lead tracking.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Name</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Company</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Email</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Phone</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Location</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                          <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Rating</th>
+                          <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Preview</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {importDetail.leads.map((lead: any) => (
+                          <tr key={lead.id} className="hover:bg-gray-50">
+                            <td className="py-3 px-4">
+                              <span className="text-sm font-medium text-gray-900">
+                                {lead.firstName} {lead.lastName}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-sm text-gray-700">{lead.companyName || '—'}</td>
+                            <td className="py-3 px-4 text-sm text-gray-600">{lead.email || '—'}</td>
+                            <td className="py-3 px-4 text-sm text-gray-600">{lead.phone || '—'}</td>
+                            <td className="py-3 px-4 text-sm text-gray-600">
+                              {[lead.city, lead.state].filter(Boolean).join(', ') || '—'}
+                            </td>
+                            <td className="py-3 px-4">
+                              <Badge variant="outline" className="text-xs">{lead.status}</Badge>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {lead.enrichedRating ? (
+                                <span className="text-sm font-medium text-yellow-600">{lead.enrichedRating}</span>
+                              ) : (
+                                <span className="text-gray-300">—</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {lead.previewUrl ? (
+                                <a
+                                  href={lead.previewUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-500 hover:text-blue-700"
+                                >
+                                  <Eye size={16} className="inline" />
+                                </a>
+                              ) : (
+                                <span className="text-gray-300">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Card>
+            </>
+          ) : (
+            <Card className="p-12">
+              <div className="text-center text-gray-400">Failed to load import details.</div>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ── STEP 2: CONFIGURE PROCESSING ──────────────────────────── */}
+      {step === 'configure' && (
+        <div className="max-w-4xl mx-auto space-y-4">
+          {/* Import Summary */}
+          <Card className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle size={28} className="text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {importResult?.created} leads imported
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {importResult?.skipped > 0 && `${importResult.skipped} duplicates skipped. `}
+                  Choose which processing steps to run below.
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Processing Options */}
+          <Card className="p-6">
+            <h4 className="font-semibold text-gray-900 mb-1">Processing Steps</h4>
+            <p className="text-sm text-gray-500 mb-4">Toggle the steps you want to run on each lead</p>
+            <div className="space-y-3">
+              {(Object.keys(PROCESS_INFO) as (keyof ProcessOptions)[]).map((key) => {
+                const info = PROCESS_INFO[key]
+                const enabled = processOptions[key]
+                return (
+                  <div key={key}>
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-white">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${enabled ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}>
+                          {info.icon}
+                        </div>
+                        <span className="font-medium text-gray-900 text-sm">{info.title}</span>
+                        <button
+                          onClick={() => setShowInfo(showInfo === key ? null : key)}
+                          className="p-1 rounded-full text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+                          title="What does this do?"
+                        >
+                          <Info size={16} />
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => toggleOption(key)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          enabled ? 'bg-blue-600' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          enabled ? 'translate-x-6' : 'translate-x-1'
+                        }`} />
+                      </button>
+                    </div>
+                    {showInfo === key && (
+                      <div className="mt-1 ml-12 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800">{info.description}</p>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {!processOptions.enrichment && !processOptions.preview && !processOptions.personalization && (
+              <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-xs text-yellow-800">No processing steps selected. Leads are already saved and can be processed later.</p>
+              </div>
+            )}
+          </Card>
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-between">
+            <Button variant="outline" onClick={() => {
+              setStep('upload')
+              setFeedLeads([])
+              fetchImportHistory()
+            }}>
+              Skip Processing
+            </Button>
+            <Button onClick={startProcessing} className="px-8">
+              {processOptions.enrichment || processOptions.preview || processOptions.personalization
+                ? `Start Processing ${feedLeads.length} Leads`
+                : `Done`}
+              <ChevronRight size={18} className="ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ── STEP 3: LIVE PROCESSING FEED ──────────────────────────── */}
       {step === 'feed' && (
         <div className="max-w-4xl mx-auto space-y-4">
           {/* Progress Header */}
@@ -467,12 +696,8 @@ export default function ImportPage() {
                   {importResult?.skipped > 0 && ` (${importResult.skipped} skipped as duplicates)`}
                 </p>
               </div>
-              {!feedDone && (
-                <Loader2 size={28} className="text-blue-600 animate-spin" />
-              )}
-              {feedDone && (
-                <CheckCircle size={28} className="text-green-600" />
-              )}
+              {!feedDone && <Loader2 size={28} className="text-blue-600 animate-spin" />}
+              {feedDone && <CheckCircle size={28} className="text-green-600" />}
             </div>
 
             {/* Progress Bar */}
@@ -533,7 +758,6 @@ export default function ImportPage() {
                       : 'bg-gray-50 opacity-60'
                   }`}
                 >
-                  {/* Status Icon */}
                   <div className="flex-shrink-0 w-5">
                     {lead.status === 'pending' && <Clock size={16} className="text-gray-300" />}
                     {lead.status === 'processing' && <Loader2 size={16} className="text-blue-500 animate-spin" />}
@@ -541,15 +765,11 @@ export default function ImportPage() {
                     {lead.status === 'error' && <XCircle size={16} className="text-red-500" />}
                   </div>
 
-                  {/* Lead Info */}
                   <div className="flex-1 min-w-0">
                     <span className="font-medium text-gray-900">{lead.name || 'Unknown'}</span>
-                    {lead.company && (
-                      <span className="text-gray-400 ml-2">{lead.company}</span>
-                    )}
+                    {lead.company && <span className="text-gray-400 ml-2">{lead.company}</span>}
                   </div>
 
-                  {/* Step Results */}
                   {lead.status === 'done' && (
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       {lead.enrichment !== undefined && lead.enrichment !== null && (
@@ -570,7 +790,6 @@ export default function ImportPage() {
                     </div>
                   )}
 
-                  {/* Processing indicator */}
                   {lead.status === 'processing' && (
                     <span className="text-xs text-blue-600 font-medium flex-shrink-0">Processing...</span>
                   )}
@@ -682,7 +901,7 @@ export default function ImportPage() {
         </div>
       )}
 
-      {/* ── COMPLETE (for edge cases like all duplicates) ─────���──── */}
+      {/* ── COMPLETE (edge case: all duplicates) ──────────────────── */}
       {step === 'complete' && (
         <div className="max-w-4xl mx-auto">
           <Card className="p-12">

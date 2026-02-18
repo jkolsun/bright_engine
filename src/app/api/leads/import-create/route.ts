@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { parseCSV } from '@/lib/csv-parser'
 import { getTimezoneFromState } from '@/lib/utils'
 import { verifySession } from '@/lib/session'
+import { logActivity } from '@/lib/logging'
 
 export const dynamic = 'force-dynamic'
 
@@ -81,6 +82,22 @@ export async function POST(request: NextRequest) {
         company: lead.companyName || '',
       })
     }
+
+    // Log activity with lead IDs for history lookup
+    await logActivity(
+      'IMPORT',
+      `CSV import: ${created.length} created, ${skipped} skipped`,
+      {
+        metadata: {
+          mode: 'CSV_IMPORT',
+          created: created.length,
+          skipped,
+          totalProcessed: validRows.length,
+          leadIds: created.map(l => l.id),
+          campaign,
+        },
+      }
+    )
 
     return NextResponse.json({
       success: true,
