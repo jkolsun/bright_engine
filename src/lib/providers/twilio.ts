@@ -14,17 +14,17 @@ export class TwilioProvider implements SMSProvider {
     return this.client
   }
 
-  private getFromNumber(): string {
-    return process.env.TWILIO_PHONE_NUMBER!
-  }
-
   async send(options: SMSSendOptions): Promise<SMSSendResult> {
     try {
       const client = this.getClient()
+      const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID
       const message = await client.messages.create({
         body: options.message,
-        from: this.getFromNumber(),
         to: options.to,
+        // Use Messaging Service (A2P compliant) if configured, otherwise fall back to direct number
+        ...(messagingServiceSid
+          ? { messagingServiceSid }
+          : { from: process.env.TWILIO_PHONE_NUMBER! }),
       })
 
       return { success: true, sid: message.sid }

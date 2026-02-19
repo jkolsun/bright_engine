@@ -61,7 +61,7 @@ export default function PartTimeDashboard() {
   const [leaderboard, setLeaderboard] = useState<any[]>([])
   const [dailyTarget, setDailyTarget] = useState({ dials: 40, conversations: 8, closes: 1 })
   const [commissionRate, setCommissionRate] = useState(75)
-  const [productPrice, setProductPrice] = useState(149)
+  const [productPrice, setProductPrice] = useState(188)
 
   useEffect(() => {
     loadRepData()

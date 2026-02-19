@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
+import { sendSMSViaProvider } from '@/lib/sms-provider'
+import { sendEmail } from '@/lib/resend'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,13 +28,15 @@ export async function GET(request: NextRequest) {
               firstName: true,
               lastName: true,
               companyName: true,
-              phone: true
+              phone: true,
+              email: true,
             }
           },
           client: {
             select: {
               id: true,
-              companyName: true
+              companyName: true,
+              email: true,
             }
           }
         },
@@ -53,7 +57,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/messages - Send a message
+// POST /api/messages - Send a message (actually delivers via SMS or Email)
 export async function POST(request: NextRequest) {
   try {
     // Authentication check - admin or rep access
@@ -64,40 +68,77 @@ export async function POST(request: NextRequest) {
     }
 
     const { leadId, clientId, to, content, channel, senderType, senderName } = await request.json()
-    
+
     if (!content) {
       return NextResponse.json({ error: 'Content required' }, { status: 400 })
     }
 
-    // Create message record
-    const message = await prisma.message.create({
-      data: {
+    const resolvedChannel = channel || 'SMS'
+    const resolvedSender = senderName || 'admin'
+
+    // Actually send the message via the appropriate channel
+    // Note: sendSMSViaProvider and sendEmail both create their own Message records
+    if (resolvedChannel === 'EMAIL' && to) {
+      const result = await sendEmail({
+        to,
+        subject: 'Message from Bright Automations',
+        html: content.replace(/\n/g, '<br>'),
         leadId: leadId || undefined,
         clientId: clientId || undefined,
-        content,
-        direction: 'OUTBOUND',
-        channel: channel || 'SMS',
-        senderType: senderType || 'ADMIN',
-        senderName: senderName || 'admin',
-        recipient: to || undefined,
-      }
-    })
-
-    // Log event if lead
-    if (leadId) {
-      await prisma.leadEvent.create({
-        data: {
-          leadId,
-          eventType: 'TEXT_SENT',
-          actor: senderName || 'admin',
-          metadata: { channel, messageId: message.id },
-        }
+        sender: resolvedSender,
+        trigger: 'manual_admin',
       })
-    }
 
-    return NextResponse.json({ message })
+      if (!result.success) {
+        return NextResponse.json({ error: result.error || 'Email send failed' }, { status: 500 })
+      }
+
+      // Log event if lead
+      if (leadId) {
+        await prisma.leadEvent.create({
+          data: {
+            leadId,
+            eventType: 'EMAIL_SENT',
+            actor: resolvedSender,
+            metadata: { channel: 'EMAIL', resendId: result.resendId },
+          }
+        })
+      }
+
+      return NextResponse.json({ success: true, channel: 'EMAIL' })
+    } else if (to) {
+      // SMS send
+      const result = await sendSMSViaProvider({
+        to,
+        message: content,
+        leadId: leadId || undefined,
+        clientId: clientId || undefined,
+        sender: resolvedSender,
+        trigger: 'manual_admin',
+      })
+
+      if (!result.success) {
+        return NextResponse.json({ error: result.error || 'SMS send failed' }, { status: 500 })
+      }
+
+      // Log event if lead
+      if (leadId) {
+        await prisma.leadEvent.create({
+          data: {
+            leadId,
+            eventType: 'TEXT_SENT',
+            actor: resolvedSender,
+            metadata: { channel: 'SMS', sid: result.sid },
+          }
+        })
+      }
+
+      return NextResponse.json({ success: true, channel: 'SMS' })
+    } else {
+      return NextResponse.json({ error: 'No recipient address provided' }, { status: 400 })
+    }
   } catch (error) {
-    console.error('Error creating message:', error)
+    console.error('Error sending message:', error)
     return NextResponse.json({ error: 'Failed to send message' }, { status: 500 })
   }
 }

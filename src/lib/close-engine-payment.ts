@@ -7,7 +7,6 @@
 
 import { getStripe } from './stripe'
 import { prisma } from './db'
-import { sendSMSViaProvider } from './sms-provider'
 import { getPricingConfig } from './pricing-config'
 import {
   checkAutonomy,
@@ -15,7 +14,7 @@ import {
   getConversationContext,
   CONVERSATION_STAGES,
 } from './close-engine'
-import { calculateDelay } from './close-engine-processor'
+import { calculateDelay, sendCloseEngineMessage } from './close-engine-processor'
 
 // ============================================
 // generatePaymentLink()
@@ -116,15 +115,21 @@ export async function sendPaymentLink(conversationId: string): Promise<{ success
 
   setTimeout(async () => {
     try {
-      await sendSMSViaProvider({
+      await sendCloseEngineMessage({
         to: lead.phone,
+        toEmail: lead.email || undefined,
         message,
         leadId: lead.id,
         trigger: 'close_engine_payment_link',
-        aiGenerated: true,
         aiDelaySeconds: delay,
         conversationType: 'pre_client',
-        sender: 'clawdbot',
+        emailSubject: `${lead.companyName} — payment link to go live`,
+        aiDecisionLog: {
+          trigger: 'payment_link',
+          delaySeconds: delay,
+          leadStatus: lead.status,
+          pricingUsed: { firstMonthTotal: config.firstMonthTotal, monthlyHosting: config.monthlyHosting },
+        },
       })
       await transitionStage(conversationId, CONVERSATION_STAGES.PAYMENT_SENT)
     } catch (err) {

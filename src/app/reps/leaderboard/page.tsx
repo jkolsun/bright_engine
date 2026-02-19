@@ -29,15 +29,20 @@ export default function LeaderboardPage() {
       setLoading(true)
       setError(null)
 
-      const repsRes = await fetch('/api/users?role=REP')
+      const [repsRes, configRes] = await Promise.all([
+        fetch('/api/users?role=REP'),
+        fetch('/api/rep-config'),
+      ])
       const repsData = repsRes.ok ? await repsRes.json() : { users: [] }
       const reps = repsData.users || []
+      const configData = configRes.ok ? await configRes.json() : {}
+      const productPrice = configData.productPrice || 188
 
       const rankings = reps
         .map((rep: any) => ({
           rep,
           closedLeads: rep.totalCloses || 0,
-          totalRevenue: (rep.totalCloses || 0) * 149,
+          totalRevenue: (rep.totalCloses || 0) * (rep.commissionRate ?? productPrice),
         }))
         .sort((a: any, b: any) => b.totalRevenue - a.totalRevenue)
         .map((item: any, idx: number) => ({

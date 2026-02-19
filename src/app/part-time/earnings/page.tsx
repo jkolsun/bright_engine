@@ -35,7 +35,7 @@ export default function EarningsPage() {
       const meData = await meRes.json()
       const userId = meData.user.id
 
-      const commRes = await fetch(`/api/commissions?userId=${userId}`)
+      const commRes = await fetch(`/api/commissions?repId=${userId}`)
       if (!commRes.ok) {
         setEarnings({
           thisMonth: 0,

@@ -35,11 +35,11 @@ export async function GET(
       }
     })
 
-    // Update priority to HOT if not already
+    // Update priority AND status to HOT if not already
     if (lead.priority !== 'HOT') {
       await prisma.lead.update({
         where: { id: lead.id },
-        data: { priority: 'HOT' }
+        data: { priority: 'HOT', status: 'HOT_LEAD' }
       })
     }
 

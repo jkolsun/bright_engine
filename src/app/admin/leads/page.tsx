@@ -20,7 +20,7 @@ import {
   Search, Filter, Plus, Eye, TrendingUp, UserPlus, UserMinus, Users,
   FolderOpen, FolderPlus, ArrowLeft, Target, Mail, MoreVertical, Pencil, Trash2,
   ChevronDown, ChevronRight, Sparkles, Globe, Star, MapPin, Clock, Wrench, MessageSquare, ExternalLink,
-  LayoutGrid, List, ChevronLeft
+  LayoutGrid, List, ChevronLeft, RefreshCw
 } from 'lucide-react'
 
 export default function LeadsPage() {
@@ -72,6 +72,8 @@ export default function LeadsPage() {
 
   // Expanded lead row state
   const [expandedLead, setExpandedLead] = useState<string | null>(null)
+  const [expandedLeadEvents, setExpandedLeadEvents] = useState<Record<string, any[]>>({})
+  const [refreshing, setRefreshing] = useState(false)
 
   // View mode & pagination
   const [viewMode, setViewMode] = useState<'folders' | 'leads'>('folders')
@@ -93,6 +95,23 @@ export default function LeadsPage() {
       console.error('Failed to fetch leads:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await fetchLeads()
+    setRefreshing(false)
+  }
+
+  const fetchLeadEvents = async (leadId: string) => {
+    if (expandedLeadEvents[leadId]) return // Already fetched
+    try {
+      const res = await fetch(`/api/leads/${leadId}`)
+      const data = await res.json()
+      setExpandedLeadEvents(prev => ({ ...prev, [leadId]: data.lead?.events || [] }))
+    } catch {
+      setExpandedLeadEvents(prev => ({ ...prev, [leadId]: [] }))
     }
   }
 
@@ -669,6 +688,11 @@ export default function LeadsPage() {
           )}
         </div>
         <div className="flex gap-3">
+          {/* Refresh button */}
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+            <RefreshCw size={16} className={`mr-1.5 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
           {/* Add to Folder button */}
           <Button
             variant="outline"
@@ -1095,7 +1119,7 @@ export default function LeadsPage() {
 
                   return (
                     <React.Fragment key={lead.id}>
-                      <tr className={`${hoverBg} ${rowBg} cursor-pointer`} onClick={() => setExpandedLead(isExpanded ? null : lead.id)}>
+                      <tr className={`${hoverBg} ${rowBg} cursor-pointer`} onClick={() => { const next = isExpanded ? null : lead.id; setExpandedLead(next); if (next) fetchLeadEvents(lead.id) }}>
                         {/* Sticky left: checkbox */}
                         <td className={`sticky left-0 z-10 ${rowBg} text-center p-3 border-r border-gray-100`} onClick={(e) => e.stopPropagation()}>
                           <input
@@ -1222,7 +1246,7 @@ export default function LeadsPage() {
                         <tr className="bg-gray-50/70">
                           <td colSpan={16} className="p-0">
                             <div className="px-6 py-5 space-y-4 border-t border-b border-gray-200">
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                                 {/* Personalization Panel */}
                                 <div className="bg-white rounded-lg border border-purple-200 p-4 shadow-sm">
@@ -1376,6 +1400,55 @@ export default function LeadsPage() {
                                       <p className="text-sm text-gray-400 italic">No additional details</p>
                                     )}
                                   </div>
+                                </div>
+
+                                {/* Event Timeline Panel */}
+                                <div className="bg-white rounded-lg border border-blue-200 p-4 shadow-sm">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <div className="w-7 h-7 rounded-md bg-blue-100 flex items-center justify-center">
+                                      <Clock size={15} className="text-blue-600" />
+                                    </div>
+                                    <h4 className="font-semibold text-gray-900 text-sm">Event Timeline</h4>
+                                  </div>
+                                  {(() => {
+                                    const events = expandedLeadEvents[lead.id]
+                                    if (!events) return <p className="text-sm text-gray-400 italic">Loading events...</p>
+                                    if (events.length === 0) return <p className="text-sm text-gray-400 italic">No events recorded yet.</p>
+                                    const getIcon = (type: string) => {
+                                      switch (type) {
+                                        case 'PREVIEW_VIEWED': return '👁️'
+                                        case 'PREVIEW_CTA_CLICKED': return '🔥'
+                                        case 'PREVIEW_RETURN_VISIT': return '🔄'
+                                        case 'TEXT_SENT': return '📤'
+                                        case 'TEXT_RECEIVED': return '📥'
+                                        case 'EMAIL_SENT': return '📧'
+                                        case 'SMS_FALLBACK_EMAIL': return '⚠️'
+                                        case 'CALL_LOGGED': return '📞'
+                                        case 'STATUS_CHANGE': return '🔀'
+                                        case 'HOT_LEAD_DETECTED': return '🔥'
+                                        case 'CLOSE_ENGINE_TRIGGERED': return '🤖'
+                                        default: return '📌'
+                                      }
+                                    }
+                                    return (
+                                      <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                                        {events.map((event: any) => (
+                                          <div key={event.id} className="flex items-start gap-2 text-sm py-1.5 border-b border-gray-50">
+                                            <span className="text-base flex-shrink-0">{getIcon(event.eventType)}</span>
+                                            <div className="flex-1 min-w-0">
+                                              <span className="font-medium text-gray-700">{event.eventType.replace(/_/g, ' ')}</span>
+                                              {event.actor && event.actor !== 'system' && (
+                                                <span className="text-gray-400 ml-1">by {event.actor}</span>
+                                              )}
+                                            </div>
+                                            <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
+                                              {new Date(event.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )
+                                  })()}
                                 </div>
 
                               </div>

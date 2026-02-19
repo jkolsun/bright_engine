@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       if (lead.priority !== 'HOT') {
         await prisma.lead.update({
           where: { id: lead.id },
-          data: { priority: 'HOT' }
+          data: { priority: 'HOT', status: 'HOT_LEAD' }
         })
 
         // Create hot lead notification

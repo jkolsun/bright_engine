@@ -212,6 +212,7 @@ enum EventType {
   CLOSE_ENGINE_STAGE_CHANGE
   CLOSE_ENGINE_COMPLETED
   POSITIVE_FEEDBACK
+  SMS_FALLBACK_EMAIL
 }
 
 model LeadEvent {
@@ -376,6 +377,7 @@ model Message {
   conversationType String?         @map("conversation_type") // pre_client, post_client
   aiDelaySeconds  Int?             @map("ai_delay_seconds") // humanizing delay used
   aiGenerated     Boolean          @default(false) @map("ai_generated")
+  aiDecisionLog   Json?            @map("ai_decision_log")
 
   // Twilio data
   twilioSid  String?          @unique @map("twilio_sid")

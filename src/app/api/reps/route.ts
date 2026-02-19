@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/reps - List reps with stats
 export async function GET(request: NextRequest) {
   try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const reps = await prisma.user.findMany({
       where: { role: 'REP' },
       orderBy: { createdAt: 'desc' },
@@ -98,9 +105,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/reps - Create rep
+// POST /api/reps - Create rep (admin only)
 export async function POST(request: NextRequest) {
   try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const { name, email, phone } = await request.json()
 
     if (!name || !email) {

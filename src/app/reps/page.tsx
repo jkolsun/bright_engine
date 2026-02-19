@@ -63,7 +63,7 @@ export default function RepsPage() {
   const [leaderboard, setLeaderboard] = useState<any[]>([])
   const [dailyTarget, setDailyTarget] = useState({ dials: 200, conversations: 40, closes: 3 })
   const [commissionRate, setCommissionRate] = useState(75)
-  const [productPrice, setProductPrice] = useState(149)
+  const [productPrice, setProductPrice] = useState(188)
 
   useEffect(() => {
     loadRepData()

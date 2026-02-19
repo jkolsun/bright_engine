@@ -148,9 +148,32 @@ export default function RepsLayout({
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto pb-20 md:pb-0">
         {children}
       </main>
+
+      {/* Mobile Bottom Nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-gray-200 shadow-lg">
+        <div className="flex items-center justify-around h-16">
+          {navItems.map((item) => {
+            const isActive = item.exact
+              ? pathname === item.href
+              : pathname.startsWith(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors ${
+                  isActive ? 'text-teal-600' : 'text-gray-400'
+                }`}
+              >
+                <item.icon size={20} />
+                <span className="text-[10px] font-semibold">{item.label}</span>
+              </Link>
+            )
+          })}
+        </div>
+      </nav>
 
       {/* Feedback Dialog */}
       {feedbackOpen && (

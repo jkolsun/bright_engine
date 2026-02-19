@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   MessageSquare, AlertCircle, CheckCircle, Send, ArrowLeft,
-  Settings, AlertTriangle, RefreshCw, Search
+  Settings, AlertTriangle, RefreshCw, Search, Mail, Phone
 } from 'lucide-react'
 
 type ViewMode = 'inbox' | 'conversation' | 'settings'
@@ -77,6 +77,11 @@ export default function MessagesPage() {
   // Pending actions
   const [pendingActions, setPendingActions] = useState<any[]>([])
   const [approvingAction, setApprovingAction] = useState<string | null>(null)
+
+  // Multi-channel
+  const [sendChannel, setSendChannel] = useState<'SMS' | 'EMAIL'>('SMS')
+  const [refreshing, setRefreshing] = useState(false)
+  const [expandedDecisionLog, setExpandedDecisionLog] = useState<string | null>(null)
 
   // AI Settings
   const [aiSettings, setAiSettings] = useState<any>(null)
@@ -232,10 +237,14 @@ export default function MessagesPage() {
     if (!messageInput.trim()) return
     setSending(true)
     try {
+      const recipientPhone = selectedConversation?.phone || conversationDetail?.lead?.phone
+      const recipientEmail = selectedConversation?.email || conversationDetail?.lead?.email || selectedCloseConv?.lead?.email
+      const to = sendChannel === 'EMAIL' ? recipientEmail : recipientPhone
+
       const body: any = {
-        to: selectedConversation?.phone || conversationDetail?.lead?.phone,
+        to,
         content: messageInput,
-        channel: 'SMS',
+        channel: sendChannel,
         senderType: 'ADMIN',
         senderName: 'admin',
       }
@@ -273,6 +282,7 @@ export default function MessagesPage() {
           leadId: msg.leadId,
           name,
           phone: msg.lead?.phone || msg.recipient || '',
+          email: msg.lead?.email || msg.client?.email || '',
           isClient,
           conversationType: isClient ? 'post_client' : 'pre_client',
           messages: [],
@@ -281,10 +291,12 @@ export default function MessagesPage() {
           aiHandling: false,
           healthScore: msg.client?.healthScore,
           hostingStatus: msg.client?.hostingStatus,
+          channels: new Set<string>(),
         })
       }
       const conv = convMap.get(key)!
       conv.messages.push(msg)
+      conv.channels.add(msg.channel || 'SMS')
       if (msg.escalated) conv.escalated = true
       if (msg.aiGenerated || msg.senderType === 'AI' || msg.senderType === 'CLAWDBOT') conv.aiHandling = true
       if (new Date(msg.createdAt) > new Date(conv.lastMessage.createdAt)) {
@@ -348,7 +360,8 @@ export default function MessagesPage() {
             <h2 className="text-xl font-bold text-gray-900">{selectedCloseConv.lead?.companyName || 'Unknown'}</h2>
             <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
               <span>{selectedCloseConv.lead?.firstName} {selectedCloseConv.lead?.lastName || ''}</span>
-              {selectedCloseConv.lead?.phone && <span>{selectedCloseConv.lead.phone}</span>}
+              {selectedCloseConv.lead?.phone && <span className="flex items-center gap-1"><Phone size={12} /> {selectedCloseConv.lead.phone}</span>}
+              {selectedCloseConv.lead?.email && <span className="flex items-center gap-1"><Mail size={12} /> {selectedCloseConv.lead.email}</span>}
               <EntryPointBadge entryPoint={selectedCloseConv.entryPoint} />
               <StageBadge stage={detail?.stage || selectedCloseConv.stage} />
             </div>
@@ -426,6 +439,12 @@ export default function MessagesPage() {
                   <div key={msg.id} className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[70%] ${isOutbound ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'} border rounded-lg p-3`}>
                       <div className="flex items-center gap-2 mb-1">
+                        {/* Channel badge */}
+                        {msg.channel === 'EMAIL' ? (
+                          <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">📧</span>
+                        ) : (
+                          <span className="text-[10px] font-medium text-green-600 bg-green-50 px-1.5 py-0.5 rounded">💬</span>
+                        )}
                         <span className="text-xs font-medium text-gray-700">
                           {isOutbound ? (isAi ? '🤖 AI' : 'You') : selectedCloseConv.lead?.firstName || 'Lead'}
                         </span>
@@ -436,10 +455,48 @@ export default function MessagesPage() {
                           <span className="text-xs text-blue-500">[auto — {msg.aiDelaySeconds}s delay]</span>
                         )}
                       </div>
-                      <div className="text-sm text-gray-800 whitespace-pre-wrap">{msg.content}</div>
+                      {/* Email subject */}
+                      {msg.channel === 'EMAIL' && msg.emailSubject && (
+                        <div className="text-xs font-semibold text-gray-500 mb-1">Re: {msg.emailSubject}</div>
+                      )}
+                      {/* Message body — strip HTML for emails */}
+                      <div className="text-sm text-gray-800 whitespace-pre-wrap">
+                        {msg.channel === 'EMAIL' ? msg.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ') : msg.content}
+                      </div>
+                      {/* Delivery status */}
+                      {isOutbound && (
+                        <div className={`text-[10px] mt-1 ${
+                          (msg.twilioStatus === 'delivered' || msg.resendStatus === 'delivered') ? 'text-green-500' :
+                          (msg.twilioStatus === 'sent' || msg.resendStatus === 'sent') ? 'text-blue-400' :
+                          (msg.twilioStatus === 'failed' || msg.resendStatus === 'failed' || msg.twilioStatus === 'undelivered') ? 'text-red-500' :
+                          (msg.resendStatus === 'bounced') ? 'text-red-500' :
+                          'text-gray-400'
+                        }`}>
+                          {(msg.twilioStatus === 'delivered' || msg.resendStatus === 'delivered') && `✓ Delivered via ${msg.channel === 'EMAIL' ? 'email' : 'SMS'}`}
+                          {msg.twilioStatus === 'sent' && msg.channel !== 'EMAIL' && '⏳ Sent via SMS'}
+                          {msg.resendStatus === 'sent' && msg.channel === 'EMAIL' && '⏳ Sent via email'}
+                          {(msg.twilioStatus === 'failed' || msg.resendStatus === 'failed') && '✗ Failed to send'}
+                          {msg.twilioStatus === 'undelivered' && '✗ Undelivered (carrier rejected)'}
+                          {msg.resendStatus === 'bounced' && '✗ Email bounced'}
+                        </div>
+                      )}
                       {msg.escalated && (
                         <div className="mt-2 text-xs text-orange-600 flex items-center gap-1">
                           <AlertTriangle size={10} /> Escalated: {msg.escalationReason || 'Manual review needed'}
+                        </div>
+                      )}
+                      {/* AI Decision Log */}
+                      {isAi && msg.aiDecisionLog && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setExpandedDecisionLog(expandedDecisionLog === msg.id ? null : msg.id) }}
+                          className="text-xs text-blue-500 hover:underline mt-1"
+                        >
+                          {expandedDecisionLog === msg.id ? 'Hide AI reasoning' : 'View AI reasoning'}
+                        </button>
+                      )}
+                      {expandedDecisionLog === msg.id && msg.aiDecisionLog && (
+                        <div className="mt-2 p-2 bg-gray-50 rounded text-xs font-mono text-gray-600 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                          {JSON.stringify(msg.aiDecisionLog, null, 2)}
                         </div>
                       )}
                     </div>
@@ -449,19 +506,37 @@ export default function MessagesPage() {
             )}
           </div>
 
-          {/* Message Input */}
-          <div className="mt-4 pt-4 border-t flex gap-3">
-            <Input
-              value={messageInput}
-              onChange={(e) => setMessageInput(e.target.value)}
-              placeholder="Type message (manual override)..."
-              className="flex-1"
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage() } }}
-            />
-            <Button onClick={handleSendMessage} disabled={sending || !messageInput.trim()}>
-              <Send size={16} className="mr-1" />
-              {sending ? 'Sending...' : 'Send'}
-            </Button>
+          {/* Message Input with Channel Selector */}
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex gap-2 mb-2">
+              <button
+                onClick={() => setSendChannel('SMS')}
+                className={`px-3 py-1 rounded text-xs font-medium ${sendChannel === 'SMS' ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}
+              >
+                💬 SMS
+              </button>
+              <button
+                onClick={() => setSendChannel('EMAIL')}
+                className={`px-3 py-1 rounded text-xs font-medium ${sendChannel === 'EMAIL' ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}
+                disabled={!selectedCloseConv?.lead?.email}
+                title={!selectedCloseConv?.lead?.email ? 'No email address available' : ''}
+              >
+                📧 Email {!selectedCloseConv?.lead?.email && '(no email)'}
+              </button>
+            </div>
+            <div className="flex gap-3">
+              <Input
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                placeholder={sendChannel === 'SMS' ? 'Type SMS (manual override)...' : 'Type email message...'}
+                className="flex-1"
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage() } }}
+              />
+              <Button onClick={handleSendMessage} disabled={sending || !messageInput.trim()}>
+                <Send size={16} className="mr-1" />
+                {sending ? 'Sending...' : `Send ${sendChannel === 'EMAIL' ? 'Email' : 'SMS'}`}
+              </Button>
+            </div>
           </div>
         </Card>
       </div>
@@ -494,8 +569,10 @@ export default function MessagesPage() {
               ) : (
                 <Badge variant="secondary">Lead (Pre-Client)</Badge>
               )}
-              <span>Channel: SMS</span>
-              {selectedConversation.phone && <span>{selectedConversation.phone}</span>}
+              {selectedConversation.channels?.has('SMS') && <span className="flex items-center gap-1">💬 SMS</span>}
+              {selectedConversation.channels?.has('EMAIL') && <span className="flex items-center gap-1">📧 Email</span>}
+              {selectedConversation.phone && <span className="flex items-center gap-1"><Phone size={12} /> {selectedConversation.phone}</span>}
+              {selectedConversation.email && <span className="flex items-center gap-1"><Mail size={12} /> {selectedConversation.email}</span>}
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm">
@@ -532,6 +609,12 @@ export default function MessagesPage() {
                   <div key={msg.id} className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[70%] ${isOutbound ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'} border rounded-lg p-3`}>
                       <div className="flex items-center gap-2 mb-1">
+                        {/* Channel badge */}
+                        {msg.channel === 'EMAIL' ? (
+                          <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">📧</span>
+                        ) : (
+                          <span className="text-[10px] font-medium text-green-600 bg-green-50 px-1.5 py-0.5 rounded">💬</span>
+                        )}
                         <span className="text-xs font-medium text-gray-700">
                           {isOutbound ? (isAi ? '🤖 AI' : 'You') : selectedConversation.name.split(' ')[0]}
                         </span>
@@ -542,10 +625,48 @@ export default function MessagesPage() {
                           <span className="text-xs text-blue-500">[auto — {msg.aiDelaySeconds}s delay]</span>
                         )}
                       </div>
-                      <div className="text-sm text-gray-800">{msg.content}</div>
+                      {/* Email subject */}
+                      {msg.channel === 'EMAIL' && msg.emailSubject && (
+                        <div className="text-xs font-semibold text-gray-500 mb-1">Re: {msg.emailSubject}</div>
+                      )}
+                      {/* Message body — strip HTML for emails */}
+                      <div className="text-sm text-gray-800 whitespace-pre-wrap">
+                        {msg.channel === 'EMAIL' ? msg.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ') : msg.content}
+                      </div>
+                      {/* Delivery status */}
+                      {isOutbound && (
+                        <div className={`text-[10px] mt-1 ${
+                          (msg.twilioStatus === 'delivered' || msg.resendStatus === 'delivered') ? 'text-green-500' :
+                          (msg.twilioStatus === 'sent' || msg.resendStatus === 'sent') ? 'text-blue-400' :
+                          (msg.twilioStatus === 'failed' || msg.resendStatus === 'failed' || msg.twilioStatus === 'undelivered') ? 'text-red-500' :
+                          (msg.resendStatus === 'bounced') ? 'text-red-500' :
+                          'text-gray-400'
+                        }`}>
+                          {(msg.twilioStatus === 'delivered' || msg.resendStatus === 'delivered') && `✓ Delivered via ${msg.channel === 'EMAIL' ? 'email' : 'SMS'}`}
+                          {msg.twilioStatus === 'sent' && msg.channel !== 'EMAIL' && '⏳ Sent via SMS'}
+                          {msg.resendStatus === 'sent' && msg.channel === 'EMAIL' && '⏳ Sent via email'}
+                          {(msg.twilioStatus === 'failed' || msg.resendStatus === 'failed') && '✗ Failed to send'}
+                          {msg.twilioStatus === 'undelivered' && '✗ Undelivered (carrier rejected)'}
+                          {msg.resendStatus === 'bounced' && '✗ Email bounced'}
+                        </div>
+                      )}
                       {msg.escalated && (
                         <div className="mt-2 text-xs text-orange-600 flex items-center gap-1">
                           <AlertTriangle size={10} /> Escalated: {msg.escalationReason || 'Manual review needed'}
+                        </div>
+                      )}
+                      {/* AI Decision Log */}
+                      {isAi && msg.aiDecisionLog && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setExpandedDecisionLog(expandedDecisionLog === msg.id ? null : msg.id) }}
+                          className="text-xs text-blue-500 hover:underline mt-1"
+                        >
+                          {expandedDecisionLog === msg.id ? 'Hide AI reasoning' : 'View AI reasoning'}
+                        </button>
+                      )}
+                      {expandedDecisionLog === msg.id && msg.aiDecisionLog && (
+                        <div className="mt-2 p-2 bg-gray-50 rounded text-xs font-mono text-gray-600 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                          {JSON.stringify(msg.aiDecisionLog, null, 2)}
                         </div>
                       )}
                     </div>
@@ -555,27 +676,37 @@ export default function MessagesPage() {
             )}
           </div>
 
-          {/* Message Input */}
-          <div className="mt-4 pt-4 border-t flex gap-3">
-            <Input
-              value={messageInput}
-              onChange={(e) => setMessageInput(e.target.value)}
-              placeholder="Type message..."
-              className="flex-1"
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage() } }}
-            />
-            <Button onClick={handleSendMessage} disabled={sending || !messageInput.trim()}>
-              <Send size={16} className="mr-1" />
-              {sending ? 'Sending...' : 'Send'}
-            </Button>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="mt-3 flex gap-4 text-xs">
-            <button className="text-blue-600 hover:underline">Toggle AI OFF for this conversation</button>
-            {selectedConversation.clientId && (
-              <button className="text-blue-600 hover:underline">View client profile</button>
-            )}
+          {/* Message Input with Channel Selector */}
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex gap-2 mb-2">
+              <button
+                onClick={() => setSendChannel('SMS')}
+                className={`px-3 py-1 rounded text-xs font-medium ${sendChannel === 'SMS' ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}
+              >
+                💬 SMS
+              </button>
+              <button
+                onClick={() => setSendChannel('EMAIL')}
+                className={`px-3 py-1 rounded text-xs font-medium ${sendChannel === 'EMAIL' ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}
+                disabled={!selectedConversation?.email}
+                title={!selectedConversation?.email ? 'No email address available' : ''}
+              >
+                📧 Email {!selectedConversation?.email && '(no email)'}
+              </button>
+            </div>
+            <div className="flex gap-3">
+              <Input
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                placeholder={sendChannel === 'SMS' ? 'Type SMS...' : 'Type email message...'}
+                className="flex-1"
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage() } }}
+              />
+              <Button onClick={handleSendMessage} disabled={sending || !messageInput.trim()}>
+                <Send size={16} className="mr-1" />
+                {sending ? 'Sending...' : `Send ${sendChannel === 'EMAIL' ? 'Email' : 'SMS'}`}
+              </Button>
+            </div>
           </div>
         </Card>
       </div>
@@ -754,8 +885,8 @@ export default function MessagesPage() {
           <p className="text-gray-500 mt-1">Unified inbox — AI handler + manual override</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" size="sm" onClick={() => { loadMessages(); loadCloseConversations() }}>
-            <RefreshCw size={14} className="mr-1" /> Refresh
+          <Button variant="outline" size="sm" disabled={refreshing} onClick={async () => { setRefreshing(true); await Promise.all([loadMessages(), loadCloseConversations()]); setRefreshing(false) }}>
+            <RefreshCw size={14} className={`mr-1 ${refreshing ? 'animate-spin' : ''}`} /> {refreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
           <Button variant="outline" size="sm" onClick={() => setViewMode('settings')}>
             <Settings size={14} className="mr-1" /> AI Settings
@@ -907,11 +1038,15 @@ export default function MessagesPage() {
                           </span>
                         )}
                       </div>
-                      <div className="text-sm text-gray-600 mt-1 truncate">
-                        {conv.lastMessage?.direction === 'OUTBOUND' && (
-                          <span className="text-gray-400">{(conv.lastMessage.aiGenerated || conv.lastMessage.senderType === 'AI') ? '🤖 ' : 'You: '}</span>
-                        )}
-                        {conv.lastMessage?.content?.substring(0, 100)}{(conv.lastMessage?.content?.length || 0) > 100 && '...'}
+                      <div className="flex items-center gap-1 mt-1">
+                        {conv.channels?.has('SMS') && <span className="text-[10px]">💬</span>}
+                        {conv.channels?.has('EMAIL') && <span className="text-[10px]">📧</span>}
+                        <span className="text-sm text-gray-600 truncate">
+                          {conv.lastMessage?.direction === 'OUTBOUND' && (
+                            <span className="text-gray-400">{(conv.lastMessage.aiGenerated || conv.lastMessage.senderType === 'AI') ? '🤖 ' : 'You: '}</span>
+                          )}
+                          {conv.lastMessage?.content?.replace(/<[^>]*>/g, '').substring(0, 80)}{(conv.lastMessage?.content?.length || 0) > 80 && '...'}
+                        </span>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1 ml-3">
@@ -992,12 +1127,14 @@ function ConversationCard({ conversation, onClick, variant }: { conversation: an
           <div className="flex items-center gap-2">
             <span className="font-medium text-gray-900 truncate">{conversation.name}</span>
             {conversation.isClient ? <Badge variant="default" className="text-xs">Client</Badge> : <Badge variant="secondary" className="text-xs">Lead</Badge>}
+            {conversation.channels?.has('SMS') && <span className="text-[10px]">💬</span>}
+            {conversation.channels?.has('EMAIL') && <span className="text-[10px]">📧</span>}
           </div>
           <div className="text-sm text-gray-600 mt-1 truncate">
             {lastMsg?.direction === 'OUTBOUND' && (
               <span className="text-gray-400">{(lastMsg.aiGenerated || lastMsg.senderType === 'AI') ? '🤖 ' : 'You: '}</span>
             )}
-            {lastMsg?.content?.substring(0, 100)}{(lastMsg?.content?.length || 0) > 100 && '...'}
+            {lastMsg?.content?.replace(/<[^>]*>/g, '').substring(0, 100)}{(lastMsg?.content?.length || 0) > 100 && '...'}
           </div>
           {conversation.escalated && lastMsg?.escalationReason && (
             <div className="text-xs text-orange-600 mt-1">AI paused — {lastMsg.escalationReason}</div>

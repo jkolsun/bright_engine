@@ -22,6 +22,7 @@ export interface SMSSendOptions {
   aiGenerated?: boolean
   aiDelaySeconds?: number
   conversationType?: string // 'pre_client' | 'post_client'
+  aiDecisionLog?: Record<string, unknown>
 }
 
 export interface SMSSendResult {
@@ -99,6 +100,7 @@ export async function sendSMSViaProvider(options: SMSSendOptions): Promise<SMSSe
         trigger: options.trigger || null,
         aiGenerated: options.aiGenerated || false,
         aiDelaySeconds: options.aiDelaySeconds || null,
+        aiDecisionLog: (options.aiDecisionLog as any) || undefined,
         conversationType: options.conversationType || null,
         twilioSid: result.sid || null,
         twilioStatus: result.success ? 'sent' : 'failed',

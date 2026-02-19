@@ -40,10 +40,10 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Update lead priority to HOT
+    // Update lead priority AND status to HOT
     await prisma.lead.update({
       where: { id: lead.id },
-      data: { priority: 'HOT' },
+      data: { priority: 'HOT', status: 'HOT_LEAD' },
     })
 
     // Create HOT_LEAD notification
@@ -55,6 +55,21 @@ export async function POST(request: NextRequest) {
         metadata: { leadId: lead.id, previewId, source: 'cta_banner' },
       },
     })
+
+    // Send urgent email notification to admin via Resend
+    try {
+      const { sendEmail } = await import('@/lib/resend')
+      await sendEmail({
+        to: process.env.ADMIN_EMAIL || 'andrew@brightautomations.net',
+        subject: `Hot Lead: ${lead.companyName} clicked CTA`,
+        html: `<p><strong>${lead.firstName}</strong> at <strong>${lead.companyName}</strong> clicked "Get Started" on their preview site.</p>
+               <p>Phone: ${lead.phone} | Email: ${lead.email || 'N/A'}</p>
+               <p><a href="${process.env.BASE_URL || 'https://app.brightautomations.net'}/admin/messages">View conversation</a></p>`,
+        trigger: 'hot_lead_admin_notification',
+      })
+    } catch (emailErr) {
+      console.error('[Preview CTA] Admin email notification failed:', emailErr)
+    }
 
     // Only trigger Close Engine if not recently clicked
     if (!recentClick) {

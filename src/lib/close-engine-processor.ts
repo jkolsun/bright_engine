@@ -3,13 +3,14 @@
  *
  * Main message processing pipeline for the AI Close Engine.
  * Calls Claude API, parses responses, applies humanizing delays,
- * checks autonomy, and sends replies via SMS.
+ * checks autonomy, and sends replies via SMS with email fallback.
  */
 
 import Anthropic from '@anthropic-ai/sdk'
 import type { Prisma } from '@prisma/client'
 import { prisma } from './db'
 import { sendSMSViaProvider } from './sms-provider'
+import { sendEmail } from './resend'
 import {
   getConversationContext,
   transitionStage,
@@ -33,6 +34,111 @@ function getAnthropicClient(): Anthropic {
     anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   }
   return anthropicClient
+}
+
+// ============================================
+// sendCloseEngineMessage() — SMS with email fallback
+// ============================================
+
+interface CloseEngineMessageOptions {
+  to: string
+  toEmail?: string
+  message: string
+  leadId: string
+  trigger: string
+  aiGenerated?: boolean
+  aiDelaySeconds?: number
+  conversationType?: string
+  sender?: string
+  aiDecisionLog?: Record<string, unknown>
+  emailSubject?: string
+}
+
+interface CloseEngineMessageResult {
+  success: boolean
+  channel: 'SMS' | 'EMAIL' | 'NONE'
+  fallbackUsed: boolean
+  error?: string
+}
+
+/**
+ * Sends a Close Engine message via SMS first, falling back to email via Resend
+ * if SMS fails (e.g. A2P 10DLC block). Logs fallback events.
+ */
+export async function sendCloseEngineMessage(options: CloseEngineMessageOptions): Promise<CloseEngineMessageResult> {
+  const {
+    to, toEmail, message, leadId, trigger, aiGenerated = true,
+    aiDelaySeconds, conversationType = 'pre_client', sender = 'clawdbot',
+    aiDecisionLog, emailSubject,
+  } = options
+
+  // 1. Try SMS first
+  const smsResult = await sendSMSViaProvider({
+    to,
+    message,
+    leadId,
+    trigger,
+    aiGenerated,
+    aiDelaySeconds,
+    conversationType,
+    sender,
+    aiDecisionLog,
+  })
+
+  if (smsResult.success) {
+    return { success: true, channel: 'SMS', fallbackUsed: false }
+  }
+
+  // 2. SMS failed — try email fallback
+  console.warn(`[CloseEngine] SMS failed for ${to} (${smsResult.error}), attempting email fallback...`)
+
+  // Look up email if not provided
+  let emailAddress = toEmail
+  if (!emailAddress && leadId) {
+    const lead = await prisma.lead.findUnique({ where: { id: leadId }, select: { email: true } })
+    emailAddress = lead?.email || undefined
+  }
+
+  if (!emailAddress) {
+    console.error(`[CloseEngine] No email address for fallback. Message delivery failed.`)
+    return { success: false, channel: 'NONE', fallbackUsed: false, error: `SMS failed (${smsResult.error}), no email for fallback` }
+  }
+
+  // 3. Send via Resend email
+  const emailResult = await sendEmail({
+    to: emailAddress,
+    subject: emailSubject || 'Message from Bright Automations',
+    html: message.replace(/\n/g, '<br>'),
+    leadId,
+    sender,
+    trigger: `${trigger}_email_fallback`,
+  })
+
+  if (emailResult.success) {
+    console.log(`[CloseEngine] Email fallback succeeded for ${emailAddress}`)
+
+    // Log fallback event
+    await prisma.leadEvent.create({
+      data: {
+        leadId,
+        eventType: 'SMS_FALLBACK_EMAIL',
+        actor: 'system',
+        metadata: {
+          smsError: smsResult.error,
+          emailTo: emailAddress,
+          resendId: emailResult.resendId,
+          trigger,
+        },
+      },
+    }).catch(() => {}) // Non-critical
+  }
+
+  return {
+    success: emailResult.success,
+    channel: 'EMAIL',
+    fallbackUsed: true,
+    error: emailResult.success ? undefined : emailResult.error,
+  }
 }
 
 // ============================================
@@ -84,21 +190,29 @@ export async function processCloseEngineFirstMessage(conversationId: string): Pr
     return
   }
 
-  // Calculate humanizing delay (120-180s for first message)
-  const delay = calculateDelay(firstMessage.length, 'first_message')
+  // Calculate humanizing delay — CTA clicks get faster response
+  const isCta = context.conversation.entryPoint === 'PREVIEW_CTA'
+  const delay = calculateDelay(firstMessage.length, isCta ? 'first_message_cta' : 'first_message')
 
-  // Schedule delayed send
+  // Schedule delayed send with email fallback
   setTimeout(async () => {
     try {
-      await sendSMSViaProvider({
+      await sendCloseEngineMessage({
         to: lead.phone,
+        toEmail: lead.email || undefined,
         message: firstMessage,
         leadId: lead.id,
         trigger: 'close_engine_first_message',
-        aiGenerated: true,
         aiDelaySeconds: delay,
         conversationType: 'pre_client',
-        sender: 'clawdbot',
+        emailSubject: `${lead.companyName} — your new website`,
+        aiDecisionLog: {
+          trigger: context.conversation.entryPoint,
+          messageType: isCta ? 'first_message_cta' : 'first_message',
+          delaySeconds: delay,
+          leadStatus: lead.status,
+          leadPriority: lead.priority,
+        },
       })
 
       // Transition to QUALIFYING
@@ -266,20 +380,35 @@ export async function processCloseEngineInbound(
     return
   }
 
-  // 8. Send reply (or payment link)
+  // 8. Build decision log
+  const aiDecisionLog = {
+    trigger: context.conversation.entryPoint,
+    leadStatus: lead.status,
+    leadPriority: lead.priority,
+    stage: context.conversation.stage,
+    delaySeconds: delay,
+    extractedData: !!claudeResponse.extractedData,
+    nextStage: claudeResponse.nextStage,
+    readyToBuild: claudeResponse.readyToBuild,
+    escalate: claudeResponse.escalate,
+    promptSnippet: systemPrompt.slice(0, 200) + '...',
+  }
+
+  // 9. Send reply (or payment link) with email fallback
   if (actionType === 'SEND_PAYMENT_LINK') {
     // Send Claude's conversational reply first, then trigger payment link flow
     setTimeout(async () => {
       try {
-        await sendSMSViaProvider({
+        await sendCloseEngineMessage({
           to: lead.phone,
+          toEmail: lead.email || undefined,
           message: claudeResponse.replyText,
           leadId: lead.id,
           trigger: `close_engine_${context.conversation.stage.toLowerCase()}`,
-          aiGenerated: true,
           aiDelaySeconds: delay,
           conversationType: 'pre_client',
-          sender: 'clawdbot',
+          emailSubject: `${lead.companyName} — next steps`,
+          aiDecisionLog,
         })
         // Generate Stripe checkout link and send it
         const { sendPaymentLink } = await import('./close-engine-payment')
@@ -291,15 +420,16 @@ export async function processCloseEngineInbound(
   } else {
     setTimeout(async () => {
       try {
-        await sendSMSViaProvider({
+        await sendCloseEngineMessage({
           to: lead.phone,
+          toEmail: lead.email || undefined,
           message: claudeResponse.replyText,
           leadId: lead.id,
           trigger: `close_engine_${context.conversation.stage.toLowerCase()}`,
-          aiGenerated: true,
           aiDelaySeconds: delay,
           conversationType: 'pre_client',
-          sender: 'clawdbot',
+          emailSubject: `${lead.companyName} — your new website`,
+          aiDecisionLog,
         })
       } catch (err) {
         console.error('[CloseEngine] Failed to send reply:', err)
@@ -324,16 +454,17 @@ export async function processCloseEngineInbound(
 
 export function calculateDelay(messageLength: number, messageType: string): number {
   const base =
-    messageType === 'first_message' ? 120
-    : messageType === 'payment_link' ? 90
-    : messageType === 'acknowledgment' ? 30
-    : messageType === 'detailed' ? 60
-    : 45 // standard
+    messageType === 'first_message_cta' ? 30  // CTA click = high intent, respond fast
+    : messageType === 'first_message' ? 60    // Was 120
+    : messageType === 'payment_link' ? 45     // Was 90
+    : messageType === 'acknowledgment' ? 20   // Was 30
+    : messageType === 'detailed' ? 40         // Was 60
+    : 30                                      // Was 45
 
-  const lengthFactor = Math.min(messageLength / 150, 1) * 60
-  const jitter = Math.random() * 30 - 15
+  const lengthFactor = Math.min(messageLength / 200, 1) * 30 // Was /150 * 60
+  const jitter = Math.random() * 20 - 10 // Was ±15, now ±10
 
-  return Math.max(30, Math.round(base + lengthFactor + jitter))
+  return Math.max(15, Math.round(base + lengthFactor + jitter))
 }
 
 // ============================================

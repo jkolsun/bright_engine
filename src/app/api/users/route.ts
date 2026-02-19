@@ -8,21 +8,37 @@ export const dynamic = 'force-dynamic'
 // GET /api/users - List users/reps
 export async function GET(request: NextRequest) {
   try {
-    // Admin-only access check
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
-    if (!session || session.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    if (!session) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const searchParams = request.nextUrl.searchParams
     const role = searchParams.get('role')
-    
     const portalType = searchParams.get('portalType')
 
     const where: any = {}
     if (role) where.role = role
     if (portalType) where.portalType = portalType
+
+    // Reps can only list other reps (for leaderboard) — return limited fields
+    if (session.role !== 'ADMIN') {
+      where.role = 'REP'
+      const users = await prisma.user.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          totalCloses: true,
+          commissionRate: true,
+          createdAt: true,
+        },
+      })
+      return NextResponse.json({ users })
+    }
 
     const users = await prisma.user.findMany({
       where,

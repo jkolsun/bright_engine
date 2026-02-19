@@ -95,7 +95,7 @@ export async function triggerCloseEngine(options: {
     await prisma.lead.update({
       where: { id: leadId },
       data: {
-        status: 'QUALIFIED',
+        status: lead.status === 'HOT_LEAD' ? 'HOT_LEAD' : 'QUALIFIED',
         priority: 'HOT',
         closeEntryPoint: entryPoint,
       },
