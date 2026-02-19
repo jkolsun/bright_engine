@@ -1,0 +1,7 @@
+[build]
+builder = "nixpacks"
+buildCommand = "npm install && npx prisma generate"
+
+[deploy]
+startCommand = "npm run worker"
+restartPolicyMaxRetries = 5
