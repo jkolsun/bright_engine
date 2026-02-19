@@ -263,6 +263,9 @@ model Client {
   tags                 String[]      @default([])
   notes                String?       @db.Text
 
+  // Channel routing
+  channelPreference    String?       @map("channel_preference") // SMS, EMAIL, or null (no preference)
+
   // Lifecycle
   siteLiveDate         DateTime?     @map("site_live_date")
   lastInteraction      DateTime?     @map("last_interaction")
@@ -1175,4 +1178,28 @@ model PromptVersion {
   createdAt   DateTime @default(now()) @map("created_at")
 
   @@map("prompt_versions")
+}
+
+// ============================================
+// CHANNEL DECISION MODEL (AI routing audit log)
+// ============================================
+model ChannelDecision {
+  id              String   @id @default(cuid())
+  clientId        String?  @map("client_id")
+  leadId          String?  @map("lead_id")
+  trigger         String   // 'post_launch_day_3', 'urgency_day_5', 'win_back', etc.
+  chosenChannel   String   @map("chosen_channel") // SMS or EMAIL
+  reason          String   // 'HARD_RULE:NO_EMAIL', 'AI:prefers_sms', 'FALLBACK:default_sms'
+  ruleApplied     String?  @map("rule_applied") // Which hard rule fired, if any
+  aiConfidence    Float?   @map("ai_confidence") // 0.0-1.0 from Claude
+  signals         Json?    // Snapshot of signals used for decision
+  latencyMs       Int?     @map("latency_ms") // How long the decision took
+  messageSent     Boolean  @default(false) @map("message_sent")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([clientId])
+  @@index([leadId])
+  @@index([chosenChannel])
+  @@index([createdAt])
+  @@map("channel_decisions")
 }

@@ -11,6 +11,7 @@ import { generateRetentionMessage } from '../lib/retention-messages'
 import { prisma } from '../lib/db'
 import { sendSMS } from '../lib/twilio'
 import { sendEmail, getEmailTemplate, triggerReferralSequence } from '../lib/resend'
+import { routeAndSend } from '../lib/channel-router'
 import { canSendMessage } from '../lib/utils'
 import { addPreviewGenerationJob, addPersonalizationJob, addScriptGenerationJob, addDistributionJob, getSharedConnection } from './queue'
 
@@ -333,7 +334,7 @@ async function startWorkers() {
 // SEQUENCE FUNCTIONS
 // ============================================
 
-// Generic AI-powered touchpoint sender
+// Generic AI-powered touchpoint sender (routes via channel router)
 async function sendAdaptiveTouchpoint(clientId: string, touchpointDay: number, nextTouchpoint?: string, nextDaysOffset?: number) {
   const client = await prisma.client.findUnique({
     where: { id: clientId },
@@ -354,11 +355,13 @@ async function sendAdaptiveTouchpoint(clientId: string, touchpointDay: number, n
 
     const { message } = await generateRetentionMessage(clientId, touchpointDay, guidance)
 
-    await sendSMS({
-      to: client.lead.phone,
-      message,
+    await routeAndSend({
       clientId: client.id,
       trigger: `post_launch_day_${touchpointDay}`,
+      messageContent: message,
+      to: client.lead.phone,
+      toEmail: client.lead.email || client.email || undefined,
+      sender: 'system',
     })
   } catch (error) {
     console.error(`[RETENTION] AI message failed for day ${touchpointDay}:`, error)
@@ -401,11 +404,14 @@ async function sendWinBackDay7(clientId: string) {
 
   if (!client || !client.lead) return
 
-  await sendSMS({
-    to: client.lead.phone,
-    message: `Your hosting was cancelled. ${client.companyName}'s site goes offline in 7 days. Reply "keep it" to reactivate.`,
+  await routeAndSend({
     clientId: client.id,
     trigger: 'win_back_day_7',
+    messageContent: `Your hosting was cancelled. ${client.companyName}'s site goes offline in 7 days. Reply "keep it" to reactivate.`,
+    urgency: 'high',
+    to: client.lead.phone,
+    toEmail: client.lead.email || client.email || undefined,
+    sender: 'system',
   })
 }
 
@@ -417,11 +423,13 @@ async function sendReferralDay45(clientId: string) {
 
   if (!client || !client.lead) return
 
-  await sendSMS({
-    to: client.lead.phone,
-    message: `Know a business owner who needs a site? Refer them, you both get a free month of hosting.`,
+  await routeAndSend({
     clientId: client.id,
     trigger: 'referral_day_45',
+    messageContent: `Know a business owner who needs a site? Refer them, you both get a free month of hosting.`,
+    to: client.lead.phone,
+    toEmail: client.lead.email || client.email || undefined,
+    sender: 'system',
   })
 }
 

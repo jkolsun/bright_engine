@@ -247,10 +247,13 @@ export default function ClientsPage() {
         })
         fetchClients()
         fetchOverviewStats()
-      } else { alert('Failed to create client') }
+      } else {
+        const errData = await res.json().catch(() => ({}))
+        alert(`Failed to create client: ${errData.detail || errData.error || res.statusText}`)
+      }
     } catch (error) {
       console.error('Error creating client:', error)
-      alert('Failed to create client')
+      alert('Failed to create client: network error')
     }
   }
 

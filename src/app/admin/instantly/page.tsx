@@ -4,13 +4,11 @@ import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import {
   Mail,
-  MousePointerClick,
   MessageSquare,
   AlertTriangle,
   CheckCircle2,
   TrendingUp,
   Eye,
-  Phone,
   ArrowRight,
   RefreshCw,
   Zap,
@@ -19,6 +17,8 @@ import {
   Globe,
   X,
   UserPlus,
+  Upload,
+  Loader2,
 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -156,6 +156,39 @@ function InstantlyDashboard() {
   const [showAssignBanner, setShowAssignBanner] = useState(assignLeadIds.length > 0)
 
   const [assignError, setAssignError] = useState<string | null>(null)
+  const [pushImmediately, setPushImmediately] = useState(true)
+
+  // Push to Instantly state
+  const [pushingCampaign, setPushingCampaign] = useState<string | null>(null)
+  const [pushResult, setPushResult] = useState<string | null>(null)
+  const [pushError, setPushError] = useState<string | null>(null)
+
+  const handlePushToInstantly = async (campaignId: string, campaignName: string) => {
+    setPushingCampaign(campaignId)
+    setPushError(null)
+    setPushResult(null)
+    try {
+      const res = await fetch('/api/instantly/push-leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId }),
+      })
+      const data = await res.json()
+      if (res.ok && data.pushed > 0) {
+        const failMsg = data.failed > 0 ? ` (${data.failed} failed)` : ''
+        const skipMsg = data.skippedNoEmail > 0 ? ` (${data.skippedNoEmail} skipped — no email)` : ''
+        setPushResult(`Pushed ${data.pushed} leads to "${campaignName}"${failMsg}${skipMsg}`)
+        setTimeout(() => setPushResult(null), 7000)
+        fetchStats()
+      } else {
+        setPushError(data.error || 'Push failed')
+      }
+    } catch (err) {
+      setPushError(err instanceof Error ? err.message : 'Push request failed')
+    } finally {
+      setPushingCampaign(null)
+    }
+  }
 
   const handleAssignToCampaign = async (campaignId: string, campaignName: string, retries = 3) => {
     if (assignLeadIds.length === 0) return
@@ -170,7 +203,7 @@ function InstantlyDashboard() {
         const res = await fetch('/api/instantly/assign-campaign', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ leadIds: assignLeadIds, campaignId, campaignName }),
+          body: JSON.stringify({ leadIds: assignLeadIds, campaignId, campaignName, pushImmediately }),
           signal: controller.signal,
         })
         clearTimeout(timeout)
@@ -178,7 +211,12 @@ function InstantlyDashboard() {
         const data = await res.json()
         if (res.ok) {
           const skippedMsg = data.skipped > 0 ? ` (${data.skipped} skipped — missing email or preview URL)` : ''
-          setAssignSuccess(`${data.updated} leads assigned to "${campaignName}"${skippedMsg}`)
+          const pushMsg = data.pushResult?.pushed > 0
+            ? ` — ${data.pushResult.pushed} pushed to Instantly!`
+            : data.pushResult?.errors?.length
+            ? ` — Push failed: ${data.pushResult.errors[0]}`
+            : ''
+          setAssignSuccess(`${data.updated} leads assigned to "${campaignName}"${skippedMsg}${pushMsg}`)
           setShowAssignBanner(false)
           window.history.replaceState({}, '', '/admin/instantly')
           setTimeout(() => setAssignSuccess(''), 7000)
@@ -339,13 +377,6 @@ function InstantlyDashboard() {
           </p>
         </div>
         <div className="flex gap-2">
-          <a
-            href="/admin/email-preview"
-            className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
-          >
-            <Eye size={14} />
-            Email Preview
-          </a>
           <button
             onClick={() => fetchStats()}
             className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
@@ -381,6 +412,15 @@ function InstantlyDashboard() {
               <X size={18} />
             </button>
           </div>
+          <label className="flex items-center gap-2 mb-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={pushImmediately}
+              onChange={(e) => setPushImmediately(e.target.checked)}
+              className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+            />
+            <span className="text-sm text-purple-700 font-medium">Push to Instantly immediately (recommended)</span>
+          </label>
           <div className="flex gap-3 flex-wrap">
             {stats?.campaigns.map((campaign) => (
               <button
@@ -389,6 +429,7 @@ function InstantlyDashboard() {
                 disabled={assigningToCampaign}
                 className="px-4 py-2 bg-white border border-purple-200 rounded-lg text-sm font-medium text-purple-700 hover:bg-purple-100 hover:border-purple-300 transition-colors disabled:opacity-50"
               >
+                {assigningToCampaign ? <Loader2 size={14} className="inline mr-1 animate-spin" /> : null}
                 {campaign.campaign_name} ({campaign.total_leads} leads)
               </button>
             ))}
@@ -434,6 +475,32 @@ function InstantlyDashboard() {
             onClick={() => setSyncError(null)}
             className="text-red-400 hover:text-red-600"
           >
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
+      {/* Push Result */}
+      {pushResult && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Upload size={20} className="text-green-600" />
+            <span className="font-medium text-green-900">{pushResult}</span>
+          </div>
+          <button onClick={() => setPushResult(null)} className="text-green-400 hover:text-green-600">
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
+      {/* Push Error */}
+      {pushError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={20} className="text-red-600" />
+            <span className="font-medium text-red-900">Push failed: {pushError}</span>
+          </div>
+          <button onClick={() => setPushError(null)} className="text-red-400 hover:text-red-600">
             <X size={18} />
           </button>
         </div>
@@ -556,6 +623,23 @@ function InstantlyDashboard() {
                 {campaign.bounced} bounced
               </span>
             </div>
+
+            {/* Push Now button — visible when queued leads exist */}
+            {campaign.queued > 0 && (
+              <div className="mt-4 pt-3 border-t border-slate-100">
+                <button
+                  onClick={() => handlePushToInstantly(campaign.campaign_id, campaign.campaign_name)}
+                  disabled={pushingCampaign === campaign.campaign_id}
+                  className="w-full px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
+                >
+                  {pushingCampaign === campaign.campaign_id ? (
+                    <><Loader2 size={14} className="animate-spin" /> Pushing...</>
+                  ) : (
+                    <><Upload size={14} /> Push {campaign.queued} Queued Leads to Instantly</>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         ))}
 

@@ -68,9 +68,10 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({ client })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating client:', error)
-    return NextResponse.json({ error: 'Failed to create client' }, { status: 500 })
+    const message = error?.message || 'Unknown error'
+    return NextResponse.json({ error: 'Failed to create client', detail: message }, { status: 500 })
   }
 }
 

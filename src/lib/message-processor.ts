@@ -1,5 +1,6 @@
 import { prisma } from './db'
 import { dispatchWebhook, WebhookEvents } from './webhook-dispatcher'
+import { detectAndSetChannelPreference } from './channel-router'
 import { MessageChannel } from '@prisma/client'
 
 /**
@@ -64,6 +65,11 @@ export async function processIncomingMessage(
           }
         }
       })
+    }
+
+    // Auto-detect channel preference for clients
+    if (lead.client) {
+      await detectAndSetChannelPreference(lead.client.id, channel)
     }
 
     console.log(`📨 Message processed: ${lead.companyName} - "${content.substring(0, 50)}..."`)
