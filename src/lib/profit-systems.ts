@@ -119,60 +119,113 @@ export async function shouldPitchAnnualHosting(
 }
 
 /**
- * PROFIT SYSTEM 3: UPSELLS
- * Pitch premium features: GBP, Social, Review Widget, SEO
- * Triggered by: engagement signals + page performance + customer lifetime value
+ * PROFIT SYSTEM 3: UPSELLS (Dynamic DB-driven)
+ * Pulls active products from UpsellProduct table, applies eligibility filters.
  */
-export async function recommendUpsells(clientId: string): Promise<string[]> {
+export async function recommendUpsells(clientId: string): Promise<{
+  productId: string
+  name: string
+  price: number
+  recurring: boolean
+  aiProductSummary: string | null
+  aiPitchInstructions: string | null
+  stripeLink: string | null
+}[]> {
   const client = await prisma.client.findUnique({
     where: { id: clientId },
-    include: {
-      lead: {
-        include: {
-          events: true,
-        },
-      },
-      revenue: true,
-    },
+    include: { lead: true }
   })
-
   if (!client) return []
 
-  const recommendations: string[] = []
-  const monthlyValue = client.revenue.reduce((sum, r) => sum + r.amount, 0) / 12
+  // Get all active upsell products, ordered by priority
+  const products = await prisma.upsellProduct.findMany({
+    where: { active: true },
+    orderBy: { sortOrder: 'asc' },
+  })
 
-  // GBP: High-intent + local search industry
-  if (
-    client.lead?.industry &&
-    ['RESTORATION', 'ROOFING', 'PLUMBING', 'HVAC', 'PAINTING', 'LANDSCAPING'].includes(
-      client.lead.industry
+  // Get all existing pitches for this client
+  const existingPitches = await prisma.upsellPitch.findMany({
+    where: { clientId },
+  })
+
+  const clientAgeDays = Math.floor(
+    (Date.now() - new Date(client.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+  )
+  const clientIndustry = client.industry || client.lead?.industry || ''
+
+  const recommendations: {
+    productId: string
+    name: string
+    price: number
+    recurring: boolean
+    aiProductSummary: string | null
+    aiPitchInstructions: string | null
+    stripeLink: string | null
+  }[] = []
+
+  for (const product of products) {
+    // Check min client age
+    if (product.minClientAgeDays && clientAgeDays < product.minClientAgeDays) continue
+
+    // Check industry eligibility (empty array = all industries eligible)
+    if (product.eligibleIndustries.length > 0 &&
+        !product.eligibleIndustries.includes(clientIndustry)) continue
+
+    // Check max pitch attempts
+    const pitchCount = existingPitches.filter(p => p.productId === product.id).length
+    if (pitchCount >= product.maxPitchesPerClient) continue
+
+    // Skip if client already paid for this product
+    const alreadyPaid = existingPitches.some(
+      p => p.productId === product.id && p.status === 'paid'
     )
-  ) {
-    recommendations.push('GBP_OPTIMIZATION')
-  }
+    if (alreadyPaid) continue
 
-  // Social: E-commerce or high-engagement verticals
-  const hasEngagement = client.lead?.events.filter((e) =>
-    ['PREVIEW_CTA_CLICKED', 'PREVIEW_RETURN_VISIT'].includes(e.eventType)
-  ).length ?? 0
-  if (hasEngagement > 2) {
-    recommendations.push('SOCIAL_MANAGEMENT')
-  }
-
-  // Review Widget: Service-based (high review reliance)
-  if (
-    client.lead?.enrichedReviews &&
-    client.lead.enrichedReviews > 10
-  ) {
-    recommendations.push('REVIEW_WIDGET')
-  }
-
-  // SEO: Any business with competitive keywords
-  if (monthlyValue > 500) {
-    recommendations.push('SEO_OPTIMIZATION')
+    recommendations.push({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      recurring: product.recurring,
+      aiProductSummary: product.aiProductSummary,
+      aiPitchInstructions: product.aiPitchInstructions,
+      stripeLink: product.stripeLink,
+    })
   }
 
   return recommendations
+}
+
+/**
+ * Build upsell context for AI prompts.
+ * Called by Close Engine and Post-Client AI.
+ * Returns a formatted text block the AI uses to understand available upsells.
+ */
+export async function buildUpsellContextForAI(clientId: string): Promise<string> {
+  const recommendations = await recommendUpsells(clientId)
+
+  if (recommendations.length === 0) {
+    return 'No upsell products are currently recommended for this client.'
+  }
+
+  let context = '## Available Upsells for This Client\n\n'
+  context += 'You may mention these products if the conversation naturally leads to them, '
+  context += 'or if the client asks about additional services. Never hard-sell.\n\n'
+
+  for (const rec of recommendations) {
+    context += `### ${rec.name} — $${rec.price}${rec.recurring ? '/mo' : ''}${rec.stripeLink ? '' : ' (no payment link yet)'}\n`
+    if (rec.aiProductSummary) {
+      context += `Summary: ${rec.aiProductSummary}\n`
+    }
+    if (rec.aiPitchInstructions) {
+      context += `Pitch guidance: ${rec.aiPitchInstructions}\n`
+    }
+    if (rec.stripeLink) {
+      context += `Payment link: ${rec.stripeLink}\n`
+    }
+    context += '\n'
+  }
+
+  return context
 }
 
 /**
@@ -331,7 +384,7 @@ export async function checkProfitSystemTriggers(clientId: string) {
   // Check general upsells
   const upsells = await recommendUpsells(clientId)
   if (upsells.length > 0) {
-    triggers.upsells = upsells
+    triggers.upsells = upsells.map(u => u.name)
   }
 
   return triggers

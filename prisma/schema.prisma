@@ -1068,13 +1068,27 @@ model SequenceProgress {
 // UPSELL MODEL (Available upsell products)
 // ============================================
 model UpsellProduct {
-  id           String  @id @default(cuid())
-  name         String  // SEO Add-on, Google Business Opt, etc.
-  price        Float
-  recurring    Boolean @default(true) // monthly vs one-time
-  stripeLink   String? @map("stripe_link")
-  active       Boolean @default(true)
-  createdAt    DateTime @default(now()) @map("created_at")
+  id                  String   @id @default(cuid())
+  name                String
+  price               Float
+  recurring           Boolean  @default(true)
+  stripeLink          String?  @map("stripe_link")
+  active              Boolean  @default(true)
+
+  // AI awareness fields
+  description         String?  @db.Text
+  aiPitchInstructions String?  @db.Text  @map("ai_pitch_instructions")
+  aiProductSummary    String?  @map("ai_product_summary")
+
+  // Eligibility & targeting
+  eligibleIndustries  String[] @default([]) @map("eligible_industries")
+  minClientAgeDays    Int?     @map("min_client_age_days")
+  maxPitchesPerClient Int      @default(3) @map("max_pitches_per_client")
+  pitchChannel        String   @default("sms") @map("pitch_channel")
+  sortOrder           Int      @default(0) @map("sort_order")
+
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   pitches UpsellPitch[]
 

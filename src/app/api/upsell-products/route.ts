@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
           }
         }
       },
-      orderBy: { name: 'asc' },
+      orderBy: { sortOrder: 'asc' },
     })
 
     return NextResponse.json({ products })
@@ -53,6 +53,14 @@ export async function POST(request: NextRequest) {
         recurring: data.recurring ?? true,
         stripeLink: data.stripeLink,
         active: data.active ?? true,
+        description: data.description || null,
+        aiPitchInstructions: data.aiPitchInstructions || null,
+        aiProductSummary: data.aiProductSummary || null,
+        eligibleIndustries: data.eligibleIndustries || [],
+        minClientAgeDays: data.minClientAgeDays || null,
+        maxPitchesPerClient: data.maxPitchesPerClient ?? 3,
+        pitchChannel: data.pitchChannel || 'sms',
+        sortOrder: data.sortOrder ?? 0,
       }
     })
 

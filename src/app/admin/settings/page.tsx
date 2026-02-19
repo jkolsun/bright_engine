@@ -7,7 +7,8 @@ import {
   Building, Target, Zap, Users, Key, DollarSign,
   CheckCircle2, AlertTriangle, XCircle, RefreshCw, Loader2,
   Save, Plus, Trash2, Phone, Link, Brain, Sparkles,
-  BarChart3, ExternalLink, Eye, Search, ChevronDown, Split
+  BarChart3, ExternalLink, Eye, Search, ChevronDown, Split,
+  Pencil, Shield, AlertCircle
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 
@@ -193,9 +194,29 @@ export default function SettingsPage() {
   const [newCampaignName, setNewCampaignName] = useState('')
   const [newCampaignId, setNewCampaignId] = useState('')
 
-  // Upsell management
+  // Upsell management (legacy local state — kept for client_sequences compat)
   const [addUpsellOpen, setAddUpsellOpen] = useState(false)
   const [newUpsell, setNewUpsell] = useState({ name: '', price: '', key: '', phone: '', paymentLink: '' })
+
+  // DB-backed upsell products
+  const [dbUpsellProducts, setDbUpsellProducts] = useState<any[]>([])
+  const [upsellProductsLoading, setUpsellProductsLoading] = useState(false)
+  const [addDbUpsellOpen, setAddDbUpsellOpen] = useState(false)
+  const [newDbUpsell, setNewDbUpsell] = useState({
+    name: '', price: 0, recurring: true, stripeLink: '', description: '',
+    aiPitchInstructions: '', aiProductSummary: '', eligibleIndustries: '',
+    minClientAgeDays: '', maxPitchesPerClient: 3, pitchChannel: 'sms', sortOrder: 0,
+  })
+
+  // Payment Links (live CRUD)
+  const [paymentLinks, setPaymentLinks] = useState<any[]>([])
+  const [envLinks, setEnvLinks] = useState<Record<string, { set: boolean; preview: string }>>({})
+  const [paymentLinksLoading, setPaymentLinksLoading] = useState(false)
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null)
+  const [editingLinkData, setEditingLinkData] = useState<any>(null)
+  const [addingLink, setAddingLink] = useState(false)
+  const [newLink, setNewLink] = useState({ id: '', label: '', url: '', price: 0, recurring: false, envKey: '', active: true })
+  const [verifyResults, setVerifyResults] = useState<Record<string, { valid: boolean; reason: string } | null>>({})
 
   // Save state per section
   const [savingKey, setSavingKey] = useState<string | null>(null)
@@ -227,6 +248,8 @@ export default function SettingsPage() {
   useEffect(() => {
     loadAllSettings()
     fetchReps()
+    fetchUpsellProducts()
+    fetchPaymentLinks()
   }, [])
 
   const fetchReps = async () => {
@@ -321,6 +344,164 @@ export default function SettingsPage() {
       console.error('Failed to save:', e)
     } finally {
       setSavingKey(null)
+    }
+  }
+
+  // ── Upsell Products (DB-backed) ────────────────────────────
+  const fetchUpsellProducts = async () => {
+    setUpsellProductsLoading(true)
+    try {
+      const res = await fetch('/api/upsell-products')
+      if (res.ok) {
+        const data = await res.json()
+        setDbUpsellProducts(data.products || [])
+      }
+    } catch { /* ignore */ }
+    finally { setUpsellProductsLoading(false) }
+  }
+
+  const addDbUpsellProduct = async () => {
+    if (!newDbUpsell.name.trim() || !newDbUpsell.price) return
+    try {
+      const res = await fetch('/api/upsell-products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newDbUpsell,
+          eligibleIndustries: newDbUpsell.eligibleIndustries
+            ? newDbUpsell.eligibleIndustries.split(',').map((s: string) => s.trim()).filter(Boolean)
+            : [],
+          minClientAgeDays: newDbUpsell.minClientAgeDays ? parseInt(newDbUpsell.minClientAgeDays) : null,
+        }),
+      })
+      if (res.ok) {
+        await fetchUpsellProducts()
+        setNewDbUpsell({
+          name: '', price: 0, recurring: true, stripeLink: '', description: '',
+          aiPitchInstructions: '', aiProductSummary: '', eligibleIndustries: '',
+          minClientAgeDays: '', maxPitchesPerClient: 3, pitchChannel: 'sms', sortOrder: 0,
+        })
+        setAddDbUpsellOpen(false)
+      }
+    } catch (e) { console.error('Failed to add upsell product:', e) }
+  }
+
+  const deleteDbUpsellProduct = async (id: string) => {
+    try {
+      const res = await fetch(`/api/upsell-products/${id}`, { method: 'DELETE' })
+      if (res.ok) await fetchUpsellProducts()
+    } catch (e) { console.error('Failed to delete upsell product:', e) }
+  }
+
+  // ── Payment Links (live CRUD) ─────────────────────────────
+  const DEFAULT_PAYMENT_LINK_SEEDS = [
+    { id: 'site_build', label: 'Site Build', price: 149, recurring: false, envKey: 'STRIPE_LINK_SITE_BUILD' },
+    { id: 'hosting_monthly', label: 'Monthly Hosting ($39/mo)', price: 39, recurring: true, envKey: 'STRIPE_LINK_HOSTING_39' },
+    { id: 'hosting_annual', label: 'Annual Hosting ($349/yr)', price: 349, recurring: false, envKey: 'STRIPE_LINK_HOSTING_ANNUAL' },
+    { id: 'gbp_setup', label: 'Google Business Profile', price: 49, recurring: false, envKey: 'STRIPE_LINK_GBP' },
+    { id: 'review_widget', label: 'Review Widget', price: 69, recurring: true, envKey: 'STRIPE_LINK_REVIEW_WIDGET' },
+    { id: 'seo_monthly', label: 'SEO Package', price: 149, recurring: true, envKey: 'STRIPE_LINK_SEO' },
+    { id: 'social_monthly', label: 'Social Media', price: 99, recurring: true, envKey: 'STRIPE_LINK_SOCIAL' },
+  ]
+
+  const fetchPaymentLinks = async () => {
+    setPaymentLinksLoading(true)
+    try {
+      const res = await fetch('/api/settings/payment-links')
+      if (res.ok) {
+        const data = await res.json()
+        setEnvLinks(data.envLinks || {})
+
+        if (data.links && data.links.length > 0) {
+          setPaymentLinks(data.links)
+        } else {
+          // Auto-seed: if DB is empty, scaffold defaults with BLANK URLs
+          const hasAnyEnvVar = Object.values(data.envLinks || {}).some((v: any) => v.set)
+          if (hasAnyEnvVar) {
+            const now = new Date().toISOString()
+            const seeded = DEFAULT_PAYMENT_LINK_SEEDS.map(seed => ({
+              ...seed,
+              url: '', // CRITICAL: blank — user must paste their actual Stripe URLs
+              active: true,
+              createdAt: now,
+              updatedAt: now,
+            }))
+            setPaymentLinks(seeded)
+            // Save the scaffolded links to DB
+            await fetch('/api/settings/payment-links', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ links: seeded }),
+            })
+          }
+        }
+      }
+    } catch { /* ignore */ }
+    finally { setPaymentLinksLoading(false) }
+  }
+
+  const savePaymentLinks = async (links: any[]) => {
+    try {
+      const res = await fetch('/api/settings/payment-links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ links }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setPaymentLinks(data.links || links)
+      }
+    } catch (e) { console.error('Failed to save payment links:', e) }
+  }
+
+  const handleAddLink = async () => {
+    if (!newLink.label.trim() || !newLink.id.trim()) return
+    const now = new Date().toISOString()
+    const updated = [...paymentLinks, { ...newLink, createdAt: now, updatedAt: now }]
+    setPaymentLinks(updated)
+    await savePaymentLinks(updated)
+    setNewLink({ id: '', label: '', url: '', price: 0, recurring: false, envKey: '', active: true })
+    setAddingLink(false)
+  }
+
+  const handleDeleteLink = async (id: string) => {
+    const updated = paymentLinks.filter((l: any) => l.id !== id)
+    setPaymentLinks(updated)
+    await savePaymentLinks(updated)
+  }
+
+  const handleUpdateLink = async (id: string, updates: any) => {
+    const updated = paymentLinks.map((l: any) =>
+      l.id === id ? { ...l, ...updates, updatedAt: new Date().toISOString() } : l
+    )
+    setPaymentLinks(updated)
+    await savePaymentLinks(updated)
+    setEditingLinkId(null)
+    setEditingLinkData(null)
+  }
+
+  const handleVerifyLink = async (url: string, id: string) => {
+    setVerifyResults(prev => ({ ...prev, [id]: null }))
+    try {
+      const res = await fetch('/api/settings/payment-links/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setVerifyResults(prev => ({ ...prev, [id]: { valid: data.valid, reason: data.reason } }))
+      }
+    } catch {
+      setVerifyResults(prev => ({ ...prev, [id]: { valid: false, reason: 'Verification request failed' } }))
+    }
+  }
+
+  const handleVerifyAll = async () => {
+    for (const link of paymentLinks) {
+      if (link.url && link.active) {
+        await handleVerifyLink(link.url, link.id)
+      }
     }
   }
 
@@ -675,29 +856,403 @@ export default function SettingsPage() {
             </div>
           </Card>
 
-          {/* Stripe Payment Links */}
+          {/* Stripe Payment Links — Live CRUD */}
           <Card className="p-6">
-            <SectionHeader title="Stripe Payment Links" description="Configured via Railway environment variables" />
-            <div className="space-y-2">
-              {[
-                { label: 'Site Build ($149)', env: 'STRIPE_LINK_SITE_BUILD' },
-                { label: 'Monthly Hosting ($39/mo)', env: 'STRIPE_LINK_HOSTING_39' },
-                { label: 'Annual Hosting ($349/yr)', env: 'STRIPE_LINK_HOSTING_ANNUAL' },
-                { label: 'Google Business Profile ($49)', env: 'STRIPE_LINK_GBP' },
-                { label: 'Review Widget ($69/mo)', env: 'STRIPE_LINK_REVIEW_WIDGET' },
-                { label: 'SEO ($149/mo)', env: 'STRIPE_LINK_SEO' },
-                { label: 'Social Media ($99/mo)', env: 'STRIPE_LINK_SOCIAL' },
-              ].map((link) => (
-                <div key={link.env} className="flex items-center justify-between p-3 bg-gray-50 rounded text-sm">
-                  <div className="flex items-center gap-2">
-                    <Link size={14} className="text-gray-400" />
-                    <span className="font-medium text-gray-700">{link.label}</span>
-                  </div>
-                  <span className="text-xs text-gray-400 font-mono">{link.env}</span>
-                </div>
-              ))}
+            <div className="flex items-center justify-between mb-4">
+              <SectionHeader title="Stripe Payment Links" description="Manage live Stripe payment links — DB is the single source of truth" />
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleVerifyAll}>
+                  <Shield size={14} className="mr-1" />
+                  Verify All
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setAddingLink(!addingLink)}>
+                  <Plus size={14} className="mr-1" />
+                  Add Link
+                </Button>
+              </div>
             </div>
-            <p className="text-xs text-gray-400 mt-3">Payment links are managed in your Railway/Stripe dashboard. Changes there take effect immediately.</p>
+
+            {/* Add New Link Form */}
+            {addingLink && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <FieldLabel>Label</FieldLabel>
+                    <Input
+                      placeholder="e.g., Site Build"
+                      value={newLink.label}
+                      onChange={(e) => setNewLink({ ...newLink, label: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Stripe URL</FieldLabel>
+                    <Input
+                      placeholder="https://buy.stripe.com/..."
+                      value={newLink.url}
+                      onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Price ($)</FieldLabel>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={newLink.price}
+                      onChange={(e) => setNewLink({ ...newLink, price: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <FieldLabel>Type</FieldLabel>
+                    <select
+                      value={newLink.recurring ? 'recurring' : 'one_time'}
+                      onChange={(e) => setNewLink({ ...newLink, recurring: e.target.value === 'recurring' })}
+                      className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm"
+                    >
+                      <option value="one_time">One-time</option>
+                      <option value="recurring">Recurring</option>
+                    </select>
+                  </div>
+                  <div>
+                    <FieldLabel>ID (unique key)</FieldLabel>
+                    <Input
+                      placeholder="e.g., site_build"
+                      value={newLink.id}
+                      onChange={(e) => setNewLink({ ...newLink, id: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') })}
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Env Var Key (optional)</FieldLabel>
+                    <Input
+                      placeholder="e.g., STRIPE_LINK_SITE_BUILD"
+                      value={newLink.envKey}
+                      onChange={(e) => setNewLink({ ...newLink, envKey: e.target.value })}
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" size="sm" onClick={() => { setAddingLink(false); setNewLink({ id: '', label: '', url: '', price: 0, recurring: false, envKey: '', active: true }) }}>Cancel</Button>
+                  <Button size="sm" onClick={handleAddLink} disabled={!newLink.label.trim() || !newLink.id.trim()}>Add Link</Button>
+                </div>
+              </div>
+            )}
+
+            {/* Payment Links List */}
+            {paymentLinksLoading ? (
+              <div className="flex items-center justify-center py-8 text-gray-500 gap-2">
+                <Loader2 size={16} className="animate-spin" />
+                <span className="text-sm">Loading payment links...</span>
+              </div>
+            ) : paymentLinks.length === 0 ? (
+              <div className="text-center py-8 text-gray-400 text-sm">No payment links configured. Click &quot;Add Link&quot; to get started.</div>
+            ) : (
+              <div className="space-y-2">
+                {paymentLinks.map((link: any) => {
+                  const isEditing = editingLinkId === link.id
+                  const verify = verifyResults[link.id]
+                  return (
+                    <div key={link.id} className={`p-3 rounded-lg border ${link.active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
+                      {isEditing ? (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                              <label className="text-xs text-gray-500 block mb-1">Label</label>
+                              <Input
+                                className="h-8 text-sm"
+                                value={editingLinkData?.label || ''}
+                                onChange={(e) => setEditingLinkData({ ...editingLinkData, label: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500 block mb-1">URL</label>
+                              <Input
+                                className="h-8 text-sm font-mono"
+                                value={editingLinkData?.url || ''}
+                                onChange={(e) => setEditingLinkData({ ...editingLinkData, url: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500 block mb-1">Price</label>
+                              <Input
+                                type="number"
+                                className="h-8 text-sm"
+                                value={editingLinkData?.price || 0}
+                                onChange={(e) => setEditingLinkData({ ...editingLinkData, price: parseFloat(e.target.value) || 0 })}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="outline" size="sm" onClick={() => { setEditingLinkId(null); setEditingLinkData(null) }}>Cancel</Button>
+                            <Button size="sm" onClick={() => handleUpdateLink(link.id, editingLinkData)}>Save</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full ${link.url ? (link.active ? 'bg-green-500' : 'bg-gray-400') : 'bg-amber-500'}`} />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-gray-900">{link.label}</span>
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+                                  ${link.price}{link.recurring ? '/mo' : ''}
+                                </span>
+                                {!link.url && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-amber-50 text-amber-600">No URL</span>
+                                )}
+                              </div>
+                              {link.url && (
+                                <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline font-mono truncate block max-w-[400px]">
+                                  {link.url}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {verify && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${verify.valid ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                                {verify.valid ? 'Live' : 'Failed'}
+                              </span>
+                            )}
+                            {link.url && (
+                              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleVerifyLink(link.url, link.id)}>
+                                <Shield size={12} className="mr-1" />
+                                Verify
+                              </Button>
+                            )}
+                            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setEditingLinkId(link.id); setEditingLinkData({ ...link }) }}>
+                              <Pencil size={12} className="mr-1" />
+                              Edit
+                            </Button>
+                            <button
+                              onClick={() => handleDeleteLink(link.id)}
+                              className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Environment Variable Cross-Check */}
+            {Object.keys(envLinks).length > 0 && (
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle size={14} className="text-gray-500" />
+                  <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Railway Env Var Cross-Check</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                  {Object.entries(envLinks).map(([key, status]) => (
+                    <div key={key} className="flex items-center gap-2 text-xs py-0.5">
+                      <div className={`w-1.5 h-1.5 rounded-full ${status.set ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <span className="font-mono text-gray-600">{key}</span>
+                      <span className={status.set ? 'text-green-600' : 'text-gray-400'}>
+                        {status.set ? 'Set' : 'Not set'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-2">Env vars are fallbacks. DB links take priority when both exist.</p>
+              </div>
+            )}
+          </Card>
+
+          {/* Upsell Products (DB-backed) */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <SectionHeader title="Upsell Products" description="AI-aware products — managed via database, visible to Close Engine and Post-Client AI" />
+              <Button variant="outline" size="sm" onClick={() => setAddDbUpsellOpen(!addDbUpsellOpen)}>
+                <Plus size={14} className="mr-1" />
+                Add Product
+              </Button>
+            </div>
+
+            {/* Add Product Form */}
+            {addDbUpsellOpen && (
+              <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <FieldLabel>Product Name</FieldLabel>
+                    <Input
+                      placeholder="e.g., SEO Package"
+                      value={newDbUpsell.name}
+                      onChange={(e) => setNewDbUpsell({ ...newDbUpsell, name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Price ($)</FieldLabel>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={newDbUpsell.price || ''}
+                      onChange={(e) => setNewDbUpsell({ ...newDbUpsell, price: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Type</FieldLabel>
+                    <select
+                      value={newDbUpsell.recurring ? 'recurring' : 'one_time'}
+                      onChange={(e) => setNewDbUpsell({ ...newDbUpsell, recurring: e.target.value === 'recurring' })}
+                      className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm"
+                    >
+                      <option value="one_time">One-time</option>
+                      <option value="recurring">Recurring (monthly)</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <FieldLabel>Stripe Payment Link</FieldLabel>
+                    <Input
+                      placeholder="https://buy.stripe.com/..."
+                      value={newDbUpsell.stripeLink}
+                      onChange={(e) => setNewDbUpsell({ ...newDbUpsell, stripeLink: e.target.value })}
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Pitch Channel</FieldLabel>
+                    <select
+                      value={newDbUpsell.pitchChannel}
+                      onChange={(e) => setNewDbUpsell({ ...newDbUpsell, pitchChannel: e.target.value })}
+                      className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm"
+                    >
+                      <option value="sms">SMS</option>
+                      <option value="email">Email</option>
+                      <option value="both">Both</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <FieldLabel>Description (admin-facing)</FieldLabel>
+                  <Input
+                    placeholder="Brief description for the admin UI"
+                    value={newDbUpsell.description}
+                    onChange={(e) => setNewDbUpsell({ ...newDbUpsell, description: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <FieldLabel>AI Product Summary (one-liner the AI uses in conversation)</FieldLabel>
+                  <Input
+                    placeholder="e.g., Google Business Profile setup — $49 one-time, we claim and optimize your listing"
+                    value={newDbUpsell.aiProductSummary}
+                    onChange={(e) => setNewDbUpsell({ ...newDbUpsell, aiProductSummary: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <FieldLabel>AI Pitch Instructions (tells AI how/when to pitch)</FieldLabel>
+                  <textarea
+                    placeholder="e.g., Pitch GBP setup to local service businesses. Mention that 46% of Google searches are local. Only pitch if the client doesn't already have a claimed GBP listing."
+                    value={newDbUpsell.aiPitchInstructions}
+                    onChange={(e) => setNewDbUpsell({ ...newDbUpsell, aiPitchInstructions: e.target.value })}
+                    className="w-full h-20 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <FieldLabel>Eligible Industries (comma-separated, blank = all)</FieldLabel>
+                    <Input
+                      placeholder="e.g., ROOFING, PLUMBING, HVAC"
+                      value={newDbUpsell.eligibleIndustries}
+                      onChange={(e) => setNewDbUpsell({ ...newDbUpsell, eligibleIndustries: e.target.value })}
+                      className="text-sm"
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Min Client Age (days)</FieldLabel>
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="0 = no restriction"
+                      value={newDbUpsell.minClientAgeDays}
+                      onChange={(e) => setNewDbUpsell({ ...newDbUpsell, minClientAgeDays: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>Max Pitches Per Client</FieldLabel>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={newDbUpsell.maxPitchesPerClient}
+                      onChange={(e) => setNewDbUpsell({ ...newDbUpsell, maxPitchesPerClient: parseInt(e.target.value) || 3 })}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" size="sm" onClick={() => setAddDbUpsellOpen(false)}>Cancel</Button>
+                  <Button size="sm" onClick={addDbUpsellProduct} disabled={!newDbUpsell.name.trim() || !newDbUpsell.price}>Add Product</Button>
+                </div>
+              </div>
+            )}
+
+            {/* Products List */}
+            {upsellProductsLoading ? (
+              <div className="flex items-center justify-center py-8 text-gray-500 gap-2">
+                <Loader2 size={16} className="animate-spin" />
+                <span className="text-sm">Loading products...</span>
+              </div>
+            ) : dbUpsellProducts.length === 0 ? (
+              <div className="text-center py-8 text-gray-400 text-sm">No upsell products yet. Click &quot;Add Product&quot; to create one.</div>
+            ) : (
+              <div className="space-y-2">
+                {dbUpsellProducts.map((product: any, idx: number) => {
+                  const pitchCount = product.pitches?.length || 0
+                  const paidCount = product.pitches?.filter((p: any) => p.status === 'paid').length || 0
+                  return (
+                    <div key={product.id} className={`flex items-center justify-between p-3 rounded-lg border group ${product.active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-sm">
+                          {idx + 1}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900">{product.name}</span>
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+                              ${product.price}{product.recurring ? '/mo' : ''}
+                            </span>
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">{product.pitchChannel}</span>
+                            {!product.active && <span className="text-xs px-1.5 py-0.5 rounded bg-red-50 text-red-600">Inactive</span>}
+                          </div>
+                          {product.aiProductSummary && (
+                            <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[500px]">{product.aiProductSummary}</p>
+                          )}
+                          {product.description && !product.aiProductSummary && (
+                            <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[500px]">{product.description}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {pitchCount > 0 && (
+                          <span className="text-xs text-gray-500">
+                            {paidCount}/{pitchCount} converted
+                          </span>
+                        )}
+                        {product.stripeLink && (
+                          <a href={product.stripeLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 flex items-center gap-1 hover:underline">
+                            <Link size={12} /> Link
+                          </a>
+                        )}
+                        <button
+                          onClick={() => deleteDbUpsellProduct(product.id)}
+                          className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <p className="text-xs text-gray-400 mt-3">Deactivating a product removes it from AI context and all pitch recommendations.</p>
           </Card>
         </div>
       )}

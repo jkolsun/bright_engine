@@ -1,4 +1,5 @@
 import Stripe from 'stripe'
+import { prisma } from './db'
 
 let _stripe: Stripe | null = null
 
@@ -50,6 +51,108 @@ export function getPaymentLink(product: keyof typeof PAYMENT_LINKS, metadata?: {
 }
 
 export { PAYMENT_LINKS }
+
+/**
+ * Get a payment link — checks DB first, falls back to env vars.
+ * This is the NEW single source of truth. Use this instead of getPaymentLink().
+ */
+export async function getPaymentLinkDynamic(
+  productId: string,
+  metadata?: { leadId?: string; clientId?: string }
+): Promise<string> {
+  // 1. Check DB first
+  try {
+    const setting = await prisma.settings.findUnique({
+      where: { key: 'payment_links' }
+    })
+    if (setting?.value && Array.isArray(setting.value)) {
+      const links = setting.value as any[]
+      const match = links.find(
+        (l: any) => l.id === productId && l.active && l.url
+      )
+      if (match?.url) {
+        return appendMetadata(match.url, metadata)
+      }
+    }
+  } catch (e) {
+    console.warn('[Stripe] DB lookup failed, falling back to env:', e)
+  }
+
+  // 2. Fall back to env vars
+  const envMap: Record<string, string | undefined> = {
+    site_build: process.env.STRIPE_LINK_SITE_BUILD,
+    hosting_monthly: process.env.STRIPE_LINK_HOSTING_39,
+    hosting_annual: process.env.STRIPE_LINK_HOSTING_ANNUAL,
+    gbp_setup: process.env.STRIPE_LINK_GBP,
+    review_widget: process.env.STRIPE_LINK_REVIEW_WIDGET,
+    seo_monthly: process.env.STRIPE_LINK_SEO,
+    social_monthly: process.env.STRIPE_LINK_SOCIAL,
+  }
+
+  const envUrl = envMap[productId]
+  if (envUrl) return appendMetadata(envUrl, metadata)
+
+  // 3. Fall back to legacy PAYMENT_LINKS keys
+  const legacyMap: Record<string, keyof typeof PAYMENT_LINKS> = {
+    site_build: 'SITE_BUILD',
+    hosting_monthly: 'HOSTING_MONTHLY',
+    hosting_annual: 'HOSTING_ANNUAL',
+    gbp_setup: 'GBP_SETUP',
+    review_widget: 'REVIEW_WIDGET',
+    seo_monthly: 'SEO_MONTHLY',
+    social_monthly: 'SOCIAL_MONTHLY',
+  }
+  const legacyKey = legacyMap[productId]
+  if (legacyKey && PAYMENT_LINKS[legacyKey]) {
+    return appendMetadata(PAYMENT_LINKS[legacyKey], metadata)
+  }
+
+  return ''
+}
+
+function appendMetadata(
+  baseUrl: string,
+  metadata?: { leadId?: string; clientId?: string }
+): string {
+  if (!metadata) return baseUrl
+  try {
+    const url = new URL(baseUrl)
+    if (metadata.leadId) url.searchParams.set('client_reference_id', metadata.leadId)
+    if (metadata.clientId) url.searchParams.set('client_reference_id', metadata.clientId)
+    return url.toString()
+  } catch {
+    return baseUrl
+  }
+}
+
+/**
+ * Get ALL active payment links (for AI context, UI displays, etc.)
+ */
+export async function getAllPaymentLinks(): Promise<Array<{
+  id: string; label: string; url: string; price: number; recurring: boolean
+}>> {
+  try {
+    const setting = await prisma.settings.findUnique({
+      where: { key: 'payment_links' }
+    })
+    if (setting?.value && Array.isArray(setting.value)) {
+      return (setting.value as any[]).filter((l: any) => l.active && l.url)
+    }
+  } catch (e) {
+    console.warn('[Stripe] Failed to fetch payment links from DB:', e)
+  }
+
+  // Fallback: build from env vars
+  return Object.entries(PAYMENT_LINKS)
+    .filter(([_, url]) => !!url)
+    .map(([key, url]) => ({
+      id: key.toLowerCase(),
+      label: key.replace(/_/g, ' '),
+      url,
+      price: 0,
+      recurring: false,
+    }))
+}
 
 export async function createCustomer(options: {
   email?: string
