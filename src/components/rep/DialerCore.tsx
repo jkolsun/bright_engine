@@ -246,7 +246,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   const [queue, setQueue] = useState<any[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [_userId, setUserId] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const [userName, setUserName] = useState('')
 
   // Dialer mode & session
@@ -277,6 +277,9 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   const [callbackTime, setCallbackTime] = useState('')
   const [showNoteDialog, setShowNoteDialog] = useState(false)
   const [noteText, setNoteText] = useState('')
+
+  // AI Handoff
+  const [aiHandoffSent, setAiHandoffSent] = useState(false)
 
   // Lead history
   const [leadHistory, setLeadHistory] = useState<any[]>([])
@@ -342,6 +345,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   useEffect(() => {
     if (currentLead?.id) {
       loadLeadHistory(currentLead.id)
+      setAiHandoffSent(false)
     }
   }, [currentLead?.id])
 
@@ -424,6 +428,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         case 'p': case 'P': e.preventDefault(); if (currentLead?.previewUrl) { openPreviewDialog('sms'); setPreviewSentThisCall(true) }; break
         case 't': case 'T': e.preventDefault(); handleAutoText(); break
         case 'n': case 'N': e.preventDefault(); setShowNoteDialog(true); break
+        case 'a': case 'A': e.preventDefault(); handleAIHandoff(); break
         case 'h': case 'H': e.preventDefault(); handleHold(); break
         case 'x': case 'X': e.preventDefault(); handleHangup(); break
       }
@@ -431,7 +436,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [callActive, processing, currentLead, previewStatus.opened])
+  }, [callActive, processing, currentLead, previewStatus.opened, aiHandoffSent])
 
   // ============================================
   // DIALING ACTIONS
@@ -719,6 +724,30 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
     window.open(`sms:${currentLead.phone}?body=${message}`)
 
     setSessionStats(prev => ({ ...prev, previewLinksSent: prev.previewLinksSent + 1 }))
+  }
+
+  const handleAIHandoff = async () => {
+    if (!currentLead || aiHandoffSent) return
+    setAiHandoffSent(true)
+
+    try {
+      const res = await fetch('/api/close-engine/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: currentLead.id,
+          entryPoint: 'REP_CLOSE',
+          repId: userId,
+        }),
+      })
+
+      if (!res.ok) {
+        setAiHandoffSent(false)
+      }
+    } catch (e) {
+      console.error('AI Handoff failed:', e)
+      setAiHandoffSent(false)
+    }
   }
 
   const handleSaveNote = async () => {
@@ -1088,16 +1117,27 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
               {/* Action Buttons */}
               {callPhase === 'idle' ? (
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))} disabled={currentIndex <= 0}>
-                    <ArrowLeft size={16} />
-                  </Button>
-                  <Button className="flex-1 gradient-primary text-white shadow-teal hover:opacity-90 rounded-xl" onClick={sessionActive ? handleDial : handleStartSession}>
-                    {!isPartTime && dialerMode === 'power' ? <Zap size={18} className="mr-2" /> : <Phone size={18} className="mr-2" />}
-                    {sessionActive ? 'Dial' : isPartTime ? 'Start Calling' : `Start ${dialerMode === 'power' ? 'Power' : 'Single'} Dial`}
-                  </Button>
-                  <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setCurrentIndex(Math.min(queue.length - 1, currentIndex + 1))} disabled={currentIndex >= queue.length - 1}>
-                    <SkipForward size={16} />
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))} disabled={currentIndex <= 0}>
+                      <ArrowLeft size={16} />
+                    </Button>
+                    <Button className="flex-1 gradient-primary text-white shadow-teal hover:opacity-90 rounded-xl" onClick={sessionActive ? handleDial : handleStartSession}>
+                      {!isPartTime && dialerMode === 'power' ? <Zap size={18} className="mr-2" /> : <Phone size={18} className="mr-2" />}
+                      {sessionActive ? 'Dial' : isPartTime ? 'Start Calling' : `Start ${dialerMode === 'power' ? 'Power' : 'Single'} Dial`}
+                    </Button>
+                    <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setCurrentIndex(Math.min(queue.length - 1, currentIndex + 1))} disabled={currentIndex >= queue.length - 1}>
+                      <SkipForward size={16} />
+                    </Button>
+                  </div>
+                  <Button
+                    onClick={handleAIHandoff}
+                    disabled={aiHandoffSent}
+                    variant="outline"
+                    className="w-full rounded-xl border-[#0D7377] text-[#0D7377] hover:bg-[#0D7377] hover:text-white disabled:opacity-60"
+                  >
+                    <Zap size={16} className="mr-2" />
+                    {aiHandoffSent ? 'Handed to AI Close Engine' : 'Close \u2192 AI Handoff'}
                   </Button>
                 </div>
               ) : callPhase === 'dialing' ? (
@@ -1174,6 +1214,16 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                       [N] Note
                     </Button>
                   </div>
+
+                  {/* AI Handoff Button */}
+                  <Button
+                    onClick={handleAIHandoff}
+                    disabled={aiHandoffSent}
+                    className="w-full bg-[#0D7377] hover:bg-[#0a5c5f] text-white rounded-xl text-sm font-bold disabled:opacity-60"
+                  >
+                    <Zap size={16} className="mr-2" />
+                    {aiHandoffSent ? 'Handed to AI Close Engine' : '[A] Close \u2192 AI Handoff'}
+                  </Button>
 
                   {/* Outcome logging — keyboard shortcut bar */}
                   <div className="bg-gray-900 rounded-xl p-2.5 text-xs font-mono text-gray-300 grid grid-cols-4 gap-1">

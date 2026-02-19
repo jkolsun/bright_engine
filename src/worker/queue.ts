@@ -428,7 +428,7 @@ export async function scheduleHotLeadMonitoring() {
     console.warn('Monitoring queue unavailable, skipping hot leads check')
     return null
   }
-  
+
   try {
     // Run every 15 minutes
     return await queue.add(
@@ -442,6 +442,77 @@ export async function scheduleHotLeadMonitoring() {
     )
   } catch (err) {
     console.warn('Failed to schedule hot lead monitoring:', err)
+    return null
+  }
+}
+
+// ── Close Engine Scheduling ──
+
+export async function scheduleCloseEngineStallCheck() {
+  const queue = getMonitoringQueue()
+  if (!queue || !isRedisAvailable) {
+    console.warn('Monitoring queue unavailable, skipping close engine stall check')
+    return null
+  }
+
+  try {
+    return await queue.add(
+      'close-engine-stall-check',
+      {},
+      {
+        repeat: {
+          every: 15 * 60 * 1000, // Every 15 minutes
+        },
+      }
+    )
+  } catch (err) {
+    console.warn('Failed to schedule close engine stall check:', err)
+    return null
+  }
+}
+
+export async function scheduleCloseEnginePaymentFollowUp() {
+  const queue = getMonitoringQueue()
+  if (!queue || !isRedisAvailable) {
+    console.warn('Monitoring queue unavailable, skipping close engine payment follow-up')
+    return null
+  }
+
+  try {
+    return await queue.add(
+      'close-engine-payment-followup',
+      {},
+      {
+        repeat: {
+          every: 60 * 60 * 1000, // Every hour
+        },
+      }
+    )
+  } catch (err) {
+    console.warn('Failed to schedule close engine payment follow-up:', err)
+    return null
+  }
+}
+
+export async function scheduleCloseEngineExpireStalled() {
+  const queue = getMonitoringQueue()
+  if (!queue || !isRedisAvailable) {
+    console.warn('Monitoring queue unavailable, skipping close engine expire stalled')
+    return null
+  }
+
+  try {
+    return await queue.add(
+      'close-engine-expire-stalled',
+      {},
+      {
+        repeat: {
+          pattern: '0 2 * * *', // Daily at 2 AM UTC (~9 PM EST)
+        },
+      }
+    )
+  } catch (err) {
+    console.warn('Failed to schedule close engine expire stalled:', err)
     return null
   }
 }

@@ -262,6 +262,17 @@ export async function checkProfitSystemTriggers(clientId: string) {
 
   const triggers: Record<string, any> = {}
 
+  // Check urgency — skip if lead is in active Close Engine conversation
+  if (client.leadId) {
+    const activeCloseConv = await prisma.closeEngineConversation.findUnique({
+      where: { leadId: client.leadId },
+    })
+    if (activeCloseConv && !['COMPLETED', 'CLOSED_LOST'].includes(activeCloseConv.stage)) {
+      console.log(`[URGENCY] Skipping — lead ${client.leadId} is in active Close Engine conversation`)
+      return triggers
+    }
+  }
+
   // Check urgency — only if lead has actually viewed the preview
   const hasViewedPreview = client.lead?.events.some(
     (e) => e.eventType === 'PREVIEW_VIEWED'

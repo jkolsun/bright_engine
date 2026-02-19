@@ -79,7 +79,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
                   className="inline-flex items-center justify-center gap-2.5 bg-white text-green-900 px-8 py-4 rounded-xl font-bold text-base hover:bg-green-50 transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
                 >
                   <Phone size={18} />
-                  Call Now
+                  Call Now — Free Estimate
                 </a>
                 <button
                   onClick={onCTAClick}
@@ -89,6 +89,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
                   <ChevronRight size={16} />
                 </button>
               </div>
+              <p className="mt-3 text-sm text-white/40">No obligation &bull; Free estimate &bull; Same-day response</p>
             </div>
 
             <div className="flex justify-center lg:justify-end">
@@ -116,8 +117,8 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
                       </div>
                     )}
                     <div className="bg-white/10 rounded-xl p-4 text-center border border-white/10">
-                      <p className="text-2xl font-bold text-white">10+</p>
-                      <p className="text-xs text-white/60 mt-1">Years Experience</p>
+                      <p className="text-2xl font-bold text-white">Same</p>
+                      <p className="text-xs text-white/60 mt-1">Day Response</p>
                     </div>
                     {!lead.enrichedReviews && (
                       <div className="bg-white/10 rounded-xl p-4 text-center border border-white/10">
@@ -195,7 +196,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               { value: hasRating ? `${lead.enrichedRating}` : '5.0', label: 'Star Rating', suffix: '/5' },
               { value: lead.enrichedReviews ? `${lead.enrichedReviews}` : '50', label: 'Happy Customers', suffix: '+' },
               { value: '100', label: 'Satisfaction', suffix: '%' },
-              { value: '10', label: 'Years Experience', suffix: '+' },
+              { value: 'Same', label: 'Day Response', suffix: '-Day' },
             ].map((stat, i) => (
               <div key={i} className="text-center">
                 <p className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-1">
@@ -354,7 +355,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
         </div>
       </section>
 
-      {/* ─── Gallery with Large Hero Image ─── */}
+      {/* ─── Gallery with Large Hero Image + Hover CTAs ─── */}
       {photos.length > 0 && (
         <section className="py-20 md:py-28 px-4 sm:px-6 bg-white">
           <div className="max-w-6xl mx-auto">
@@ -363,22 +364,32 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold text-green-950 mb-4">See the Results</h2>
               <p className="text-green-800/50 text-base md:text-lg">Quality craftsmanship showcased through our recent projects.</p>
             </div>
-            <div className="group aspect-[16/9] md:aspect-[21/9] bg-green-100 rounded-2xl overflow-hidden mb-4 card-lift">
+            <div className="group relative aspect-[16/9] md:aspect-[21/9] bg-green-100 rounded-2xl overflow-hidden mb-4 card-lift">
               <img
                 src={photos[0]}
                 alt={`${lead.companyName} featured project`}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-6">
+                <button onClick={onCTAClick} className="bg-white/90 text-green-900 text-sm font-semibold px-6 py-2.5 rounded-full backdrop-blur-sm shadow-lg">
+                  Get a Free Quote
+                </button>
+              </div>
             </div>
             {photos.length > 1 && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
                 {photos.slice(1, 9).map((photo, i) => (
-                  <div key={i} className="group aspect-square bg-green-100 rounded-xl md:rounded-2xl overflow-hidden card-lift">
+                  <div key={i} className="group relative aspect-square bg-green-100 rounded-xl md:rounded-2xl overflow-hidden card-lift">
                     <img
                       src={photo}
                       alt={`${lead.companyName} project ${i + 2}`}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3">
+                      <button onClick={onCTAClick} className="bg-white/90 text-green-900 text-xs font-semibold px-4 py-2 rounded-full backdrop-blur-sm">
+                        Get a Free Quote
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -402,7 +413,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
             <div className="flex flex-wrap justify-center gap-3 md:gap-4">
               {[
                 { icon: Users, label: 'Locally Owned' },
-                { icon: Clock, label: 'Prompt Service' },
+                { icon: Clock, label: 'Same-Day Response' },
                 { icon: Shield, label: 'Fully Licensed' },
                 { icon: Leaf, label: 'Eco-Conscious' },
               ].map((item, i) => (
@@ -438,7 +449,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               className="inline-flex items-center justify-center gap-2.5 bg-white text-green-900 px-8 md:px-10 py-4 rounded-xl font-bold text-base md:text-lg hover:bg-green-50 transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
             >
               <Phone size={20} />
-              {lead.phone || 'Call Now'}
+              Call Now — It&apos;s Free
             </a>
             {lead.email && (
               <a
@@ -450,6 +461,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               </a>
             )}
           </div>
+          <p className="mt-4 text-sm text-white/40">No obligation &bull; Free estimate &bull; Satisfaction guaranteed</p>
         </div>
       </section>
 
@@ -462,13 +474,13 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
             className="flex-1 inline-flex items-center justify-center gap-2 bg-green-50 text-green-900 py-3 rounded-xl font-semibold text-sm border border-green-200 hover:bg-green-100 transition-colors duration-200"
           >
             <Phone size={16} />
-            {lead.phone || 'Call Now'}
+            Call Now
           </a>
           <button
             onClick={onCTAClick}
             className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-green-700 to-emerald-600 text-white py-3 rounded-xl font-semibold text-sm shadow-md hover:opacity-90 transition-all duration-200"
           >
-            {config.ctaText}
+            Free Quote
           </button>
         </div>
       </div>
@@ -488,6 +500,16 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
                 Your trusted {industryLabel} professionals{location ? ` in ${location}` : ''}.
                 Licensed, insured, and committed to quality workmanship on every project.
               </p>
+              {hasRating && (
+                <div className="flex items-center gap-2 mt-4">
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <Star key={i} size={12} className={i < Math.floor(lead.enrichedRating!) ? 'text-amber-400 fill-current' : 'text-green-800'} />
+                    ))}
+                  </div>
+                  <span className="text-green-200/50 text-xs">{lead.enrichedRating} Stars{lead.enrichedReviews ? ` (${lead.enrichedReviews} reviews)` : ''}</span>
+                </div>
+              )}
             </div>
             <div>
               <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Services</h4>

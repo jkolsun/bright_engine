@@ -249,11 +249,23 @@ async function startWorkers() {
           case 'hot-leads-check':
             await checkHotLeads()
             break
-            
+
           case 'daily-audit':
             await runDailyAudit()
             break
-            
+
+          case 'close-engine-stall-check':
+            await closeEngineStallCheck()
+            break
+
+          case 'close-engine-payment-followup':
+            await closeEnginePaymentFollowUp()
+            break
+
+          case 'close-engine-expire-stalled':
+            await closeEngineExpireStalled()
+            break
+
           default:
             console.log(`Unknown monitoring job: ${job.name}`)
         }
@@ -375,16 +387,74 @@ async function sendAdaptiveTouchpoint(clientId: string, touchpointDay: number, n
   }
 }
 
+// AI-enhanced version: sends a pre-generated message instead of calling generateRetentionMessage
+async function sendAdaptiveTouchpointWithMessage(clientId: string, message: string, nextTouchpoint?: string, nextDaysOffset?: number) {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true },
+  })
+
+  if (!client || !client.lead) return
+
+  if (!canSendMessage(client.lead.timezone || 'America/New_York')) return
+
+  try {
+    await routeAndSend({
+      clientId: client.id,
+      trigger: 'post_launch_ai_touchpoint',
+      messageContent: message,
+      to: client.lead.phone,
+      toEmail: client.lead.email || client.email || undefined,
+      sender: 'system',
+    })
+  } catch (error) {
+    console.error('[RETENTION] AI touchpoint send failed:', error)
+  }
+
+  if (nextTouchpoint && nextDaysOffset) {
+    await prisma.client.update({
+      where: { id: clientId },
+      data: { nextTouchpoint, nextTouchpointDate: new Date(Date.now() + nextDaysOffset * 24 * 60 * 60 * 1000) },
+    })
+  }
+}
+
 async function sendPostLaunchDay3(clientId: string) {
+  try {
+    const { generateTouchpointMessage } = await import('../lib/post-client-engine')
+    const aiMessage = await generateTouchpointMessage(clientId, 'post_launch_day_3')
+    if (aiMessage) {
+      await sendAdaptiveTouchpointWithMessage(clientId, aiMessage, 'day_7', 4)
+      return
+    }
+  } catch { /* fall through to default */ }
   await sendAdaptiveTouchpoint(clientId, 3, 'day_7', 4)
 }
 
 async function sendPostLaunchDay7(clientId: string) {
+  try {
+    const { generateTouchpointMessage } = await import('../lib/post-client-engine')
+    const aiMessage = await generateTouchpointMessage(clientId, 'post_launch_day_7')
+    if (aiMessage) {
+      await sendAdaptiveTouchpointWithMessage(clientId, aiMessage, 'day_14', 7)
+      return
+    }
+  } catch { /* fall through to default */ }
   await sendAdaptiveTouchpoint(clientId, 7, 'day_14', 7)
 }
 
 async function sendPostLaunchDay28(clientId: string) {
-  await sendAdaptiveTouchpoint(clientId, 30)
+  try {
+    const { generateTouchpointMessage } = await import('../lib/post-client-engine')
+    const aiMessage = await generateTouchpointMessage(clientId, 'post_launch_day_28')
+    if (aiMessage) {
+      await sendAdaptiveTouchpointWithMessage(clientId, aiMessage)
+    } else {
+      await sendAdaptiveTouchpoint(clientId, 30)
+    }
+  } catch {
+    await sendAdaptiveTouchpoint(clientId, 30)
+  }
   // Also notify for upsell conversation
   await prisma.notification.create({
     data: {
@@ -423,10 +493,18 @@ async function sendReferralDay45(clientId: string) {
 
   if (!client || !client.lead) return
 
+  let messageContent = `Know a business owner who needs a site? Refer them, you both get a free month of hosting.`
+
+  try {
+    const { generateTouchpointMessage } = await import('../lib/post-client-engine')
+    const aiMessage = await generateTouchpointMessage(clientId, 'referral_day_45')
+    if (aiMessage) messageContent = aiMessage
+  } catch { /* use default */ }
+
   await routeAndSend({
     clientId: client.id,
     trigger: 'referral_day_45',
-    messageContent: `Know a business owner who needs a site? Refer them, you both get a free month of hosting.`,
+    messageContent,
     to: client.lead.phone,
     toEmail: client.lead.email || client.email || undefined,
     sender: 'system',
@@ -825,6 +903,171 @@ async function runDailyAudit() {
       metadata: { leadsImported, qualified, paid, sitesLive, revenue: revenue._sum.amount },
     },
   })
+}
+
+// ============================================
+// CLOSE ENGINE WORKER FUNCTIONS
+// ============================================
+
+async function closeEngineStallCheck() {
+  const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000)
+  const seventyTwoHoursAgo = new Date(Date.now() - 72 * 60 * 60 * 1000)
+
+  const activeStages = ['QUALIFYING', 'COLLECTING_INFO', 'PREVIEW_SENT', 'EDIT_LOOP']
+
+  const conversations = await prisma.closeEngineConversation.findMany({
+    where: {
+      stage: { in: activeStages },
+    },
+    include: {
+      lead: true,
+    },
+  })
+
+  for (const conv of conversations) {
+    // Find last inbound message
+    const lastInbound = await prisma.message.findFirst({
+      where: { leadId: conv.leadId, direction: 'INBOUND' },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    if (!lastInbound) continue
+
+    // Check if we already sent a nudge recently (last 4 hours)
+    const lastNudge = await prisma.message.findFirst({
+      where: {
+        leadId: conv.leadId,
+        direction: 'OUTBOUND',
+        trigger: { startsWith: 'close_engine_nudge' },
+        createdAt: { gte: fourHoursAgo },
+      },
+    })
+    if (lastNudge) continue
+
+    // Respect timezone: only nudge 8 AM - 9 PM
+    if (!canSendMessage(conv.lead.timezone || 'America/New_York')) continue
+
+    if (lastInbound.createdAt < seventyTwoHoursAgo) {
+      // 72+ hours — mark STALLED
+      await prisma.closeEngineConversation.update({
+        where: { id: conv.id },
+        data: { stage: 'STALLED', stalledAt: new Date() },
+      })
+      await prisma.notification.create({
+        data: {
+          type: 'CLIENT_TEXT',
+          title: 'Close Engine — Lead Stalled',
+          message: `${conv.lead.firstName} at ${conv.lead.companyName} hasn't responded in 72+ hours`,
+          metadata: { conversationId: conv.id, leadId: conv.leadId },
+        },
+      })
+    } else if (lastInbound.createdAt < fourHoursAgo) {
+      // 4-72 hours — send nudge via Close Engine processor
+      try {
+        const { processCloseEngineInbound } = await import('../lib/close-engine-processor')
+        await processCloseEngineInbound(conv.id, '[SYSTEM: Lead has not responded in 4+ hours. Send a friendly follow-up nudge.]')
+      } catch (err) {
+        console.error(`[Worker] Nudge failed for ${conv.id}:`, err)
+      }
+    }
+  }
+}
+
+async function closeEnginePaymentFollowUp() {
+  const conversations = await prisma.closeEngineConversation.findMany({
+    where: { stage: 'PAYMENT_SENT' },
+    include: { lead: true },
+  })
+
+  for (const conv of conversations) {
+    if (!conv.paymentLinkSentAt) continue
+
+    const hoursSinceSent = (Date.now() - conv.paymentLinkSentAt.getTime()) / (1000 * 60 * 60)
+
+    // Get follow-up message for this time threshold
+    const { getPaymentFollowUpMessage } = await import('../lib/close-engine-payment')
+    const followUpMsg = getPaymentFollowUpMessage(hoursSinceSent, conv.lead.firstName)
+
+    if (!followUpMsg) continue // Too soon
+
+    // Determine which threshold we're at
+    const threshold = hoursSinceSent >= 72 ? '72h' : hoursSinceSent >= 48 ? '48h' : hoursSinceSent >= 24 ? '24h' : '4h'
+
+    // Check if we already sent this threshold's follow-up
+    const existingFollowUp = await prisma.message.findFirst({
+      where: {
+        leadId: conv.leadId,
+        trigger: `close_engine_payment_followup_${threshold}`,
+      },
+    })
+    if (existingFollowUp) continue // Already sent
+
+    // Respect timezone
+    if (!canSendMessage(conv.lead.timezone || 'America/New_York')) continue
+
+    // Send
+    try {
+      const { sendSMSViaProvider } = await import('../lib/sms-provider')
+      await sendSMSViaProvider({
+        to: conv.lead.phone,
+        message: followUpMsg,
+        leadId: conv.leadId,
+        trigger: `close_engine_payment_followup_${threshold}`,
+        aiGenerated: true,
+        conversationType: 'pre_client',
+        sender: 'clawdbot',
+      })
+    } catch (smsErr) {
+      console.error(`[Worker] Payment follow-up SMS failed for ${conv.id}:`, smsErr)
+      continue
+    }
+
+    // At 72h+, also mark STALLED
+    if (hoursSinceSent >= 72) {
+      await prisma.closeEngineConversation.update({
+        where: { id: conv.id },
+        data: { stage: 'STALLED', stalledAt: new Date() },
+      })
+    }
+  }
+}
+
+async function closeEngineExpireStalled() {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+
+  const stalled = await prisma.closeEngineConversation.findMany({
+    where: {
+      stage: 'STALLED',
+      stalledAt: { lt: sevenDaysAgo },
+    },
+    include: { lead: true },
+  })
+
+  for (const conv of stalled) {
+    await prisma.closeEngineConversation.update({
+      where: { id: conv.id },
+      data: {
+        stage: 'CLOSED_LOST',
+        closedLostAt: new Date(),
+        closedLostReason: 'No response after 7 days',
+      },
+    })
+    await prisma.lead.update({
+      where: { id: conv.leadId },
+      data: { status: 'CLOSED_LOST' },
+    })
+  }
+
+  if (stalled.length > 0) {
+    await prisma.notification.create({
+      data: {
+        type: 'DAILY_AUDIT',
+        title: 'Close Engine — Expired Conversations',
+        message: `${stalled.length} conversation(s) expired after 7 days of no response`,
+        metadata: { count: stalled.length, leadIds: stalled.map(s => s.leadId) },
+      },
+    })
+  }
 }
 
 export { startWorkers }

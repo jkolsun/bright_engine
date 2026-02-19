@@ -29,7 +29,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
               </a>
             )}
             <button onClick={onCTAClick} className="bg-gradient-to-r from-amber-500 to-amber-400 text-black px-6 py-2.5 rounded-lg text-sm font-semibold hover:from-amber-400 hover:to-amber-300 transition-all shadow-md hover:shadow-lg animate-cta-glow-amber">
-              Schedule Consultation
+              Free Consultation
             </button>
           </div>
         </div>
@@ -70,11 +70,11 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
                       <Star key={i} size={18} className={i < Math.floor(lead.enrichedRating!) ? 'text-amber-400 fill-current' : 'text-gray-700'} />
                     ))}
                   </div>
-                  <span className="text-amber-400 font-semibold">{lead.enrichedRating}</span>
+                  <span className="text-amber-400 font-semibold">{lead.enrichedRating}-Star Rated</span>
                   {lead.enrichedReviews && <span className="text-gray-500 text-sm">({lead.enrichedReviews} reviews)</span>}
                 </div>
               )}
-              <h2 className="font-display text-2xl md:text-3xl font-light text-white mb-4">Let&apos;s Discuss Your Needs</h2>
+              <h2 className="font-display text-2xl md:text-3xl font-light text-white mb-4">Ready to Get Started?</h2>
               <p className="text-gray-400 mb-10 leading-relaxed text-lg">
                 Schedule a complimentary consultation with our team. We&apos;ll provide personalized recommendations tailored to your specific requirements.
               </p>
@@ -85,7 +85,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
                   className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-amber-500 to-amber-400 text-black px-8 py-4 rounded-xl font-semibold text-lg hover:from-amber-400 hover:to-amber-300 transition-all shadow-lg animate-cta-glow-amber"
                 >
                   <Phone size={20} />
-                  Call Now
+                  Call Now — Free Consultation
                 </a>
                 <button
                   onClick={onCTAClick}
@@ -95,6 +95,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
                   <ArrowRight size={18} />
                 </button>
               </div>
+              <p className="text-center text-xs text-gray-600 mt-4">No obligation &bull; Free consultation &bull; Same-day response</p>
             </div>
           </div>
         </div>
@@ -111,7 +112,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
                     <Star key={i} size={13} className={i < Math.floor(lead.enrichedRating!) ? 'text-amber-400 fill-current' : 'text-gray-700'} />
                   ))}
                 </div>
-                <span className="text-amber-400 font-semibold text-sm">{lead.enrichedRating} Rating</span>
+                <span className="text-amber-400 font-semibold text-sm">{lead.enrichedRating}-Star Rated</span>
               </div>
               <div className="hidden md:block w-px h-8 bg-amber-500/20" />
             </>
@@ -128,6 +129,11 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
           <div className="flex items-center gap-2 px-6">
             <Shield size={15} className="text-amber-400/70" />
             <span className="text-gray-400 text-sm">Licensed &amp; Insured</span>
+          </div>
+          <div className="hidden md:block w-px h-8 bg-amber-500/20" />
+          <div className="flex items-center gap-2 px-6">
+            <Clock size={15} className="text-amber-400/70" />
+            <span className="text-gray-400 text-sm">Same-Day Response</span>
           </div>
           {location && (
             <>
@@ -234,7 +240,8 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
           {/* Contact Sidebar */}
           <div className="lg:col-span-2">
             <div className="border border-amber-500/15 rounded-3xl p-10 bg-gray-950/60 backdrop-blur-sm sticky top-24">
-              <h3 className="font-display text-2xl font-light text-white mb-8">Contact</h3>
+              <h3 className="font-display text-2xl font-light text-white mb-2">Ready to Get Started?</h3>
+              <p className="text-gray-500 text-sm mb-8">Free consultation &bull; Same-day response</p>
               <div className="space-y-5">
                 {lead.phone && (
                   <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 text-gray-400 hover:text-amber-400 transition-colors duration-300 p-3 rounded-xl hover:bg-white/5">
@@ -269,27 +276,17 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
                     </div>
                   </div>
                 )}
-                {location && (
-                  <div className="flex items-center gap-4 text-gray-400 p-3 rounded-xl">
-                    <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                      <Clock size={20} className="text-amber-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.15em] text-gray-600 font-medium">Availability</p>
-                      <p className="font-medium text-white">Mon - Sat</p>
-                    </div>
-                  </div>
-                )}
               </div>
               <button onClick={onCTAClick} className="w-full mt-10 bg-gradient-to-r from-amber-500 to-amber-400 text-black py-4 rounded-xl font-semibold text-lg hover:from-amber-400 hover:to-amber-300 transition-all duration-300 shadow-lg">
-                {config.ctaText}
+                Get Your Free Consultation
               </button>
+              <p className="text-center text-xs text-gray-600 mt-3">No obligation &bull; Satisfaction guaranteed</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ─── Photo Portfolio — 4-Column Grid ─── */}
+      {/* ─── Photo Portfolio — 4-Column Grid with Hover CTAs ─── */}
       {photos.length > 0 && (
         <section className="py-24 px-4 sm:px-6 bg-gray-950">
           <div className="max-w-6xl mx-auto">
@@ -300,8 +297,13 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {photos.slice(0, 8).map((photo, i) => (
-                <div key={i} className="group aspect-square bg-gray-900 rounded-2xl overflow-hidden border border-gray-800/50 hover:border-amber-500/30 transition-all duration-500 hover:shadow-xl hover:shadow-amber-500/10">
+                <div key={i} className="group relative aspect-square bg-gray-900 rounded-2xl overflow-hidden border border-gray-800/50 hover:border-amber-500/30 transition-all duration-500 hover:shadow-xl hover:shadow-amber-500/10">
                   <img src={photo} alt={`${lead.companyName} project ${i + 1}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
+                    <button onClick={onCTAClick} className="bg-amber-400/90 text-black text-xs font-semibold px-4 py-2 rounded-full backdrop-blur-sm">
+                      Get a Free Quote
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -346,7 +348,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
               className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-amber-500 to-amber-400 text-black px-10 py-4 rounded-xl font-semibold text-lg hover:from-amber-400 hover:to-amber-300 transition-all duration-300 shadow-lg animate-cta-glow-amber"
             >
               <Phone size={20} />
-              {lead.phone || 'Call Now'}
+              Call Now — It&apos;s Free
             </a>
             <button
               onClick={onCTAClick}
@@ -356,11 +358,32 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
               <ArrowRight size={18} />
             </button>
           </div>
+          <p className="mt-4 text-sm text-gray-600">No obligation &bull; Free consultation &bull; Satisfaction guaranteed</p>
         </div>
       </section>
 
+      {/* ─── Sticky Mobile CTA Bar ─── */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden glass-dark border-t border-amber-500/15 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <a
+            href={`tel:${lead.phone}`}
+            onClick={onCallClick}
+            className="flex-1 inline-flex items-center justify-center gap-2 bg-gray-800 text-white py-3 rounded-xl font-semibold text-sm border border-gray-700"
+          >
+            <Phone size={16} />
+            Call Now
+          </a>
+          <button
+            onClick={onCTAClick}
+            className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-400 text-black py-3 rounded-xl font-semibold text-sm shadow-md"
+          >
+            Free Quote
+          </button>
+        </div>
+      </div>
+
       {/* ─── Footer ─── */}
-      <footer className="bg-black py-16 px-4 sm:px-6 border-t border-amber-500/10">
+      <footer className="bg-black py-16 px-4 sm:px-6 border-t border-amber-500/10 pb-28 md:pb-16">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
             <div>
@@ -369,6 +392,16 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
                 Premium {industryLabel} services{location ? ` in ${location}` : ''}.
                 Excellence in every detail, satisfaction with every engagement.
               </p>
+              {hasRating && (
+                <div className="flex items-center gap-2 mt-4">
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <Star key={i} size={12} className={i < Math.floor(lead.enrichedRating!) ? 'text-amber-400 fill-current' : 'text-gray-800'} />
+                    ))}
+                  </div>
+                  <span className="text-gray-600 text-xs">{lead.enrichedRating} Stars{lead.enrichedReviews ? ` (${lead.enrichedReviews} reviews)` : ''}</span>
+                </div>
+              )}
             </div>
             <div>
               <h4 className="text-sm uppercase tracking-[0.2em] text-amber-400/50 mb-5 font-medium">Services</h4>

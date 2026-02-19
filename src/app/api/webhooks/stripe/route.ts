@@ -136,6 +136,76 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       } catch (err) {
         console.error('Onboarding email sequence failed to queue:', err)
       }
+
+      // ── CLOSE ENGINE: Post-Payment Processing ──
+      try {
+        const conversation = await prisma.closeEngineConversation.findUnique({
+          where: { leadId: lead.id },
+        })
+
+        if (conversation && ['PAYMENT_SENT', 'PENDING_APPROVAL'].includes(conversation.stage)) {
+          // 1. Complete the conversation
+          await prisma.closeEngineConversation.update({
+            where: { id: conversation.id },
+            data: {
+              stage: 'COMPLETED',
+              completedAt: new Date(),
+            },
+          })
+
+          // 2. Copy autonomy level to client
+          if (clientId) {
+            await prisma.client.update({
+              where: { id: clientId },
+              data: { autonomyLevel: conversation.autonomyLevel },
+            })
+          }
+
+          // 3. Send welcome message via SMS (~2.5 min delay after payment)
+          const welcomeMessage = `Welcome aboard, ${lead.firstName}! 🎉 Your site is going live. You'll get a text from us when it's up. Quick win: make sure your Google Business Profile is claimed — that alone can double your local visibility.`
+
+          const { sendSMSViaProvider } = await import('@/lib/sms-provider')
+
+          setTimeout(async () => {
+            try {
+              await sendSMSViaProvider({
+                to: lead.phone,
+                message: welcomeMessage,
+                leadId: lead.id,
+                clientId: clientId,
+                trigger: 'close_engine_welcome',
+                aiGenerated: true,
+                aiDelaySeconds: 150,
+                conversationType: 'post_client',
+                sender: 'clawdbot',
+              })
+            } catch (smsErr) {
+              console.error('[Stripe Webhook] Welcome SMS failed:', smsErr)
+            }
+          }, 150 * 1000)
+
+          // 4. Enhanced notification
+          await prisma.notification.create({
+            data: {
+              type: 'PAYMENT_RECEIVED',
+              title: '🎉 AI Close Engine — New Client!',
+              message: `${lead.companyName} paid $${amountTotal / 100} via Close Engine (${conversation.entryPoint})`,
+              metadata: {
+                leadId: lead.id,
+                clientId,
+                conversationId: conversation.id,
+                entryPoint: conversation.entryPoint,
+                amount: amountTotal / 100,
+              },
+            },
+          })
+
+          console.log(`[CloseEngine] Payment complete: ${lead.companyName}, conversation ${conversation.id} → COMPLETED`)
+        }
+      } catch (closeEngineErr) {
+        console.error('[Stripe Webhook] Close Engine post-payment processing failed:', closeEngineErr)
+        // Don't fail the webhook if Close Engine processing fails
+      }
     }
   }
 

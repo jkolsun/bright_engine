@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import PreviewTemplate from '@/components/preview/PreviewTemplate'
 import PreviewTracker from '@/components/preview/PreviewTracker'
+import PreviewCTABanner from '@/components/preview/PreviewCTABanner'
 import { notFound } from 'next/navigation'
 
 export default async function PreviewPage({ params }: { params: { id: string } }) {
@@ -37,6 +38,7 @@ export default async function PreviewPage({ params }: { params: { id: string } }
         <PreviewTracker
           previewId={lead.previewId || params.id}
         />
+        <div className="pb-16">
         <PreviewTemplate
           lead={{
             companyName: lead.companyName,
@@ -55,6 +57,8 @@ export default async function PreviewPage({ params }: { params: { id: string } }
           }}
           websiteCopy={personalization?.websiteCopy || undefined}
         />
+        </div>
+        <PreviewCTABanner previewId={lead.previewId || params.id} />
       </body>
     </html>
   )

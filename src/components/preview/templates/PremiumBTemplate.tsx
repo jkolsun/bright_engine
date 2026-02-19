@@ -53,12 +53,26 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
           <div className="w-24 h-0.5 bg-gradient-to-r from-sky-400 to-blue-500 mx-auto mb-8" />
           <p className="text-lg md:text-xl text-slate-300 leading-relaxed max-w-2xl mx-auto mb-4">{wc?.heroHeadline || config.tagline}</p>
           {wc?.heroSubheadline && <p className="text-base text-slate-400 leading-relaxed max-w-xl mx-auto mb-8">{wc.heroSubheadline}</p>}
-          {location && (
+
+          {hasRating && (
+            <div className="inline-flex items-center gap-3 glass-dark border border-sky-400/15 rounded-full px-6 py-3 mb-10">
+              <div className="flex gap-0.5">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <Star key={i} size={14} className={i < Math.floor(lead.enrichedRating!) ? 'text-sky-400 fill-current' : 'text-slate-700'} />
+                ))}
+              </div>
+              <span className="text-sky-400 font-semibold text-sm">{lead.enrichedRating}-Star Rated</span>
+              {lead.enrichedReviews && <span className="text-slate-500 text-sm">({lead.enrichedReviews} reviews)</span>}
+            </div>
+          )}
+
+          {!hasRating && location && (
             <p className="text-slate-500 flex items-center justify-center gap-2.5 text-base mb-12">
               <MapPin size={16} className="text-sky-400/50" />
               Serving {location} and surrounding areas
             </p>
           )}
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
               href={`tel:${lead.phone}`}
@@ -66,7 +80,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
               className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-sky-500 to-blue-500 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:from-sky-400 hover:to-blue-400 transition-all duration-300 shadow-lg animate-cta-glow"
             >
               <Phone size={20} />
-              Call Now
+              Call Now — Free Consultation
             </a>
             <button
               onClick={onCTAClick}
@@ -76,6 +90,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
               <ArrowRight size={18} />
             </button>
           </div>
+          <p className="mt-4 text-sm text-slate-600">No obligation &bull; Free consultation &bull; Same-day response</p>
         </div>
       </section>
 
@@ -172,7 +187,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
         </div>
       </section>
 
-      {/* ─── Horizontal Scrolling Gallery ─── */}
+      {/* ─── Horizontal Scrolling Gallery with Hover CTAs ─── */}
       {photos.length > 0 && (
         <section className="py-24 px-4 sm:px-6 bg-slate-900/40">
           <div className="max-w-6xl mx-auto">
@@ -186,8 +201,13 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
             <div className="flex gap-4 px-4 sm:px-6 w-max">
               {photos.slice(0, 10).map((photo, i) => (
                 <div key={i} className="group w-72 md:w-80 flex-shrink-0 snap-center">
-                  <div className="aspect-[4/3] bg-slate-900 rounded-2xl overflow-hidden border border-slate-800/50 hover:border-sky-400/30 transition-all duration-500 hover:shadow-xl hover:shadow-sky-500/5">
+                  <div className="relative aspect-[4/3] bg-slate-900 rounded-2xl overflow-hidden border border-slate-800/50 hover:border-sky-400/30 transition-all duration-500 hover:shadow-xl hover:shadow-sky-500/5">
                     <img src={photo} alt={`${lead.companyName} project ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
+                      <button onClick={onCTAClick} className="bg-sky-400/90 text-white text-xs font-semibold px-4 py-2 rounded-full backdrop-blur-sm">
+                        Get a Free Quote
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -237,7 +257,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
                 className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-sky-500 to-blue-500 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:from-sky-400 hover:to-blue-400 transition-all duration-300 shadow-lg animate-cta-glow"
               >
                 <Phone size={20} />
-                {lead.phone || 'Call Now'}
+                Call Now — It&apos;s Free
               </a>
               <button
                 onClick={onCTAClick}
@@ -247,6 +267,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
                 <ArrowRight size={18} />
               </button>
             </div>
+            <p className="mt-4 text-sm text-slate-600">No obligation &bull; Free consultation &bull; Satisfaction guaranteed</p>
           </div>
         </div>
       </section>
@@ -282,8 +303,28 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
         )}
       </div>
 
+      {/* ─── Sticky Mobile CTA Bar ─── */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden glass-dark border-t border-sky-400/15 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <a
+            href={`tel:${lead.phone}`}
+            onClick={onCallClick}
+            className="flex-1 inline-flex items-center justify-center gap-2 bg-slate-800 text-white py-3 rounded-xl font-semibold text-sm border border-slate-700"
+          >
+            <Phone size={16} />
+            Call Now
+          </a>
+          <button
+            onClick={onCTAClick}
+            className="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-sky-500 to-blue-500 text-white py-3 rounded-xl font-semibold text-sm shadow-md"
+          >
+            Free Quote
+          </button>
+        </div>
+      </div>
+
       {/* ─── Footer ─── */}
-      <footer className="bg-slate-950 py-16 px-4 sm:px-6 border-t border-sky-400/10">
+      <footer className="bg-slate-950 py-16 px-4 sm:px-6 border-t border-sky-400/10 pb-28 md:pb-16">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
             <div>
@@ -292,6 +333,16 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
                 Premium {industryLabel} services{location ? ` in ${location}` : ''}.
                 Modern solutions delivered with precision and care.
               </p>
+              {hasRating && (
+                <div className="flex items-center gap-2 mt-4">
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <Star key={i} size={12} className={i < Math.floor(lead.enrichedRating!) ? 'text-sky-400 fill-current' : 'text-slate-800'} />
+                    ))}
+                  </div>
+                  <span className="text-slate-600 text-xs">{lead.enrichedRating} Stars{lead.enrichedReviews ? ` (${lead.enrichedReviews} reviews)` : ''}</span>
+                </div>
+              )}
             </div>
             <div>
               <h4 className="text-sm uppercase tracking-[0.2em] text-sky-400/50 mb-5 font-medium">Services</h4>

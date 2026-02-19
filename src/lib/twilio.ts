@@ -1,7 +1,7 @@
 import twilio from 'twilio'
-import { prisma } from './db'
+import { sendSMSViaProvider, logInboundSMSViaProvider } from './sms-provider'
 
-// Lazy initialize Twilio client
+// Lazy initialize Twilio client (kept for direct Twilio usage like voice/dialer)
 let client: ReturnType<typeof twilio> | null = null
 
 function getTwilioClient() {
@@ -14,7 +14,7 @@ function getTwilioClient() {
   return client
 }
 
-function getFromNumber() {
+export function getFromNumber() {
   return process.env.TWILIO_PHONE_NUMBER!
 }
 
@@ -27,59 +27,24 @@ export interface SendSMSOptions {
   trigger?: string // What caused this message
 }
 
+/**
+ * @deprecated Use sendSMSViaProvider() from sms-provider.ts directly for new code.
+ * This wrapper exists for backward compatibility with existing call sites.
+ */
 export async function sendSMS(options: SendSMSOptions) {
-  const { to, message, leadId, clientId, sender = 'clawdbot', trigger } = options
-
-  try {
-    // Send via Twilio
-    const client = getTwilioClient()
-    const twilioMessage = await client.messages.create({
-      body: message,
-      from: getFromNumber(),
-      to: to,
-    })
-
-    // Log to database
-    await prisma.message.create({
-      data: {
-        leadId,
-        clientId,
-        direction: 'OUTBOUND',
-        channel: 'SMS',
-        senderType: 'CLAWDBOT',
-        senderName: sender,
-        recipient: to,
-        content: message,
-        trigger,
-        twilioSid: twilioMessage.sid,
-        twilioStatus: twilioMessage.status,
-      },
-    })
-
-    return { success: true, sid: twilioMessage.sid }
-  } catch (error) {
-    console.error('SMS send failed:', error)
-    
-    // Log failed message
-    await prisma.message.create({
-      data: {
-        leadId,
-        clientId,
-        direction: 'OUTBOUND',
-        channel: 'SMS',
-        senderType: 'CLAWDBOT',
-        senderName: sender,
-        recipient: to,
-        content: message,
-        trigger,
-        twilioStatus: 'failed',
-      },
-    })
-
-    return { success: false, error: (error as Error).message }
-  }
+  return sendSMSViaProvider({
+    to: options.to,
+    message: options.message,
+    leadId: options.leadId,
+    clientId: options.clientId,
+    sender: options.sender,
+    trigger: options.trigger,
+  })
 }
 
+/**
+ * @deprecated Use logInboundSMSViaProvider() from sms-provider.ts directly.
+ */
 export async function logInboundSMS(options: {
   from: string
   body: string
@@ -87,22 +52,8 @@ export async function logInboundSMS(options: {
   leadId?: string
   clientId?: string
 }) {
-  const { from, body, sid, leadId, clientId } = options
-
-  await prisma.message.create({
-    data: {
-      leadId,
-      clientId,
-      direction: 'INBOUND',
-      channel: 'SMS',
-      senderType: 'LEAD',
-      senderName: 'client',
-      recipient: getFromNumber(),
-      content: body,
-      twilioSid: sid,
-      twilioStatus: 'received',
-    },
-  })
+  return logInboundSMSViaProvider(options)
 }
 
+export { getTwilioClient }
 export default client

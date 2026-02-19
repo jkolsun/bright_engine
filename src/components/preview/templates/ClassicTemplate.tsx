@@ -53,6 +53,26 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
         </div>
       </nav>
 
+      {/* ─── Sticky Mobile CTA Bar ─── */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white/95 backdrop-blur-md border-t border-stone-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <a
+            href={`tel:${lead.phone}`}
+            onClick={onCallClick}
+            className="flex-1 inline-flex items-center justify-center gap-2 bg-stone-100 text-stone-900 py-3 rounded-xl font-semibold text-sm border border-stone-200"
+          >
+            <Phone size={16} />
+            Call Now
+          </a>
+          <button
+            onClick={onCTAClick}
+            className={`flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r ${config.gradient} text-white py-3 rounded-xl font-semibold text-sm shadow-md`}
+          >
+            Free Quote
+          </button>
+        </div>
+      </div>
+
       {/* ─── Full-Width Gradient Hero ─── */}
       <section className={`relative bg-gradient-to-br ${config.gradient} text-white py-24 md:py-36 lg:py-44 px-4 sm:px-6 overflow-hidden`}>
         <div className="absolute inset-0 bg-black/10" />
@@ -85,7 +105,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
                   <Star key={i} size={16} className={i < Math.floor(lead.enrichedRating!) ? 'text-yellow-300 fill-current' : 'text-white/20'} />
                 ))}
               </div>
-              <span className="text-sm font-semibold">{lead.enrichedRating} Stars</span>
+              <span className="text-sm font-semibold">{lead.enrichedRating}-Star Rated</span>
               {lead.enrichedReviews && <span className="text-sm text-white/60">({lead.enrichedReviews} reviews)</span>}
             </div>
           )}
@@ -99,7 +119,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
               className="inline-flex items-center justify-center gap-2.5 bg-white text-stone-900 px-8 md:px-10 py-4 rounded-xl font-bold text-base md:text-lg hover:bg-stone-50 transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
             >
               <Phone size={20} />
-              Call Now
+              Call Now — Free Estimate
             </a>
             <button
               onClick={onCTAClick}
@@ -109,6 +129,53 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
               <ChevronRight size={18} />
             </button>
           </div>
+          <p className="mt-4 text-sm text-white/50">No obligation &bull; Free estimate &bull; Fast response</p>
+        </div>
+      </section>
+
+      {/* ─── Social Proof Banner ─── */}
+      <section className="py-4 px-4 sm:px-6 bg-white border-b border-stone-200/60">
+        <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-6 md:gap-0">
+          {hasRating && (
+            <>
+              <div className="flex items-center gap-2 px-6">
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Star key={i} size={13} className={i < Math.floor(lead.enrichedRating!) ? 'text-amber-400 fill-current' : 'text-stone-200'} />
+                  ))}
+                </div>
+                <span className="text-stone-700 font-semibold text-sm">{lead.enrichedRating}-Star Rated</span>
+              </div>
+              <div className="hidden md:block w-px h-6 bg-stone-200" />
+            </>
+          )}
+          {lead.enrichedReviews && (
+            <>
+              <div className="flex items-center gap-1.5 px-6">
+                <span className="text-stone-800 font-semibold text-sm">{lead.enrichedReviews}+</span>
+                <span className="text-stone-500 text-sm">Reviews</span>
+              </div>
+              <div className="hidden md:block w-px h-6 bg-stone-200" />
+            </>
+          )}
+          <div className="flex items-center gap-1.5 px-6">
+            <Shield size={14} className="text-stone-500" />
+            <span className="text-stone-500 text-sm">Licensed &amp; Insured</span>
+          </div>
+          <div className="hidden md:block w-px h-6 bg-stone-200" />
+          <div className="flex items-center gap-1.5 px-6">
+            <Clock size={14} className="text-stone-500" />
+            <span className="text-stone-500 text-sm">Same-Day Response</span>
+          </div>
+          {lead.phone && (
+            <>
+              <div className="hidden md:block w-px h-6 bg-stone-200" />
+              <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-1.5 px-6 text-stone-600 hover:text-stone-900 transition-colors">
+                <Phone size={13} />
+                <span className="text-sm font-semibold">{lead.phone}</span>
+              </a>
+            </>
+          )}
         </div>
       </section>
 
@@ -207,7 +274,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
               },
               {
                 step: '02',
-                title: 'Get Your Estimate',
+                title: 'Get Your Free Estimate',
                 desc: 'We provide a detailed, written estimate with no hidden fees. You\'ll know exactly what to expect before any work begins.',
               },
               {
@@ -265,7 +332,8 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
             </div>
             <div className="lg:col-span-2">
               <div className="bg-white rounded-2xl border border-stone-200/60 p-7 md:p-9 shadow-sm sticky top-24">
-                <h3 className="font-display text-xl md:text-2xl font-bold text-stone-900 mb-6">Contact Information</h3>
+                <h3 className="font-display text-xl md:text-2xl font-bold text-stone-900 mb-2">Ready to Get Started?</h3>
+                <p className="text-stone-500 text-sm mb-6">Free estimate &bull; Same-day response</p>
                 <div className="space-y-3">
                   {lead.phone && (
                     <a
@@ -313,8 +381,9 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
                     onClick={onCTAClick}
                     className={`w-full bg-gradient-to-r ${config.gradient} text-white py-3.5 rounded-xl font-semibold text-base hover:opacity-90 transition-all duration-200 shadow-md hover:shadow-lg`}
                   >
-                    {config.ctaText}
+                    Get Your Free Estimate
                   </button>
+                  <p className="text-center text-xs text-stone-400 mt-2">No obligation &bull; Same-day response</p>
                 </div>
               </div>
             </div>
@@ -350,7 +419,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
         </div>
       </section>
 
-      {/* ─── Photo Gallery — 4 Columns ─── */}
+      {/* ─── Photo Gallery — 4 Columns with Hover CTAs ─── */}
       {photos.length > 0 && (
         <section className="py-20 md:py-28 px-4 sm:px-6 bg-stone-50">
           <div className="max-w-6xl mx-auto">
@@ -364,12 +433,17 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
               {photos.slice(0, 8).map((photo, i) => (
-                <div key={i} className="group aspect-square bg-stone-200 rounded-xl md:rounded-2xl overflow-hidden card-lift">
+                <div key={i} className="group relative aspect-square bg-stone-200 rounded-xl md:rounded-2xl overflow-hidden card-lift">
                   <img
                     src={photo}
                     alt={`${lead.companyName} project ${i + 1}`}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
+                    <button onClick={onCTAClick} className="bg-white/90 text-stone-900 text-xs font-semibold px-4 py-2 rounded-full backdrop-blur-sm">
+                      Get a Free Quote
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -394,7 +468,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
             <div className="flex flex-wrap justify-center gap-3 md:gap-4">
               {[
                 { icon: Users, label: 'Locally Owned' },
-                { icon: Clock, label: 'Prompt Service' },
+                { icon: Clock, label: 'Same-Day Response' },
                 { icon: Shield, label: 'Fully Licensed' },
                 { icon: CheckCircle, label: 'Satisfaction Guaranteed' },
               ].map((item, i) => (
@@ -430,7 +504,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
               className="inline-flex items-center justify-center gap-2.5 bg-white text-stone-900 px-8 md:px-10 py-4 rounded-xl font-bold text-base md:text-lg hover:bg-stone-50 transition-all duration-200 shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
             >
               <Phone size={20} />
-              {lead.phone || 'Call Now'}
+              Call Now — It&apos;s Free
             </a>
             {lead.email && (
               <a
@@ -442,11 +516,12 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
               </a>
             )}
           </div>
+          <p className="mt-4 text-sm text-white/50">No obligation &bull; Free estimate &bull; Satisfaction guaranteed</p>
         </div>
       </section>
 
       {/* ─── Footer ─── */}
-      <footer className="bg-stone-900 py-14 md:py-16 px-4 sm:px-6">
+      <footer className="bg-stone-900 py-14 md:py-16 px-4 sm:px-6 pb-28 md:pb-16">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-12 mb-10 md:mb-12">
             <div>
@@ -455,6 +530,16 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
                 Your trusted {industryLabel} professionals{location ? ` in ${location}` : ''}.
                 Licensed, insured, and committed to quality workmanship on every project.
               </p>
+              {hasRating && (
+                <div className="flex items-center gap-2 mt-4">
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <Star key={i} size={12} className={i < Math.floor(lead.enrichedRating!) ? 'text-amber-400 fill-current' : 'text-stone-700'} />
+                    ))}
+                  </div>
+                  <span className="text-stone-400 text-xs">{lead.enrichedRating} Stars{lead.enrichedReviews ? ` (${lead.enrichedReviews} reviews)` : ''}</span>
+                </div>
+              )}
             </div>
             <div>
               <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Services</h4>

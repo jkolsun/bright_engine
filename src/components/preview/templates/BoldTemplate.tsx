@@ -19,7 +19,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-[72px] flex items-center justify-between">
           <div className="flex items-center gap-3">
             {lead.logo && (
-              <img src={lead.logo} alt={lead.companyName} className="h-8 w-8 rounded-lg object-cover" />
+              <img src={lead.logo} alt={lead.companyName} className="h-8 w-8 rounded-lg object-cover ring-2 ring-orange-500/20" />
             )}
             <span className="font-display text-xl font-black text-white tracking-tight uppercase">
               {lead.companyName}
@@ -46,7 +46,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         </div>
       </nav>
 
-      {/* ─── Hero — Full-Bleed Dramatic, Left-Aligned ─── */}
+      {/* ─── Hero — Full-Bleed Dramatic ─── */}
       <section className="relative min-h-[80vh] flex items-center overflow-hidden">
         <div className={`absolute inset-0 bg-gradient-to-br ${config.gradient}`} />
         <div className="absolute inset-0 bg-black/60" />
@@ -55,7 +55,6 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
 
         <div className="absolute top-1/4 right-0 w-[600px] h-[600px] bg-orange-500/10 rounded-full translate-x-1/3 blur-3xl" />
         <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-red-600/8 rounded-full translate-y-1/2 blur-3xl" />
-        <div className="absolute top-0 left-0 w-[300px] h-[300px] bg-amber-500/5 rounded-full -translate-x-1/4 -translate-y-1/4 blur-3xl" />
 
         <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 py-28">
           {hasRating && (
@@ -65,9 +64,9 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                   <Star key={i} size={15} className={i < Math.floor(lead.enrichedRating!) ? 'text-amber-400 fill-current' : 'text-white/20'} />
                 ))}
               </div>
-              <span className="text-sm font-bold text-white">{lead.enrichedRating}</span>
+              <span className="text-sm font-bold text-white">{lead.enrichedRating}-Star Rated</span>
               {lead.enrichedReviews && (
-                <span className="text-sm text-white/50">({lead.enrichedReviews} reviews)</span>
+                <span className="text-sm text-white/50">• {lead.enrichedReviews}+ reviews</span>
               )}
             </div>
           )}
@@ -83,7 +82,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           {location && (
             <p className="text-base text-white/40 mb-12 flex items-center gap-2">
               <MapPin size={16} className="text-orange-400" />
-              Proudly serving {location}
+              Proudly serving {location} and the surrounding area
             </p>
           )}
 
@@ -94,7 +93,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
               className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white px-10 py-5 rounded-xl font-black text-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-2xl animate-cta-glow-orange"
             >
               <Phone size={22} />
-              Call Now
+              Call Now — Free Estimate
             </a>
             <button
               onClick={onCTAClick}
@@ -131,7 +130,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                     {lead.enrichedReviews}+
                   </p>
                   <div className="h-[13px] mb-2" />
-                  <p className="text-xs text-gray-500 uppercase tracking-[0.2em] font-semibold">Reviews</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-[0.2em] font-semibold">Happy Customers</p>
                 </div>
               )}
               <div>
@@ -200,7 +199,33 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         </section>
       )}
 
-      {/* ─── Why Choose Us — Three Large Center Cards ─── */}
+      {/* ─── Urgency Strip ─── */}
+      <section className="relative py-12 px-4 sm:px-6 bg-gradient-to-r from-orange-500 via-red-500 to-orange-500 overflow-hidden">
+        <div className="absolute inset-0 bg-noise opacity-10" />
+        <div className="relative max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
+          <div className="flex items-center gap-5">
+            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0 animate-bounce-gentle">
+              <Zap size={30} className="text-white" />
+            </div>
+            <div>
+              <p className="text-2xl font-display font-black text-white">Need Help Fast?</p>
+              <p className="text-white/80 text-lg">
+                Same-day response — call us anytime for fast, reliable service.
+              </p>
+            </div>
+          </div>
+          <a
+            href={`tel:${lead.phone}`}
+            onClick={onCallClick}
+            className="inline-flex items-center gap-2.5 bg-white text-gray-900 px-10 py-4 rounded-xl font-black text-lg hover:bg-gray-100 transition-all shadow-xl flex-shrink-0"
+          >
+            <Phone size={20} />
+            {lead.phone || 'Call Now'}
+          </a>
+        </div>
+      </section>
+
+      {/* ─── Why Choose Us ─── */}
       <section className="py-24 px-4 sm:px-6 bg-gray-900/40">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
@@ -218,7 +243,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
               {
                 icon: Flame,
                 title: wc?.valueProps?.[0]?.title || 'Fast Response',
-                desc: wc?.valueProps?.[0]?.description || `We understand urgency. ${lead.companyName} responds quickly and gets to work fast — because your time matters.`,
+                desc: wc?.valueProps?.[0]?.description || `We understand urgency. ${lead.companyName} responds the same day and gets to work fast — because your time matters.`,
               },
               {
                 icon: Shield,
@@ -235,7 +260,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                 key={i}
                 className="bg-gray-950/80 border border-gray-800/50 rounded-2xl p-10 text-center card-lift card-lift-dark hover:border-orange-500/20 transition-all duration-300"
               >
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-orange-500/15 group-hover:shadow-orange-500/30 transition-shadow">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-orange-500/15">
                   <item.icon size={32} className="text-white" />
                 </div>
                 <h3 className="font-display text-xl font-bold text-white mb-4">{item.title}</h3>
@@ -246,7 +271,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         </div>
       </section>
 
-      {/* ─── About — Side-by-Side (Text Left, Contact Card Right) ─── */}
+      {/* ─── About with Contact Card ─── */}
       <section className="py-24 px-4 sm:px-6 bg-gray-950">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-14 items-start">
           <div>
@@ -300,7 +325,8 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           </div>
 
           <div className="bg-gray-900/60 border border-gray-800/50 rounded-2xl p-10">
-            <h3 className="font-display text-2xl font-bold text-white mb-8">Get In Touch</h3>
+            <h3 className="font-display text-2xl font-bold text-white mb-2">Ready to Get Started?</h3>
+            <p className="text-gray-500 mb-8">Reach out today for a free, no-obligation estimate.</p>
             <div className="space-y-5">
               {lead.phone && (
                 <a
@@ -347,13 +373,14 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
               onClick={onCTAClick}
               className="w-full mt-8 bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-xl font-bold text-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-lg"
             >
-              {config.ctaText}
+              Get Your Free Estimate
             </button>
+            <p className="text-center text-xs text-gray-600 mt-3">No obligation • Same-day response • Satisfaction guaranteed</p>
           </div>
         </div>
       </section>
 
-      {/* ─── Photo Gallery — Dark Borders, Orange Hover Glow ─── */}
+      {/* ─── Photo Gallery ─── */}
       {photos.length > 0 && (
         <section className="py-24 px-4 sm:px-6 bg-gray-900/40">
           <div className="max-w-7xl mx-auto">
@@ -387,29 +414,26 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         </section>
       )}
 
-      {/* ─── Urgency Strip — Orange Gradient Full-Width ─── */}
-      <section className="relative py-12 px-4 sm:px-6 bg-gradient-to-r from-orange-500 via-red-500 to-orange-500 overflow-hidden">
-        <div className="absolute inset-0 bg-noise opacity-10" />
-        <div className="relative max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
-          <div className="flex items-center gap-5">
-            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0 animate-bounce-gentle">
-              <Zap size={30} className="text-white" />
-            </div>
-            <div>
-              <p className="text-2xl font-display font-black text-white">Need Help Fast?</p>
-              <p className="text-white/80 text-lg">
-                We respond quickly — call us anytime for fast, reliable service.
-              </p>
-            </div>
+      {/* ─── Testimonial ─── */}
+      <section className="py-20 px-4 sm:px-6 bg-gray-950">
+        <div className="max-w-3xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-sm font-bold mb-8 border border-orange-500/20">
+            <Award size={14} />
+            Customer Review
           </div>
-          <a
-            href={`tel:${lead.phone}`}
-            onClick={onCallClick}
-            className="inline-flex items-center gap-2.5 bg-white text-gray-900 px-10 py-4 rounded-xl font-black text-lg hover:bg-gray-100 transition-all shadow-xl flex-shrink-0"
-          >
-            <Phone size={20} />
-            {lead.phone || 'Call Now'}
-          </a>
+          <div className="flex justify-center mb-6 gap-1">
+            {Array.from({ length: 5 }, (_, i) => (
+              <Star key={i} size={28} className="text-amber-400 fill-current" />
+            ))}
+          </div>
+          <p className="text-xl md:text-2xl text-gray-300 leading-relaxed italic font-light mb-8">
+            &ldquo;{lead.companyName} absolutely crushed it. They were fast, professional, and the
+            quality of work was top-notch. Fair pricing too. Already recommended them to everyone
+            I know. These guys are the real deal!&rdquo;
+          </p>
+          <div className="w-12 h-0.5 bg-orange-500 mx-auto mb-4 rounded-full" />
+          <p className="text-gray-500 font-semibold">Satisfied Customer</p>
+          {location && <p className="text-gray-600 text-sm mt-1">{lead.city}, {lead.state}</p>}
         </div>
       </section>
 
@@ -465,7 +489,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
             onClick={onCTAClick}
             className="flex-1 inline-flex items-center justify-center gap-2 bg-white/10 border border-white/20 text-white py-3.5 rounded-xl font-bold text-base"
           >
-            {config.ctaText}
+            Free Quote
           </button>
         </div>
       </div>
@@ -482,6 +506,16 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                 Professional {industryLabel} services{location ? ` serving ${location}` : ''}.
                 Licensed, insured, and committed to delivering results.
               </p>
+              {hasRating && (
+                <div className="flex items-center gap-2 mt-4">
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <Star key={i} size={12} className={i < Math.floor(lead.enrichedRating!) ? 'text-amber-400 fill-current' : 'text-gray-700'} />
+                    ))}
+                  </div>
+                  <span className="text-gray-500 text-sm">{lead.enrichedRating} rating</span>
+                </div>
+              )}
             </div>
             <div>
               <h4 className="text-white font-bold mb-4 text-sm uppercase tracking-wider">Services</h4>

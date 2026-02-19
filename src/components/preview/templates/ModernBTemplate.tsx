@@ -18,7 +18,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
       <nav className="sticky top-0 z-40 glass border-b border-gray-200/40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-[72px] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {lead.logo && <img src={lead.logo} alt="" className="w-9 h-9 rounded-xl object-cover" />}
+            {lead.logo && <img src={lead.logo} alt="" className="w-9 h-9 rounded-xl object-cover ring-2 ring-violet-100" />}
             <span className="font-display text-xl font-bold text-gray-900 tracking-tight">{lead.companyName}</span>
           </div>
           <div className="flex items-center gap-4">
@@ -29,7 +29,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
               </a>
             )}
             <button onClick={onCTAClick} className="bg-gradient-to-r from-violet-500 to-purple-600 text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:from-violet-600 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg animate-cta-glow-violet">
-              Get a Quote
+              Get a Free Quote
             </button>
           </div>
         </div>
@@ -42,11 +42,11 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
 
         <div className="relative max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* Left: Text Content */}
             <div className="animate-fade-in-up">
-              <p className="text-violet-600 font-semibold text-sm tracking-widest uppercase mb-5">
-                Professional {industryLabel} in {location || 'your area'}
-              </p>
+              <div className="inline-flex items-center gap-2 bg-violet-50 border border-violet-200/60 text-violet-700 rounded-full px-4 py-2 text-sm font-semibold mb-6">
+                <Sparkles size={14} />
+                {hasRating ? `${lead.enrichedRating}-Star Rated` : 'Top Rated'} • {location || 'Your Area'}
+              </div>
               <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 tracking-tight leading-[1.1]">
                 {wc?.heroHeadline || `Expert ${industryLabel.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} You Can Trust`}
               </h1>
@@ -66,7 +66,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                   className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white px-9 py-4 rounded-full font-semibold text-lg hover:from-violet-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 animate-cta-glow-violet"
                 >
                   <Phone size={20} />
-                  Call Now
+                  Call Now — It&apos;s Free
                 </a>
                 <button
                   onClick={onCTAClick}
@@ -78,7 +78,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
               </div>
             </div>
 
-            {/* Right: CTA Card with Rating */}
+            {/* CTA Card with Rating */}
             <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
               <div className="bg-white rounded-3xl border border-gray-100 shadow-xl p-8 md:p-10 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-violet-50 to-transparent rounded-bl-full" />
@@ -95,21 +95,20 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                     </div>
                   )}
                   <h3 className="font-display text-2xl font-bold text-gray-900 mb-2">Get Your Free Estimate</h3>
-                  <p className="text-gray-500 mb-8">No obligation. Fast response guaranteed.</p>
+                  <p className="text-gray-500 mb-8">No obligation. Same-day response guaranteed.</p>
 
                   <div className="space-y-3 mb-8">
-                    <div className="flex items-center gap-3 text-gray-600">
-                      <CheckCircle size={18} className="text-violet-500 flex-shrink-0" />
-                      <span className="text-sm">Free, no-obligation assessment</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-gray-600">
-                      <CheckCircle size={18} className="text-violet-500 flex-shrink-0" />
-                      <span className="text-sm">Licensed and fully insured</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-gray-600">
-                      <CheckCircle size={18} className="text-violet-500 flex-shrink-0" />
-                      <span className="text-sm">Transparent, upfront pricing</span>
-                    </div>
+                    {[
+                      'Free, no-obligation assessment',
+                      'Licensed and fully insured',
+                      'Transparent, upfront pricing',
+                      'Same-day response time',
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-3 text-gray-600">
+                        <CheckCircle size={18} className="text-violet-500 flex-shrink-0" />
+                        <span className="text-sm">{item}</span>
+                      </div>
+                    ))}
                   </div>
 
                   <button
@@ -142,7 +141,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
             {[
               { icon: Shield, label: wc?.valueProps?.[0]?.title || 'Licensed & Insured' },
               { icon: Award, label: wc?.valueProps?.[1]?.title || 'Top Rated' },
-              { icon: Clock, label: wc?.valueProps?.[2]?.title || 'Fast Response' },
+              { icon: Clock, label: wc?.valueProps?.[2]?.title || 'Same-Day Response' },
               { icon: BadgeCheck, label: 'Satisfaction Guaranteed' },
               { icon: ThumbsUp, label: hasRating ? `${lead.enrichedRating}-Star Rated` : 'Trusted Pros' },
             ].map((badge, i) => (
@@ -171,7 +170,6 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
               >
                 <div className="max-w-6xl mx-auto">
                   <div className={`grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center ${!isEven ? 'md:[direction:rtl]' : ''}`}>
-                    {/* Text side */}
                     <div className={!isEven ? 'md:[direction:ltr]' : ''}>
                       <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-sm font-semibold mb-5">
                         Service {String(i + 1).padStart(2, '0')}
@@ -186,7 +184,6 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                         <ArrowRight size={16} />
                       </button>
                     </div>
-                    {/* Icon/Visual side */}
                     <div className={`flex justify-center ${!isEven ? 'md:[direction:ltr]' : ''}`}>
                       <div className="relative">
                         <div className="w-48 h-48 md:w-56 md:h-56 rounded-3xl bg-gradient-to-br from-violet-100 to-purple-50 flex items-center justify-center">
@@ -209,8 +206,6 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
       {/* ─── Full-Width Social Proof Banner ─── */}
       <section className="relative py-14 px-4 sm:px-6 bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600 overflow-hidden">
         <div className="absolute inset-0 bg-noise opacity-10" />
-        <div className="absolute top-0 left-1/4 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-48 h-48 bg-purple-400/10 rounded-full translate-y-1/2 blur-3xl" />
         <div className="relative max-w-5xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12 text-center md:text-left">
             {hasRating && (
@@ -221,7 +216,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                   ))}
                 </div>
                 <span className="text-white font-display text-2xl font-bold">{lead.enrichedRating}</span>
-                {lead.enrichedReviews && <span className="text-white/70">({lead.enrichedReviews} reviews)</span>}
+                {lead.enrichedReviews && <span className="text-white/70">({lead.enrichedReviews}+ reviews)</span>}
               </div>
             )}
             <div className="hidden md:block w-px h-10 bg-white/20" />
@@ -232,15 +227,19 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
               </span>
             </div>
             <div className="hidden md:block w-px h-10 bg-white/20" />
-            <div className="flex items-center gap-2.5">
-              <Shield size={20} className="text-white/80" />
-              <span className="text-white font-semibold text-lg">Fully Licensed &amp; Insured</span>
-            </div>
+            <a
+              href={`tel:${lead.phone}`}
+              onClick={onCallClick}
+              className="inline-flex items-center gap-2 bg-white text-violet-700 px-6 py-3 rounded-full font-bold hover:bg-gray-50 transition-all shadow-lg"
+            >
+              <Phone size={18} />
+              Call Now
+            </a>
           </div>
         </div>
       </section>
 
-      {/* ─── Full-Width About Section ─── */}
+      {/* ─── About Section ─── */}
       <section className="py-24 px-4 sm:px-6 bg-white">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
@@ -261,29 +260,23 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
             </p>
           </div>
 
-          {/* Inline stat numbers */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div className="p-6 rounded-2xl bg-violet-50/50 border border-violet-100">
-              <p className="font-display text-4xl md:text-5xl font-bold text-gradient-violet">{hasRating ? lead.enrichedRating : '5.0'}</p>
-              <p className="text-sm text-gray-500 font-medium mt-2">Star Rating</p>
-            </div>
-            <div className="p-6 rounded-2xl bg-violet-50/50 border border-violet-100">
-              <p className="font-display text-4xl md:text-5xl font-bold text-gradient-violet">{lead.enrichedReviews ? `${lead.enrichedReviews}+` : '100+'}</p>
-              <p className="text-sm text-gray-500 font-medium mt-2">{lead.enrichedReviews ? 'Reviews' : 'Projects'}</p>
-            </div>
-            <div className="p-6 rounded-2xl bg-violet-50/50 border border-violet-100">
-              <p className="font-display text-4xl md:text-5xl font-bold text-gradient-violet">100%</p>
-              <p className="text-sm text-gray-500 font-medium mt-2">Satisfaction</p>
-            </div>
-            <div className="p-6 rounded-2xl bg-violet-50/50 border border-violet-100">
-              <p className="font-display text-4xl md:text-5xl font-bold text-gradient-violet">24hr</p>
-              <p className="text-sm text-gray-500 font-medium mt-2">Response Time</p>
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            {[
+              { value: hasRating ? `${lead.enrichedRating}` : '5.0', label: 'Star Rating' },
+              { value: lead.enrichedReviews ? `${lead.enrichedReviews}+` : '100+', label: lead.enrichedReviews ? 'Reviews' : 'Projects' },
+              { value: '100%', label: 'Satisfaction' },
+              { value: 'Same Day', label: 'Response Time' },
+            ].map((stat, i) => (
+              <div key={i} className="p-6 rounded-2xl bg-violet-50/50 border border-violet-100">
+                <p className="font-display text-3xl md:text-4xl font-bold text-gradient-violet">{stat.value}</p>
+                <p className="text-sm text-gray-500 font-medium mt-2">{stat.label}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ─── Gallery with Featured Image ─── */}
+      {/* ─── Gallery ─── */}
       {photos.length > 0 && (
         <section className="py-24 px-4 sm:px-6 bg-gradient-to-b from-gray-50 to-white">
           <div className="max-w-6xl mx-auto">
@@ -310,13 +303,13 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                       alt={`${lead.companyName} project ${i + 1}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     {isFeatured && (
                       <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <span className="inline-flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-gray-900 text-sm font-semibold px-4 py-2 rounded-full">
+                        <button onClick={onCTAClick} className="inline-flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-gray-900 text-sm font-semibold px-4 py-2 rounded-full">
                           <Camera size={14} />
-                          Featured Project
-                        </span>
+                          Get a Quote
+                        </button>
                       </div>
                     )}
                   </div>
@@ -388,6 +381,16 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                 Professional {industryLabel} services{location ? ` in ${location}` : ''}.
                 Quality workmanship, honest pricing, and customer satisfaction guaranteed.
               </p>
+              {hasRating && (
+                <div className="flex items-center gap-2 mt-4">
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <Star key={i} size={12} className={i < Math.floor(lead.enrichedRating!) ? 'text-amber-400 fill-current' : 'text-gray-700'} />
+                    ))}
+                  </div>
+                  <span className="text-gray-400 text-sm">{lead.enrichedRating} rating</span>
+                </div>
+              )}
             </div>
             <div>
               <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Quick Links</h4>
@@ -401,8 +404,8 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
             <div>
               <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Contact</h4>
               <div className="space-y-3 text-sm text-gray-400">
-                {lead.phone && <p className="flex items-center gap-2.5 hover:text-white transition-colors"><Phone size={14} className="text-violet-400" /> {lead.phone}</p>}
-                {lead.email && <p className="flex items-center gap-2.5 hover:text-white transition-colors"><Mail size={14} className="text-violet-400" /> {lead.email}</p>}
+                {lead.phone && <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-2.5 hover:text-white transition-colors"><Phone size={14} className="text-violet-400" /> {lead.phone}</a>}
+                {lead.email && <a href={`mailto:${lead.email}`} className="flex items-center gap-2.5 hover:text-white transition-colors"><Mail size={14} className="text-violet-400" /> {lead.email}</a>}
                 {lead.enrichedAddress && <p className="flex items-center gap-2.5"><MapPin size={14} className="text-violet-400" /> {lead.enrichedAddress}</p>}
               </div>
             </div>
@@ -414,7 +417,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
         </div>
       </footer>
 
-      {/* ─── Floating Phone Button (fixed bottom-right, all screens) ─── */}
+      {/* ─── Floating Phone Button ─── */}
       <a
         href={`tel:${lead.phone}`}
         onClick={onCallClick}

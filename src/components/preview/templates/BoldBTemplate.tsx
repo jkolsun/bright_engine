@@ -19,7 +19,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-[72px] flex items-center justify-between">
           <div className="flex items-center gap-3">
             {lead.logo && (
-              <img src={lead.logo} alt={lead.companyName} className="h-8 w-8 rounded-lg object-cover" />
+              <img src={lead.logo} alt={lead.companyName} className="h-8 w-8 rounded-lg object-cover ring-2 ring-blue-500/20" />
             )}
             <span className="font-display text-xl font-black text-white tracking-tight uppercase">
               {lead.companyName}
@@ -60,7 +60,6 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
 
         <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-blue-500/8 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-cyan-500/8 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-0 w-[300px] h-[300px] bg-indigo-500/5 rounded-full -translate-x-1/2 blur-3xl" />
 
         <div className="relative max-w-4xl mx-auto w-full px-4 sm:px-6 py-28 text-center">
           {hasRating && (
@@ -70,9 +69,9 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                   <Star key={i} size={15} className={i < Math.floor(lead.enrichedRating!) ? 'text-blue-400 fill-current' : 'text-white/20'} />
                 ))}
               </div>
-              <span className="text-sm font-bold text-white">{lead.enrichedRating}</span>
+              <span className="text-sm font-bold text-white">{lead.enrichedRating}-Star Rated</span>
               {lead.enrichedReviews && (
-                <span className="text-sm text-white/50">({lead.enrichedReviews} reviews)</span>
+                <span className="text-sm text-white/50">• {lead.enrichedReviews}+ reviews</span>
               )}
             </div>
           )}
@@ -92,7 +91,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-10 py-5 rounded-xl font-black text-lg hover:from-blue-600 hover:to-cyan-600 transition-all shadow-2xl animate-cta-glow"
             >
               <Phone size={22} />
-              Call Now
+              Call Now — Free Estimate
             </a>
             <button
               onClick={onCTAClick}
@@ -105,7 +104,46 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         </div>
       </section>
 
-      {/* ─── Compact Icon Grid — Services ─── */}
+      {/* ─── Inline Social Proof Strip ─── */}
+      <section className="py-6 px-4 sm:px-6 border-y border-white/5 bg-gray-900/50">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm">
+            {hasRating && (
+              <span className="flex items-center gap-1.5 text-white font-semibold">
+                <Star size={14} className="text-blue-400 fill-current" />
+                {lead.enrichedRating} Rating
+              </span>
+            )}
+            {hasRating && lead.enrichedReviews && (
+              <span className="text-gray-600 hidden sm:inline">&#x2022;</span>
+            )}
+            {lead.enrichedReviews && (
+              <span className="text-gray-300 font-medium">{lead.enrichedReviews}+ Happy Customers</span>
+            )}
+            <span className="text-gray-600 hidden sm:inline">&#x2022;</span>
+            <span className="flex items-center gap-1.5 text-gray-300 font-medium">
+              <Shield size={13} className="text-blue-400" />
+              Licensed &amp; Insured
+            </span>
+            {location && (
+              <>
+                <span className="text-gray-600 hidden sm:inline">&#x2022;</span>
+                <span className="flex items-center gap-1.5 text-gray-300 font-medium">
+                  <MapPin size={13} className="text-blue-400" />
+                  Serving {location}
+                </span>
+              </>
+            )}
+            <span className="text-gray-600 hidden sm:inline">&#x2022;</span>
+            <span className="flex items-center gap-1.5 text-gray-300 font-medium">
+              <Clock size={13} className="text-blue-400" />
+              Same-Day Response
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Services Grid ─── */}
       {services.length > 0 && (
         <section className="py-24 px-4 sm:px-6 bg-gray-950">
           <div className="max-w-7xl mx-auto">
@@ -144,48 +182,9 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         </section>
       )}
 
-      {/* ─── Inline Social Proof Strip ─── */}
-      <section className="py-6 px-4 sm:px-6 border-y border-white/5 bg-gray-900/50">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm">
-            {hasRating && (
-              <span className="flex items-center gap-1.5 text-white font-semibold">
-                <Star size={14} className="text-blue-400 fill-current" />
-                {lead.enrichedRating} Rating
-              </span>
-            )}
-            {hasRating && lead.enrichedReviews && (
-              <span className="text-gray-600 hidden sm:inline">&#x2022;</span>
-            )}
-            {lead.enrichedReviews && (
-              <span className="text-gray-300 font-medium">{lead.enrichedReviews}+ Reviews</span>
-            )}
-            <span className="text-gray-600 hidden sm:inline">&#x2022;</span>
-            <span className="flex items-center gap-1.5 text-gray-300 font-medium">
-              <Shield size={13} className="text-blue-400" />
-              Licensed &amp; Insured
-            </span>
-            {location && (
-              <>
-                <span className="text-gray-600 hidden sm:inline">&#x2022;</span>
-                <span className="flex items-center gap-1.5 text-gray-300 font-medium">
-                  <MapPin size={13} className="text-blue-400" />
-                  Serving {location}
-                </span>
-              </>
-            )}
-            <span className="text-gray-600 hidden sm:inline">&#x2022;</span>
-            <span className="flex items-center gap-1.5 text-gray-300 font-medium">
-              <Clock size={13} className="text-blue-400" />
-              24/7 Available
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Before/After Style Gallery — Creative Offset Grid ─── */}
+      {/* ─── Gallery ─── */}
       {photos.length > 0 && (
-        <section className="py-24 px-4 sm:px-6 bg-gray-950">
+        <section className="py-24 px-4 sm:px-6 bg-gray-900/40">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-16">
               <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-sm font-bold mb-4 border border-blue-500/20">
@@ -215,8 +214,9 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                   </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="absolute bottom-0 left-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-500 translate-y-2 group-hover:translate-y-0">
-                    <p className="text-white text-sm font-semibold">Project {i + 1}</p>
-                    <p className="text-white/60 text-xs">{lead.companyName}</p>
+                    <button onClick={onCTAClick} className="inline-flex items-center gap-1.5 bg-blue-500/90 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1.5 rounded-full">
+                      Get a Quote <ArrowRight size={12} />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -225,8 +225,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         </section>
       )}
 
-      {/* ─── About with Pull-Quote Callout ─── */}
-      <section className="py-24 px-4 sm:px-6 bg-gray-900/40">
+      {/* ─── About with Pull-Quote ─── */}
+      <section className="py-24 px-4 sm:px-6 bg-gray-950">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 items-start">
             <div className="lg:col-span-3">
@@ -290,7 +290,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               </div>
 
               <div className="bg-gray-950/80 border border-gray-800/50 rounded-2xl p-8">
-                <h3 className="font-display text-lg font-bold text-white mb-5">Contact Info</h3>
+                <h3 className="font-display text-lg font-bold text-white mb-2">Ready to Get Started?</h3>
+                <p className="text-gray-600 text-sm mb-5">Free estimate • Same-day response</p>
                 <div className="space-y-4">
                   {lead.phone && (
                     <a
@@ -339,8 +340,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         </div>
       </section>
 
-      {/* ─── Mini Testimonial Cards ─── */}
-      <section className="py-20 px-4 sm:px-6 bg-gray-950">
+      {/* ─── Testimonial Cards ─── */}
+      <section className="py-20 px-4 sm:px-6 bg-gray-900/40">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-sm font-bold mb-4 border border-blue-500/20">
@@ -358,19 +359,16 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                 quote: `${lead.companyName} was fantastic from start to finish. Professional, clean, and affordable. Will absolutely call again.`,
                 name: 'Homeowner',
                 loc: location || 'Local Area',
-                stars: 5,
               },
               {
                 quote: `Fast response and excellent work. They explained everything clearly and completed the job on time. Couldn't be happier.`,
                 name: 'Property Manager',
                 loc: location || 'Local Area',
-                stars: 5,
               },
               {
                 quote: `Great experience from the first call to project completion. Fair pricing, quality workmanship, and genuinely nice people.`,
                 name: 'Repeat Customer',
                 loc: location || 'Local Area',
-                stars: 5,
               },
             ].map((review, i) => (
               <div
@@ -378,7 +376,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                 className="bg-gray-900/50 border border-gray-800/50 rounded-xl p-6 hover:border-blue-500/20 transition-all duration-300"
               >
                 <div className="flex gap-0.5 mb-4">
-                  {Array.from({ length: review.stars }, (_, j) => (
+                  {Array.from({ length: 5 }, (_, j) => (
                     <Star key={j} size={14} className="text-blue-400 fill-current" />
                   ))}
                 </div>
@@ -400,7 +398,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
       </section>
 
       {/* ─── Why Choose Us ─── */}
-      <section className="py-24 px-4 sm:px-6 bg-gray-900/40">
+      <section className="py-24 px-4 sm:px-6 bg-gray-950">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-sm font-bold mb-4 border border-blue-500/20">
@@ -416,8 +414,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
             {[
               {
                 icon: Clock,
-                title: wc?.valueProps?.[0]?.title || 'Fast Response',
-                desc: wc?.valueProps?.[0]?.description || `We understand urgency. ${lead.companyName} responds quickly and gets to work fast — because your time matters.`,
+                title: wc?.valueProps?.[0]?.title || 'Same-Day Response',
+                desc: wc?.valueProps?.[0]?.description || `We understand urgency. ${lead.companyName} responds the same day and gets to work fast — because your time matters.`,
               },
               {
                 icon: Shield,
@@ -432,7 +430,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
             ].map((item, i) => (
               <div
                 key={i}
-                className="group bg-gray-950/80 border border-gray-800/50 rounded-2xl p-10 text-center card-lift card-lift-dark hover:border-blue-500/20 transition-all duration-300"
+                className="group bg-gray-900/60 border border-gray-800/50 rounded-2xl p-10 text-center card-lift card-lift-dark hover:border-blue-500/20 transition-all duration-300"
               >
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-500/15 group-hover:shadow-blue-500/30 transition-shadow">
                   <item.icon size={28} className="text-white" />
@@ -445,8 +443,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         </div>
       </section>
 
-      {/* ─── Inline Final CTA — Contained Card with Gradient Border ─── */}
-      <section className="py-24 px-4 sm:px-6 bg-gray-950">
+      {/* ─── Gradient Border CTA ─── */}
+      <section className="py-24 px-4 sm:px-6 bg-gray-900/40">
         <div className="max-w-3xl mx-auto">
           <div className="relative rounded-2xl p-[1px] bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500">
             <div className="bg-gray-950 rounded-2xl p-10 md:p-14 text-center">
@@ -481,7 +479,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         </div>
       </section>
 
-      {/* ─── Floating Phone Button (Bottom-Right, Mobile + Desktop) ─── */}
+      {/* ─── Floating Phone Button ─── */}
       {lead.phone && (
         <a
           href={`tel:${lead.phone}`}
@@ -505,6 +503,16 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                 Professional {industryLabel} services{location ? ` serving ${location}` : ''}.
                 Licensed, insured, and committed to delivering results.
               </p>
+              {hasRating && (
+                <div className="flex items-center gap-2 mt-4">
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <Star key={i} size={12} className={i < Math.floor(lead.enrichedRating!) ? 'text-blue-400 fill-current' : 'text-gray-700'} />
+                    ))}
+                  </div>
+                  <span className="text-gray-500 text-sm">{lead.enrichedRating} rating</span>
+                </div>
+              )}
             </div>
             <div>
               <h4 className="text-white font-bold mb-4 text-sm uppercase tracking-wider">Services</h4>

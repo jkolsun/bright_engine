@@ -605,6 +605,48 @@ export async function handleInstantlyWebhook(event: any) {
           },
         })
         console.log(`[Instantly] Lead ${email} replied (${sentiment})`)
+
+        // ── CLOSE ENGINE TRIGGER ──
+        if (sentiment === 'positive' || sentiment === 'question') {
+          if (lead.phone) {
+            try {
+              const { triggerCloseEngine } = await import('./close-engine')
+              const result = await triggerCloseEngine({
+                leadId: lead.id,
+                entryPoint: 'INSTANTLY_REPLY',
+              })
+
+              if (result.success) {
+                console.log(`[Instantly] Close Engine triggered for ${email} (${sentiment}), conversation: ${result.conversationId}`)
+
+                await prisma.leadEvent.create({
+                  data: {
+                    leadId: lead.id,
+                    eventType: 'CLOSE_ENGINE_TRIGGERED',
+                    metadata: {
+                      entryPoint: 'INSTANTLY_REPLY',
+                      sentiment,
+                      emailBody: body?.substring(0, 200),
+                    },
+                  },
+                })
+              }
+            } catch (err) {
+              console.error('[Instantly] Close Engine trigger failed:', err)
+              // Don't fail the webhook if Close Engine fails
+            }
+          } else {
+            console.warn(`[Instantly] Lead ${email} replied positively but has no phone number`)
+            await prisma.notification.create({
+              data: {
+                type: 'HOT_LEAD',
+                title: 'Positive Reply — No Phone Number',
+                message: `${lead.firstName} at ${lead.companyName} replied to email but has no phone. Manual follow-up needed.`,
+                metadata: { leadId: lead.id, email, sentiment, source: 'instantly_reply' },
+              },
+            })
+          }
+        }
         break
 
       case 'bounce':
