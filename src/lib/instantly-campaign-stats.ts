@@ -79,14 +79,18 @@ export async function getCampaignFunnelStats(): Promise<CampaignFunnelStats[]> {
     where: { key: 'instantly_campaigns' },
   })
 
-  const campaigns = campaignSettings?.value as any
+  const campaigns = campaignSettings?.value as Record<string, string> | null
   const campaignIds: { id: string; name: string }[] = []
 
-  if (campaigns?.campaign_a) {
-    campaignIds.push({ id: campaigns.campaign_a, name: 'Campaign A - Bad Website' })
-  }
-  if (campaigns?.campaign_b) {
-    campaignIds.push({ id: campaigns.campaign_b, name: 'Campaign B - No Website' })
+  // Load ALL campaigns from settings (not just campaign_a/campaign_b)
+  if (campaigns && typeof campaigns === 'object') {
+    for (const [key, id] of Object.entries(campaigns)) {
+      if (id && typeof id === 'string') {
+        // Convert key like "campaign_a" to "Campaign A"
+        const name = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+        campaignIds.push({ id, name })
+      }
+    }
   }
 
   // If no campaigns stored, try to find any leads with campaign IDs
