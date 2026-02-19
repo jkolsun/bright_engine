@@ -4,10 +4,10 @@ import { verifySession } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
-const INSTANTLY_BATCH_LIMIT = 500 // V1 API max per request
+const BATCH_LIMIT = 1000 // V2 bulk endpoint max per request
 
 // POST /api/instantly/push-leads
-// Push QUEUED leads to Instantly using V1 lead/add endpoint (batch, adds to campaign)
+// Push QUEUED leads to Instantly using V2 bulk add endpoint (Bearer auth + adds to campaign)
 export async function POST(request: NextRequest) {
   try {
     const sessionCookie = request.cookies.get('session')?.value
@@ -60,23 +60,23 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Push leads to Instantly V1 lead/add endpoint in batches of 500
+    // Push leads to Instantly V2 bulk add endpoint in batches
     let totalPushed = 0
-    let totalUploadedByInstantly = 0
     const errors: string[] = []
     const successIds: string[] = []
 
-    for (let i = 0; i < pushableLeads.length; i += INSTANTLY_BATCH_LIMIT) {
-      const batch = pushableLeads.slice(i, i + INSTANTLY_BATCH_LIMIT)
-
+    for (let i = 0; i < pushableLeads.length; i += BATCH_LIMIT) {
+      const batch = pushableLeads.slice(i, i + BATCH_LIMIT)
       const formattedLeads = batch.map(lead => formatLeadForInstantly(lead))
 
       try {
-        const response = await fetch('https://api.instantly.ai/api/v1/lead/add', {
+        const response = await fetch('https://api.instantly.ai/api/v2/leads/add', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify({
-            api_key: apiKey,
             campaign_id: campaignId,
             skip_if_in_workspace: false,
             skip_if_in_campaign: false,
@@ -86,24 +86,17 @@ export async function POST(request: NextRequest) {
 
         if (!response.ok) {
           const errBody = await response.text()
-          errors.push(`Batch ${Math.floor(i / INSTANTLY_BATCH_LIMIT) + 1}: ${response.status} — ${errBody.substring(0, 300)}`)
+          errors.push(`Batch ${Math.floor(i / BATCH_LIMIT) + 1}: ${response.status} — ${errBody.substring(0, 300)}`)
           continue
         }
 
         const result = await response.json()
         console.log(`[Instantly Push] Batch result:`, JSON.stringify(result))
 
-        // V1 response: { status, leads_uploaded, already_in_campaign, invalid_email_count, ... }
-        const uploaded = result.leads_uploaded ?? result.upload_count ?? batch.length
-        totalUploadedByInstantly += uploaded
         totalPushed += batch.length
         successIds.push(...batch.map(l => l.id))
-
-        if (result.already_in_campaign > 0) {
-          console.log(`[Instantly Push] ${result.already_in_campaign} leads already in campaign`)
-        }
       } catch (err) {
-        errors.push(`Batch ${Math.floor(i / INSTANTLY_BATCH_LIMIT) + 1}: ${err instanceof Error ? err.message : String(err)}`)
+        errors.push(`Batch ${Math.floor(i / BATCH_LIMIT) + 1}: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
 
@@ -124,7 +117,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       status: totalPushed > 0 ? 'success' : 'failed',
       pushed: totalPushed,
-      uploadedByInstantly: totalUploadedByInstantly,
       total: pushableLeads.length,
       failed: pushableLeads.length - totalPushed,
       skippedNoEmail,

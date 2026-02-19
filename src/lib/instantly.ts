@@ -417,54 +417,56 @@ async function pushLeadsPerCampaign(calculations: any) {
       continue
     }
 
-    // Push leads to Instantly V1 lead/add endpoint (batch, adds to campaign)
+    // Push leads to Instantly V2 bulk add endpoint (Bearer auth, batch)
     let totalPushed = 0
 
     try {
-      // Format leads for V1 API batch format
-      const formattedLeads = leadsToPush
-        .filter(lead => lead.email)
-        .map((lead) => {
-          const deliveryDate = new Date()
-          deliveryDate.setDate(deliveryDate.getDate() + 3)
-          const deliveryStr = deliveryDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+      const pushableLeads = leadsToPush.filter(lead => lead.email)
 
-          let personalizationLine = ''
-          try {
-            const p = typeof lead.personalization === 'string' ? JSON.parse(lead.personalization) : lead.personalization
-            personalizationLine = p?.firstLine || ''
-          } catch { personalizationLine = lead.personalization || '' }
+      // Format leads for V2 bulk add
+      const formattedLeads = pushableLeads.map((lead) => {
+        const deliveryDate = new Date()
+        deliveryDate.setDate(deliveryDate.getDate() + 3)
+        const deliveryStr = deliveryDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
-          return {
-            email: lead.email,
-            first_name: lead.firstName || '',
-            last_name: lead.lastName || '',
-            company_name: lead.companyName || '',
-            website: lead.website || '',
-            phone: lead.phone || '',
-            personalization: personalizationLine,
-            custom_variables: {
-              preview_url: lead.previewUrl || '',
-              industry: formatIndustry(lead.industry) || 'home service',
-              location: [lead.city, lead.state].filter(Boolean).join(', ') || '',
-              delivery_date: deliveryStr,
-            },
-          }
-        })
+        let personalizationLine = ''
+        try {
+          const p = typeof lead.personalization === 'string' ? JSON.parse(lead.personalization) : lead.personalization
+          personalizationLine = p?.firstLine || ''
+        } catch { personalizationLine = lead.personalization || '' }
 
-      // Push in batches of 500 (V1 API limit)
-      const BATCH_LIMIT = 500
+        return {
+          email: lead.email,
+          first_name: lead.firstName || '',
+          last_name: lead.lastName || '',
+          company_name: lead.companyName || '',
+          website: lead.website || '',
+          phone: lead.phone || '',
+          personalization: personalizationLine,
+          custom_variables: {
+            preview_url: lead.previewUrl || '',
+            industry: formatIndustry(lead.industry) || 'home service',
+            location: [lead.city, lead.state].filter(Boolean).join(', ') || '',
+            delivery_date: deliveryStr,
+          },
+        }
+      })
+
+      // Push in batches of 1000 (V2 bulk limit)
+      const BATCH_LIMIT = 1000
       const successIds: string[] = []
 
       for (let i = 0; i < formattedLeads.length; i += BATCH_LIMIT) {
         const batch = formattedLeads.slice(i, i + BATCH_LIMIT)
-        const batchLeadIds = leadsToPush.filter(l => l.email).slice(i, i + BATCH_LIMIT).map(l => l.id)
+        const batchLeadIds = pushableLeads.slice(i, i + BATCH_LIMIT).map(l => l.id)
 
-        const response = await fetch('https://api.instantly.ai/api/v1/lead/add', {
+        const response = await fetch('https://api.instantly.ai/api/v2/leads/add', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify({
-            api_key: apiKey,
             campaign_id: campaignId,
             skip_if_in_workspace: false,
             skip_if_in_campaign: false,
@@ -481,8 +483,7 @@ async function pushLeadsPerCampaign(calculations: any) {
         const result = await response.json()
         console.log(`[Instantly] Campaign ${campaignId} batch result:`, JSON.stringify(result))
 
-        const uploaded = result.leads_uploaded ?? result.upload_count ?? batch.length
-        totalPushed += uploaded
+        totalPushed += batch.length
         successIds.push(...batchLeadIds)
       }
 

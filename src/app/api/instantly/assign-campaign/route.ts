@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Optionally push to Instantly immediately (V1 lead/add — batch, adds to campaign)
+    // Optionally push to Instantly immediately (V2 bulk add endpoint with Bearer auth)
     let pushResult: { pushed: number; failed: number; errors?: string[] } | null = null
     if (pushImmediately) {
       const apiKey = process.env.INSTANTLY_API_KEY
@@ -87,11 +87,13 @@ export async function POST(request: NextRequest) {
             }
           })
 
-          const res = await fetch('https://api.instantly.ai/api/v1/lead/add', {
+          const res = await fetch('https://api.instantly.ai/api/v2/leads/add', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
             body: JSON.stringify({
-              api_key: apiKey,
               campaign_id: campaignId,
               skip_if_in_workspace: false,
               skip_if_in_campaign: false,
@@ -105,14 +107,13 @@ export async function POST(request: NextRequest) {
           } else {
             const result = await res.json()
             console.log('[Instantly Assign+Push] Result:', JSON.stringify(result))
-            const uploaded = result.leads_uploaded ?? result.upload_count ?? fullLeads.length
 
             await prisma.lead.updateMany({
               where: { id: { in: fullLeads.map(l => l.id) } },
               data: { instantlyStatus: 'IN_SEQUENCE', instantlyAddedDate: new Date(), instantlyCurrentStep: 1 },
             })
 
-            pushResult = { pushed: uploaded, failed: fullLeads.length - uploaded }
+            pushResult = { pushed: fullLeads.length, failed: 0 }
           }
         } catch (err) {
           pushResult = { pushed: 0, failed: validLeadIds.length, errors: [err instanceof Error ? err.message : String(err)] }
