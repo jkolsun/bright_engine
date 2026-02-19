@@ -30,6 +30,9 @@ export interface SendEmailOptions {
   sender?: string
   trigger?: string
   tags?: { name: string; value: string }[]
+  aiGenerated?: boolean
+  aiDelaySeconds?: number
+  aiDecisionLog?: Record<string, unknown>
 }
 
 export interface SendEmailResult {
@@ -41,7 +44,7 @@ export interface SendEmailResult {
 // ── Send Email ─────────────────────────────────────────
 
 export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
-  const { to, subject, html, text, leadId, clientId, sender = 'clawdbot', trigger, tags } = options
+  const { to, subject, html, text, leadId, clientId, sender = 'clawdbot', trigger, tags, aiGenerated, aiDelaySeconds, aiDecisionLog } = options
 
   // Resolve leadId from client if only clientId provided
   let resolvedLeadId = leadId
@@ -100,6 +103,8 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
           emailSubject: subject,
           trigger,
           resendStatus: 'failed',
+          aiGenerated: aiGenerated || false,
+          aiDecisionLog: (aiDecisionLog as any) || undefined,
         },
       })
       return { success: false, error: error.message }
@@ -114,7 +119,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
         clientId,
         direction: 'OUTBOUND',
         channel: 'EMAIL',
-        senderType: 'CLAWDBOT',
+        senderType: aiGenerated ? 'CLAWDBOT' : 'CLAWDBOT',
         senderName: sender,
         recipient: to,
         content: html,
@@ -122,6 +127,9 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
         trigger,
         resendId,
         resendStatus: 'sent',
+        aiGenerated: aiGenerated || false,
+        aiDelaySeconds: aiDelaySeconds || null,
+        aiDecisionLog: (aiDecisionLog as any) || undefined,
       },
     })
 
@@ -158,6 +166,8 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
         emailSubject: subject,
         trigger,
         resendStatus: 'failed',
+        aiGenerated: aiGenerated || false,
+        aiDecisionLog: (aiDecisionLog as any) || undefined,
       },
     })
 

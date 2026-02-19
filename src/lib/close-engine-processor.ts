@@ -112,6 +112,9 @@ export async function sendCloseEngineMessage(options: CloseEngineMessageOptions)
     leadId,
     sender,
     trigger: `${trigger}_email_fallback`,
+    aiGenerated,
+    aiDelaySeconds,
+    aiDecisionLog,
   })
 
   if (emailResult.success) {

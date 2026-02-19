@@ -11,7 +11,8 @@
     "db:push": "prisma db push --accept-data-loss",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "worker": "tsx src/worker/index.ts"
+    "worker": "tsx src/worker/index.ts",
+    "test:workflow": "npx tsx tests/workflow-test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
