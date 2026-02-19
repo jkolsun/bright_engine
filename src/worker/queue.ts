@@ -1,4 +1,4 @@
-import { Queue, Worker, QueueEvents } from 'bullmq'
+import { Queue, QueueEvents } from 'bullmq'
 import Redis from 'ioredis'
 
 let connection: Redis | null = null
