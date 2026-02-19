@@ -599,7 +599,7 @@ export async function generatePersonalization(
         }
 
         const response = await anthropic.messages.create({
-          model: 'claude-3-5-haiku-20241022',
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: 300,
           system: SYSTEM_PROMPT,
           messages: [{ role: 'user', content: userPrompt }],
@@ -816,7 +816,7 @@ async function generateWebsiteCopy(
     const prompt = buildWebsiteCopyPrompt(lead, research, artifacts)
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 800,
       system: WEBSITE_COPY_SYSTEM,
       messages: [{ role: 'user', content: prompt }],
@@ -834,7 +834,7 @@ async function generateWebsiteCopy(
         console.warn('[WEBSITE_COPY] Hero headline contains banned words, retrying...')
         // One retry
         const retryResponse = await anthropic.messages.create({
-          model: 'claude-3-5-haiku-20241022',
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: 800,
           system: WEBSITE_COPY_SYSTEM,
           messages: [{ role: 'user', content: prompt + '\n\nIMPORTANT: Do NOT use hype adjectives. Be specific and factual.' }],

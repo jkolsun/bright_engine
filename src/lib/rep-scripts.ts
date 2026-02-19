@@ -85,7 +85,7 @@ Requirements:
 Be conversational, not robotic. Assume the rep is experienced but needs structure.`
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022', // Haiku for cost
+      model: 'claude-haiku-4-5-20251001', // Haiku for cost
       max_tokens: 1000,
       messages: [
         {

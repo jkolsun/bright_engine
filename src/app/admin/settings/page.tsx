@@ -110,7 +110,7 @@ const DEFAULT_CHANNEL_ROUTING = {
   defaultChannel: 'SMS' as 'SMS' | 'EMAIL',
 }
 const DEFAULT_PERSONALIZATION = {
-  model: 'claude-3-5-haiku-20241022',
+  model: 'claude-haiku-4-5-20251001',
   enabled: true,
   fallbackBehavior: 'generic_template',
   defaultCallScript: `OPENER (10 sec):
@@ -221,6 +221,7 @@ export default function SettingsPage() {
   const [addingLink, setAddingLink] = useState(false)
   const [newLink, setNewLink] = useState({ id: '', label: '', url: '', price: 0, recurring: false, envKey: '', active: true })
   const [verifyResults, setVerifyResults] = useState<Record<string, { valid: boolean; reason: string } | null>>({})
+  const [verifyingAll, setVerifyingAll] = useState(false)
 
   // Save state per section
   const [savingKey, setSavingKey] = useState<string | null>(null)
@@ -502,11 +503,19 @@ export default function SettingsPage() {
   }
 
   const handleVerifyAll = async () => {
+    setVerifyingAll(true)
+    // Clear old results
+    setVerifyResults({})
     for (const link of paymentLinks) {
-      if (link.url && link.active) {
+      if (!link.active) {
+        setVerifyResults(prev => ({ ...prev, [link.id]: { valid: false, reason: 'Inactive' } }))
+      } else if (!link.url) {
+        setVerifyResults(prev => ({ ...prev, [link.id]: { valid: false, reason: 'No URL configured' } }))
+      } else {
         await handleVerifyLink(link.url, link.id)
       }
     }
+    setVerifyingAll(false)
   }
 
   // ── API status check ───────────────────────────────────────
@@ -879,9 +888,12 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between mb-4">
               <SectionHeader title="Stripe Payment Links" description="Manage live Stripe payment links — DB is the single source of truth" />
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleVerifyAll}>
-                  <Shield size={14} className="mr-1" />
-                  Verify All
+                <Button variant="outline" size="sm" onClick={handleVerifyAll} disabled={verifyingAll}>
+                  {verifyingAll ? (
+                    <><Loader2 size={14} className="mr-1 animate-spin" /> Verifying...</>
+                  ) : (
+                    <><Shield size={14} className="mr-1" /> Verify All</>
+                  )}
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setAddingLink(!addingLink)}>
                   <Plus size={14} className="mr-1" />
@@ -956,6 +968,36 @@ export default function SettingsPage() {
                   <Button variant="outline" size="sm" onClick={() => { setAddingLink(false); setNewLink({ id: '', label: '', url: '', price: 0, recurring: false, envKey: '', active: true }) }}>Cancel</Button>
                   <Button size="sm" onClick={handleAddLink} disabled={!newLink.label.trim() || !newLink.id.trim()}>Add Link</Button>
                 </div>
+              </div>
+            )}
+
+            {/* Verify All Results Summary */}
+            {Object.keys(verifyResults).length > 0 && !verifyingAll && (
+              <div className="mb-4 p-3 rounded-lg border border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Verification Results</span>
+                  <button onClick={() => setVerifyResults({})} className="text-xs text-gray-400 hover:text-gray-600">
+                    Dismiss
+                  </button>
+                </div>
+                <div className="flex gap-3 text-sm">
+                  <span className="text-green-600 font-medium">
+                    {Object.values(verifyResults).filter(v => v?.valid).length} live
+                  </span>
+                  <span className="text-red-600 font-medium">
+                    {Object.values(verifyResults).filter(v => v && !v.valid).length} failed
+                  </span>
+                </div>
+                {Object.values(verifyResults).some(v => v && !v.valid) && (
+                  <div className="mt-2 space-y-1">
+                    {paymentLinks.filter(l => verifyResults[l.id] && !verifyResults[l.id]?.valid).map(l => (
+                      <div key={l.id} className="text-xs text-red-600 flex items-center gap-1">
+                        <XCircle size={12} />
+                        <span className="font-medium">{l.label}:</span> {verifyResults[l.id]?.reason}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1991,7 +2033,7 @@ export default function SettingsPage() {
                   onChange={(e) => setPersonalization({ ...personalization, model: e.target.value })}
                   className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (fast, cost-effective)</option>
+                  <option value="claude-haiku-4-5-20251001">Claude 4.5 Haiku (fast, cost-effective)</option>
                   <option value="claude-sonnet-4-5-20250929">Claude 4.5 Sonnet (higher quality)</option>
                 </select>
                 <p className="text-xs text-gray-400 mt-1">Haiku is recommended for high-volume personalization</p>
