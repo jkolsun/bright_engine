@@ -1073,5 +1073,8 @@ async function closeEngineExpireStalled() {
 
 export { startWorkers }
 
-// When running as standalone worker process (npm run worker), start immediately
-startWorkers()
+// Only auto-start when run directly via `npm run worker` (tsx src/worker/index.ts)
+// Do NOT start when imported by Next.js API routes (causes SIGSEGV in web process)
+if (process.argv[1]?.includes('worker/index')) {
+  startWorkers()
+}
