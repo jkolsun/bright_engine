@@ -1,4 +1,4 @@
-import { Phone, MapPin, Star, Shield, Clock, CheckCircle, ArrowRight, Award, Mail, ChevronRight, Sparkles, Eye, Users } from 'lucide-react'
+import { Phone, MapPin, Star, Shield, Clock, CheckCircle, ArrowRight, Award, Mail, ChevronRight, Sparkles, Users, Camera, BadgeCheck, ThumbsUp, Zap } from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
 
@@ -14,255 +14,314 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
     <div className="preview-template min-h-screen bg-white">
       <DisclaimerBanner variant="modern" companyName={lead.companyName} />
 
-      {/* ─── Sticky Nav ─── */}
-      <nav className="sticky top-0 z-40 glass border-b border-gray-200/50">
+      {/* ─── Sticky Glass Nav ─── */}
+      <nav className="sticky top-0 z-40 glass border-b border-gray-200/40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-[72px] flex items-center justify-between">
-          <span className="font-display text-xl font-bold text-gray-900 tracking-tight">{lead.companyName}</span>
+          <div className="flex items-center gap-3">
+            {lead.logo && <img src={lead.logo} alt="" className="w-9 h-9 rounded-xl object-cover" />}
+            <span className="font-display text-xl font-bold text-gray-900 tracking-tight">{lead.companyName}</span>
+          </div>
           <div className="flex items-center gap-4">
             {lead.phone && (
-              <a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden md:inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors font-medium">
+              <a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden md:inline-flex items-center gap-2 text-sm text-gray-500 hover:text-violet-600 transition-colors font-medium">
                 <Phone size={15} />
                 {lead.phone}
               </a>
             )}
-            <button onClick={onCTAClick} className="bg-gradient-to-r from-violet-500 to-purple-600 text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:from-violet-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg animate-cta-glow-violet">
+            <button onClick={onCTAClick} className="bg-gradient-to-r from-violet-500 to-purple-600 text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:from-violet-600 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg animate-cta-glow-violet">
               Get a Quote
             </button>
           </div>
         </div>
       </nav>
 
-      {/* ─── Hero ─── */}
-      <section className="relative py-28 md:py-40 px-4 sm:px-6 overflow-hidden bg-mesh-light-violet">
-        {/* Decorative blobs */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-violet-100/60 to-transparent rounded-full -translate-y-1/3 translate-x-1/4 blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-gradient-to-tr from-purple-100/40 to-transparent rounded-full translate-y-1/3 -translate-x-1/4 blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 w-[300px] h-[300px] bg-gradient-to-br from-fuchsia-100/30 to-transparent rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
+      {/* ─── Split Hero ─── */}
+      <section className="relative py-20 md:py-32 px-4 sm:px-6 overflow-hidden bg-mesh-light">
+        <div className="absolute top-[-5%] left-[-10%] w-[500px] h-[500px] bg-gradient-to-br from-violet-200/40 to-purple-100/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '9s' }} />
+        <div className="absolute bottom-[-10%] right-[-8%] w-[450px] h-[450px] bg-gradient-to-tl from-fuchsia-100/30 to-violet-50/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '7s' }} />
 
-        <div className="relative max-w-5xl mx-auto text-center">
-          {hasRating && (
-            <div className="inline-flex items-center gap-2.5 bg-white/80 backdrop-blur-sm border border-gray-200/60 rounded-full px-5 py-2.5 mb-10 shadow-sm animate-fade-in-up">
-              <div className="flex gap-0.5">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <Star key={i} size={15} className={i < Math.floor(lead.enrichedRating!) ? 'text-amber-400 fill-current' : 'text-gray-200'} />
-                ))}
+        <div className="relative max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Left: Text Content */}
+            <div className="animate-fade-in-up">
+              <p className="text-violet-600 font-semibold text-sm tracking-widest uppercase mb-5">
+                Professional {industryLabel} in {location || 'your area'}
+              </p>
+              <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 tracking-tight leading-[1.1]">
+                {wc?.heroHeadline || `Expert ${industryLabel.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} You Can Trust`}
+              </h1>
+              <p className="text-lg md:text-xl text-gray-500 mb-4 leading-relaxed">
+                {wc?.heroSubheadline || `${lead.companyName} delivers premium ${industryLabel} services with transparent pricing and guaranteed satisfaction.`}
+              </p>
+              {location && (
+                <p className="text-gray-400 mb-10 flex items-center gap-2 text-base">
+                  <MapPin size={16} className="text-violet-500" />
+                  Serving {location} and surrounding areas
+                </p>
+              )}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <a
+                  href={`tel:${lead.phone}`}
+                  onClick={onCallClick}
+                  className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white px-9 py-4 rounded-full font-semibold text-lg hover:from-violet-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 animate-cta-glow-violet"
+                >
+                  <Phone size={20} />
+                  Call Now
+                </a>
+                <button
+                  onClick={onCTAClick}
+                  className="inline-flex items-center justify-center gap-2.5 bg-white border-2 border-gray-200 text-gray-700 px-9 py-4 rounded-full font-semibold text-lg hover:border-violet-400 hover:text-violet-600 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
+                >
+                  {config.ctaText}
+                  <ArrowRight size={18} />
+                </button>
               </div>
-              <span className="text-sm font-semibold text-gray-800">{lead.enrichedRating}</span>
-              {lead.enrichedReviews && <span className="text-sm text-gray-400">({lead.enrichedReviews} reviews)</span>}
             </div>
-          )}
 
-          <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold text-gray-900 mb-8 tracking-tight leading-[1.05]">
-            {lead.companyName}
-          </h1>
+            {/* Right: CTA Card with Rating */}
+            <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-xl p-8 md:p-10 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-violet-50 to-transparent rounded-bl-full" />
+                <div className="relative">
+                  {hasRating && (
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="flex gap-0.5">
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <Star key={i} size={20} className={i < Math.floor(lead.enrichedRating!) ? 'text-amber-400 fill-current' : 'text-gray-200'} />
+                        ))}
+                      </div>
+                      <span className="font-display text-xl font-bold text-gray-900">{lead.enrichedRating}</span>
+                      {lead.enrichedReviews && <span className="text-sm text-gray-400">({lead.enrichedReviews} reviews)</span>}
+                    </div>
+                  )}
+                  <h3 className="font-display text-2xl font-bold text-gray-900 mb-2">Get Your Free Estimate</h3>
+                  <p className="text-gray-500 mb-8">No obligation. Fast response guaranteed.</p>
 
-          <div className="w-24 h-1.5 bg-gradient-to-r from-violet-400 via-purple-500 to-violet-500 mx-auto mb-8 rounded-full" />
-
-          <p className="text-xl md:text-2xl text-gray-500 mb-5 max-w-2xl mx-auto leading-relaxed font-light">{wc?.heroHeadline || config.tagline}</p>
-          {wc?.heroSubheadline && <p className="text-lg text-gray-400 mb-5 max-w-2xl mx-auto leading-relaxed">{wc.heroSubheadline}</p>}
-          {location && (
-            <p className="text-gray-400 mb-12 flex items-center justify-center gap-2 text-base">
-              <MapPin size={16} className="text-violet-500" />
-              Serving {location} and surrounding areas
-            </p>
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href={`tel:${lead.phone}`}
-              onClick={onCallClick}
-              className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white px-10 py-4.5 rounded-full font-semibold text-lg hover:from-violet-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl animate-cta-glow-violet"
-            >
-              <Phone size={20} />
-              Call Now
-            </a>
-            <button
-              onClick={onCTAClick}
-              className="inline-flex items-center justify-center gap-2.5 bg-white border-2 border-gray-200 text-gray-700 px-10 py-4.5 rounded-full font-semibold text-lg hover:border-violet-400 hover:text-violet-600 transition-all hover:shadow-md"
-            >
-              {config.ctaText}
-              <ArrowRight size={18} />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Trust Bar ─── */}
-      <section className="py-12 px-4 sm:px-6 border-y border-gray-100 bg-gradient-to-r from-gray-50 via-white to-gray-50">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
-          {[
-            { icon: Shield, color: 'violet', title: wc?.valueProps?.[0]?.title || 'Licensed & Insured', desc: wc?.valueProps?.[0]?.description || 'Full coverage for your peace of mind' },
-            { icon: Award, color: 'purple', title: wc?.valueProps?.[1]?.title || 'Top Rated', desc: wc?.valueProps?.[1]?.description || (hasRating ? `${lead.enrichedRating}-star average rating` : 'Consistently 5-star service') },
-            { icon: Clock, color: 'fuchsia', title: wc?.valueProps?.[2]?.title || 'Fast Response', desc: wc?.valueProps?.[2]?.description || 'Quick turnaround on every project' },
-          ].map((item, i) => (
-            <div key={i} className="flex flex-col items-center gap-3">
-              <div className={`w-14 h-14 rounded-2xl bg-${item.color}-50 flex items-center justify-center`}>
-                <item.icon size={24} className={`text-${item.color}-500`} />
-              </div>
-              <p className="font-display font-bold text-gray-900 text-lg">{item.title}</p>
-              <p className="text-sm text-gray-500">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ─── Services ─── */}
-      {services.length > 0 && (
-        <section className="py-24 px-4 sm:px-6 bg-white">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-sm font-semibold mb-4">
-                <Sparkles size={14} />
-                What We Offer
-              </div>
-              <h2 className="font-display text-4xl md:text-5xl font-bold text-gray-900 mb-4">Our Services</h2>
-              <p className="text-gray-500 max-w-xl mx-auto text-lg">{wc?.heroSubheadline || `Professional ${industryLabel} services tailored to your specific needs.`}</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {services.slice(0, 6).map((service, i) => (
-                <div key={i} className="group bg-white rounded-2xl border border-gray-100 p-8 card-lift hover:border-violet-200">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-md">
-                    <CheckCircle size={24} className="text-white" />
+                  <div className="space-y-3 mb-8">
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <CheckCircle size={18} className="text-violet-500 flex-shrink-0" />
+                      <span className="text-sm">Free, no-obligation assessment</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <CheckCircle size={18} className="text-violet-500 flex-shrink-0" />
+                      <span className="text-sm">Licensed and fully insured</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <CheckCircle size={18} className="text-violet-500 flex-shrink-0" />
+                      <span className="text-sm">Transparent, upfront pricing</span>
+                    </div>
                   </div>
-                  <h3 className="font-display font-bold text-xl text-gray-900 mb-3">{service}</h3>
-                  <p className="text-gray-500 text-sm leading-relaxed mb-4">{wc?.serviceDescriptions?.[service] || `Expert ${service.toLowerCase()} solutions delivered with precision, quality materials, and attention to detail.`}</p>
-                  <div className="flex items-center gap-1.5 text-violet-500 text-sm font-semibold opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0">
-                    Learn more <ChevronRight size={14} />
-                  </div>
+
+                  <button
+                    onClick={onCTAClick}
+                    className="w-full bg-gradient-to-r from-violet-500 to-purple-600 text-white py-4 rounded-xl font-bold text-lg hover:from-violet-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl mb-4"
+                  >
+                    Request a Quote
+                  </button>
+                  {lead.phone && (
+                    <a
+                      href={`tel:${lead.phone}`}
+                      onClick={onCallClick}
+                      className="w-full inline-flex items-center justify-center gap-2 border-2 border-gray-200 text-gray-700 py-3.5 rounded-xl font-semibold hover:border-violet-300 hover:text-violet-600 transition-all duration-300"
+                    >
+                      <Phone size={16} />
+                      Or call {lead.phone}
+                    </a>
+                  )}
                 </div>
-              ))}
+              </div>
             </div>
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
-      {/* ─── How It Works ─── */}
-      <section className="py-24 px-4 sm:px-6 bg-gradient-to-b from-gray-50 to-white">
+      {/* ─── Horizontal Badge Row ─── */}
+      <section className="py-8 px-4 sm:px-6 border-b border-gray-100 bg-white">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-sm font-semibold mb-4">
-              <Eye size={14} />
-              Simple Process
-            </div>
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-gray-900 mb-4">How It Works</h2>
-            <p className="text-gray-500 text-lg">Three simple steps to get your project started.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          <div className="flex flex-wrap items-center justify-center gap-3">
             {[
-              { step: '01', title: 'Get in Touch', desc: `Call us or request a quote online. We'll discuss your ${industryLabel} needs and schedule a time that works for you.` },
-              { step: '02', title: 'Free Consultation', desc: `Our team will assess your project, provide expert recommendations, and deliver a transparent, no-obligation estimate.` },
-              { step: '03', title: 'We Get to Work', desc: `Once approved, our skilled professionals handle everything from start to finish with quality craftsmanship guaranteed.` },
-            ].map((item) => (
-              <div key={item.step} className="text-center group">
-                <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-400 to-purple-500 text-white text-2xl font-bold flex items-center justify-center mx-auto mb-6 font-display shadow-lg group-hover:shadow-xl transition-shadow">
-                  {item.step}
-                </div>
-                <h3 className="font-display text-xl font-bold text-gray-900 mb-3">{item.title}</h3>
-                <p className="text-gray-500 leading-relaxed">{item.desc}</p>
+              { icon: Shield, label: wc?.valueProps?.[0]?.title || 'Licensed & Insured' },
+              { icon: Award, label: wc?.valueProps?.[1]?.title || 'Top Rated' },
+              { icon: Clock, label: wc?.valueProps?.[2]?.title || 'Fast Response' },
+              { icon: BadgeCheck, label: 'Satisfaction Guaranteed' },
+              { icon: ThumbsUp, label: hasRating ? `${lead.enrichedRating}-Star Rated` : 'Trusted Pros' },
+            ].map((badge, i) => (
+              <div key={i} className="inline-flex items-center gap-2 bg-violet-50/60 border border-violet-100 rounded-full px-5 py-2.5 text-sm font-medium text-violet-700 hover:bg-violet-50 transition-colors duration-200">
+                <badge.icon size={15} />
+                {badge.label}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── About ─── */}
-      <section className="py-24 px-4 sm:px-6 bg-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-14">
-            <div className="lg:col-span-3">
-              <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-sm font-semibold mb-4">
-                About Us
-              </div>
-              <h2 className="font-display text-4xl md:text-5xl font-bold text-gray-900 mb-8">Your Trusted {industryLabel.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} Professionals</h2>
-              <div className="space-y-5 text-gray-600 leading-relaxed text-lg">
-                <p>
-                  {wc?.aboutParagraph1 || `At ${lead.companyName}, we believe every client deserves exceptional ${industryLabel} service delivered with integrity and professionalism.${location ? ` Based in ${location}, we've built our reputation on honest work, transparent pricing, and results that speak for themselves.` : " We've built our reputation on honest work, transparent pricing, and results that speak for themselves."}`}
-                </p>
-                <p>
-                  {wc?.aboutParagraph2 || 'Our team of experienced professionals is fully licensed and insured, bringing deep expertise to every project — no matter the size. From initial consultation to final walkthrough, we keep you informed and ensure complete satisfaction.'}
-                </p>
-              </div>
-              <div className="mt-10 flex flex-wrap gap-10">
-                <div>
-                  <p className="font-display text-4xl font-bold text-gradient-violet">{hasRating ? lead.enrichedRating : '5.0'}</p>
-                  <p className="text-sm text-gray-400 font-medium mt-1">Star Rating</p>
-                </div>
-                {lead.enrichedReviews && (
-                  <div>
-                    <p className="font-display text-4xl font-bold text-gradient-violet">{lead.enrichedReviews}+</p>
-                    <p className="text-sm text-gray-400 font-medium mt-1">Reviews</p>
-                  </div>
-                )}
-                <div>
-                  <p className="font-display text-4xl font-bold text-gradient-violet">100%</p>
-                  <p className="text-sm text-gray-400 font-medium mt-1">Satisfaction</p>
-                </div>
-              </div>
-            </div>
-            <div className="lg:col-span-2">
-              <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl border border-gray-100 p-9 sticky top-24 shadow-sm">
-                <h3 className="font-display text-2xl font-bold text-gray-900 mb-6">Contact Us</h3>
-                <div className="space-y-4">
-                  {lead.phone && (
-                    <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 text-gray-600 hover:text-gray-900 transition-colors p-3 rounded-xl hover:bg-gray-50">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <Phone size={20} className="text-white" />
+      {/* ─── Alternating Feature Sections for Services ─── */}
+      {services.length > 0 && (
+        <div>
+          {services.slice(0, 4).map((service, i) => {
+            const isEven = i % 2 === 0
+            const serviceIcons = [Sparkles, Zap, CheckCircle, Award]
+            const ServiceIcon = serviceIcons[i % serviceIcons.length]
+            const desc = wc?.serviceDescriptions?.[service] || `Expert ${service.toLowerCase()} solutions delivered with precision, quality materials, and meticulous attention to detail. We handle projects of every size with the same level of care and professionalism.`
+
+            return (
+              <section
+                key={i}
+                className={`py-20 px-4 sm:px-6 ${isEven ? 'bg-white' : 'bg-violet-50/30'}`}
+              >
+                <div className="max-w-6xl mx-auto">
+                  <div className={`grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center ${!isEven ? 'md:[direction:rtl]' : ''}`}>
+                    {/* Text side */}
+                    <div className={!isEven ? 'md:[direction:ltr]' : ''}>
+                      <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-sm font-semibold mb-5">
+                        Service {String(i + 1).padStart(2, '0')}
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Phone</p>
-                        <p className="font-semibold text-gray-900">{lead.phone}</p>
-                      </div>
-                    </a>
-                  )}
-                  {lead.email && (
-                    <a href={`mailto:${lead.email}`} className="flex items-center gap-4 text-gray-600 hover:text-gray-900 transition-colors p-3 rounded-xl hover:bg-gray-50">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-fuchsia-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <Mail size={20} className="text-white" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Email</p>
-                        <p className="font-semibold text-gray-900">{lead.email}</p>
-                      </div>
-                    </a>
-                  )}
-                  {lead.enrichedAddress && (
-                    <div className="flex items-start gap-4 text-gray-600 p-3 rounded-xl">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-fuchsia-400 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <MapPin size={20} className="text-white" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Address</p>
-                        <p className="font-semibold text-gray-900">{lead.enrichedAddress}</p>
+                      <h3 className="font-display text-3xl md:text-4xl font-bold text-gray-900 mb-5">{service}</h3>
+                      <p className="text-gray-500 text-lg leading-relaxed mb-8">{desc}</p>
+                      <button
+                        onClick={onCTAClick}
+                        className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-500 to-purple-600 text-white px-8 py-3.5 rounded-full font-semibold hover:from-violet-600 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg"
+                      >
+                        Get a Quote
+                        <ArrowRight size={16} />
+                      </button>
+                    </div>
+                    {/* Icon/Visual side */}
+                    <div className={`flex justify-center ${!isEven ? 'md:[direction:ltr]' : ''}`}>
+                      <div className="relative">
+                        <div className="w-48 h-48 md:w-56 md:h-56 rounded-3xl bg-gradient-to-br from-violet-100 to-purple-50 flex items-center justify-center">
+                          <div className="w-28 h-28 md:w-32 md:h-32 rounded-2xl bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center shadow-xl">
+                            <ServiceIcon size={48} className="text-white" />
+                          </div>
+                        </div>
+                        <div className="absolute -top-3 -right-3 w-20 h-20 bg-gradient-to-br from-fuchsia-100/50 to-transparent rounded-full blur-xl" />
+                        <div className="absolute -bottom-3 -left-3 w-16 h-16 bg-gradient-to-br from-violet-100/40 to-transparent rounded-full blur-xl" />
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
-                <button onClick={onCTAClick} className="w-full mt-8 bg-gradient-to-r from-violet-500 to-purple-600 text-white py-4 rounded-xl font-semibold text-lg hover:from-violet-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg">
-                  {config.ctaText}
-                </button>
+              </section>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ─── Full-Width Social Proof Banner ─── */}
+      <section className="relative py-14 px-4 sm:px-6 bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600 overflow-hidden">
+        <div className="absolute inset-0 bg-noise opacity-10" />
+        <div className="absolute top-0 left-1/4 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-48 h-48 bg-purple-400/10 rounded-full translate-y-1/2 blur-3xl" />
+        <div className="relative max-w-5xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12 text-center md:text-left">
+            {hasRating && (
+              <div className="flex items-center gap-3">
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Star key={i} size={22} className={i < Math.floor(lead.enrichedRating!) ? 'text-amber-300 fill-current' : 'text-white/30'} />
+                  ))}
+                </div>
+                <span className="text-white font-display text-2xl font-bold">{lead.enrichedRating}</span>
+                {lead.enrichedReviews && <span className="text-white/70">({lead.enrichedReviews} reviews)</span>}
               </div>
+            )}
+            <div className="hidden md:block w-px h-10 bg-white/20" />
+            <div className="flex items-center gap-2.5">
+              <Users size={20} className="text-white/80" />
+              <span className="text-white font-semibold text-lg">
+                Trusted by homeowners in {location || 'your area'}
+              </span>
+            </div>
+            <div className="hidden md:block w-px h-10 bg-white/20" />
+            <div className="flex items-center gap-2.5">
+              <Shield size={20} className="text-white/80" />
+              <span className="text-white font-semibold text-lg">Fully Licensed &amp; Insured</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ─── Photo Gallery ─── */}
+      {/* ─── Full-Width About Section ─── */}
+      <section className="py-24 px-4 sm:px-6 bg-white">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-sm font-semibold mb-5">
+              About {lead.companyName}
+            </div>
+            <h2 className="font-display text-4xl md:text-5xl font-bold text-gray-900 mb-8 leading-tight">
+              Your Trusted {industryLabel.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} Professionals
+            </h2>
+          </div>
+
+          <div className="space-y-6 text-gray-600 text-lg leading-relaxed mb-14">
+            <p>
+              {wc?.aboutParagraph1 || `At ${lead.companyName}, we believe every client deserves exceptional ${industryLabel} service delivered with integrity and professionalism.${location ? ` Based in ${location}, we've built our reputation on honest work, transparent pricing, and results that speak for themselves.` : ' We\'ve built our reputation on honest work, transparent pricing, and results that speak for themselves.'}`}
+            </p>
+            <p>
+              {wc?.aboutParagraph2 || 'Our team of experienced professionals is fully licensed and insured, bringing deep expertise to every project — no matter the size. From initial consultation to final walkthrough, we keep you informed and ensure complete satisfaction.'}
+            </p>
+          </div>
+
+          {/* Inline stat numbers */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div className="p-6 rounded-2xl bg-violet-50/50 border border-violet-100">
+              <p className="font-display text-4xl md:text-5xl font-bold text-gradient-violet">{hasRating ? lead.enrichedRating : '5.0'}</p>
+              <p className="text-sm text-gray-500 font-medium mt-2">Star Rating</p>
+            </div>
+            <div className="p-6 rounded-2xl bg-violet-50/50 border border-violet-100">
+              <p className="font-display text-4xl md:text-5xl font-bold text-gradient-violet">{lead.enrichedReviews ? `${lead.enrichedReviews}+` : '100+'}</p>
+              <p className="text-sm text-gray-500 font-medium mt-2">{lead.enrichedReviews ? 'Reviews' : 'Projects'}</p>
+            </div>
+            <div className="p-6 rounded-2xl bg-violet-50/50 border border-violet-100">
+              <p className="font-display text-4xl md:text-5xl font-bold text-gradient-violet">100%</p>
+              <p className="text-sm text-gray-500 font-medium mt-2">Satisfaction</p>
+            </div>
+            <div className="p-6 rounded-2xl bg-violet-50/50 border border-violet-100">
+              <p className="font-display text-4xl md:text-5xl font-bold text-gradient-violet">24hr</p>
+              <p className="text-sm text-gray-500 font-medium mt-2">Response Time</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Gallery with Featured Image ─── */}
       {photos.length > 0 && (
         <section className="py-24 px-4 sm:px-6 bg-gradient-to-b from-gray-50 to-white">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
               <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-sm font-semibold mb-4">
+                <Camera size={14} />
                 Portfolio
               </div>
               <h2 className="font-display text-4xl md:text-5xl font-bold text-gray-900 mb-4">Our Recent Work</h2>
               <p className="text-gray-500 text-lg">See the quality and craftsmanship we bring to every project.</p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {photos.slice(0, 8).map((photo, i) => (
-                <div key={i} className="group aspect-square bg-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500">
-                  <img src={photo} alt={`${lead.companyName} project ${i + 1}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                </div>
-              ))}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[180px] md:auto-rows-[200px]">
+              {photos.slice(0, 8).map((photo, i) => {
+                const isFeatured = i === 0
+                return (
+                  <div
+                    key={i}
+                    className={`group relative bg-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 ${
+                      isFeatured ? 'col-span-2 row-span-2' : ''
+                    }`}
+                  >
+                    <img
+                      src={photo}
+                      alt={`${lead.companyName} project ${i + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    {isFeatured && (
+                      <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <span className="inline-flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-gray-900 text-sm font-semibold px-4 py-2 rounded-full">
+                          <Camera size={14} />
+                          Featured Project
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         </section>
@@ -270,9 +329,9 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
 
       {/* ─── Service Area ─── */}
       {location && (
-        <section className="py-24 px-4 sm:px-6 bg-white">
+        <section className="py-20 px-4 sm:px-6 bg-white">
           <div className="max-w-4xl mx-auto text-center">
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center mx-auto mb-8 shadow-lg">
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center mx-auto mb-8 shadow-lg">
               <MapPin size={32} className="text-white" />
             </div>
             <h2 className="font-display text-4xl md:text-5xl font-bold text-gray-900 mb-6">Serving {location}</h2>
@@ -288,13 +347,15 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
         </section>
       )}
 
-      {/* ─── Final CTA ─── */}
-      <section className="relative py-24 px-4 sm:px-6 bg-gradient-to-br from-violet-600 via-violet-500 to-purple-600 overflow-hidden">
+      {/* ─── Final CTA Section ─── */}
+      <section className="relative py-24 px-4 sm:px-6 bg-gradient-to-br from-violet-600 via-purple-600 to-violet-700 overflow-hidden">
         <div className="absolute inset-0 bg-noise opacity-10" />
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-400/20 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl" />
         <div className="relative max-w-4xl mx-auto text-center">
-          <h2 className="font-display text-4xl md:text-5xl font-bold text-white mb-6">{wc?.closingHeadline || 'Ready to Get Started?'}</h2>
+          <h2 className="font-display text-4xl md:text-5xl font-bold text-white mb-6">
+            {wc?.closingHeadline || 'Ready to Get Started?'}
+          </h2>
           <p className="text-xl text-white/80 mb-12 max-w-xl mx-auto leading-relaxed">
             {wc?.closingBody || 'Get a free estimate on your project today. No obligation, no pressure — just honest advice from local professionals.'}
           </p>
@@ -302,14 +363,14 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
             <a
               href={`tel:${lead.phone}`}
               onClick={onCallClick}
-              className="inline-flex items-center justify-center gap-2.5 bg-white text-violet-700 px-10 py-4.5 rounded-full font-bold text-lg hover:bg-gray-50 transition-all shadow-xl hover:shadow-2xl"
+              className="inline-flex items-center justify-center gap-2.5 bg-white text-violet-700 px-10 py-4 rounded-full font-bold text-lg hover:bg-gray-50 transition-all duration-300 shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
             >
               <Phone size={20} />
               {lead.phone || 'Call Now'}
             </a>
             <button
               onClick={onCTAClick}
-              className="inline-flex items-center justify-center gap-2.5 border-2 border-white/50 text-white px-10 py-4.5 rounded-full font-bold text-lg hover:bg-white hover:text-violet-700 transition-all"
+              className="inline-flex items-center justify-center gap-2.5 border-2 border-white/50 text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-white hover:text-violet-700 transition-all duration-300"
             >
               {config.ctaText}
             </button>
@@ -352,6 +413,16 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
           </div>
         </div>
       </footer>
+
+      {/* ─── Floating Phone Button (fixed bottom-right, all screens) ─── */}
+      <a
+        href={`tel:${lead.phone}`}
+        onClick={onCallClick}
+        className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-white flex items-center justify-center shadow-2xl hover:shadow-xl hover:from-violet-600 hover:to-purple-700 transition-all duration-300 hover:scale-110 animate-cta-glow-violet"
+        aria-label="Call us"
+      >
+        <Phone size={26} />
+      </a>
     </div>
   )
 }

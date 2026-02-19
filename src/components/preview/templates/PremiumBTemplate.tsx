@@ -14,158 +14,94 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
     <div className="preview-template min-h-screen bg-slate-950">
       <DisclaimerBanner variant="premium" companyName={lead.companyName} />
 
-      {/* ─── Slim Nav ─── */}
+      {/* ─── Sticky Dark Glass Nav ─── */}
       <nav className="sticky top-0 z-40 glass-dark border-b border-sky-400/10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-[72px] flex items-center justify-between">
           <span className="font-display text-xl font-light text-white tracking-wide">{lead.companyName}</span>
           <div className="flex items-center gap-4">
             {lead.phone && (
-              <a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden md:inline-flex items-center gap-2 text-sm text-slate-400 hover:text-sky-400 transition-colors font-medium">
+              <a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden md:inline-flex items-center gap-2 text-sm text-slate-400 hover:text-sky-400 transition-colors duration-300 font-medium">
                 <Phone size={15} />
                 {lead.phone}
               </a>
             )}
-            <button onClick={onCTAClick} className="bg-gradient-to-r from-sky-500 to-blue-500 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:from-sky-400 hover:to-blue-400 transition-all shadow-md hover:shadow-lg animate-cta-glow">
-              Schedule Consultation
+            <button onClick={onCTAClick} className="bg-gradient-to-r from-sky-500 to-blue-500 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:from-sky-400 hover:to-blue-400 transition-all duration-300 shadow-md hover:shadow-lg animate-cta-glow">
+              Get Started
             </button>
           </div>
         </div>
       </nav>
 
-      {/* ─── Hero — elegant split layout ─── */}
+      {/* ─── Full-Width Centered Hero ─── */}
       <section className="relative overflow-hidden">
         <div className={`absolute inset-0 bg-gradient-to-br ${config.gradient}`} />
         <div className="absolute inset-0 bg-mesh-dark" />
 
-        {/* Decorative ice-blue accents */}
-        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-sky-500/5 rounded-full -translate-y-1/2 blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-500/3 rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl" />
-        <div className="absolute top-1/3 right-0 w-[300px] h-[300px] bg-indigo-500/3 rounded-full translate-x-1/3 blur-3xl" />
+        {/* Floating blue decorative circles */}
+        <div className="absolute top-20 left-[10%] w-72 h-72 bg-sky-500/8 rounded-full blur-3xl" />
+        <div className="absolute bottom-10 right-[15%] w-96 h-96 bg-blue-500/6 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-sky-400/3 rounded-full blur-3xl" />
+        <div className="absolute top-32 right-[20%] w-4 h-4 bg-sky-400/30 rounded-full" />
+        <div className="absolute bottom-40 left-[25%] w-6 h-6 bg-blue-400/20 rounded-full" />
+        <div className="absolute top-[60%] right-[10%] w-3 h-3 bg-sky-300/25 rounded-full" />
 
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-28 md:py-40">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-            {/* Left — branding */}
-            <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-sky-400/50 mb-6 font-medium">Welcome to</p>
-              <h1 className="font-display text-4xl md:text-5xl lg:text-7xl font-light text-white mb-8 tracking-tight leading-[1.08]">
-                {lead.companyName}
-              </h1>
-              <div className="w-20 h-0.5 bg-gradient-to-r from-sky-400 to-blue-500 mb-8" />
-              <p className="text-lg md:text-xl text-slate-300 leading-relaxed mb-3">{wc?.heroHeadline || config.tagline}</p>
-              {wc?.heroSubheadline && <p className="text-base text-slate-400 leading-relaxed mb-6">{wc.heroSubheadline}</p>}
-              {location && (
-                <p className="text-slate-500 flex items-center gap-2.5 text-base">
-                  <MapPin size={16} className="text-sky-400/50" />
-                  Serving {location} and surrounding areas
-                </p>
-              )}
-            </div>
-
-            {/* Right — CTA card */}
-            <div className="border border-sky-400/15 rounded-3xl p-10 md:p-12 bg-slate-950/60 backdrop-blur-md shadow-2xl shadow-sky-500/5">
-              {hasRating && (
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="flex gap-0.5">
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <Star key={i} size={18} className={i < Math.floor(lead.enrichedRating!) ? 'text-sky-400 fill-current' : 'text-slate-700'} />
-                    ))}
-                  </div>
-                  <span className="text-sky-400 font-semibold">{lead.enrichedRating}</span>
-                  {lead.enrichedReviews && <span className="text-slate-500 text-sm">({lead.enrichedReviews} reviews)</span>}
-                </div>
-              )}
-              <h2 className="font-display text-2xl md:text-3xl font-light text-white mb-4">Let&apos;s Discuss Your Needs</h2>
-              <p className="text-slate-400 mb-10 leading-relaxed text-lg">
-                Schedule a complimentary consultation with our team. We&apos;ll provide personalized recommendations tailored to your specific requirements.
-              </p>
-              <div className="flex flex-col gap-4">
-                <a
-                  href={`tel:${lead.phone}`}
-                  onClick={onCallClick}
-                  className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-sky-500 to-blue-500 text-white px-8 py-4.5 rounded-xl font-semibold text-lg hover:from-sky-400 hover:to-blue-400 transition-all shadow-lg animate-cta-glow"
-                >
-                  <Phone size={20} />
-                  Call Now
-                </a>
-                <button
-                  onClick={onCTAClick}
-                  className="inline-flex items-center justify-center gap-2.5 border border-sky-400/30 text-sky-400 px-8 py-4.5 rounded-xl font-semibold text-lg hover:bg-sky-500 hover:text-white transition-all"
-                >
-                  {config.ctaText}
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Trust Indicators ─── */}
-      <section className="py-16 px-4 sm:px-6 bg-slate-950 border-y border-sky-400/10">
-        <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-10 md:gap-20">
-          {hasRating && (
-            <>
-              <div className="text-center">
-                <p className="font-display text-4xl font-light text-gradient-blue">{lead.enrichedRating}</p>
-                <div className="flex justify-center mt-2 mb-2 gap-0.5">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <Star key={i} size={12} className={i < Math.floor(lead.enrichedRating!) ? 'text-sky-400 fill-current' : 'text-slate-700'} />
-                  ))}
-                </div>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-medium">Rating</p>
-              </div>
-              <div className="hidden md:block w-px h-16 bg-sky-400/10" />
-            </>
-          )}
-          {lead.enrichedReviews && (
-            <>
-              <div className="text-center">
-                <p className="font-display text-4xl font-light text-gradient-blue">{lead.enrichedReviews}+</p>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-medium mt-2">Reviews</p>
-              </div>
-              <div className="hidden md:block w-px h-16 bg-sky-400/10" />
-            </>
-          )}
-          <div className="text-center">
-            <div className="flex items-center gap-2 mb-1">
-              <Shield size={18} className="text-sky-400/70" />
-              <p className="text-lg text-white font-light">{wc?.valueProps?.[0]?.title || 'Licensed & Insured'}</p>
-            </div>
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-medium">{wc?.valueProps?.[0]?.description || 'Full Coverage'}</p>
-          </div>
-          <div className="hidden md:block w-px h-16 bg-sky-400/10" />
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 py-32 md:py-44 text-center">
+          <p className="text-sm uppercase tracking-[0.3em] text-sky-400/50 mb-8 font-medium">Premium {industryLabel}</p>
+          <h1 className="font-display text-5xl md:text-6xl lg:text-8xl font-light text-white mb-8 tracking-tight leading-[1.05]">
+            {lead.companyName}
+          </h1>
+          <div className="w-24 h-0.5 bg-gradient-to-r from-sky-400 to-blue-500 mx-auto mb-8" />
+          <p className="text-lg md:text-xl text-slate-300 leading-relaxed max-w-2xl mx-auto mb-4">{wc?.heroHeadline || config.tagline}</p>
+          {wc?.heroSubheadline && <p className="text-base text-slate-400 leading-relaxed max-w-xl mx-auto mb-8">{wc.heroSubheadline}</p>}
           {location && (
-            <div className="text-center">
-              <div className="flex items-center gap-2 mb-1">
-                <MapPin size={18} className="text-sky-400/70" />
-                <p className="text-lg text-white font-light">{location}</p>
-              </div>
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500 font-medium">Service Area</p>
-            </div>
+            <p className="text-slate-500 flex items-center justify-center gap-2.5 text-base mb-12">
+              <MapPin size={16} className="text-sky-400/50" />
+              Serving {location} and surrounding areas
+            </p>
           )}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a
+              href={`tel:${lead.phone}`}
+              onClick={onCallClick}
+              className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-sky-500 to-blue-500 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:from-sky-400 hover:to-blue-400 transition-all duration-300 shadow-lg animate-cta-glow"
+            >
+              <Phone size={20} />
+              Call Now
+            </a>
+            <button
+              onClick={onCTAClick}
+              className="inline-flex items-center justify-center gap-2.5 border border-sky-400/30 text-sky-400 px-10 py-4 rounded-xl font-semibold text-lg hover:bg-sky-500 hover:text-white transition-all duration-300"
+            >
+              {config.ctaText}
+              <ArrowRight size={18} />
+            </button>
+          </div>
         </div>
       </section>
 
-      {/* ─── Services ─── */}
+      {/* ─── Floating Glass Service Cards — Staggered 3-Column Grid ─── */}
       {services.length > 0 && (
-        <section className="py-24 px-4 sm:px-6 bg-slate-900/50">
+        <section className="py-24 px-4 sm:px-6 bg-slate-900/40">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
-              <p className="text-sm uppercase tracking-[0.25em] text-sky-400/60 mb-3 font-medium">Our Expertise</p>
-              <h2 className="font-display text-4xl md:text-5xl font-light text-white mb-4">Services</h2>
-              <p className="text-slate-400 max-w-xl mx-auto text-lg">Comprehensive {industryLabel} solutions delivered with precision and care.</p>
+              <p className="text-sm uppercase tracking-[0.25em] text-sky-400/60 mb-3 font-medium">What We Do</p>
+              <h2 className="font-display text-4xl md:text-5xl font-light text-white mb-4">Our Services</h2>
+              <p className="text-slate-400 max-w-xl mx-auto text-lg">Comprehensive {industryLabel} solutions with a modern approach.</p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {services.slice(0, 6).map((service, i) => (
-                <div key={i} className="group flex items-center gap-5 bg-slate-950/60 border border-slate-800/30 rounded-2xl p-7 card-lift card-lift-dark hover:border-sky-400/20">
-                  <div className="w-12 h-12 rounded-xl bg-sky-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-sky-500/20 transition-colors">
-                    <Scale size={20} className="text-sky-400" />
+                <div
+                  key={i}
+                  className={`group glass-dark border border-slate-700/30 rounded-2xl p-8 hover:border-sky-400/30 transition-all duration-500 hover:shadow-xl hover:shadow-sky-500/5 ${
+                    i % 2 === 1 ? 'lg:translate-y-6' : ''
+                  }`}
+                >
+                  <div className="w-14 h-14 rounded-xl bg-sky-500/10 flex items-center justify-center mb-6 group-hover:bg-sky-500/20 transition-colors duration-300">
+                    <Scale size={24} className="text-sky-400" />
                   </div>
-                  <div>
-                    <h3 className="font-display font-medium text-white text-lg mb-1">{service}</h3>
-                    <p className="text-slate-500 text-sm">{wc?.serviceDescriptions?.[service] || `Expert ${service.toLowerCase()} tailored to your requirements.`}</p>
-                  </div>
-                  <ArrowRight size={16} className="text-sky-500/0 group-hover:text-sky-500/60 transition-all ml-auto flex-shrink-0" />
+                  <h3 className="font-display text-xl font-medium text-white mb-3">{service}</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed">{wc?.serviceDescriptions?.[service] || `Expert ${service.toLowerCase()} delivered with precision and modern techniques.`}</p>
+                  <ArrowRight size={16} className="text-sky-500/0 group-hover:text-sky-400 transition-all duration-300 mt-4" />
                 </div>
               ))}
             </div>
@@ -173,36 +109,11 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
         </section>
       )}
 
-      {/* ─── Our Approach ─── */}
+      {/* ─── Asymmetric About Section ─── */}
       <section className="py-24 px-4 sm:px-6 bg-slate-950">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <p className="text-sm uppercase tracking-[0.25em] text-sky-400/60 mb-3 font-medium">How We Work</p>
-            <h2 className="font-display text-4xl md:text-5xl font-light text-white mb-4">Our Approach</h2>
-            <p className="text-slate-400 text-lg">A refined process designed to deliver exceptional outcomes.</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-            {[
-              { icon: Target, title: wc?.valueProps?.[0]?.title || 'Consultation', desc: wc?.valueProps?.[0]?.description || `We begin with a thorough consultation to understand your vision, assess your ${industryLabel} needs, and develop a tailored strategy.` },
-              { icon: Briefcase, title: wc?.valueProps?.[1]?.title || 'Expert Execution', desc: wc?.valueProps?.[1]?.description || 'Our skilled professionals execute your project with meticulous attention to detail, using only premium materials and proven techniques.' },
-              { icon: Handshake, title: wc?.valueProps?.[2]?.title || 'Lasting Results', desc: wc?.valueProps?.[2]?.description || 'We deliver results that exceed expectations and stand the test of time, backed by our commitment to your complete satisfaction.' },
-            ].map((item, i) => (
-              <div key={i} className="text-center group">
-                <div className="w-20 h-20 rounded-2xl border border-sky-400/20 flex items-center justify-center mx-auto mb-8 group-hover:border-sky-400/40 group-hover:bg-sky-500/5 transition-all">
-                  <item.icon size={30} className="text-sky-400" />
-                </div>
-                <h3 className="font-display text-xl font-medium text-white mb-4">{item.title}</h3>
-                <p className="text-slate-400 leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── About ─── */}
-      <section className="py-24 px-4 sm:px-6 bg-slate-900/50">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-16">
-          <div className="lg:col-span-3">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-16 items-start">
+          {/* Left — Wide About Text */}
+          <div className="lg:col-span-2">
             <p className="text-sm uppercase tracking-[0.25em] text-sky-400/60 mb-3 font-medium">About</p>
             <h2 className="font-display text-4xl md:text-5xl font-light text-white mb-10">{lead.companyName}</h2>
             <div className="space-y-6 text-slate-400 leading-relaxed text-lg">
@@ -210,89 +121,74 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
                 {wc?.aboutParagraph1 || `${lead.companyName} represents a commitment to excellence in ${industryLabel}.${location ? ` Serving ${location} and the surrounding region, we` : ' We'} combine deep expertise with a client-first philosophy to deliver results that consistently exceed expectations.`}
               </p>
               <p>
-                {wc?.aboutParagraph2 || 'Our team of seasoned professionals brings a wealth of knowledge and meticulous attention to detail to every engagement. We understand that each client\u2019s needs are unique, which is why we take the time to develop customized solutions rather than one-size-fits-all approaches.'}
+                {wc?.aboutParagraph2 || `Our team of seasoned professionals brings a wealth of knowledge and meticulous attention to detail to every engagement. We understand that each client\u2019s needs are unique, which is why we take the time to develop customized solutions rather than one-size-fits-all approaches.`}
               </p>
               <p>
                 From initial consultation through project completion, we maintain the highest standards of professionalism,
-                communication, and craftsmanship.
+                communication, and craftsmanship that our clients have come to expect.
               </p>
             </div>
-            <div className="mt-12 flex flex-wrap gap-12">
-              <div>
-                <p className="font-display text-4xl font-light text-gradient-blue">{hasRating ? lead.enrichedRating : '5.0'}</p>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mt-2 font-medium">Star Rating</p>
-              </div>
-              {lead.enrichedReviews && (
-                <div>
-                  <p className="font-display text-4xl font-light text-gradient-blue">{lead.enrichedReviews}+</p>
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mt-2 font-medium">Client Reviews</p>
+
+            {/* Value Props */}
+            <div className="mt-14 grid grid-cols-1 sm:grid-cols-3 gap-8">
+              {[
+                { icon: Target, title: wc?.valueProps?.[0]?.title || 'Consultation', desc: wc?.valueProps?.[0]?.description || `We begin with understanding your ${industryLabel} needs and developing a tailored strategy.` },
+                { icon: Briefcase, title: wc?.valueProps?.[1]?.title || 'Expert Execution', desc: wc?.valueProps?.[1]?.description || 'Our skilled professionals execute with meticulous attention to detail.' },
+                { icon: Handshake, title: wc?.valueProps?.[2]?.title || 'Lasting Results', desc: wc?.valueProps?.[2]?.description || 'We deliver results that exceed expectations and stand the test of time.' },
+              ].map((item, i) => (
+                <div key={i} className="group">
+                  <div className="w-12 h-12 rounded-xl border border-sky-400/15 flex items-center justify-center mb-4 group-hover:border-sky-400/30 group-hover:bg-sky-500/5 transition-all duration-300">
+                    <item.icon size={22} className="text-sky-400" />
+                  </div>
+                  <h3 className="font-display text-base font-medium text-white mb-2">{item.title}</h3>
+                  <p className="text-slate-500 text-sm leading-relaxed">{item.desc}</p>
                 </div>
-              )}
-              <div>
-                <p className="font-display text-4xl font-light text-gradient-blue">100%</p>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mt-2 font-medium">Satisfaction</p>
-              </div>
+              ))}
             </div>
           </div>
-          <div className="lg:col-span-2">
-            <div className="border border-sky-400/15 rounded-3xl p-10 bg-slate-950/60 backdrop-blur-sm sticky top-24">
-              <h3 className="font-display text-2xl font-light text-white mb-8">Contact</h3>
-              <div className="space-y-5">
-                {lead.phone && (
-                  <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 text-slate-400 hover:text-sky-400 transition-colors p-3 rounded-xl hover:bg-white/5">
-                    <div className="w-12 h-12 rounded-xl bg-sky-500/10 flex items-center justify-center flex-shrink-0">
-                      <Phone size={20} className="text-sky-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.15em] text-slate-600 font-medium">Phone</p>
-                      <p className="font-medium text-white text-lg">{lead.phone}</p>
-                    </div>
-                  </a>
-                )}
-                {lead.email && (
-                  <a href={`mailto:${lead.email}`} className="flex items-center gap-4 text-slate-400 hover:text-sky-400 transition-colors p-3 rounded-xl hover:bg-white/5">
-                    <div className="w-12 h-12 rounded-xl bg-sky-500/10 flex items-center justify-center flex-shrink-0">
-                      <Mail size={20} className="text-sky-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.15em] text-slate-600 font-medium">Email</p>
-                      <p className="font-medium text-white">{lead.email}</p>
-                    </div>
-                  </a>
-                )}
-                {lead.enrichedAddress && (
-                  <div className="flex items-start gap-4 text-slate-400 p-3 rounded-xl">
-                    <div className="w-12 h-12 rounded-xl bg-sky-500/10 flex items-center justify-center flex-shrink-0">
-                      <MapPin size={20} className="text-sky-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.15em] text-slate-600 font-medium">Address</p>
-                      <p className="font-medium text-white">{lead.enrichedAddress}</p>
-                    </div>
-                  </div>
-                )}
+
+          {/* Right — Stacked Stat Numbers */}
+          <div className="lg:col-span-1 flex flex-col gap-10 lg:pt-16">
+            <div className="text-center lg:text-left">
+              <p className="font-display text-6xl font-light text-gradient-blue">{hasRating ? lead.enrichedRating : '5.0'}</p>
+              <div className="flex gap-0.5 mt-2 justify-center lg:justify-start">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <Star key={i} size={14} className={i < Math.floor(lead.enrichedRating || 5) ? 'text-sky-400 fill-current' : 'text-slate-700'} />
+                ))}
               </div>
-              <button onClick={onCTAClick} className="w-full mt-10 bg-gradient-to-r from-sky-500 to-blue-500 text-white py-4.5 rounded-xl font-semibold text-lg hover:from-sky-400 hover:to-blue-400 transition-all shadow-lg">
-                {config.ctaText}
-              </button>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mt-2 font-medium">Star Rating</p>
+            </div>
+            {lead.enrichedReviews && (
+              <div className="text-center lg:text-left">
+                <p className="font-display text-6xl font-light text-gradient-blue">{lead.enrichedReviews}+</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mt-2 font-medium">Verified Reviews</p>
+              </div>
+            )}
+            <div className="text-center lg:text-left">
+              <p className="font-display text-6xl font-light text-gradient-blue">100%</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500 mt-2 font-medium">Satisfaction Rate</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ─── Photo Portfolio ─── */}
+      {/* ─── Horizontal Scrolling Gallery ─── */}
       {photos.length > 0 && (
-        <section className="py-24 px-4 sm:px-6 bg-slate-950">
+        <section className="py-24 px-4 sm:px-6 bg-slate-900/40">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
               <p className="text-sm uppercase tracking-[0.25em] text-sky-400/60 mb-3 font-medium">Portfolio</p>
               <h2 className="font-display text-4xl md:text-5xl font-light text-white mb-4">Our Work</h2>
-              <p className="text-slate-400 text-lg">A selection of recent projects showcasing our commitment to excellence.</p>
+              <p className="text-slate-400 text-lg">Scroll to explore our recent projects.</p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {photos.slice(0, 8).map((photo, i) => (
-                <div key={i} className="group aspect-square bg-slate-900 rounded-2xl overflow-hidden border border-slate-800/50 hover:border-sky-400/20 transition-all duration-500 hover:shadow-xl hover:shadow-sky-500/5">
-                  <img src={photo} alt={`${lead.companyName} project ${i + 1}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+          </div>
+          <div className="max-w-7xl mx-auto overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4">
+            <div className="flex gap-4 px-4 sm:px-6 w-max">
+              {photos.slice(0, 10).map((photo, i) => (
+                <div key={i} className="group w-72 md:w-80 flex-shrink-0 snap-center">
+                  <div className="aspect-[4/3] bg-slate-900 rounded-2xl overflow-hidden border border-slate-800/50 hover:border-sky-400/30 transition-all duration-500 hover:shadow-xl hover:shadow-sky-500/5">
+                    <img src={photo} alt={`${lead.companyName} project ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  </div>
                 </div>
               ))}
             </div>
@@ -300,8 +196,8 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
         </section>
       )}
 
-      {/* ─── Testimonial ─── */}
-      <section className="py-24 px-4 sm:px-6 bg-slate-900/50">
+      {/* ─── Full-Width Social Proof ─── */}
+      <section className="py-24 px-4 sm:px-6 bg-slate-950 border-y border-sky-400/5">
         <div className="max-w-3xl mx-auto text-center">
           <p className="text-sm uppercase tracking-[0.25em] text-sky-400/60 mb-10 font-medium">Client Testimonial</p>
           <div className="flex justify-center mb-8 gap-1">
@@ -315,40 +211,76 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
             our expectations in every way.&rdquo;
           </p>
           <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-sky-400/30 to-transparent mx-auto mb-5" />
-          <p className="text-slate-500 text-sm tracking-wide font-medium">Satisfied Client{location ? ` — ${lead.city}` : ''}</p>
+          <p className="text-slate-500 text-sm tracking-wide font-medium">Satisfied Client{location ? ` \u2014 ${lead.city}` : ''}</p>
+          {hasRating && (
+            <div className="mt-8 flex items-center justify-center gap-6 text-sm text-slate-500">
+              <span className="flex items-center gap-1.5"><Shield size={14} className="text-sky-400/60" /> Licensed &amp; Insured</span>
+              {lead.enrichedReviews && <span>{lead.enrichedReviews}+ verified reviews</span>}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* ─── Final CTA ─── */}
-      <section className="py-24 px-4 sm:px-6 bg-slate-950 border-t border-sky-400/10 relative overflow-hidden">
-        <div className="absolute inset-0 bg-mesh-dark" />
-        <div className="absolute top-0 left-1/2 w-[500px] h-[500px] bg-sky-500/3 rounded-full -translate-y-1/2 -translate-x-1/2 blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-[350px] h-[350px] bg-blue-500/3 rounded-full translate-y-1/3 blur-3xl" />
-        <div className="relative max-w-4xl mx-auto text-center">
-          <p className="text-sm uppercase tracking-[0.25em] text-sky-400/60 mb-4 font-medium">Get Started</p>
-          <h2 className="font-display text-4xl md:text-5xl font-light text-white mb-6">{wc?.closingHeadline || 'Begin Your Project Today'}</h2>
-          <p className="text-slate-400 text-lg max-w-xl mx-auto mb-12 leading-relaxed">
-            {wc?.closingBody || `Schedule a complimentary consultation with ${lead.companyName}. Let us show you why discerning clients trust us with their most important projects.`}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href={`tel:${lead.phone}`}
-              onClick={onCallClick}
-              className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-sky-500 to-blue-500 text-white px-10 py-4.5 rounded-xl font-semibold text-lg hover:from-sky-400 hover:to-blue-400 transition-all shadow-lg animate-cta-glow"
-            >
-              <Phone size={20} />
-              {lead.phone || 'Call Now'}
-            </a>
-            <button
-              onClick={onCTAClick}
-              className="inline-flex items-center justify-center gap-2.5 border border-sky-400/30 text-sky-400 px-10 py-4.5 rounded-xl font-semibold text-lg hover:bg-sky-500 hover:text-white transition-all"
-            >
-              {config.ctaText}
-              <ArrowRight size={18} />
-            </button>
+      {/* ─── Contained CTA Card ─── */}
+      <section className="py-24 px-4 sm:px-6 bg-slate-900/40">
+        <div className="max-w-2xl mx-auto">
+          <div className="border border-sky-400/15 rounded-3xl p-12 md:p-16 bg-slate-950/80 backdrop-blur-sm text-center shadow-2xl shadow-sky-500/5">
+            <p className="text-sm uppercase tracking-[0.25em] text-sky-400/60 mb-4 font-medium">Get Started</p>
+            <h2 className="font-display text-3xl md:text-4xl font-light text-white mb-6">{wc?.closingHeadline || 'Begin Your Project Today'}</h2>
+            <p className="text-slate-400 text-lg mb-12 leading-relaxed">
+              {wc?.closingBody || `Schedule a complimentary consultation with ${lead.companyName}. Let us show you why discerning clients trust us with their most important projects.`}
+            </p>
+            <div className="flex flex-col gap-4">
+              <a
+                href={`tel:${lead.phone}`}
+                onClick={onCallClick}
+                className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-sky-500 to-blue-500 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:from-sky-400 hover:to-blue-400 transition-all duration-300 shadow-lg animate-cta-glow"
+              >
+                <Phone size={20} />
+                {lead.phone || 'Call Now'}
+              </a>
+              <button
+                onClick={onCTAClick}
+                className="inline-flex items-center justify-center gap-2.5 border border-sky-400/30 text-sky-400 px-10 py-4 rounded-xl font-semibold text-lg hover:bg-sky-500 hover:text-white transition-all duration-300"
+              >
+                {config.ctaText}
+                <ArrowRight size={18} />
+              </button>
+            </div>
           </div>
         </div>
       </section>
+
+      {/* ─── Floating Contact Sidebar (Desktop) ─── */}
+      <div className="hidden lg:flex fixed right-0 top-1/2 -translate-y-1/2 z-30 flex-col gap-3 pr-4">
+        {lead.phone && (
+          <a
+            href={`tel:${lead.phone}`}
+            onClick={onCallClick}
+            className="w-12 h-12 rounded-xl glass-dark border border-sky-400/15 flex items-center justify-center text-sky-400 hover:bg-sky-500 hover:text-white hover:border-sky-500 transition-all duration-300 shadow-lg"
+            title="Call us"
+          >
+            <Phone size={18} />
+          </a>
+        )}
+        {lead.email && (
+          <a
+            href={`mailto:${lead.email}`}
+            className="w-12 h-12 rounded-xl glass-dark border border-sky-400/15 flex items-center justify-center text-sky-400 hover:bg-sky-500 hover:text-white hover:border-sky-500 transition-all duration-300 shadow-lg"
+            title="Email us"
+          >
+            <Mail size={18} />
+          </a>
+        )}
+        {location && (
+          <div
+            className="w-12 h-12 rounded-xl glass-dark border border-sky-400/15 flex items-center justify-center text-sky-400/60 shadow-lg"
+            title={location}
+          >
+            <MapPin size={18} />
+          </div>
+        )}
+      </div>
 
       {/* ─── Footer ─── */}
       <footer className="bg-slate-950 py-16 px-4 sm:px-6 border-t border-sky-400/10">
@@ -358,14 +290,14 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
               <h3 className="font-display text-sky-400/70 font-light text-xl tracking-wide mb-4">{lead.companyName}</h3>
               <p className="text-slate-600 text-sm leading-relaxed">
                 Premium {industryLabel} services{location ? ` in ${location}` : ''}.
-                Excellence in every detail, satisfaction with every engagement.
+                Modern solutions delivered with precision and care.
               </p>
             </div>
             <div>
               <h4 className="text-sm uppercase tracking-[0.2em] text-sky-400/50 mb-5 font-medium">Services</h4>
               <ul className="space-y-3 text-sm text-slate-500">
                 {services.slice(0, 4).map((s, i) => (
-                  <li key={i} className="flex items-center gap-2.5 hover:text-white transition-colors">
+                  <li key={i} className="flex items-center gap-2.5 hover:text-white transition-colors duration-300">
                     <CheckCircle size={12} className="text-sky-500/40" />
                     {s}
                   </li>
@@ -378,8 +310,8 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
             <div>
               <h4 className="text-sm uppercase tracking-[0.2em] text-sky-400/50 mb-5 font-medium">Contact</h4>
               <div className="space-y-3 text-sm text-slate-500">
-                {lead.phone && <p className="flex items-center gap-2.5 hover:text-white transition-colors"><Phone size={14} className="text-sky-500/40" /> {lead.phone}</p>}
-                {lead.email && <p className="flex items-center gap-2.5 hover:text-white transition-colors"><Mail size={14} className="text-sky-500/40" /> {lead.email}</p>}
+                {lead.phone && <p className="flex items-center gap-2.5 hover:text-white transition-colors duration-300"><Phone size={14} className="text-sky-500/40" /> {lead.phone}</p>}
+                {lead.email && <p className="flex items-center gap-2.5 hover:text-white transition-colors duration-300"><Mail size={14} className="text-sky-500/40" /> {lead.email}</p>}
                 {lead.enrichedAddress && <p className="flex items-center gap-2.5"><MapPin size={14} className="text-sky-500/40" /> {lead.enrichedAddress}</p>}
               </div>
             </div>

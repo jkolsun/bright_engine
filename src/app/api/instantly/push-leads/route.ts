@@ -4,8 +4,10 @@ import { verifySession } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
+const INSTANTLY_BATCH_LIMIT = 500 // V1 API max per request
+
 // POST /api/instantly/push-leads
-// Actually push QUEUED leads to Instantly V2 API (one lead at a time)
+// Push QUEUED leads to Instantly using V1 lead/add endpoint (batch, adds to campaign)
 export async function POST(request: NextRequest) {
   try {
     const sessionCookie = request.cookies.get('session')?.value
@@ -58,44 +60,50 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Push leads to Instantly V2 API individually with controlled concurrency
-    const CONCURRENCY = 5
+    // Push leads to Instantly V1 lead/add endpoint in batches of 500
     let totalPushed = 0
+    let totalUploadedByInstantly = 0
     const errors: string[] = []
     const successIds: string[] = []
 
-    for (let i = 0; i < pushableLeads.length; i += CONCURRENCY) {
-      const chunk = pushableLeads.slice(i, i + CONCURRENCY)
+    for (let i = 0; i < pushableLeads.length; i += INSTANTLY_BATCH_LIMIT) {
+      const batch = pushableLeads.slice(i, i + INSTANTLY_BATCH_LIMIT)
 
-      const results = await Promise.allSettled(
-        chunk.map(async (lead) => {
-          const payload = formatLeadForInstantly(lead, campaignId)
+      const formattedLeads = batch.map(lead => formatLeadForInstantly(lead))
 
-          const response = await fetch('https://api.instantly.ai/api/v2/leads', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-          })
-
-          if (!response.ok) {
-            const errBody = await response.text()
-            throw new Error(`${response.status}: ${errBody.substring(0, 200)}`)
-          }
-
-          return lead.id
+      try {
+        const response = await fetch('https://api.instantly.ai/api/v1/lead/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api_key: apiKey,
+            campaign_id: campaignId,
+            skip_if_in_workspace: false,
+            skip_if_in_campaign: false,
+            leads: formattedLeads,
+          }),
         })
-      )
 
-      for (const result of results) {
-        if (result.status === 'fulfilled') {
-          successIds.push(result.value)
-          totalPushed++
-        } else {
-          errors.push(result.reason?.message || String(result.reason))
+        if (!response.ok) {
+          const errBody = await response.text()
+          errors.push(`Batch ${Math.floor(i / INSTANTLY_BATCH_LIMIT) + 1}: ${response.status} — ${errBody.substring(0, 300)}`)
+          continue
         }
+
+        const result = await response.json()
+        console.log(`[Instantly Push] Batch result:`, JSON.stringify(result))
+
+        // V1 response: { status, leads_uploaded, already_in_campaign, invalid_email_count, ... }
+        const uploaded = result.leads_uploaded ?? result.upload_count ?? batch.length
+        totalUploadedByInstantly += uploaded
+        totalPushed += batch.length
+        successIds.push(...batch.map(l => l.id))
+
+        if (result.already_in_campaign > 0) {
+          console.log(`[Instantly Push] ${result.already_in_campaign} leads already in campaign`)
+        }
+      } catch (err) {
+        errors.push(`Batch ${Math.floor(i / INSTANTLY_BATCH_LIMIT) + 1}: ${err instanceof Error ? err.message : String(err)}`)
       }
     }
 
@@ -111,12 +119,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Deduplicate errors for cleaner display
     const uniqueErrors = [...new Set(errors)]
 
     return NextResponse.json({
       status: totalPushed > 0 ? 'success' : 'failed',
       pushed: totalPushed,
+      uploadedByInstantly: totalUploadedByInstantly,
       total: pushableLeads.length,
       failed: pushableLeads.length - totalPushed,
       skippedNoEmail,
@@ -133,22 +141,18 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function formatLeadForInstantly(
-  lead: {
-    email: string | null; firstName: string | null; lastName: string | null;
-    companyName: string | null; website: string | null; phone: string | null;
-    city: string | null; state: string | null; industry: string | null;
-    previewUrl: string | null; personalization: any;
-  },
-  campaignId: string,
-) {
+function formatLeadForInstantly(lead: {
+  email: string | null; firstName: string | null; lastName: string | null;
+  companyName: string | null; website: string | null; phone: string | null;
+  city: string | null; state: string | null; industry: string | null;
+  previewUrl: string | null; personalization: any;
+}) {
   const deliveryDate = new Date()
   deliveryDate.setDate(deliveryDate.getDate() + 3)
   const deliveryStr = deliveryDate.toLocaleDateString('en-US', {
     weekday: 'long', month: 'short', day: 'numeric',
   })
 
-  // Parse personalization if stored as JSON string
   let personalizationLine = ''
   try {
     const p = typeof lead.personalization === 'string'
@@ -167,9 +171,6 @@ function formatLeadForInstantly(
     website: lead.website || '',
     phone: lead.phone || '',
     personalization: personalizationLine,
-    campaign_id: campaignId,
-    skip_if_in_workspace: false,
-    skip_if_in_campaign: false,
     custom_variables: {
       preview_url: lead.previewUrl || '',
       industry: formatIndustry(lead.industry),

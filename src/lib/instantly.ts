@@ -417,69 +417,73 @@ async function pushLeadsPerCampaign(calculations: any) {
       continue
     }
 
-    // Push leads individually to Instantly V2 API with controlled concurrency
-    const CONCURRENCY = 5
+    // Push leads to Instantly V1 lead/add endpoint (batch, adds to campaign)
     let totalPushed = 0
-    const successIds: string[] = []
 
     try {
-      for (let i = 0; i < leadsToPush.length; i += CONCURRENCY) {
-        const chunk = leadsToPush.slice(i, i + CONCURRENCY)
+      // Format leads for V1 API batch format
+      const formattedLeads = leadsToPush
+        .filter(lead => lead.email)
+        .map((lead) => {
+          const deliveryDate = new Date()
+          deliveryDate.setDate(deliveryDate.getDate() + 3)
+          const deliveryStr = deliveryDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
 
-        const pushResults = await Promise.allSettled(
-          chunk.map(async (lead) => {
-            const deliveryDate = new Date()
-            deliveryDate.setDate(deliveryDate.getDate() + 3)
-            const deliveryStr = deliveryDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+          let personalizationLine = ''
+          try {
+            const p = typeof lead.personalization === 'string' ? JSON.parse(lead.personalization) : lead.personalization
+            personalizationLine = p?.firstLine || ''
+          } catch { personalizationLine = lead.personalization || '' }
 
-            // Parse personalization if stored as JSON
-            let personalizationLine = ''
-            try {
-              const p = typeof lead.personalization === 'string' ? JSON.parse(lead.personalization) : lead.personalization
-              personalizationLine = p?.firstLine || ''
-            } catch { personalizationLine = lead.personalization || '' }
-
-            const response = await fetch(`${INSTANTLY_API_BASE}/leads`, {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                email: lead.email,
-                first_name: lead.firstName || '',
-                last_name: lead.lastName || '',
-                company_name: lead.companyName || '',
-                website: lead.website || '',
-                phone: lead.phone || '',
-                personalization: personalizationLine,
-                campaign_id: campaignId,
-                skip_if_in_workspace: false,
-                skip_if_in_campaign: false,
-                custom_variables: {
-                  preview_url: lead.previewUrl || '',
-                  industry: formatIndustry(lead.industry) || 'home service',
-                  location: [lead.city, lead.state].filter(Boolean).join(', ') || '',
-                  delivery_date: deliveryStr,
-                },
-              }),
-            })
-
-            if (!response.ok) {
-              const errBody = await response.text()
-              throw new Error(`${response.status}: ${errBody.substring(0, 200)}`)
-            }
-
-            return lead.id
-          })
-        )
-
-        for (const result of pushResults) {
-          if (result.status === 'fulfilled') {
-            successIds.push(result.value)
-            totalPushed++
+          return {
+            email: lead.email,
+            first_name: lead.firstName || '',
+            last_name: lead.lastName || '',
+            company_name: lead.companyName || '',
+            website: lead.website || '',
+            phone: lead.phone || '',
+            personalization: personalizationLine,
+            custom_variables: {
+              preview_url: lead.previewUrl || '',
+              industry: formatIndustry(lead.industry) || 'home service',
+              location: [lead.city, lead.state].filter(Boolean).join(', ') || '',
+              delivery_date: deliveryStr,
+            },
           }
+        })
+
+      // Push in batches of 500 (V1 API limit)
+      const BATCH_LIMIT = 500
+      const successIds: string[] = []
+
+      for (let i = 0; i < formattedLeads.length; i += BATCH_LIMIT) {
+        const batch = formattedLeads.slice(i, i + BATCH_LIMIT)
+        const batchLeadIds = leadsToPush.filter(l => l.email).slice(i, i + BATCH_LIMIT).map(l => l.id)
+
+        const response = await fetch('https://api.instantly.ai/api/v1/lead/add', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            api_key: apiKey,
+            campaign_id: campaignId,
+            skip_if_in_workspace: false,
+            skip_if_in_campaign: false,
+            leads: batch,
+          }),
+        })
+
+        if (!response.ok) {
+          const errBody = await response.text()
+          console.error(`[Instantly] Campaign ${campaignId} batch push failed: ${response.status} — ${errBody.substring(0, 300)}`)
+          continue
         }
+
+        const result = await response.json()
+        console.log(`[Instantly] Campaign ${campaignId} batch result:`, JSON.stringify(result))
+
+        const uploaded = result.leads_uploaded ?? result.upload_count ?? batch.length
+        totalPushed += uploaded
+        successIds.push(...batchLeadIds)
       }
 
       // Update successful leads in database
