@@ -169,9 +169,11 @@ export default function EmailPreviewPage() {
   const [sendTo, setSendTo] = useState('')
   const [sending, setSending] = useState(false)
   const [sendResult, setSendResult] = useState<string | null>(null)
+  const [emailPrice, setEmailPrice] = useState(149)
 
   useEffect(() => {
     fetchLeads()
+    fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => { if (d?.firstMonthTotal) setEmailPrice(d.firstMonthTotal) }).catch(() => {})
   }, [])
 
   const fetchLeads = async () => {
@@ -219,7 +221,7 @@ export default function EmailPreviewPage() {
 
   const currentEmail = sequence[activeStep]
   const renderedSubject = currentEmail ? fillTemplate(currentEmail.subject, mergeVars) : ''
-  const renderedBody = currentEmail ? fillTemplate(currentEmail.body, mergeVars) : ''
+  const renderedBody = currentEmail ? fillTemplate(currentEmail.body, mergeVars).replace(/\$149/g, `$${emailPrice}`) : ''
 
   // Filter leads for dropdown
   const filteredLeads = leads.filter(l => {

@@ -1,11 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import type { TemplateVariant } from '../config/template-types'
 
 export default function DisclaimerBanner({ variant, companyName }: { variant: TemplateVariant; companyName: string }) {
   const [visible, setVisible] = useState(true)
+  const [bannerPrice, setBannerPrice] = useState<number>(149)
+
+  useEffect(() => {
+    fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => { if (d?.firstMonthTotal) setBannerPrice(d.firstMonthTotal) }).catch(() => {})
+  }, [])
+
   if (!visible) return null
 
   return (
@@ -32,7 +38,7 @@ export default function DisclaimerBanner({ variant, companyName }: { variant: Te
             Our dev team will work directly with you to customize every detail.
           </p>
           <p className="text-gray-900 font-bold text-lg mb-5">
-            $149 to go live <span className="text-gray-400 font-normal text-sm">• Expires in 7 days</span>
+            ${bannerPrice} to go live <span className="text-gray-400 font-normal text-sm">• Expires in 7 days</span>
           </p>
 
           <button

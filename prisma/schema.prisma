@@ -1065,7 +1065,7 @@ model SequenceProgress {
 }
 
 // ============================================
-// UPSELL MODEL (Available upsell products)
+// UNIFIED PRODUCTS TABLE (Core plan + upsells in one table)
 // ============================================
 model UpsellProduct {
   id                  String   @id @default(cuid())
@@ -1075,12 +1075,26 @@ model UpsellProduct {
   stripeLink          String?  @map("stripe_link")
   active              Boolean  @default(true)
 
-  // AI awareness fields
-  description         String?  @db.Text
-  aiPitchInstructions String?  @db.Text  @map("ai_pitch_instructions")
-  aiProductSummary    String?  @map("ai_product_summary")
+  // Product type
+  isCore              Boolean  @default(false) @map("is_core")  // true = core plan, false = upsell
 
-  // Eligibility & targeting
+  // Core product pricing fields (only used when isCore=true)
+  month1Price         Float?   @map("month1_price")       // First month combined price (e.g., 188)
+  recurringPrice      Float?   @map("recurring_price")    // Month 2+ price (e.g., 39)
+  annualPrice         Float?   @map("annual_price")       // Annual option (e.g., 399)
+  stripeLinkAnnual    String?  @map("stripe_link_annual") // Annual payment link
+
+  // Copy strings (core product uses these system-wide; upsells use pitchOneLiner only)
+  pitchOneLiner       String?  @map("pitch_one_liner")    // "$188 to go live, $39/mo after that"
+  previewBannerText   String?  @map("preview_banner_text") // "$188 to get started"
+  repCloseScript      String?  @db.Text @map("rep_close_script") // Full close script for reps
+
+  // AI awareness fields
+  description         String?  @db.Text                            // Admin reference
+  aiPitchInstructions String?  @db.Text @map("ai_pitch_instructions") // How to sell this
+  aiProductSummary    String?  @map("ai_product_summary")           // One-liner for AI conversation
+
+  // Eligibility & targeting (upsells only — core products skip these checks)
   eligibleIndustries  String[] @default([]) @map("eligible_industries")
   minClientAgeDays    Int?     @map("min_client_age_days")
   maxPitchesPerClient Int      @default(3) @map("max_pitches_per_client")

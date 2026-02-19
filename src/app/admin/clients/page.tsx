@@ -125,6 +125,9 @@ export default function ClientsPage() {
   // Overview stats
   const [overviewStats, setOverviewStats] = useState<any>({ stats: {}, alerts: {} })
 
+  // Dynamic pricing from DB
+  const [pricing, setPricing] = useState<{ siteBuildFee: number; monthlyHosting: number; firstMonthTotal: number }>({ siteBuildFee: 149, monthlyHosting: 39, firstMonthTotal: 188 })
+
   // Form data
   const [formData, setFormData] = useState({
     companyName: '', contactName: '', phone: '', email: '',
@@ -136,7 +139,20 @@ export default function ClientsPage() {
   useEffect(() => {
     fetchClients()
     fetchOverviewStats()
+    fetchPricing()
   }, [])
+
+  const fetchPricing = async () => {
+    try {
+      const res = await fetch('/api/settings/pricing')
+      if (res.ok) {
+        const data = await res.json()
+        const p = { siteBuildFee: data.siteBuildFee, monthlyHosting: data.monthlyHosting, firstMonthTotal: data.firstMonthTotal }
+        setPricing(p)
+        setFormData(prev => ({ ...prev, monthlyRevenue: p.monthlyHosting, siteBuildFee: p.siteBuildFee }))
+      }
+    } catch { /* use defaults */ }
+  }
 
   const fetchClients = async () => {
     try {
@@ -235,14 +251,14 @@ export default function ClientsPage() {
       const res = await fetch('/api/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, siteBuildFee: formData.chargeSiteBuildFee ? 149 : 0 })
+        body: JSON.stringify({ ...formData, siteBuildFee: formData.chargeSiteBuildFee ? pricing.siteBuildFee : 0 })
       })
       if (res.ok) {
         setDialogOpen(false)
         setFormData({
           companyName: '', contactName: '', phone: '', email: '',
           siteUrl: '', location: '', industry: 'GENERAL_CONTRACTING',
-          monthlyRevenue: 39, plan: 'base', siteBuildFee: 149,
+          monthlyRevenue: pricing.monthlyHosting, plan: 'base', siteBuildFee: pricing.siteBuildFee,
           chargeSiteBuildFee: true, tags: [], notes: '',
         })
         fetchClients()
@@ -438,18 +454,19 @@ export default function ClientsPage() {
                       <label className="text-sm font-medium">Plan</label>
                       <select value={formData.plan} onChange={(e) => {
                         const plan = e.target.value
-                        const prices: Record<string, number> = { base: 39, premium: 78, enterprise: 149 }
-                        setFormData(prev => ({ ...prev, plan, monthlyRevenue: prices[plan] || 39 }))
+                        const p = pricing.monthlyHosting
+                        const prices: Record<string, number> = { base: p, premium: p * 2, enterprise: p * 4 }
+                        setFormData(prev => ({ ...prev, plan, monthlyRevenue: prices[plan] || p }))
                       }} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
-                        <option value="base">Base - $39/mo</option>
-                        <option value="premium">Premium - $78/mo</option>
-                        <option value="enterprise">Enterprise - $149/mo</option>
+                        <option value="base">Base - ${pricing.monthlyHosting}/mo</option>
+                        <option value="premium">Premium - ${pricing.monthlyHosting * 2}/mo</option>
+                        <option value="enterprise">Enterprise - ${pricing.monthlyHosting * 4}/mo</option>
                       </select>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <input type="checkbox" id="setup" className="rounded" checked={formData.chargeSiteBuildFee} onChange={(e) => setFormData(prev => ({ ...prev, chargeSiteBuildFee: e.target.checked }))} />
-                    <label htmlFor="setup" className="text-sm">Charge $149 site build fee</label>
+                    <label htmlFor="setup" className="text-sm">Charge ${pricing.siteBuildFee} site build fee</label>
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Notes</label>
@@ -1243,7 +1260,7 @@ function ReferralView({ referrals, stats }: any) {
         <div className="text-sm text-blue-700 space-y-1">
           <p>Each client gets a unique referral link</p>
           <p>Referred lead enters pipeline with &quot;referral&quot; tag</p>
-          <p>When referral closes, referring client gets $39 credit</p>
+          <p>When referral closes, referring client gets 1-month credit</p>
           <p>Credit auto-applied to next billing cycle via Stripe</p>
         </div>
       </Card>

@@ -8,6 +8,7 @@
 import { getStripe } from './stripe'
 import { prisma } from './db'
 import { sendSMSViaProvider } from './sms-provider'
+import { getPricingConfig } from './pricing-config'
 import {
   checkAutonomy,
   transitionStage,
@@ -28,6 +29,8 @@ export async function generatePaymentLink(leadId: string): Promise<string> {
     where: { leadId },
   })
 
+  const pricingConfig = await getPricingConfig()
+
   const stripe = getStripe()
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
@@ -38,7 +41,7 @@ export async function generatePaymentLink(leadId: string): Promise<string> {
           name: `Website for ${lead.companyName}`,
           description: 'Professional website build + monthly hosting',
         },
-        unit_amount: 14900, // $149.00
+        unit_amount: Math.round(pricingConfig.firstMonthTotal * 100),
       },
       quantity: 1,
     }],
@@ -83,8 +86,9 @@ export async function sendPaymentLink(conversationId: string): Promise<{ success
 
   // Generate the link
   const paymentUrl = await generatePaymentLink(lead.id)
+  const config = await getPricingConfig()
 
-  const message = `Looks great! Here's your payment link to go live: ${paymentUrl}\n\n$149 gets your site built and launched, plus monthly hosting at $39/month. You can cancel anytime.\n\nOnce you pay, we'll have your site live within 48 hours!`
+  const message = `Looks great! Here's your payment link to go live: ${paymentUrl}\n\n$${config.firstMonthTotal} gets your site built and launched, plus monthly hosting at $${config.monthlyHosting}/month. You can cancel anytime.\n\nOnce you pay, we'll have your site live within 48 hours!`
 
   if (autonomy.requiresApproval) {
     await prisma.pendingAction.create({

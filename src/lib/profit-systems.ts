@@ -137,9 +137,9 @@ export async function recommendUpsells(clientId: string): Promise<{
   })
   if (!client) return []
 
-  // Get all active upsell products, ordered by priority
+  // Only get NON-CORE active products (core product is not an upsell)
   const products = await prisma.upsellProduct.findMany({
-    where: { active: true },
+    where: { active: true, isCore: false },
     orderBy: { sortOrder: 'asc' },
   })
 

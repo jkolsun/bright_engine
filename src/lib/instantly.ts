@@ -4,6 +4,7 @@
  */
 
 import { prisma } from './db'
+import { getPricingConfig } from './pricing-config'
 
 const INSTANTLY_API_BASE = 'https://api.instantly.ai/api/v2'
 const SAFETY_BUFFER = 0.85 // Only tunable config — conservative margin
@@ -14,11 +15,12 @@ const SAFETY_BUFFER = 0.85 // Only tunable config — conservative margin
 // Variables: {{first_name}}, {{company_name}}, {{preview_url}}, {{industry}}, {{location}}
 // ============================================
 
-const SEQUENCE_A_BAD_WEBSITE = [
-  {
-    delay: 0,
-    subject: "{{company_name}}'s website",
-    body: `Hey {{first_name}},
+function getSequenceA(price: number) {
+  return [
+    {
+      delay: 0,
+      subject: "{{company_name}}'s website",
+      body: `Hey {{first_name}},
 
 I came across {{company_name}} and pulled up your site. Looks like it could use a refresh — not loading great on mobile and the design is dated.
 
@@ -26,107 +28,110 @@ That matters because 70% of people searching for {{industry}} services are on th
 
 I actually already mocked up what a new site would look like for {{company_name}}: {{preview_url}}
 
-$149 to make it live. No contracts, no hassle.
+$${price} to make it live. No contracts, no hassle.
 
 Andrew
 Bright Automations`,
-  },
-  {
-    delay: 2,
-    subject: "Re: {{company_name}}'s website",
-    body: `Hey {{first_name}},
+    },
+    {
+      delay: 2,
+      subject: "Re: {{company_name}}'s website",
+      body: `Hey {{first_name}},
 
 Quick follow-up — did you get a chance to look at the preview I built for you? {{preview_url}}
 
 The businesses we've built sites for are seeing more calls and form fills within the first week.
 
-$149, live by {{delivery_date}}. Takes 10 minutes of your time.
+$${price}, live by {{delivery_date}}. Takes 10 minutes of your time.
 
 Andrew`,
-  },
-  {
-    delay: 2,
-    subject: "Re: {{company_name}}'s website",
-    body: `{{first_name}},
+    },
+    {
+      delay: 2,
+      subject: "Re: {{company_name}}'s website",
+      body: `{{first_name}},
 
 Just wrapped a site for a {{industry}} company in {{location}}. They got 3 new leads in the first week.
 
 Your preview is still live: {{preview_url}} — but it expires in a few days.
 
-$149 to make it permanent. I handle everything.
+$${price} to make it permanent. I handle everything.
 
 Andrew`,
-  },
-  {
-    delay: 2,
-    subject: "Re: {{company_name}}'s website",
-    body: `Hey {{first_name}},
+    },
+    {
+      delay: 2,
+      subject: "Re: {{company_name}}'s website",
+      body: `Hey {{first_name}},
 
-Your preview site expires tomorrow. If a $149 professional website isn't on your radar right now, no worries at all.
+Your preview site expires tomorrow. If a $${price} professional website isn't on your radar right now, no worries at all.
 
 But if it ever is, just reply to this email and we'll rebuild it in 48 hours.
 
 Good luck with {{company_name}}.
 
 Andrew`,
-  },
-]
+    },
+  ]
+}
 
-const SEQUENCE_B_NO_WEBSITE = [
-  {
-    delay: 0,
-    subject: "Found {{company_name}} on Google but no website",
-    body: `Hey {{first_name}},
+function getSequenceB(price: number) {
+  return [
+    {
+      delay: 0,
+      subject: "Found {{company_name}} on Google but no website",
+      body: `Hey {{first_name}},
 
 I searched for {{industry}} in {{location}} and found {{company_name}} on Google Maps — but no website. Most people won't call a business with no site.
 
 I put together a preview of what a site could look like for you: {{preview_url}}
 
-$149 to go live with your own domain. You'd have a real site showing up on Google by this weekend.
+$${price} to go live with your own domain. You'd have a real site showing up on Google by this weekend.
 
 Andrew
 Bright Automations`,
-  },
-  {
-    delay: 2,
-    subject: "Re: Found {{company_name}} on Google but no website",
-    body: `{{first_name}},
+    },
+    {
+      delay: 2,
+      subject: "Re: Found {{company_name}} on Google but no website",
+      body: `{{first_name}},
 
 97% of people search online before hiring a local service company. Without a website, you're invisible to almost all of them.
 
 Your preview is still live: {{preview_url}}
 
-$149. We handle everything. No maintenance headaches.
+$${price}. We handle everything. No maintenance headaches.
 
 Andrew`,
-  },
-  {
-    delay: 2,
-    subject: "Re: Found {{company_name}} on Google but no website",
-    body: `{{first_name}},
+    },
+    {
+      delay: 2,
+      subject: "Re: Found {{company_name}} on Google but no website",
+      body: `{{first_name}},
 
 I searched '{{industry}} in {{location}}' and the top 5 results all have sites with reviews and click-to-call. They're getting calls that should go to you.
 
 Your preview expires in 2 days: {{preview_url}}
 
-Reply 'yes' and I'll get started today. $149.
+Reply 'yes' and I'll get started today. $${price}.
 
 Andrew`,
-  },
-  {
-    delay: 2,
-    subject: "Re: Found {{company_name}} on Google but no website",
-    body: `Hey {{first_name}},
+    },
+    {
+      delay: 2,
+      subject: "Re: Found {{company_name}} on Google but no website",
+      body: `Hey {{first_name}},
 
 Last note. Your preview expires today. If you ever want a website for {{company_name}}, just reply.
 
-$149, 48 hours, we handle everything.
+$${price}, 48 hours, we handle everything.
 
 Good luck.
 
 Andrew`,
-  },
-]
+    },
+  ]
+}
 
 /**
  * Main daily sync + calculate + push
@@ -800,6 +805,12 @@ async function ensureCampaignsExist() {
 
     console.log('[Instantly] Creating Campaign A & B in Instantly...')
 
+    // Fetch dynamic pricing for email templates
+    const pricingConfig = await getPricingConfig()
+    const emailPrice = pricingConfig.firstMonthTotal
+    const sequenceA = getSequenceA(emailPrice)
+    const sequenceB = getSequenceB(emailPrice)
+
     // Create Campaign A — Bad Website sequence (4 emails, 2 days apart)
     const campaignARes = await fetch(`${INSTANTLY_API_BASE}/campaigns`, {
       method: 'POST',
@@ -822,7 +833,7 @@ async function ensureCampaignsExist() {
         sequences: [
           {
             name: 'Bad Website Sequence',
-            steps: SEQUENCE_A_BAD_WEBSITE.map((step) => ({
+            steps: sequenceA.map((step) => ({
               delay: step.delay,
               subject: step.subject,
               body: step.body,
@@ -863,7 +874,7 @@ async function ensureCampaignsExist() {
         sequences: [
           {
             name: 'No Website Sequence',
-            steps: SEQUENCE_B_NO_WEBSITE.map((step) => ({
+            steps: sequenceB.map((step) => ({
               delay: step.delay,
               subject: step.subject,
               body: step.body,

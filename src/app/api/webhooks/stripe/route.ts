@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { dispatchWebhook, WebhookEvents } from '@/lib/webhook-dispatcher'
+import { getPricingConfig } from '@/lib/pricing-config'
 import type Stripe from 'stripe'
 import { prisma } from '@/lib/db'
 import { processRevenueCommission } from '@/lib/commissions'
@@ -88,13 +89,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
     if (lead) {
       // Create client from lead
+      const webhookConfig = await getPricingConfig()
       const client = await prisma.client.create({
         data: {
           companyName: lead.companyName,
           industry: lead.industry,
           siteUrl: '', // Will be set when site goes live
           hostingStatus: 'ACTIVE',
-          monthlyRevenue: 39, // Default hosting
+          monthlyRevenue: webhookConfig.monthlyHosting,
           stripeCustomerId: session.customer as string,
           leadId: lead.id,
         },
@@ -224,14 +226,23 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   // Create revenue record (only if we have a client)
   if (clientId) {
-    const revenue = await prisma.revenue.create({
-      data: {
-        clientId,
-        type: amountTotal === 14900 ? 'SITE_BUILD' : 'HOSTING_MONTHLY', // $149 = site build
-        amount: amountTotal / 100,
-        status: 'PAID',
-      },
-    })
+    const config = await getPricingConfig()
+    const amountDollars = amountTotal / 100
+
+    let revenue
+    if (amountDollars >= config.firstMonthTotal * 0.9) {
+      // First month combined — split into build + hosting revenue
+      await prisma.revenue.create({
+        data: { clientId, type: 'SITE_BUILD', amount: config.siteBuildFee, status: 'PAID', recurring: false, product: 'Website Setup' }
+      })
+      revenue = await prisma.revenue.create({
+        data: { clientId, type: 'HOSTING_MONTHLY', amount: config.monthlyHosting, status: 'PAID', recurring: true, product: 'Monthly Hosting' }
+      })
+    } else {
+      revenue = await prisma.revenue.create({
+        data: { clientId, type: 'HOSTING_MONTHLY', amount: amountDollars, status: 'PAID', recurring: true, product: 'Monthly Hosting' }
+      })
+    }
 
     // Process commission automatically
     try {

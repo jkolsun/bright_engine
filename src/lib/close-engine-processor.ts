@@ -145,7 +145,7 @@ export async function processCloseEngineInbound(
   }
 
   // 2. Build system prompt and call Claude
-  const systemPrompt = buildPreClientSystemPrompt(context)
+  const systemPrompt = await buildPreClientSystemPrompt(context)
 
   let claudeResponse: ClaudeCloseResponse
   try {

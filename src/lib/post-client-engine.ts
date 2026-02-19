@@ -11,6 +11,7 @@ import { prisma } from './db'
 import { sendSMSViaProvider } from './sms-provider'
 import { buildPostClientSystemPrompt } from './close-engine-prompts'
 import { calculateDelay } from './close-engine-processor'
+import { getPricingConfig } from './pricing-config'
 
 const POST_CLIENT_MODEL = 'claude-haiku-4-5-20251001'
 
@@ -198,6 +199,10 @@ export async function generateTouchpointMessage(
   if (!client || !client.lead) return null
 
   // Build a focused prompt for the touchpoint
+  const config = await getPricingConfig()
+  const annualMonthly = Math.round(config.monthlyHosting * 0.85)
+  const annualTotal = annualMonthly * 12
+
   const touchpointPrompts: Record<string, string> = {
     'post_launch_day_3': `Generate a helpful Day 3 tip for ${client.lead.firstName} at ${client.companyName}. Focus on Google Business Profile optimization. Keep under 250 chars. SMS tone.`,
     'post_launch_day_7': `Generate a Week 1 stats update for ${client.lead.firstName} at ${client.companyName}. Mention their site is live and performing. Keep under 250 chars. SMS tone. Be encouraging.`,
@@ -207,7 +212,7 @@ export async function generateTouchpointMessage(
     'referral_day_45': `Generate a referral ask for ${client.lead.firstName}. Offer: "Know a business owner who needs a site? You both get a free month." Keep casual and under 200 chars. SMS.`,
     'referral_day_90': `Generate a second referral ask for ${client.lead.firstName}. Different angle than first ask. Mention how many businesses you've helped. Under 200 chars. SMS.`,
     'referral_day_180': `Generate a final referral ask for ${client.lead.firstName}. Brief and appreciative. Under 160 chars. SMS.`,
-    'annual_hosting_month_3': `Generate a pitch to ${client.lead.firstName} for annual billing. Save 15% by switching. Current: $39/month. Annual: ~$33/month ($396/year). Under 250 chars. SMS.`,
+    'annual_hosting_month_3': `Generate a pitch to ${client.lead.firstName} for annual billing. Save 15% by switching. Current: $${config.monthlyHosting}/month. Annual: ~$${annualMonthly}/month ($${annualTotal}/year). Under 250 chars. SMS.`,
   }
 
   const prompt = touchpointPrompts[touchpointType]

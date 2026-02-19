@@ -10,9 +10,11 @@ export default function CommissionSettingsPage() {
   const [reps, setReps] = useState<any[]>([])
   const [rates, setRates] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
+  const [buildFee, setBuildFee] = useState(149)
 
   useEffect(() => {
     loadReps()
+    fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => { if (d?.siteBuildFee) setBuildFee(d.siteBuildFee) }).catch(() => {})
   }, [])
 
   const loadReps = async () => {
@@ -66,7 +68,7 @@ export default function CommissionSettingsPage() {
       <Card className="p-6 bg-blue-50 border-blue-200">
         <p className="text-sm text-blue-800">
           <strong>How it works:</strong> Set the percentage of each closed deal that goes to the rep.
-          For example, 50% means the rep gets $74.50 on a $149 site build.
+          For example, 50% means the rep gets ${(buildFee * 0.5).toFixed(2)} on a ${buildFee} site build.
         </p>
       </Card>
 

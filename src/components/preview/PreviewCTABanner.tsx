@@ -6,10 +6,12 @@ export default function PreviewCTABanner({ previewId }: { previewId: string }) {
   const [dismissed, setDismissed] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [bannerPrice, setBannerPrice] = useState<number>(149)
 
   useEffect(() => {
     const wasDismissed = sessionStorage.getItem(`cta_dismissed_${previewId}`)
     if (wasDismissed) setDismissed(true)
+    fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => { if (d?.firstMonthTotal) setBannerPrice(d.firstMonthTotal) }).catch(() => {})
   }, [previewId])
 
   useEffect(() => {
@@ -67,7 +69,7 @@ export default function PreviewCTABanner({ previewId }: { previewId: string }) {
       ) : (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 py-3 px-6 pr-10">
           <span className="text-sm sm:text-base font-semibold text-center sm:text-left">
-            Get This Site Live &mdash; $149/month
+            Get This Site Live &mdash; ${bannerPrice}
           </span>
           <button
             onClick={handleClick}

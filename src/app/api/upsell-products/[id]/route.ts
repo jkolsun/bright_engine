@@ -18,18 +18,13 @@ export async function GET(
 
     const product = await prisma.upsellProduct.findUnique({
       where: { id: params.id },
-      include: {
-        pitches: {
-          orderBy: { pitchedAt: 'desc' },
-          take: 50
-        }
-      }
+      include: { pitches: { orderBy: { pitchedAt: 'desc' }, take: 50 } }
     })
 
     if (!product) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     return NextResponse.json({ product })
   } catch (error) {
-    console.error('Error fetching upsell product:', error)
+    console.error('Error fetching product:', error)
     return NextResponse.json({ error: 'Failed' }, { status: 500 })
   }
 }
@@ -55,6 +50,14 @@ export async function PUT(
         recurring: data.recurring,
         stripeLink: data.stripeLink,
         active: data.active,
+        isCore: data.isCore,
+        month1Price: data.month1Price,
+        recurringPrice: data.recurringPrice,
+        annualPrice: data.annualPrice,
+        stripeLinkAnnual: data.stripeLinkAnnual,
+        pitchOneLiner: data.pitchOneLiner,
+        previewBannerText: data.previewBannerText,
+        repCloseScript: data.repCloseScript,
         description: data.description,
         aiPitchInstructions: data.aiPitchInstructions,
         aiProductSummary: data.aiProductSummary,
@@ -68,12 +71,12 @@ export async function PUT(
 
     return NextResponse.json({ product })
   } catch (error) {
-    console.error('Error updating upsell product:', error)
+    console.error('Error updating product:', error)
     return NextResponse.json({ error: 'Failed' }, { status: 500 })
   }
 }
 
-// DELETE /api/upsell-products/[id] — Soft delete (preserves pitch history)
+// DELETE /api/upsell-products/[id] — Soft delete
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -92,7 +95,7 @@ export async function DELETE(
 
     return NextResponse.json({ product, message: 'Deactivated' })
   } catch (error) {
-    console.error('Error deactivating upsell product:', error)
+    console.error('Error deactivating product:', error)
     return NextResponse.json({ error: 'Failed' }, { status: 500 })
   }
 }

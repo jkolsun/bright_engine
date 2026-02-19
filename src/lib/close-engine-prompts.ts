@@ -6,6 +6,7 @@
  */
 
 import type { ConversationContext } from './close-engine'
+import { getPricingConfig } from './pricing-config'
 
 // ============================================
 // Models
@@ -83,7 +84,7 @@ Current edit round: ${editRounds}/3.`
   },
 
   PAYMENT_SENT: () =>
-    `Payment link has been sent. If they have questions about pricing, answer honestly: $149 one-time for the build, $39/month for hosting, cancel anytime.
+    `Payment link has been sent. If they have questions about pricing, answer honestly: {{siteBuildFee}} one-time for the build, {{monthlyHosting}}/month for hosting, cancel anytime.
 Don't be pushy. If they haven't paid and reach out, gently remind them the link is ready.`,
 
   STALLED: (ctx) =>
@@ -147,15 +148,21 @@ function formatEnrichedPhotos(photos: unknown): string {
 // buildPreClientSystemPrompt()
 // ============================================
 
-export function buildPreClientSystemPrompt(context: ConversationContext): string {
+export async function buildPreClientSystemPrompt(context: ConversationContext): Promise<string> {
   const { conversation, lead, messages, collectedData, questionsAsked } = context
   const stage = conversation.stage
+  const pricingConfig = await getPricingConfig()
 
   // Get stage-specific instructions
   const stageInstructionFn = STAGE_INSTRUCTIONS[stage]
-  const stageInstructions = stageInstructionFn
+  let stageInstructions = stageInstructionFn
     ? stageInstructionFn(context)
     : `Unknown stage: ${stage}. Respond helpfully and set escalate: true.`
+
+  // Replace pricing placeholders in stage instructions
+  stageInstructions = stageInstructions
+    .replace(/\{\{siteBuildFee\}\}/g, `$${pricingConfig.siteBuildFee}`)
+    .replace(/\{\{monthlyHosting\}\}/g, `$${pricingConfig.monthlyHosting}`)
 
   return `[IDENTITY]
 You are a sales team member for Bright Automations, a company that builds professional websites for local businesses. You are communicating via SMS text message. Your tone is enthusiastic, professional, and friendly — like a helpful business consultant, not a pushy salesperson.
@@ -266,7 +273,7 @@ You are the account manager for Bright Automations. You manage the ongoing relat
 - If they mention cancelling, wanting to leave, or dissatisfaction: set escalate: true immediately.
 - Pitch upsells ONLY when naturally relevant, never forced.
 - If they give positive feedback: thank them, ask for a Google review.
-- For billing questions: provide basic info ($39/month hosting), escalate payment disputes.
+- For billing questions: provide basic info ($${monthlyRevenue}/month hosting), escalate payment disputes.
 - Keep messages professional but warm.
 - NEVER mention AI, Claude, bots, automation, or that you're automated.
 - If asked who you are: "This is the Bright Automations team!"

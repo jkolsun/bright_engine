@@ -301,6 +301,9 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   const [previewSentThisCall, setPreviewSentThisCall] = useState(false)
   const previewPollRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Dynamic pricing from DB
+  const [pricing, setPricing] = useState<{ siteBuildFee: number; monthlyHosting: number; firstMonthTotal: number }>({ siteBuildFee: 149, monthlyHosting: 39, firstMonthTotal: 188 })
+
   const currentLead = queue[currentIndex] || null
 
   // Compute lead temperature from events already in queue data
@@ -310,7 +313,17 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   // ============================================
   // LOAD QUEUE (Smart priority ordering)
   // ============================================
-  useEffect(() => { loadQueue() }, [])
+  useEffect(() => { loadQueue(); loadPricing() }, [])
+
+  const loadPricing = async () => {
+    try {
+      const res = await fetch('/api/settings/pricing')
+      if (res.ok) {
+        const data = await res.json()
+        setPricing({ siteBuildFee: data.siteBuildFee, monthlyHosting: data.monthlyHosting, firstMonthTotal: data.firstMonthTotal })
+      }
+    } catch { /* use defaults */ }
+  }
 
   const loadQueue = async () => {
     try {
@@ -868,6 +881,9 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       .replace(/\{\{city\}\}/g, currentLead?.city || '[city]')
       .replace(/\[REP\]/g, userName)
       .replace(/\[YOUR NAME\]/g, userName)
+      .replace(/\$149 one-time/g, `$${pricing.siteBuildFee} one-time`)
+      .replace(/\$149/g, `$${pricing.firstMonthTotal}`)
+      .replace(/\$39\/month/g, `$${pricing.monthlyHosting}/month`)
   }
 
   const getScript = () => {
@@ -1199,7 +1215,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                   {/* SECONDARY: Send Pay Link */}
                   {(previewStatus.opened || previewStatus.ctaClicked) && (
                     <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold" onClick={handleCopyPayLink}>
-                      <CreditCard size={16} className="mr-2" /> {copiedPayLink ? 'PAY LINK COPIED!' : 'SEND PAY LINK ($149)'}
+                      <CreditCard size={16} className="mr-2" /> {copiedPayLink ? 'PAY LINK COPIED!' : `SEND PAY LINK ($${pricing.firstMonthTotal})`}
                     </Button>
                   )}
 
@@ -1350,7 +1366,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                     className={`rounded-xl ${copiedPayLink ? 'border-green-300 text-green-600' : ''}`}>
                     {copiedPayLink
                       ? <><CheckCircle size={14} className="mr-1" /> Pay Link Copied!</>
-                      : <><CreditCard size={14} className="mr-1" /> Copy Pay Link ($149)</>}
+                      : <><CreditCard size={14} className="mr-1" /> Copy Pay Link (${pricing.firstMonthTotal})</>}
                   </Button>
                 </div>
               </div>

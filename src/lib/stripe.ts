@@ -27,9 +27,7 @@ export const stripe = new Proxy({} as Stripe, {
   }
 })
 
-// Pre-created Stripe Payment Links
-// Andrew: Create these in Stripe Dashboard → Payment Links
-// Then paste the URLs here or add to env vars
+// LEGACY FALLBACK — primary source is now Products table via getPaymentLinkDynamic()
 const PAYMENT_LINKS = {
   SITE_BUILD: process.env.STRIPE_LINK_SITE_BUILD || '', // $149 one-time
   HOSTING_MONTHLY: process.env.STRIPE_LINK_HOSTING_39 || '', // $39/month
@@ -53,105 +51,80 @@ export function getPaymentLink(product: keyof typeof PAYMENT_LINKS, metadata?: {
 export { PAYMENT_LINKS }
 
 /**
- * Get a payment link — checks DB first, falls back to env vars.
- * This is the NEW single source of truth. Use this instead of getPaymentLink().
+ * DB-first payment link lookup. Checks Products table → env vars → legacy constants.
  */
 export async function getPaymentLinkDynamic(
-  productId: string,
+  productName: string,
   metadata?: { leadId?: string; clientId?: string }
 ): Promise<string> {
-  // 1. Check DB first
+  // 1. Check Products table
   try {
-    const setting = await prisma.settings.findUnique({
-      where: { key: 'payment_links' }
-    })
-    if (setting?.value && Array.isArray(setting.value)) {
-      const links = setting.value as any[]
-      const match = links.find(
-        (l: any) => l.id === productId && l.active && l.url
-      )
-      if (match?.url) {
-        return appendMetadata(match.url, metadata)
+    const product = await prisma.upsellProduct.findFirst({
+      where: {
+        active: true,
+        OR: [
+          { name: { contains: productName, mode: 'insensitive' } },
+          { id: productName },
+        ]
       }
-    }
+    })
+    if (product?.stripeLink) return appendMetadata(product.stripeLink, metadata)
   } catch (e) {
-    console.warn('[Stripe] DB lookup failed, falling back to env:', e)
+    console.warn('[Stripe] DB lookup failed:', e)
   }
 
-  // 2. Fall back to env vars
+  // 2. Env vars fallback
   const envMap: Record<string, string | undefined> = {
     site_build: process.env.STRIPE_LINK_SITE_BUILD,
     hosting_monthly: process.env.STRIPE_LINK_HOSTING_39,
     hosting_annual: process.env.STRIPE_LINK_HOSTING_ANNUAL,
-    gbp_setup: process.env.STRIPE_LINK_GBP,
+    gbp: process.env.STRIPE_LINK_GBP,
     review_widget: process.env.STRIPE_LINK_REVIEW_WIDGET,
-    seo_monthly: process.env.STRIPE_LINK_SEO,
-    social_monthly: process.env.STRIPE_LINK_SOCIAL,
+    seo: process.env.STRIPE_LINK_SEO,
+    social: process.env.STRIPE_LINK_SOCIAL,
   }
-
-  const envUrl = envMap[productId]
+  const key = productName.toLowerCase().replace(/[^a-z0-9]/g, '_')
+  const envUrl = envMap[key]
   if (envUrl) return appendMetadata(envUrl, metadata)
 
-  // 3. Fall back to legacy PAYMENT_LINKS keys
-  const legacyMap: Record<string, keyof typeof PAYMENT_LINKS> = {
-    site_build: 'SITE_BUILD',
-    hosting_monthly: 'HOSTING_MONTHLY',
-    hosting_annual: 'HOSTING_ANNUAL',
-    gbp_setup: 'GBP_SETUP',
-    review_widget: 'REVIEW_WIDGET',
-    seo_monthly: 'SEO_MONTHLY',
-    social_monthly: 'SOCIAL_MONTHLY',
-  }
-  const legacyKey = legacyMap[productId]
-  if (legacyKey && PAYMENT_LINKS[legacyKey]) {
-    return appendMetadata(PAYMENT_LINKS[legacyKey], metadata)
-  }
+  // 3. Legacy constant fallback
+  const legacyKey = key.toUpperCase() as keyof typeof PAYMENT_LINKS
+  if (PAYMENT_LINKS[legacyKey]) return appendMetadata(PAYMENT_LINKS[legacyKey], metadata)
 
   return ''
 }
 
-function appendMetadata(
-  baseUrl: string,
-  metadata?: { leadId?: string; clientId?: string }
-): string {
+function appendMetadata(baseUrl: string, metadata?: { leadId?: string; clientId?: string }): string {
   if (!metadata) return baseUrl
   try {
     const url = new URL(baseUrl)
     if (metadata.leadId) url.searchParams.set('client_reference_id', metadata.leadId)
     if (metadata.clientId) url.searchParams.set('client_reference_id', metadata.clientId)
     return url.toString()
-  } catch {
-    return baseUrl
-  }
+  } catch { return baseUrl }
 }
 
 /**
- * Get ALL active payment links (for AI context, UI displays, etc.)
+ * Get ALL active products with Stripe links (for AI context and UI).
  */
 export async function getAllPaymentLinks(): Promise<Array<{
-  id: string; label: string; url: string; price: number; recurring: boolean
+  id: string; name: string; url: string; price: number; recurring: boolean; isCore: boolean
 }>> {
   try {
-    const setting = await prisma.settings.findUnique({
-      where: { key: 'payment_links' }
+    const products = await prisma.upsellProduct.findMany({
+      where: { active: true, stripeLink: { not: null } },
+      orderBy: [{ isCore: 'desc' }, { sortOrder: 'asc' }],
     })
-    if (setting?.value && Array.isArray(setting.value)) {
-      return (setting.value as any[]).filter((l: any) => l.active && l.url)
-    }
+    return products
+      .filter(p => p.stripeLink)
+      .map(p => ({
+        id: p.id, name: p.name, url: p.stripeLink!, price: p.price,
+        recurring: p.recurring, isCore: p.isCore,
+      }))
   } catch (e) {
-    console.warn('[Stripe] Failed to fetch payment links from DB:', e)
+    console.warn('[Stripe] Failed to fetch products:', e)
+    return []
   }
-
-  // Fallback: build from env vars
-  return Object.entries(PAYMENT_LINKS)
-    .filter(([_, url]) => !!url)
-    .map(([key, url]) => ({
-      id: key.toLowerCase(),
-      label: key.replace(/_/g, ' '),
-      url,
-      price: 0,
-      recurring: false,
-    }))
 }
 
 export async function createCustomer(options: {

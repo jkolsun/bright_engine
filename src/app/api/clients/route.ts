@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
+import { getPricingConfig } from '@/lib/pricing-config'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }
     const data = await request.json()
+    const config = await getPricingConfig()
 
     // Generate referral code
     const referralCode = `BA-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
@@ -27,7 +29,7 @@ export async function POST(request: NextRequest) {
         industry: data.industry || 'GENERAL_CONTRACTING',
         location: data.location,
         hostingStatus: 'ACTIVE',
-        monthlyRevenue: data.monthlyRevenue || 39,
+        monthlyRevenue: data.monthlyRevenue || config.monthlyHosting,
         plan: data.plan || 'base',
         leadId: data.leadId,
         repId: data.repId,
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
     await prisma.revenue.create({
       data: {
         clientId: client.id,
-        amount: data.siteBuildFee || 149,
+        amount: data.siteBuildFee || config.siteBuildFee,
         type: 'SITE_BUILD',
         product: 'Website Setup',
         status: 'PENDING',
@@ -59,7 +61,7 @@ export async function POST(request: NextRequest) {
     await prisma.revenue.create({
       data: {
         clientId: client.id,
-        amount: data.monthlyRevenue || 39,
+        amount: data.monthlyRevenue || config.monthlyHosting,
         type: 'HOSTING_MONTHLY',
         product: 'Monthly Hosting',
         status: 'PENDING',

@@ -69,7 +69,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 // ── Default Values ─────────────────────────────────────────────
 
 const DEFAULT_COMPANY = { companyName: 'Bright Automations', adminPhone: '', previewExpirationDays: 14 }
-const DEFAULT_PRICING = { siteBuild: 149, monthlyHosting: 39, annualHosting: 349 }
+// Pricing is now driven by core product in Products table — see getPricingConfig()
 const DEFAULT_SEQUENCES = {
   urgencyDays: [3, 5, 6, 7, 8, 10, 14],
   urgencyTemplates: {
@@ -175,7 +175,7 @@ export default function SettingsPage() {
 
   // Settings state per key
   const [companyInfo, setCompanyInfo] = useState(DEFAULT_COMPANY)
-  const [pricing, setPricing] = useState(DEFAULT_PRICING)
+  // pricing state removed — now driven by core product in Products table
   const [sequences, setSequences] = useState(DEFAULT_SEQUENCES)
   const [clientSequences, setClientSequences] = useState(DEFAULT_CLIENT_SEQUENCES)
   const [channelRouting, setChannelRouting] = useState(DEFAULT_CHANNEL_ROUTING)
@@ -202,26 +202,25 @@ export default function SettingsPage() {
   const [addUpsellOpen, setAddUpsellOpen] = useState(false)
   const [newUpsell, setNewUpsell] = useState({ name: '', price: '', key: '', phone: '', paymentLink: '' })
 
-  // DB-backed upsell products
-  const [dbUpsellProducts, setDbUpsellProducts] = useState<any[]>([])
-  const [upsellProductsLoading, setUpsellProductsLoading] = useState(false)
-  const [addDbUpsellOpen, setAddDbUpsellOpen] = useState(false)
-  const [newDbUpsell, setNewDbUpsell] = useState({
-    name: '', price: 0, recurring: true, stripeLink: '', description: '',
-    aiPitchInstructions: '', aiProductSummary: '', eligibleIndustries: '',
-    minClientAgeDays: '', maxPitchesPerClient: 3, pitchChannel: 'sms', sortOrder: 0,
-  })
-
-  // Payment Links (live CRUD)
-  const [paymentLinks, setPaymentLinks] = useState<any[]>([])
-  const [envLinks, setEnvLinks] = useState<Record<string, { set: boolean; preview: string }>>({})
-  const [paymentLinksLoading, setPaymentLinksLoading] = useState(false)
-  const [editingLinkId, setEditingLinkId] = useState<string | null>(null)
-  const [editingLinkData, setEditingLinkData] = useState<any>(null)
-  const [addingLink, setAddingLink] = useState(false)
-  const [newLink, setNewLink] = useState({ id: '', label: '', url: '', price: 0, recurring: false, envKey: '', active: true })
-  const [verifyResults, setVerifyResults] = useState<Record<string, { valid: boolean; reason: string } | null>>({})
+  // Unified Products (core + upsells in one table)
+  const [products, setProducts] = useState<any[]>([])
+  const [productsLoading, setProductsLoading] = useState(true)
+  const [addProductOpen, setAddProductOpen] = useState(false)
+  const [editingProductId, setEditingProductId] = useState<string | null>(null)
+  const [editingProductData, setEditingProductData] = useState<any>(null)
+  const [verifyResults, setVerifyResults] = useState<Record<string, { valid: boolean; reason: string }>>({})
   const [verifyingAll, setVerifyingAll] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [envLinks, setEnvLinks] = useState<Record<string, { set: boolean; preview: string }>>({})
+
+  const [newProduct, setNewProduct] = useState({
+    name: '', price: '', recurring: true, isCore: false,
+    stripeLink: '', month1Price: '', recurringPrice: '', annualPrice: '',
+    stripeLinkAnnual: '', pitchOneLiner: '', previewBannerText: '', repCloseScript: '',
+    description: '', aiPitchInstructions: '', aiProductSummary: '',
+    eligibleIndustries: '', minClientAgeDays: '', maxPitchesPerClient: '3',
+    pitchChannel: 'sms', sortOrder: '0',
+  })
 
   // Save state per section
   const [savingKey, setSavingKey] = useState<string | null>(null)
@@ -253,8 +252,8 @@ export default function SettingsPage() {
   useEffect(() => {
     loadAllSettings()
     fetchReps()
-    fetchUpsellProducts()
-    fetchPaymentLinks()
+    fetchProducts()
+    fetchEnvLinks()
   }, [])
 
   const fetchReps = async () => {
@@ -300,7 +299,7 @@ export default function SettingsPage() {
       const s: SettingsData = data.settings || {}
 
       if (s.company_info) setCompanyInfo({ ...DEFAULT_COMPANY, ...s.company_info })
-      if (s.pricing) setPricing({ ...DEFAULT_PRICING, ...s.pricing })
+      // pricing now comes from core product, not settings key
       if (s.sequences) {
         setSequences({
           urgencyDays: s.sequences.urgencyDays || DEFAULT_SEQUENCES.urgencyDays,
@@ -352,171 +351,145 @@ export default function SettingsPage() {
     }
   }
 
-  // ── Upsell Products (DB-backed) ────────────────────────────
-  const fetchUpsellProducts = async () => {
-    setUpsellProductsLoading(true)
+  // ── Unified Products (core + upsells) ────────────────────────
+  const fetchProducts = async () => {
+    setProductsLoading(true)
     try {
       const res = await fetch('/api/upsell-products')
       if (res.ok) {
         const data = await res.json()
-        setDbUpsellProducts(data.products || [])
+        const loadedProducts = data.products || []
+        setProducts(loadedProducts)
+
+        // Auto-seed if empty
+        if (loadedProducts.length === 0) {
+          await seedDefaultProducts()
+        }
       }
     } catch { /* ignore */ }
-    finally { setUpsellProductsLoading(false) }
+    finally { setProductsLoading(false) }
   }
 
-  const addDbUpsellProduct = async () => {
-    if (!newDbUpsell.name.trim() || !newDbUpsell.price) return
-    try {
-      const res = await fetch('/api/upsell-products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...newDbUpsell,
-          eligibleIndustries: newDbUpsell.eligibleIndustries
-            ? newDbUpsell.eligibleIndustries.split(',').map((s: string) => s.trim()).filter(Boolean)
-            : [],
-          minClientAgeDays: newDbUpsell.minClientAgeDays ? parseInt(newDbUpsell.minClientAgeDays) : null,
-        }),
-      })
-      if (res.ok) {
-        await fetchUpsellProducts()
-        setNewDbUpsell({
-          name: '', price: 0, recurring: true, stripeLink: '', description: '',
-          aiPitchInstructions: '', aiProductSummary: '', eligibleIndustries: '',
-          minClientAgeDays: '', maxPitchesPerClient: 3, pitchChannel: 'sms', sortOrder: 0,
-        })
-        setAddDbUpsellOpen(false)
-      }
-    } catch (e) { console.error('Failed to add upsell product:', e) }
-  }
-
-  const deleteDbUpsellProduct = async (id: string) => {
-    try {
-      const res = await fetch(`/api/upsell-products/${id}`, { method: 'DELETE' })
-      if (res.ok) await fetchUpsellProducts()
-    } catch (e) { console.error('Failed to delete upsell product:', e) }
-  }
-
-  // ── Payment Links (live CRUD) ─────────────────────────────
-  const DEFAULT_PAYMENT_LINK_SEEDS = [
-    { id: 'site_build', label: 'Site Build', price: 149, recurring: false, envKey: 'STRIPE_LINK_SITE_BUILD' },
-    { id: 'hosting_monthly', label: 'Monthly Hosting ($39/mo)', price: 39, recurring: true, envKey: 'STRIPE_LINK_HOSTING_39' },
-    { id: 'hosting_annual', label: 'Annual Hosting ($349/yr)', price: 349, recurring: false, envKey: 'STRIPE_LINK_HOSTING_ANNUAL' },
-    { id: 'gbp_setup', label: 'Google Business Profile', price: 49, recurring: false, envKey: 'STRIPE_LINK_GBP' },
-    { id: 'review_widget', label: 'Review Widget', price: 69, recurring: true, envKey: 'STRIPE_LINK_REVIEW_WIDGET' },
-    { id: 'seo_monthly', label: 'SEO Package', price: 149, recurring: true, envKey: 'STRIPE_LINK_SEO' },
-    { id: 'social_monthly', label: 'Social Media', price: 99, recurring: true, envKey: 'STRIPE_LINK_SOCIAL' },
-  ]
-
-  const fetchPaymentLinks = async () => {
-    setPaymentLinksLoading(true)
+  const fetchEnvLinks = async () => {
     try {
       const res = await fetch('/api/settings/payment-links')
       if (res.ok) {
         const data = await res.json()
         setEnvLinks(data.envLinks || {})
-
-        if (data.links && data.links.length > 0) {
-          setPaymentLinks(data.links)
-        } else {
-          // Auto-seed: if DB is empty, scaffold defaults with BLANK URLs
-          const hasAnyEnvVar = Object.values(data.envLinks || {}).some((v: any) => v.set)
-          if (hasAnyEnvVar) {
-            const now = new Date().toISOString()
-            const seeded = DEFAULT_PAYMENT_LINK_SEEDS.map(seed => ({
-              ...seed,
-              url: '', // CRITICAL: blank — user must paste their actual Stripe URLs
-              active: true,
-              createdAt: now,
-              updatedAt: now,
-            }))
-            setPaymentLinks(seeded)
-            // Save the scaffolded links to DB
-            await fetch('/api/settings/payment-links', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ links: seeded }),
-            })
-          }
-        }
       }
     } catch { /* ignore */ }
-    finally { setPaymentLinksLoading(false) }
   }
 
-  const savePaymentLinks = async (links: any[]) => {
-    try {
-      const res = await fetch('/api/settings/payment-links', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ links }),
+  const seedDefaultProducts = async () => {
+    // Seed core product
+    await fetch('/api/upsell-products', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Website + Hosting', price: 188, recurring: true, isCore: true,
+        month1Price: 188, recurringPrice: 39, annualPrice: 399,
+        stripeLink: 'https://buy.stripe.com/28E28k7uG0Wsaxu7IM7wA06',
+        stripeLinkAnnual: 'https://buy.stripe.com/3cI5kw3eqfRm7lid367wA08',
+        pitchOneLiner: '$188 to go live, $39/mo after that',
+        previewBannerText: '$188 to get started',
+        repCloseScript: "It's $188 for the first month \u2014 that covers the full site build plus your first month of hosting. After that it's just $39/month to keep everything running.",
+        aiProductSummary: 'Professional website + monthly hosting for service businesses',
+        sortOrder: 0,
       })
-      if (res.ok) {
-        const data = await res.json()
-        setPaymentLinks(data.links || links)
-      }
-    } catch (e) { console.error('Failed to save payment links:', e) }
-  }
-
-  const handleAddLink = async () => {
-    if (!newLink.label.trim() || !newLink.id.trim()) return
-    const now = new Date().toISOString()
-    const updated = [...paymentLinks, { ...newLink, createdAt: now, updatedAt: now }]
-    setPaymentLinks(updated)
-    await savePaymentLinks(updated)
-    setNewLink({ id: '', label: '', url: '', price: 0, recurring: false, envKey: '', active: true })
-    setAddingLink(false)
-  }
-
-  const handleDeleteLink = async (id: string) => {
-    const updated = paymentLinks.filter((l: any) => l.id !== id)
-    setPaymentLinks(updated)
-    await savePaymentLinks(updated)
-  }
-
-  const handleUpdateLink = async (id: string, updates: any) => {
-    const updated = paymentLinks.map((l: any) =>
-      l.id === id ? { ...l, ...updates, updatedAt: new Date().toISOString() } : l
-    )
-    setPaymentLinks(updated)
-    await savePaymentLinks(updated)
-    setEditingLinkId(null)
-    setEditingLinkData(null)
-  }
-
-  const handleVerifyLink = async (url: string, id: string) => {
-    setVerifyResults(prev => ({ ...prev, [id]: null }))
-    try {
-      const res = await fetch('/api/settings/payment-links/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+    })
+    // Seed upsells
+    const upsells = [
+      { name: 'GBP Optimization', price: 49, recurring: false, stripeLink: 'https://buy.stripe.com/fZu3coeX8ax2fROfbe7wA09', aiProductSummary: 'Google Business Profile setup \u2014 $49 one-time', sortOrder: 1 },
+      { name: 'Review Widget', price: 29, recurring: true, stripeLink: 'https://buy.stripe.com/fZu00c02e34AgVS3sw7wA0a', aiProductSummary: 'Review widget \u2014 $29/mo, shows Google reviews on your site', sortOrder: 2 },
+      { name: 'SEO Updates', price: 59, recurring: true, stripeLink: 'https://buy.stripe.com/14A9AM5my7kQ20Yd367wA0b', aiProductSummary: 'Monthly SEO optimization \u2014 $59/mo', sortOrder: 3 },
+      { name: 'Social Page', price: 99, recurring: false, stripeLink: 'https://buy.stripe.com/fZeV6aGS20w8pm4wA7wA0c', aiProductSummary: 'Social media page setup \u2014 $99 one-time', sortOrder: 4 },
+    ]
+    for (const u of upsells) {
+      await fetch('/api/upsell-products', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...u, isCore: false }),
       })
-      if (res.ok) {
-        const data = await res.json()
-        setVerifyResults(prev => ({ ...prev, [id]: { valid: data.valid, reason: data.reason } }))
-      }
-    } catch {
-      setVerifyResults(prev => ({ ...prev, [id]: { valid: false, reason: 'Verification request failed' } }))
+    }
+    await fetchProducts()
+  }
+
+  const handleAddProduct = async () => {
+    const payload = {
+      name: newProduct.name,
+      price: parseFloat(newProduct.price) || 0,
+      recurring: newProduct.recurring,
+      isCore: newProduct.isCore,
+      stripeLink: newProduct.stripeLink || null,
+      month1Price: newProduct.isCore ? (parseFloat(newProduct.month1Price) || null) : null,
+      recurringPrice: newProduct.isCore ? (parseFloat(newProduct.recurringPrice) || null) : null,
+      annualPrice: newProduct.isCore ? (parseFloat(newProduct.annualPrice) || null) : null,
+      stripeLinkAnnual: newProduct.isCore ? (newProduct.stripeLinkAnnual || null) : null,
+      pitchOneLiner: newProduct.pitchOneLiner || null,
+      previewBannerText: newProduct.isCore ? (newProduct.previewBannerText || null) : null,
+      repCloseScript: newProduct.isCore ? (newProduct.repCloseScript || null) : null,
+      description: newProduct.description || null,
+      aiPitchInstructions: newProduct.aiPitchInstructions || null,
+      aiProductSummary: newProduct.aiProductSummary || null,
+      eligibleIndustries: newProduct.eligibleIndustries ? newProduct.eligibleIndustries.split(',').map(s => s.trim()).filter(Boolean) : [],
+      minClientAgeDays: newProduct.minClientAgeDays ? parseInt(newProduct.minClientAgeDays) : null,
+      maxPitchesPerClient: parseInt(newProduct.maxPitchesPerClient) || 3,
+      pitchChannel: newProduct.pitchChannel,
+      sortOrder: parseInt(newProduct.sortOrder) || 0,
+    }
+    const res = await fetch('/api/upsell-products', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    })
+    if (res.ok) {
+      setAddProductOpen(false)
+      setNewProduct({ name: '', price: '', recurring: true, isCore: false, stripeLink: '', month1Price: '', recurringPrice: '', annualPrice: '', stripeLinkAnnual: '', pitchOneLiner: '', previewBannerText: '', repCloseScript: '', description: '', aiPitchInstructions: '', aiProductSummary: '', eligibleIndustries: '', minClientAgeDays: '', maxPitchesPerClient: '3', pitchChannel: 'sms', sortOrder: '0' })
+      if (payload.isCore) await fetch('/api/settings/pricing', { method: 'POST' })
+      await fetchProducts()
+    }
+  }
+
+  const handleUpdateProduct = async (id: string, data: any) => {
+    const res = await fetch(`/api/upsell-products/${id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+    })
+    if (res.ok) {
+      if (data.isCore) await fetch('/api/settings/pricing', { method: 'POST' })
+      setEditingProductId(null)
+      setEditingProductData(null)
+      await fetchProducts()
+    }
+  }
+
+  const handleDeleteProduct = async (id: string) => {
+    await fetch(`/api/upsell-products/${id}`, { method: 'DELETE' })
+    await fetchProducts()
+  }
+
+  const handleVerifyLink = async (productId: string, url: string) => {
+    if (!url) return
+    const res = await fetch('/api/settings/payment-links/verify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url })
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setVerifyResults(prev => ({ ...prev, [productId]: data }))
     }
   }
 
   const handleVerifyAll = async () => {
     setVerifyingAll(true)
-    // Clear old results
     setVerifyResults({})
-    for (const link of paymentLinks) {
-      if (!link.active) {
-        setVerifyResults(prev => ({ ...prev, [link.id]: { valid: false, reason: 'Inactive' } }))
-      } else if (!link.url) {
-        setVerifyResults(prev => ({ ...prev, [link.id]: { valid: false, reason: 'No URL configured' } }))
+    for (const product of products) {
+      if (!product.active) {
+        setVerifyResults(prev => ({ ...prev, [product.id]: { valid: false, reason: 'Inactive' } }))
+      } else if (!product.stripeLink) {
+        setVerifyResults(prev => ({ ...prev, [product.id]: { valid: false, reason: 'No URL configured' } }))
       } else {
-        await handleVerifyLink(link.url, link.id)
+        await handleVerifyLink(product.id, product.stripeLink)
       }
     }
     setVerifyingAll(false)
   }
+
+  // (Payment links handlers removed — unified into Products above)
 
   // ── API status check ───────────────────────────────────────
   const checkApiStatus = useCallback(async () => {
@@ -831,169 +804,36 @@ export default function SettingsPage() {
             </div>
           </Card>
 
-          {/* Pricing */}
-          <Card className="p-6">
-            <SectionHeader title="Product Pricing" description="Default pricing for your services" />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <FieldLabel>Site Build (one-time)</FieldLabel>
-                <div className="flex items-center gap-1">
-                  <span className="text-gray-500">$</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={pricing.siteBuild}
-                    onChange={(e) => setPricing({ ...pricing, siteBuild: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-              </div>
-              <div>
-                <FieldLabel>Monthly Hosting</FieldLabel>
-                <div className="flex items-center gap-1">
-                  <span className="text-gray-500">$</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={pricing.monthlyHosting}
-                    onChange={(e) => setPricing({ ...pricing, monthlyHosting: parseInt(e.target.value) || 0 })}
-                  />
-                  <span className="text-xs text-gray-400">/mo</span>
-                </div>
-              </div>
-              <div>
-                <FieldLabel>Annual Hosting</FieldLabel>
-                <div className="flex items-center gap-1">
-                  <span className="text-gray-500">$</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={pricing.annualHosting}
-                    onChange={(e) => setPricing({ ...pricing, annualHosting: parseInt(e.target.value) || 0 })}
-                  />
-                  <span className="text-xs text-gray-400">/yr</span>
-                </div>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <SaveButton
-                onClick={() => saveSetting('pricing', pricing)}
-                saving={savingKey === 'pricing'}
-                saved={savedKey === 'pricing'}
-              />
-            </div>
-          </Card>
-
-          {/* Stripe Payment Links — Live CRUD */}
+          {/* ── Unified Products Section ───────────────────────── */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <SectionHeader title="Stripe Payment Links" description="Manage live Stripe payment links — DB is the single source of truth" />
+              <SectionHeader title="Products" description="All products and payment links — core plan and upsells. The AI reads from this list." />
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={handleVerifyAll} disabled={verifyingAll}>
-                  {verifyingAll ? (
-                    <><Loader2 size={14} className="mr-1 animate-spin" /> Verifying...</>
-                  ) : (
-                    <><Shield size={14} className="mr-1" /> Verify All</>
-                  )}
+                  {verifyingAll ? <><Loader2 size={14} className="mr-1 animate-spin" /> Verifying...</> : <><Shield size={14} className="mr-1" /> Verify All</>}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setAddingLink(!addingLink)}>
-                  <Plus size={14} className="mr-1" />
-                  Add Link
+                <Button variant="outline" size="sm" onClick={() => setAddProductOpen(!addProductOpen)}>
+                  <Plus size={14} className="mr-1" /> Add Product
                 </Button>
               </div>
             </div>
-
-            {/* Add New Link Form */}
-            {addingLink && (
-              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <FieldLabel>Label</FieldLabel>
-                    <Input
-                      placeholder="e.g., Site Build"
-                      value={newLink.label}
-                      onChange={(e) => setNewLink({ ...newLink, label: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <FieldLabel>Stripe URL</FieldLabel>
-                    <Input
-                      placeholder="https://buy.stripe.com/..."
-                      value={newLink.url}
-                      onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
-                      className="font-mono text-sm"
-                    />
-                  </div>
-                  <div>
-                    <FieldLabel>Price ($)</FieldLabel>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={newLink.price}
-                      onChange={(e) => setNewLink({ ...newLink, price: parseFloat(e.target.value) || 0 })}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <FieldLabel>Type</FieldLabel>
-                    <select
-                      value={newLink.recurring ? 'recurring' : 'one_time'}
-                      onChange={(e) => setNewLink({ ...newLink, recurring: e.target.value === 'recurring' })}
-                      className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm"
-                    >
-                      <option value="one_time">One-time</option>
-                      <option value="recurring">Recurring</option>
-                    </select>
-                  </div>
-                  <div>
-                    <FieldLabel>ID (unique key)</FieldLabel>
-                    <Input
-                      placeholder="e.g., site_build"
-                      value={newLink.id}
-                      onChange={(e) => setNewLink({ ...newLink, id: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') })}
-                      className="font-mono text-sm"
-                    />
-                  </div>
-                  <div>
-                    <FieldLabel>Env Var Key (optional)</FieldLabel>
-                    <Input
-                      placeholder="e.g., STRIPE_LINK_SITE_BUILD"
-                      value={newLink.envKey}
-                      onChange={(e) => setNewLink({ ...newLink, envKey: e.target.value })}
-                      className="font-mono text-sm"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" size="sm" onClick={() => { setAddingLink(false); setNewLink({ id: '', label: '', url: '', price: 0, recurring: false, envKey: '', active: true }) }}>Cancel</Button>
-                  <Button size="sm" onClick={handleAddLink} disabled={!newLink.label.trim() || !newLink.id.trim()}>Add Link</Button>
-                </div>
-              </div>
-            )}
 
             {/* Verify All Results Summary */}
             {Object.keys(verifyResults).length > 0 && !verifyingAll && (
               <div className="mb-4 p-3 rounded-lg border border-gray-200 bg-gray-50">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Verification Results</span>
-                  <button onClick={() => setVerifyResults({})} className="text-xs text-gray-400 hover:text-gray-600">
-                    Dismiss
-                  </button>
+                  <button onClick={() => setVerifyResults({})} className="text-xs text-gray-400 hover:text-gray-600">Dismiss</button>
                 </div>
                 <div className="flex gap-3 text-sm">
-                  <span className="text-green-600 font-medium">
-                    {Object.values(verifyResults).filter(v => v?.valid).length} live
-                  </span>
-                  <span className="text-red-600 font-medium">
-                    {Object.values(verifyResults).filter(v => v && !v.valid).length} failed
-                  </span>
+                  <span className="text-green-600 font-medium">{Object.values(verifyResults).filter(v => v?.valid).length} live</span>
+                  <span className="text-red-600 font-medium">{Object.values(verifyResults).filter(v => v && !v.valid).length} failed</span>
                 </div>
                 {Object.values(verifyResults).some(v => v && !v.valid) && (
                   <div className="mt-2 space-y-1">
-                    {paymentLinks.filter(l => verifyResults[l.id] && !verifyResults[l.id]?.valid).map(l => (
-                      <div key={l.id} className="text-xs text-red-600 flex items-center gap-1">
-                        <XCircle size={12} />
-                        <span className="font-medium">{l.label}:</span> {verifyResults[l.id]?.reason}
+                    {products.filter(p => verifyResults[p.id] && !verifyResults[p.id]?.valid).map(p => (
+                      <div key={p.id} className="text-xs text-red-600 flex items-center gap-1">
+                        <XCircle size={12} /> <span className="font-medium">{p.name}:</span> {verifyResults[p.id]?.reason}
                       </div>
                     ))}
                   </div>
@@ -1001,98 +841,228 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Payment Links List */}
-            {paymentLinksLoading ? (
-              <div className="flex items-center justify-center py-8 text-gray-500 gap-2">
-                <Loader2 size={16} className="animate-spin" />
-                <span className="text-sm">Loading payment links...</span>
+            {/* Add Product Form */}
+            {addProductOpen && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <FieldLabel>Product Name</FieldLabel>
+                    <Input placeholder="e.g., SEO Package" value={newProduct.name} onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })} />
+                  </div>
+                  <div>
+                    <FieldLabel>Price ($)</FieldLabel>
+                    <Input type="number" min={0} placeholder="0" value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} />
+                  </div>
+                  <div>
+                    <FieldLabel>Type</FieldLabel>
+                    <select value={newProduct.recurring ? 'recurring' : 'one_time'} onChange={(e) => setNewProduct({ ...newProduct, recurring: e.target.value === 'recurring' })} className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm">
+                      <option value="one_time">One-time</option>
+                      <option value="recurring">Recurring (monthly)</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="isCore" checked={newProduct.isCore} onChange={(e) => setNewProduct({ ...newProduct, isCore: e.target.checked })} className="rounded" />
+                  <label htmlFor="isCore" className="text-sm font-medium text-blue-700">Core Product (main plan — pricing propagates system-wide)</label>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <FieldLabel>Stripe Payment Link</FieldLabel>
+                    <Input placeholder="https://buy.stripe.com/..." value={newProduct.stripeLink} onChange={(e) => setNewProduct({ ...newProduct, stripeLink: e.target.value })} className="font-mono text-sm" />
+                  </div>
+                  <div>
+                    <FieldLabel>AI Product Summary</FieldLabel>
+                    <Input placeholder="One-liner the AI uses in conversation" value={newProduct.aiProductSummary} onChange={(e) => setNewProduct({ ...newProduct, aiProductSummary: e.target.value })} />
+                  </div>
+                </div>
+                {newProduct.isCore && (
+                  <div className="p-3 bg-blue-100 border border-blue-300 rounded-lg space-y-3">
+                    <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">Core Pricing Fields</span>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <FieldLabel>First Month Price ($)</FieldLabel>
+                        <Input type="number" min={0} value={newProduct.month1Price} onChange={(e) => setNewProduct({ ...newProduct, month1Price: e.target.value })} />
+                      </div>
+                      <div>
+                        <FieldLabel>Recurring Price ($/mo)</FieldLabel>
+                        <Input type="number" min={0} value={newProduct.recurringPrice} onChange={(e) => setNewProduct({ ...newProduct, recurringPrice: e.target.value })} />
+                      </div>
+                      <div>
+                        <FieldLabel>Annual Price ($/yr)</FieldLabel>
+                        <Input type="number" min={0} value={newProduct.annualPrice} onChange={(e) => setNewProduct({ ...newProduct, annualPrice: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <FieldLabel>Annual Stripe Link</FieldLabel>
+                        <Input placeholder="https://buy.stripe.com/..." value={newProduct.stripeLinkAnnual} onChange={(e) => setNewProduct({ ...newProduct, stripeLinkAnnual: e.target.value })} className="font-mono text-sm" />
+                      </div>
+                      <div>
+                        <FieldLabel>Preview Banner Text</FieldLabel>
+                        <Input placeholder='e.g., $188 to get started' value={newProduct.previewBannerText} onChange={(e) => setNewProduct({ ...newProduct, previewBannerText: e.target.value })} />
+                      </div>
+                    </div>
+                    <div>
+                      <FieldLabel>Pitch One-Liner (used everywhere)</FieldLabel>
+                      <Input placeholder='e.g., $188 to go live, $39/mo after that' value={newProduct.pitchOneLiner} onChange={(e) => setNewProduct({ ...newProduct, pitchOneLiner: e.target.value })} />
+                    </div>
+                    <div>
+                      <FieldLabel>Rep Close Script</FieldLabel>
+                      <textarea placeholder="Full script reps use to close" value={newProduct.repCloseScript} onChange={(e) => setNewProduct({ ...newProduct, repCloseScript: e.target.value })} className="w-full h-20 px-3 py-2 text-sm border border-blue-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <FieldLabel>AI Pitch Instructions</FieldLabel>
+                  <textarea placeholder="How/when AI should pitch this product" value={newProduct.aiPitchInstructions} onChange={(e) => setNewProduct({ ...newProduct, aiPitchInstructions: e.target.value })} className="w-full h-16 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <FieldLabel>Description (admin-facing)</FieldLabel>
+                  <Input placeholder="Brief description" value={newProduct.description} onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })} />
+                </div>
+                <button onClick={() => setShowAdvanced(!showAdvanced)} className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1">
+                  <ChevronDown size={12} className={showAdvanced ? 'rotate-180 transition-transform' : 'transition-transform'} /> Advanced Targeting
+                </button>
+                {showAdvanced && (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <FieldLabel>Eligible Industries</FieldLabel>
+                      <Input placeholder="blank = all" value={newProduct.eligibleIndustries} onChange={(e) => setNewProduct({ ...newProduct, eligibleIndustries: e.target.value })} className="text-sm" />
+                    </div>
+                    <div>
+                      <FieldLabel>Min Client Age (days)</FieldLabel>
+                      <Input type="number" min={0} value={newProduct.minClientAgeDays} onChange={(e) => setNewProduct({ ...newProduct, minClientAgeDays: e.target.value })} />
+                    </div>
+                    <div>
+                      <FieldLabel>Max Pitches</FieldLabel>
+                      <Input type="number" min={1} value={newProduct.maxPitchesPerClient} onChange={(e) => setNewProduct({ ...newProduct, maxPitchesPerClient: e.target.value })} />
+                    </div>
+                    <div>
+                      <FieldLabel>Pitch Channel</FieldLabel>
+                      <select value={newProduct.pitchChannel} onChange={(e) => setNewProduct({ ...newProduct, pitchChannel: e.target.value })} className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm">
+                        <option value="sms">SMS</option>
+                        <option value="email">Email</option>
+                        <option value="both">Both</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" size="sm" onClick={() => setAddProductOpen(false)}>Cancel</Button>
+                  <Button size="sm" onClick={handleAddProduct} disabled={!newProduct.name.trim() || !newProduct.price}>Add Product</Button>
+                </div>
               </div>
-            ) : paymentLinks.length === 0 ? (
-              <div className="text-center py-8 text-gray-400 text-sm">No payment links configured. Click &quot;Add Link&quot; to get started.</div>
+            )}
+
+            {/* Products List */}
+            {productsLoading ? (
+              <div className="flex items-center justify-center py-8 text-gray-500 gap-2">
+                <Loader2 size={16} className="animate-spin" /> <span className="text-sm">Loading products...</span>
+              </div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-8 text-gray-400 text-sm">No products yet. Seeding defaults...</div>
             ) : (
               <div className="space-y-2">
-                {paymentLinks.map((link: any) => {
-                  const isEditing = editingLinkId === link.id
-                  const verify = verifyResults[link.id]
+                {/* Core products first */}
+                {products.filter(p => p.isCore).map((product: any) => {
+                  const verify = verifyResults[product.id]
+                  const isEditing = editingProductId === product.id
                   return (
-                    <div key={link.id} className={`p-3 rounded-lg border ${link.active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
+                    <div key={product.id} className={`p-4 rounded-lg border-2 ${product.active ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-gray-50 opacity-60'}`}>
                       {isEditing ? (
                         <div className="space-y-3">
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div>
-                              <label className="text-xs text-gray-500 block mb-1">Label</label>
-                              <Input
-                                className="h-8 text-sm"
-                                value={editingLinkData?.label || ''}
-                                onChange={(e) => setEditingLinkData({ ...editingLinkData, label: e.target.value })}
-                              />
+                            <div><label className="text-xs text-gray-500 block mb-1">Name</label><Input className="h-8 text-sm" value={editingProductData?.name || ''} onChange={(e) => setEditingProductData({ ...editingProductData, name: e.target.value })} /></div>
+                            <div><label className="text-xs text-gray-500 block mb-1">First Month ($)</label><Input type="number" className="h-8 text-sm" value={editingProductData?.month1Price || ''} onChange={(e) => setEditingProductData({ ...editingProductData, month1Price: parseFloat(e.target.value) || null, price: parseFloat(e.target.value) || 0 })} /></div>
+                            <div><label className="text-xs text-gray-500 block mb-1">Recurring ($/mo)</label><Input type="number" className="h-8 text-sm" value={editingProductData?.recurringPrice || ''} onChange={(e) => setEditingProductData({ ...editingProductData, recurringPrice: parseFloat(e.target.value) || null })} /></div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div><label className="text-xs text-gray-500 block mb-1">Stripe Link</label><Input className="h-8 text-sm font-mono" value={editingProductData?.stripeLink || ''} onChange={(e) => setEditingProductData({ ...editingProductData, stripeLink: e.target.value })} /></div>
+                            <div><label className="text-xs text-gray-500 block mb-1">Pitch One-Liner</label><Input className="h-8 text-sm" value={editingProductData?.pitchOneLiner || ''} onChange={(e) => setEditingProductData({ ...editingProductData, pitchOneLiner: e.target.value })} /></div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div><label className="text-xs text-gray-500 block mb-1">Annual ($)</label><Input type="number" className="h-8 text-sm" value={editingProductData?.annualPrice || ''} onChange={(e) => setEditingProductData({ ...editingProductData, annualPrice: parseFloat(e.target.value) || null })} /></div>
+                            <div><label className="text-xs text-gray-500 block mb-1">Annual Link</label><Input className="h-8 text-sm font-mono" value={editingProductData?.stripeLinkAnnual || ''} onChange={(e) => setEditingProductData({ ...editingProductData, stripeLinkAnnual: e.target.value })} /></div>
+                            <div><label className="text-xs text-gray-500 block mb-1">Banner Text</label><Input className="h-8 text-sm" value={editingProductData?.previewBannerText || ''} onChange={(e) => setEditingProductData({ ...editingProductData, previewBannerText: e.target.value })} /></div>
+                          </div>
+                          <div><label className="text-xs text-gray-500 block mb-1">Rep Close Script</label><textarea className="w-full h-16 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none" value={editingProductData?.repCloseScript || ''} onChange={(e) => setEditingProductData({ ...editingProductData, repCloseScript: e.target.value })} /></div>
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="outline" size="sm" onClick={() => { setEditingProductId(null); setEditingProductData(null) }}>Cancel</Button>
+                            <Button size="sm" onClick={() => handleUpdateProduct(product.id, editingProductData)}>Save</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-600 text-white font-bold uppercase">Core</span>
+                              <span className="text-sm font-semibold text-gray-900">{product.name}</span>
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+                                ${product.month1Price || product.price} first month / ${product.recurringPrice || '?'}/mo after
+                              </span>
                             </div>
-                            <div>
-                              <label className="text-xs text-gray-500 block mb-1">URL</label>
-                              <Input
-                                className="h-8 text-sm font-mono"
-                                value={editingLinkData?.url || ''}
-                                onChange={(e) => setEditingLinkData({ ...editingLinkData, url: e.target.value })}
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs text-gray-500 block mb-1">Price</label>
-                              <Input
-                                type="number"
-                                className="h-8 text-sm"
-                                value={editingLinkData?.price || 0}
-                                onChange={(e) => setEditingLinkData({ ...editingLinkData, price: parseFloat(e.target.value) || 0 })}
-                              />
+                            <div className="flex items-center gap-2">
+                              {verify && <span className={`text-xs px-2 py-0.5 rounded-full ${verify.valid ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{verify.valid ? 'Live' : 'Failed'}</span>}
+                              {product.stripeLink && <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleVerifyLink(product.id, product.stripeLink)}><Shield size={12} className="mr-1" /> Verify</Button>}
+                              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setEditingProductId(product.id); setEditingProductData({ ...product }) }}><Pencil size={12} className="mr-1" /> Edit</Button>
                             </div>
                           </div>
+                          <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-xs text-gray-600">
+                            {product.annualPrice && <div>Annual: ${product.annualPrice}/yr</div>}
+                            {product.previewBannerText && <div>Banner: &quot;{product.previewBannerText}&quot;</div>}
+                            {product.pitchOneLiner && <div>Pitch: &quot;{product.pitchOneLiner}&quot;</div>}
+                            {product.stripeLink && <a href={product.stripeLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline font-mono truncate block max-w-[400px]">{product.stripeLink}</a>}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* Upsell products */}
+                {products.filter(p => !p.isCore).map((product: any) => {
+                  const verify = verifyResults[product.id]
+                  const isEditing = editingProductId === product.id
+                  const pitchCount = product.pitches?.length || 0
+                  const paidCount = product.pitches?.filter((p: any) => p.status === 'paid').length || 0
+                  return (
+                    <div key={product.id} className={`p-3 rounded-lg border ${product.active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-60'} group`}>
+                      {isEditing ? (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div><label className="text-xs text-gray-500 block mb-1">Name</label><Input className="h-8 text-sm" value={editingProductData?.name || ''} onChange={(e) => setEditingProductData({ ...editingProductData, name: e.target.value })} /></div>
+                            <div><label className="text-xs text-gray-500 block mb-1">Price</label><Input type="number" className="h-8 text-sm" value={editingProductData?.price || 0} onChange={(e) => setEditingProductData({ ...editingProductData, price: parseFloat(e.target.value) || 0 })} /></div>
+                            <div><label className="text-xs text-gray-500 block mb-1">Stripe Link</label><Input className="h-8 text-sm font-mono" value={editingProductData?.stripeLink || ''} onChange={(e) => setEditingProductData({ ...editingProductData, stripeLink: e.target.value })} /></div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div><label className="text-xs text-gray-500 block mb-1">AI Summary</label><Input className="h-8 text-sm" value={editingProductData?.aiProductSummary || ''} onChange={(e) => setEditingProductData({ ...editingProductData, aiProductSummary: e.target.value })} /></div>
+                            <div><label className="text-xs text-gray-500 block mb-1">AI Pitch Instructions</label><Input className="h-8 text-sm" value={editingProductData?.aiPitchInstructions || ''} onChange={(e) => setEditingProductData({ ...editingProductData, aiPitchInstructions: e.target.value })} /></div>
+                          </div>
                           <div className="flex gap-2 justify-end">
-                            <Button variant="outline" size="sm" onClick={() => { setEditingLinkId(null); setEditingLinkData(null) }}>Cancel</Button>
-                            <Button size="sm" onClick={() => handleUpdateLink(link.id, editingLinkData)}>Save</Button>
+                            <Button variant="outline" size="sm" onClick={() => { setEditingProductId(null); setEditingProductData(null) }}>Cancel</Button>
+                            <Button size="sm" onClick={() => handleUpdateProduct(product.id, editingProductData)}>Save</Button>
                           </div>
                         </div>
                       ) : (
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className={`w-2 h-2 rounded-full ${link.url ? (link.active ? 'bg-green-500' : 'bg-gray-400') : 'bg-amber-500'}`} />
+                            <div className={`w-2 h-2 rounded-full ${product.stripeLink ? (product.active ? 'bg-green-500' : 'bg-gray-400') : 'bg-amber-500'}`} />
                             <div>
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-gray-900">{link.label}</span>
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
-                                  ${link.price}{link.recurring ? '/mo' : ''}
-                                </span>
-                                {!link.url && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-amber-50 text-amber-600">No URL</span>
-                                )}
+                                <span className="text-sm font-medium text-gray-900">{product.name}</span>
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">${product.price}{product.recurring ? '/mo' : ''}</span>
+                                {!product.stripeLink && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-50 text-amber-600">No URL</span>}
+                                {!product.active && <span className="text-xs px-1.5 py-0.5 rounded bg-red-50 text-red-600">Inactive</span>}
                               </div>
-                              {link.url && (
-                                <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline font-mono truncate block max-w-[400px]">
-                                  {link.url}
-                                </a>
-                              )}
+                              {product.aiProductSummary && <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[500px]">{product.aiProductSummary}</p>}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {verify && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${verify.valid ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                                {verify.valid ? 'Live' : 'Failed'}
-                              </span>
-                            )}
-                            {link.url && (
-                              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleVerifyLink(link.url, link.id)}>
-                                <Shield size={12} className="mr-1" />
-                                Verify
-                              </Button>
-                            )}
-                            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setEditingLinkId(link.id); setEditingLinkData({ ...link }) }}>
-                              <Pencil size={12} className="mr-1" />
-                              Edit
-                            </Button>
-                            <button
-                              onClick={() => handleDeleteLink(link.id)}
-                              className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            {verify && <span className={`text-xs px-2 py-0.5 rounded-full ${verify.valid ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{verify.valid ? 'Live' : 'Failed'}</span>}
+                            {pitchCount > 0 && <span className="text-xs text-gray-500">{paidCount}/{pitchCount} converted</span>}
+                            {product.stripeLink && <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleVerifyLink(product.id, product.stripeLink)}><Shield size={12} className="mr-1" /> Verify</Button>}
+                            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setEditingProductId(product.id); setEditingProductData({ ...product }) }}><Pencil size={12} className="mr-1" /> Edit</Button>
+                            <button onClick={() => handleDeleteProduct(product.id)} className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={14} /></button>
                           </div>
                         </div>
                       )}
@@ -1102,7 +1072,7 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Environment Variable Cross-Check */}
+            {/* Env Var Cross-Check */}
             {Object.keys(envLinks).length > 0 && (
               <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <div className="flex items-center gap-2 mb-2">
@@ -1114,205 +1084,13 @@ export default function SettingsPage() {
                     <div key={key} className="flex items-center gap-2 text-xs py-0.5">
                       <div className={`w-1.5 h-1.5 rounded-full ${status.set ? 'bg-green-500' : 'bg-gray-300'}`} />
                       <span className="font-mono text-gray-600">{key}</span>
-                      <span className={status.set ? 'text-green-600' : 'text-gray-400'}>
-                        {status.set ? 'Set' : 'Not set'}
-                      </span>
+                      <span className={status.set ? 'text-green-600' : 'text-gray-400'}>{status.set ? 'Set' : 'Not set'}</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-gray-400 mt-2">Env vars are fallbacks. DB links take priority when both exist.</p>
+                <p className="text-xs text-gray-400 mt-2">Env vars are legacy fallbacks. Products table is the source of truth.</p>
               </div>
             )}
-          </Card>
-
-          {/* Upsell Products (DB-backed) */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <SectionHeader title="Upsell Products" description="AI-aware products — managed via database, visible to Close Engine and Post-Client AI" />
-              <Button variant="outline" size="sm" onClick={() => setAddDbUpsellOpen(!addDbUpsellOpen)}>
-                <Plus size={14} className="mr-1" />
-                Add Product
-              </Button>
-            </div>
-
-            {/* Add Product Form */}
-            {addDbUpsellOpen && (
-              <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <FieldLabel>Product Name</FieldLabel>
-                    <Input
-                      placeholder="e.g., SEO Package"
-                      value={newDbUpsell.name}
-                      onChange={(e) => setNewDbUpsell({ ...newDbUpsell, name: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <FieldLabel>Price ($)</FieldLabel>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={newDbUpsell.price || ''}
-                      onChange={(e) => setNewDbUpsell({ ...newDbUpsell, price: parseFloat(e.target.value) || 0 })}
-                    />
-                  </div>
-                  <div>
-                    <FieldLabel>Type</FieldLabel>
-                    <select
-                      value={newDbUpsell.recurring ? 'recurring' : 'one_time'}
-                      onChange={(e) => setNewDbUpsell({ ...newDbUpsell, recurring: e.target.value === 'recurring' })}
-                      className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm"
-                    >
-                      <option value="one_time">One-time</option>
-                      <option value="recurring">Recurring (monthly)</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <FieldLabel>Stripe Payment Link</FieldLabel>
-                    <Input
-                      placeholder="https://buy.stripe.com/..."
-                      value={newDbUpsell.stripeLink}
-                      onChange={(e) => setNewDbUpsell({ ...newDbUpsell, stripeLink: e.target.value })}
-                      className="font-mono text-sm"
-                    />
-                  </div>
-                  <div>
-                    <FieldLabel>Pitch Channel</FieldLabel>
-                    <select
-                      value={newDbUpsell.pitchChannel}
-                      onChange={(e) => setNewDbUpsell({ ...newDbUpsell, pitchChannel: e.target.value })}
-                      className="w-full h-10 px-3 rounded-md border border-gray-200 bg-white text-sm"
-                    >
-                      <option value="sms">SMS</option>
-                      <option value="email">Email</option>
-                      <option value="both">Both</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <FieldLabel>Description (admin-facing)</FieldLabel>
-                  <Input
-                    placeholder="Brief description for the admin UI"
-                    value={newDbUpsell.description}
-                    onChange={(e) => setNewDbUpsell({ ...newDbUpsell, description: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <FieldLabel>AI Product Summary (one-liner the AI uses in conversation)</FieldLabel>
-                  <Input
-                    placeholder="e.g., Google Business Profile setup — $49 one-time, we claim and optimize your listing"
-                    value={newDbUpsell.aiProductSummary}
-                    onChange={(e) => setNewDbUpsell({ ...newDbUpsell, aiProductSummary: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <FieldLabel>AI Pitch Instructions (tells AI how/when to pitch)</FieldLabel>
-                  <textarea
-                    placeholder="e.g., Pitch GBP setup to local service businesses. Mention that 46% of Google searches are local. Only pitch if the client doesn't already have a claimed GBP listing."
-                    value={newDbUpsell.aiPitchInstructions}
-                    onChange={(e) => setNewDbUpsell({ ...newDbUpsell, aiPitchInstructions: e.target.value })}
-                    className="w-full h-20 px-3 py-2 text-sm border border-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <FieldLabel>Eligible Industries (comma-separated, blank = all)</FieldLabel>
-                    <Input
-                      placeholder="e.g., ROOFING, PLUMBING, HVAC"
-                      value={newDbUpsell.eligibleIndustries}
-                      onChange={(e) => setNewDbUpsell({ ...newDbUpsell, eligibleIndustries: e.target.value })}
-                      className="text-sm"
-                    />
-                  </div>
-                  <div>
-                    <FieldLabel>Min Client Age (days)</FieldLabel>
-                    <Input
-                      type="number"
-                      min={0}
-                      placeholder="0 = no restriction"
-                      value={newDbUpsell.minClientAgeDays}
-                      onChange={(e) => setNewDbUpsell({ ...newDbUpsell, minClientAgeDays: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <FieldLabel>Max Pitches Per Client</FieldLabel>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={newDbUpsell.maxPitchesPerClient}
-                      onChange={(e) => setNewDbUpsell({ ...newDbUpsell, maxPitchesPerClient: parseInt(e.target.value) || 3 })}
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" size="sm" onClick={() => setAddDbUpsellOpen(false)}>Cancel</Button>
-                  <Button size="sm" onClick={addDbUpsellProduct} disabled={!newDbUpsell.name.trim() || !newDbUpsell.price}>Add Product</Button>
-                </div>
-              </div>
-            )}
-
-            {/* Products List */}
-            {upsellProductsLoading ? (
-              <div className="flex items-center justify-center py-8 text-gray-500 gap-2">
-                <Loader2 size={16} className="animate-spin" />
-                <span className="text-sm">Loading products...</span>
-              </div>
-            ) : dbUpsellProducts.length === 0 ? (
-              <div className="text-center py-8 text-gray-400 text-sm">No upsell products yet. Click &quot;Add Product&quot; to create one.</div>
-            ) : (
-              <div className="space-y-2">
-                {dbUpsellProducts.map((product: any, idx: number) => {
-                  const pitchCount = product.pitches?.length || 0
-                  const paidCount = product.pitches?.filter((p: any) => p.status === 'paid').length || 0
-                  return (
-                    <div key={product.id} className={`flex items-center justify-between p-3 rounded-lg border group ${product.active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-60'}`}>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-sm">
-                          {idx + 1}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-gray-900">{product.name}</span>
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
-                              ${product.price}{product.recurring ? '/mo' : ''}
-                            </span>
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">{product.pitchChannel}</span>
-                            {!product.active && <span className="text-xs px-1.5 py-0.5 rounded bg-red-50 text-red-600">Inactive</span>}
-                          </div>
-                          {product.aiProductSummary && (
-                            <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[500px]">{product.aiProductSummary}</p>
-                          )}
-                          {product.description && !product.aiProductSummary && (
-                            <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[500px]">{product.description}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {pitchCount > 0 && (
-                          <span className="text-xs text-gray-500">
-                            {paidCount}/{pitchCount} converted
-                          </span>
-                        )}
-                        {product.stripeLink && (
-                          <a href={product.stripeLink} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 flex items-center gap-1 hover:underline">
-                            <Link size={12} /> Link
-                          </a>
-                        )}
-                        <button
-                          onClick={() => deleteDbUpsellProduct(product.id)}
-                          className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-            <p className="text-xs text-gray-400 mt-3">Deactivating a product removes it from AI context and all pitch recommendations.</p>
           </Card>
         </div>
       )}
