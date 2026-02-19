@@ -120,7 +120,7 @@ export async function triggerCloseEngine(options: {
     // 5. Create notification
     await prisma.notification.create({
       data: {
-        type: 'HOT_LEAD',
+        type: 'CLOSE_ENGINE',
         title: 'New Close Engine Conversation',
         message: `New close conversation: ${lead.companyName} via ${entryPoint}`,
         metadata: { leadId, conversationId: conversation.id, entryPoint },

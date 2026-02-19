@@ -99,7 +99,7 @@ export async function sendPaymentLink(conversationId: string): Promise<{ success
     })
     await prisma.notification.create({
       data: {
-        type: 'CLIENT_TEXT',
+        type: 'CLOSE_ENGINE',
         title: 'Payment Link Ready — Approve?',
         message: `Payment link ready for ${lead.companyName}. Approve to send.`,
         metadata: { conversationId, leadId: lead.id, paymentUrl },

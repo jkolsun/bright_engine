@@ -955,7 +955,7 @@ async function closeEngineStallCheck() {
       })
       await prisma.notification.create({
         data: {
-          type: 'CLIENT_TEXT',
+          type: 'CLOSE_ENGINE',
           title: 'Close Engine — Lead Stalled',
           message: `${conv.lead.firstName} at ${conv.lead.companyName} hasn't responded in 72+ hours`,
           metadata: { conversationId: conv.id, leadId: conv.leadId },
@@ -1061,7 +1061,7 @@ async function closeEngineExpireStalled() {
   if (stalled.length > 0) {
     await prisma.notification.create({
       data: {
-        type: 'DAILY_AUDIT',
+        type: 'CLOSE_ENGINE',
         title: 'Close Engine — Expired Conversations',
         message: `${stalled.length} conversation(s) expired after 7 days of no response`,
         metadata: { count: stalled.length, leadIds: stalled.map(s => s.leadId) },

@@ -40,9 +40,24 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Update lead priority to HOT
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: { priority: 'HOT' },
+    })
+
+    // Create HOT_LEAD notification
+    await prisma.notification.create({
+      data: {
+        type: 'HOT_LEAD',
+        title: 'Preview CTA Clicked!',
+        message: `${lead.firstName} at ${lead.companyName} clicked "Get Started" on their preview`,
+        metadata: { leadId: lead.id, previewId, source: 'cta_banner' },
+      },
+    })
+
     // Only trigger Close Engine if not recently clicked
     if (!recentClick) {
-      // triggerCloseEngine handles: lead priority → HOT, notification, conversation creation
       try {
         const { triggerCloseEngine } = await import('@/lib/close-engine')
         await triggerCloseEngine({
@@ -51,7 +66,6 @@ export async function POST(request: NextRequest) {
         })
       } catch (err) {
         console.error('[Preview CTA] Close Engine trigger failed:', err)
-        // Don't fail the response
       }
     }
 

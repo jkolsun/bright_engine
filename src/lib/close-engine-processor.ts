@@ -75,7 +75,7 @@ export async function processCloseEngineFirstMessage(conversationId: string): Pr
     })
     await prisma.notification.create({
       data: {
-        type: 'CLIENT_TEXT',
+        type: 'CLOSE_ENGINE',
         title: 'Draft Message Ready',
         message: `AI drafted first message for ${lead.companyName} — review and send`,
         metadata: { conversationId, leadId: lead.id },
@@ -199,8 +199,8 @@ export async function processCloseEngineInbound(
     })
   }
 
-  // 4. Handle stage transition
-  if (claudeResponse.nextStage) {
+  // 4. Handle stage transition (skip PAYMENT_SENT — sendPaymentLink handles that)
+  if (claudeResponse.nextStage && claudeResponse.nextStage !== CONVERSATION_STAGES.PAYMENT_SENT) {
     await transitionStage(conversationId, claudeResponse.nextStage)
   }
 
@@ -209,7 +209,7 @@ export async function processCloseEngineInbound(
     await transitionStage(conversationId, CONVERSATION_STAGES.BUILDING)
     await prisma.notification.create({
       data: {
-        type: 'DAILY_AUDIT',
+        type: 'CLOSE_ENGINE',
         title: 'Site Build Ready',
         message: `${lead.companyName} qualification complete. Ready to build site.`,
         metadata: { conversationId, leadId: lead.id } as Prisma.InputJsonValue,
@@ -257,7 +257,7 @@ export async function processCloseEngineInbound(
     })
     await prisma.notification.create({
       data: {
-        type: 'CLIENT_TEXT',
+        type: 'CLOSE_ENGINE',
         title: 'Approval Required',
         message: `AI drafted response for ${lead.companyName} — review in Messages`,
         metadata: { conversationId, leadId: lead.id },
@@ -266,23 +266,46 @@ export async function processCloseEngineInbound(
     return
   }
 
-  // 8. Send with humanizing delay
-  setTimeout(async () => {
-    try {
-      await sendSMSViaProvider({
-        to: lead.phone,
-        message: claudeResponse.replyText,
-        leadId: lead.id,
-        trigger: `close_engine_${context.conversation.stage.toLowerCase()}`,
-        aiGenerated: true,
-        aiDelaySeconds: delay,
-        conversationType: 'pre_client',
-        sender: 'clawdbot',
-      })
-    } catch (err) {
-      console.error('[CloseEngine] Failed to send reply:', err)
-    }
-  }, delay * 1000)
+  // 8. Send reply (or payment link)
+  if (actionType === 'SEND_PAYMENT_LINK') {
+    // Send Claude's conversational reply first, then trigger payment link flow
+    setTimeout(async () => {
+      try {
+        await sendSMSViaProvider({
+          to: lead.phone,
+          message: claudeResponse.replyText,
+          leadId: lead.id,
+          trigger: `close_engine_${context.conversation.stage.toLowerCase()}`,
+          aiGenerated: true,
+          aiDelaySeconds: delay,
+          conversationType: 'pre_client',
+          sender: 'clawdbot',
+        })
+        // Generate Stripe checkout link and send it
+        const { sendPaymentLink } = await import('./close-engine-payment')
+        await sendPaymentLink(conversationId)
+      } catch (err) {
+        console.error('[CloseEngine] Failed to send payment link:', err)
+      }
+    }, delay * 1000)
+  } else {
+    setTimeout(async () => {
+      try {
+        await sendSMSViaProvider({
+          to: lead.phone,
+          message: claudeResponse.replyText,
+          leadId: lead.id,
+          trigger: `close_engine_${context.conversation.stage.toLowerCase()}`,
+          aiGenerated: true,
+          aiDelaySeconds: delay,
+          conversationType: 'pre_client',
+          sender: 'clawdbot',
+        })
+      } catch (err) {
+        console.error('[CloseEngine] Failed to send reply:', err)
+      }
+    }, delay * 1000)
+  }
 
   // 9. Track question asked
   if (claudeResponse.questionAsked) {

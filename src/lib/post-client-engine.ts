@@ -166,7 +166,7 @@ export async function processPostClientInbound(
     await prisma.apiCost.create({
       data: {
         service: 'anthropic',
-        operation: 'post_client_inbound',
+        operation: 'post_client_chat',
         cost: 0.003,
       },
     }).catch(() => {})

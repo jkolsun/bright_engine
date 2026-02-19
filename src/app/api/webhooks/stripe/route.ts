@@ -153,6 +153,19 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             },
           })
 
+          // 1b. Log CLOSE_ENGINE_COMPLETED event
+          await prisma.leadEvent.create({
+            data: {
+              leadId: lead.id,
+              eventType: 'CLOSE_ENGINE_COMPLETED',
+              metadata: {
+                conversationId: conversation.id,
+                entryPoint: conversation.entryPoint,
+                amount: amountTotal / 100,
+              },
+            },
+          })
+
           // 2. Copy autonomy level to client
           if (clientId) {
             await prisma.client.update({
