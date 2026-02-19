@@ -304,6 +304,12 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   // Dynamic pricing from DB
   const [pricing, setPricing] = useState<{ siteBuildFee: number; monthlyHosting: number; firstMonthTotal: number }>({ siteBuildFee: 149, monthlyHosting: 39, firstMonthTotal: 188 })
 
+  // Commission rate from admin config
+  const [repCommissionRate, setRepCommissionRate] = useState(75)
+
+  // Admin-configured default call script (overrides hardcoded CALL_SCRIPTS)
+  const [adminCallScript, setAdminCallScript] = useState<string | null>(null)
+
   const currentLead = queue[currentIndex] || null
 
   // Compute lead temperature from events already in queue data
@@ -313,7 +319,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   // ============================================
   // LOAD QUEUE (Smart priority ordering)
   // ============================================
-  useEffect(() => { loadQueue(); loadPricing() }, [])
+  useEffect(() => { loadQueue(); loadPricing(); loadRepConfig() }, [])
 
   const loadPricing = async () => {
     try {
@@ -321,6 +327,17 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       if (res.ok) {
         const data = await res.json()
         setPricing({ siteBuildFee: data.siteBuildFee, monthlyHosting: data.monthlyHosting, firstMonthTotal: data.firstMonthTotal })
+      }
+    } catch { /* use defaults */ }
+  }
+
+  const loadRepConfig = async () => {
+    try {
+      const res = await fetch('/api/rep-config')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.commissionRate) setRepCommissionRate(data.commissionRate)
+        if (data.defaultCallScript) setAdminCallScript(data.defaultCallScript)
       }
     } catch { /* use defaults */ }
   }
@@ -887,6 +904,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   }
 
   const getScript = () => {
+    // 1. Use AI-generated per-lead script if available
     if (currentLead?.callScript) {
       try {
         const parsed = JSON.parse(currentLead.callScript)
@@ -895,6 +913,11 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         return currentLead.callScript
       }
     }
+    // 2. Use admin-configured default call script if set
+    if (adminCallScript) {
+      return personalizeScript(adminCallScript)
+    }
+    // 3. Fall back to built-in scripts
     return personalizeScript(pickByLead(CALL_SCRIPTS))
   }
 
@@ -1000,7 +1023,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
             </div>
             <p className="text-sm text-gray-500">
               {sessionActive
-                ? `Session: ${sessionStats.dials} dials | ${sessionStats.conversations} conversations | ${sessionStats.closes} closes | ${formatCurrency(sessionStats.closes * 75)} earned`
+                ? `Session: ${sessionStats.dials} dials | ${sessionStats.conversations} conversations | ${sessionStats.closes} closes | ${formatCurrency(sessionStats.closes * repCommissionRate)} earned`
                 : `${queue.length} leads in queue`
               }
             </p>

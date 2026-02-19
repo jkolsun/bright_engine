@@ -61,6 +61,9 @@ export default function RepsPage() {
   const [callbacks, setCallbacks] = useState<any>({ overdue: [], today: [], upcoming: [] })
   const [coachingTip, setCoachingTip] = useState<string | null>(null)
   const [leaderboard, setLeaderboard] = useState<any[]>([])
+  const [dailyTarget, setDailyTarget] = useState({ dials: 200, conversations: 40, closes: 3 })
+  const [commissionRate, setCommissionRate] = useState(75)
+  const [productPrice, setProductPrice] = useState(149)
 
   useEffect(() => {
     loadRepData()
@@ -80,7 +83,7 @@ export default function RepsPage() {
       const currentUser = meData.user
       setRepData(currentUser)
 
-      const [leadsRes, activityRes, weekRes, monthRes, allTimeRes, queueRes, callbackRes, leaderboardRes] = await Promise.all([
+      const [leadsRes, activityRes, weekRes, monthRes, allTimeRes, queueRes, callbackRes, leaderboardRes, configRes] = await Promise.all([
         fetch(`/api/leads?assignedTo=${currentUser.id}&limit=200`),
         fetch('/api/activity'),
         fetch('/api/dialer/stats?period=week'),
@@ -89,6 +92,7 @@ export default function RepsPage() {
         fetch('/api/dialer/queue'),
         fetch('/api/dialer/callback'),
         fetch('/api/users?role=REP'),
+        fetch('/api/rep-config'),
       ])
 
       if (leadsRes.ok) {
@@ -120,10 +124,29 @@ export default function RepsPage() {
         const data = await callbackRes.json()
         setCallbacks(data)
       }
+      // Load admin-configured targets for this rep
+      let repCommRate = 75
+      if (configRes.ok) {
+        const config = await configRes.json()
+        if (config.targets) {
+          setDailyTarget({
+            dials: config.targets.dials || 200,
+            conversations: config.targets.conversations || 40,
+            closes: config.targets.closes || 3,
+          })
+        }
+        repCommRate = config.commissionRate || 75
+        setCommissionRate(repCommRate)
+        if (config.productPrice) setProductPrice(config.productPrice)
+      }
       if (leaderboardRes.ok) {
         const data = await leaderboardRes.json()
         const reps = (data.users || [])
-          .map((rep: any) => ({ rep, closes: rep.totalCloses || 0, revenue: (rep.totalCloses || 0) * 75 }))
+          .map((rep: any) => ({
+            rep,
+            closes: rep.totalCloses || 0,
+            revenue: (rep.totalCloses || 0) * (rep.commissionRate ?? repCommRate),
+          }))
           .sort((a: any, b: any) => b.revenue - a.revenue)
           .slice(0, 5)
         setLeaderboard(reps)
@@ -199,7 +222,6 @@ export default function RepsPage() {
   const qualifiedLeads = assignedLeads.filter(l => l.status === 'QUALIFIED')
   const dialableLeads = assignedLeads.filter(l => ['NEW', 'HOT_LEAD', 'QUALIFIED'].includes(l.status))
   const todayDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-  const dailyTarget = { dials: 200, conversations: 40, closes: 3 }
   const progressPercent = Math.min(100, Math.round((todayStats.dials / dailyTarget.dials) * 100))
 
   return (
@@ -268,7 +290,7 @@ export default function RepsPage() {
         <StatCard icon={<Users size={20} />} iconBg="bg-teal-50" iconColor="text-teal-600" label="Assigned Leads" value={assignedLeads.length} />
         <StatCard icon={<Target size={20} />} iconBg="bg-red-50" iconColor="text-red-500" label="Hot Leads" value={hotLeads.length} />
         <StatCard icon={<CheckCircle size={20} />} iconBg="bg-emerald-50" iconColor="text-emerald-600" label="Qualified" value={qualifiedLeads.length} />
-        <StatCard icon={<DollarSign size={20} />} iconBg="bg-amber-50" iconColor="text-amber-600" label="Potential Revenue" value={formatCurrency(assignedLeads.length * 149)} />
+        <StatCard icon={<DollarSign size={20} />} iconBg="bg-amber-50" iconColor="text-amber-600" label="Potential Revenue" value={formatCurrency(assignedLeads.length * productPrice)} />
       </div>
 
       {/* Queue + Callbacks Row */}
