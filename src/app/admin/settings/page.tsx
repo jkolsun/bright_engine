@@ -8,7 +8,7 @@ import {
   CheckCircle2, AlertTriangle, XCircle, RefreshCw, Loader2,
   Save, Plus, Trash2, Phone, Link, Brain, Sparkles,
   BarChart3, ExternalLink, Eye, Search, ChevronDown, Split,
-  Pencil, Shield, AlertCircle
+  Pencil, Shield, AlertCircle, X
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 
@@ -193,6 +193,10 @@ export default function SettingsPage() {
   const [addCampaignOpen, setAddCampaignOpen] = useState(false)
   const [newCampaignName, setNewCampaignName] = useState('')
   const [newCampaignId, setNewCampaignId] = useState('')
+  const [editingCampaignKey, setEditingCampaignKey] = useState<string | null>(null)
+  const [editCampaignId, setEditCampaignId] = useState('')
+  const [remoteCampaigns, setRemoteCampaigns] = useState<{ id: string; name: string; status: string }[]>([])
+  const [showRemotePicker, setShowRemotePicker] = useState(false)
 
   // Upsell management (legacy local state — kept for client_sequences compat)
   const [addUpsellOpen, setAddUpsellOpen] = useState(false)
@@ -599,22 +603,28 @@ export default function SettingsPage() {
     finally { setRetentionGenerating(null) }
   }
 
-  // ── Sync Instantly campaigns ───────────────────────────────
+  // ── Instantly campaign CRUD ───────────────────────────────
   const [syncing, setSyncing] = useState(false)
   const syncCampaigns = async () => {
     setSyncing(true)
     try {
       const res = await fetch('/api/instantly/sync-campaigns', { method: 'POST' })
       if (res.ok) {
-        // Reload to get updated campaign IDs
-        const settingsRes = await fetch('/api/settings?key=instantly_campaigns')
-        if (settingsRes.ok) {
-          const data = await settingsRes.json()
-          if (data.value) setCampaigns(data.value)
+        const data = await res.json()
+        if (data.campaigns?.length) {
+          setRemoteCampaigns(data.campaigns)
+          setShowRemotePicker(true)
         }
       }
     } catch (e) { console.error('Sync failed:', e) }
     finally { setSyncing(false) }
+  }
+
+  const importRemoteCampaign = async (remote: { id: string; name: string }) => {
+    const key = remote.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_')
+    const updated = { ...campaigns, [key]: remote.id }
+    setCampaigns(updated)
+    await saveSetting('instantly_campaigns', updated)
   }
 
   const addCampaign = async () => {
@@ -633,6 +643,14 @@ export default function SettingsPage() {
     delete updated[key]
     setCampaigns(updated)
     await saveSetting('instantly_campaigns', updated)
+  }
+
+  const updateCampaignId = async (key: string, newId: string) => {
+    const updated = { ...campaigns, [key]: newId.trim() }
+    setCampaigns(updated)
+    await saveSetting('instantly_campaigns', updated)
+    setEditingCampaignKey(null)
+    setEditCampaignId('')
   }
 
   // ── Upsell helpers ─────────────────────────────────────────
@@ -1371,16 +1389,16 @@ export default function SettingsPage() {
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => setAddCampaignOpen(!addCampaignOpen)}>
                       <Plus size={14} className="mr-1" />
-                      Add Campaign
+                      Add Manual
                     </Button>
                     <Button variant="outline" size="sm" onClick={syncCampaigns} disabled={syncing}>
                       {syncing ? <Loader2 size={14} className="mr-1 animate-spin" /> : <RefreshCw size={14} className="mr-1" />}
-                      {syncing ? 'Syncing...' : 'Sync Campaigns'}
+                      {syncing ? 'Fetching...' : 'Import from Instantly'}
                     </Button>
                   </div>
                 </div>
 
-                {/* Add Campaign Form */}
+                {/* Add Campaign Form (manual) */}
                 {addCampaignOpen && (
                   <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1409,19 +1427,84 @@ export default function SettingsPage() {
                   </div>
                 )}
 
+                {/* Remote Campaign Picker (from Instantly sync) */}
+                {showRemotePicker && remoteCampaigns.length > 0 && (
+                  <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <FieldLabel>Select campaigns to import from Instantly</FieldLabel>
+                      <button onClick={() => setShowRemotePicker(false)} className="text-gray-400 hover:text-gray-600">
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <div className="max-h-60 overflow-y-auto space-y-2">
+                      {remoteCampaigns.map((rc) => {
+                        const alreadyImported = Object.values(campaigns).includes(rc.id)
+                        return (
+                          <div key={rc.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
+                            <div>
+                              <div className="text-sm font-medium">{rc.name}</div>
+                              <div className="text-xs text-gray-400 font-mono">{rc.id}</div>
+                            </div>
+                            {alreadyImported ? (
+                              <span className="text-xs text-green-600 font-medium">Already added</span>
+                            ) : (
+                              <Button size="sm" variant="outline" onClick={() => importRemoteCampaign(rc)}>
+                                <Plus size={14} className="mr-1" />
+                                Import
+                              </Button>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {Object.entries(campaigns).map(([key, id]) => (
                     <div key={key} className="p-4 bg-gray-50 rounded-lg group relative">
                       <div className="text-sm font-medium text-gray-700 mb-1 capitalize">{key.replace(/_/g, ' ')}</div>
-                      <p className="text-xs text-gray-400 font-mono truncate">{id || 'Not configured'}</p>
-                      {!['campaign_a', 'campaign_b'].includes(key) && (
+                      {editingCampaignKey === key ? (
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            value={editCampaignId}
+                            onChange={(e) => setEditCampaignId(e.target.value)}
+                            className="font-mono text-xs h-8"
+                            placeholder="Campaign ID"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') updateCampaignId(key, editCampaignId)
+                              if (e.key === 'Escape') { setEditingCampaignKey(null); setEditCampaignId('') }
+                            }}
+                          />
+                          <Button size="sm" className="h-8 px-2" onClick={() => updateCampaignId(key, editCampaignId)}>Save</Button>
+                          <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => { setEditingCampaignKey(null); setEditCampaignId('') }}>Cancel</Button>
+                        </div>
+                      ) : (
+                        <p
+                          className="text-xs text-gray-400 font-mono truncate cursor-pointer hover:text-blue-500 transition-colors"
+                          title="Click to edit"
+                          onClick={() => { setEditingCampaignKey(key); setEditCampaignId(id) }}
+                        >
+                          {id || 'Click to set campaign ID'}
+                        </p>
+                      )}
+                      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                        <button
+                          onClick={() => { setEditingCampaignKey(key); setEditCampaignId(id) }}
+                          className="p-1 rounded-md text-gray-400 hover:text-blue-500 hover:bg-blue-50"
+                          title="Edit campaign ID"
+                        >
+                          <Pencil size={14} />
+                        </button>
                         <button
                           onClick={() => removeCampaign(key)}
-                          className="absolute top-2 right-2 p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                          className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50"
+                          title="Remove campaign"
                         >
                           <Trash2 size={14} />
                         </button>
-                      )}
+                      </div>
                     </div>
                   ))}
                 </div>

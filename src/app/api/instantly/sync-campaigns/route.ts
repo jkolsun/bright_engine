@@ -2,14 +2,22 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
 
 /**
  * POST /api/instantly/sync-campaigns
- * Fetch campaigns from Instantly API and store IDs in Settings table
- * One-time setup endpoint (public for convenience)
+ * Fetch ALL campaigns from Instantly API and store selected ones in Settings table
+ * If body contains { campaigns: { key: id } }, it saves those directly.
+ * If no body, it fetches from Instantly and returns the list for the UI to pick from.
  */
 export async function POST(request: NextRequest) {
   try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const apiKey = process.env.INSTANTLY_API_KEY
     if (!apiKey) {
       return NextResponse.json(
@@ -18,17 +26,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fetch campaigns from Instantly API with timeout
+    // Fetch all campaigns from Instantly V2 API
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8000)
-    
+    const timeoutId = setTimeout(() => controller.abort(), 10000)
+
     let response
     try {
-      response = await fetch('https://api.instantly.ai/api/v2/campaigns', {
+      response = await fetch('https://api.instantly.ai/api/v2/campaigns?limit=100', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
         },
         signal: controller.signal,
       })
@@ -37,64 +44,28 @@ export async function POST(request: NextRequest) {
     }
 
     if (!response.ok) {
+      const errBody = await response.text()
+      console.error('[Sync Campaigns] Instantly API error:', response.status, errBody)
       return NextResponse.json(
-        { error: 'Failed to fetch campaigns from Instantly', status: response.status },
+        { error: 'Failed to fetch campaigns from Instantly', status: response.status, details: errBody.substring(0, 300) },
         { status: 500 }
       )
     }
 
     const data = (await response.json()) as any
-    const campaigns = data.campaigns || []
+    // V2 API returns { data: [...] } or { items: [...] }
+    const remoteCampaigns = data.data || data.items || data.campaigns || []
 
-    // Find campaigns by name
-    const campaignA = campaigns.find(
-      (c: any) => c.name.toLowerCase().includes('campaign a') || c.name.toLowerCase().includes('bad website')
-    )
-    const campaignB = campaigns.find(
-      (c: any) => c.name.toLowerCase().includes('campaign b') || c.name.toLowerCase().includes('no website')
-    )
+    console.log('[Sync Campaigns] Fetched', remoteCampaigns.length, 'campaigns from Instantly')
 
-    if (!campaignA || !campaignB) {
-      return NextResponse.json({
-        error: 'Could not find Campaign A and Campaign B',
-        found: {
-          campaign_a: campaignA?.id || null,
-          campaign_b: campaignB?.id || null,
-        },
-        all_campaigns: campaigns.map((c: any) => ({ name: c.name, id: c.id })),
-      }, { status: 400 })
-    }
-
-    // Store in Settings table
-    await prisma.settings.upsert({
-      where: { key: 'instantly_campaigns' },
-      create: {
-        key: 'instantly_campaigns',
-        value: {
-          campaign_a: campaignA.id,
-          campaign_b: campaignB.id,
-        },
-      },
-      update: {
-        value: {
-          campaign_a: campaignA.id,
-          campaign_b: campaignB.id,
-        },
-      },
-    })
-
+    // Return the full list so the UI can display them
     return NextResponse.json({
       status: 'success',
-      campaigns_stored: {
-        campaign_a: {
-          name: campaignA.name,
-          id: campaignA.id,
-        },
-        campaign_b: {
-          name: campaignB.name,
-          id: campaignB.id,
-        },
-      },
+      campaigns: remoteCampaigns.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        status: c.status,
+      })),
     })
   } catch (error) {
     console.error('Sync campaigns error:', error)
