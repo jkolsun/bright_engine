@@ -70,27 +70,42 @@ export async function POST(request: NextRequest) {
       const formattedLeads = batch.map(lead => formatLeadForInstantly(lead))
 
       try {
+        const requestBody = {
+          campaign_id: campaignId,
+          skip_if_in_workspace: false,
+          skip_if_in_campaign: false,
+          leads: formattedLeads,
+        }
+
+        console.log(`[Instantly Push] === REQUEST DEBUG ===`)
+        console.log(`[Instantly Push] URL: https://api.instantly.ai/api/v2/leads/add`)
+        console.log(`[Instantly Push] API Key (first 10 chars): ${apiKey.substring(0, 10)}...`)
+        console.log(`[Instantly Push] Campaign ID: ${campaignId}`)
+        console.log(`[Instantly Push] Leads count: ${formattedLeads.length}`)
+        console.log(`[Instantly Push] First lead: ${JSON.stringify(formattedLeads[0])}`)
+        console.log(`[Instantly Push] Full request body: ${JSON.stringify(requestBody).substring(0, 500)}`)
+
         const response = await fetch('https://api.instantly.ai/api/v2/leads/add', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            campaign_id: campaignId,
-            skip_if_in_workspace: false,
-            skip_if_in_campaign: false,
-            leads: formattedLeads,
-          }),
+          body: JSON.stringify(requestBody),
         })
 
+        const responseText = await response.text()
+        console.log(`[Instantly Push] === RESPONSE DEBUG ===`)
+        console.log(`[Instantly Push] Status: ${response.status}`)
+        console.log(`[Instantly Push] Headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`)
+        console.log(`[Instantly Push] Body: ${responseText.substring(0, 500)}`)
+
         if (!response.ok) {
-          const errBody = await response.text()
-          errors.push(`Batch ${Math.floor(i / BATCH_LIMIT) + 1}: ${response.status} — ${errBody.substring(0, 300)}`)
+          errors.push(`Batch ${Math.floor(i / BATCH_LIMIT) + 1}: ${response.status} — ${responseText.substring(0, 300)}`)
           continue
         }
 
-        const result = await response.json()
+        const result = JSON.parse(responseText)
         console.log(`[Instantly Push] Batch result:`, JSON.stringify(result))
 
         totalPushed += batch.length
