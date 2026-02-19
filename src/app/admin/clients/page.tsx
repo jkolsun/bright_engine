@@ -466,7 +466,7 @@ export default function ClientsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <input type="checkbox" id="setup" className="rounded" checked={formData.chargeSiteBuildFee} onChange={(e) => setFormData(prev => ({ ...prev, chargeSiteBuildFee: e.target.checked }))} />
-                    <label htmlFor="setup" className="text-sm">Charge ${pricing.siteBuildFee} site build fee</label>
+                    <label htmlFor="setup" className="text-sm">Charge ${pricing.siteBuildFee} site build fee + ${pricing.monthlyHosting}/mo hosting</label>
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Notes</label>
