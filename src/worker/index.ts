@@ -21,8 +21,9 @@ async function startWorkers() {
     const testConnection = new Redis(process.env.REDIS_URL || process.env.REDIS_HOST || 'redis://localhost:6379', {
       maxRetriesPerRequest: null,
       connectTimeout: 5000,
+      lazyConnect: true,
     })
-    
+
     try {
       await testConnection.connect()
       await testConnection.ping()
@@ -1072,6 +1073,5 @@ async function closeEngineExpireStalled() {
 
 export { startWorkers }
 
-// Note: startWorkers() is called on-demand via GET /api/worker-init, not automatically
-// This prevents startup failures if Redis is not configured
-// startWorkers()
+// When running as standalone worker process (npm run worker), start immediately
+startWorkers()
