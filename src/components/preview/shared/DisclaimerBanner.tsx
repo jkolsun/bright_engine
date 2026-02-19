@@ -6,10 +6,13 @@ import type { TemplateVariant } from '../config/template-types'
 
 export default function DisclaimerBanner({ variant, companyName }: { variant: TemplateVariant; companyName: string }) {
   const [visible, setVisible] = useState(true)
-  const [bannerPrice, setBannerPrice] = useState<number>(149)
+  const [bannerText, setBannerText] = useState('$188 to get started')
 
   useEffect(() => {
-    fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => { if (d?.firstMonthTotal) setBannerPrice(d.firstMonthTotal) }).catch(() => {})
+    fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => {
+      if (d?.previewBannerText) setBannerText(d.previewBannerText)
+      else if (d?.firstMonthTotal) setBannerText(`$${d.firstMonthTotal} to get started`)
+    }).catch(() => {})
   }, [])
 
   if (!visible) return null
@@ -38,7 +41,7 @@ export default function DisclaimerBanner({ variant, companyName }: { variant: Te
             Our dev team will work directly with you to customize every detail.
           </p>
           <p className="text-gray-900 font-bold text-lg mb-5">
-            ${bannerPrice} to go live <span className="text-gray-400 font-normal text-sm">• Expires in 7 days</span>
+            {bannerText} <span className="text-gray-400 font-normal text-sm">• Expires in 7 days</span>
           </p>
 
           <button

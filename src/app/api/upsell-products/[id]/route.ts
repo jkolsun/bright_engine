@@ -41,38 +41,44 @@ export async function PUT(
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }
 
+    const productId = params.id
+    if (!productId) {
+      return NextResponse.json({ error: 'Missing product ID' }, { status: 400 })
+    }
+
     const data = await request.json()
-    const product = await prisma.upsellProduct.update({
-      where: { id: params.id },
-      data: {
-        name: data.name,
-        price: data.price,
-        recurring: data.recurring,
-        stripeLink: data.stripeLink,
-        active: data.active,
-        isCore: data.isCore,
-        month1Price: data.month1Price,
-        recurringPrice: data.recurringPrice,
-        annualPrice: data.annualPrice,
-        stripeLinkAnnual: data.stripeLinkAnnual,
-        pitchOneLiner: data.pitchOneLiner,
-        previewBannerText: data.previewBannerText,
-        repCloseScript: data.repCloseScript,
-        description: data.description,
-        aiPitchInstructions: data.aiPitchInstructions,
-        aiProductSummary: data.aiProductSummary,
-        eligibleIndustries: data.eligibleIndustries || [],
-        minClientAgeDays: data.minClientAgeDays,
-        maxPitchesPerClient: data.maxPitchesPerClient,
-        pitchChannel: data.pitchChannel,
-        sortOrder: data.sortOrder,
+
+    // Only include fields that are explicitly provided (not undefined)
+    const updateData: Record<string, unknown> = {}
+    const fields = [
+      'name', 'price', 'recurring', 'stripeLink', 'active', 'isCore',
+      'month1Price', 'recurringPrice', 'annualPrice', 'stripeLinkAnnual',
+      'pitchOneLiner', 'previewBannerText', 'repCloseScript',
+      'description', 'aiPitchInstructions', 'aiProductSummary',
+      'minClientAgeDays', 'maxPitchesPerClient', 'pitchChannel', 'sortOrder',
+    ]
+    for (const field of fields) {
+      if (field in data) {
+        updateData[field] = data[field]
       }
+    }
+    // Always default eligibleIndustries to [] if provided
+    if ('eligibleIndustries' in data) {
+      updateData.eligibleIndustries = data.eligibleIndustries || []
+    }
+
+    const product = await prisma.upsellProduct.update({
+      where: { id: productId },
+      data: updateData,
     })
 
     return NextResponse.json({ product })
-  } catch (error) {
-    console.error('Error updating product:', error)
-    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  } catch (error: any) {
+    console.error('Error updating product:', error?.message || error)
+    return NextResponse.json(
+      { error: error?.message || 'Failed to update product' },
+      { status: 500 }
+    )
   }
 }
 

@@ -6,7 +6,7 @@ export default function PreviewCTABanner({ previewId }: { previewId: string }) {
   const [dismissed, setDismissed] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [bannerPrice, setBannerPrice] = useState<number>(149)
+  const [bannerPrice, setBannerPrice] = useState<number>(188)
 
   useEffect(() => {
     const wasDismissed = sessionStorage.getItem(`cta_dismissed_${previewId}`)

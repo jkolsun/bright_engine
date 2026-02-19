@@ -29,12 +29,12 @@ export const stripe = new Proxy({} as Stripe, {
 
 // LEGACY FALLBACK — primary source is now Products table via getPaymentLinkDynamic()
 const PAYMENT_LINKS = {
-  SITE_BUILD: process.env.STRIPE_LINK_SITE_BUILD || '', // $149 one-time
+  SITE_BUILD: process.env.STRIPE_LINK_SITE_BUILD || '', // $188 first month (build + hosting)
   HOSTING_MONTHLY: process.env.STRIPE_LINK_HOSTING_39 || '', // $39/month
   HOSTING_ANNUAL: process.env.STRIPE_LINK_HOSTING_ANNUAL || '', // $349/year (save $119)
   GBP_SETUP: process.env.STRIPE_LINK_GBP || '', // $49 one-time
   REVIEW_WIDGET: process.env.STRIPE_LINK_REVIEW_WIDGET || '', // $69/month
-  SEO_MONTHLY: process.env.STRIPE_LINK_SEO || '', // $149/month
+  SEO_MONTHLY: process.env.STRIPE_LINK_SEO || '', // $59/month
   SOCIAL_MONTHLY: process.env.STRIPE_LINK_SOCIAL || '', // $99/month
 }
 
