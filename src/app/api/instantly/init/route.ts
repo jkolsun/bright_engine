@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { initializeInstantlyJobs, startInstantlyWorker } from '@/worker/instantly-jobs'
 import { verifySession } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * POST /api/instantly/init
- * Initialize Instantly BullMQ jobs on application startup
- * Admin-only (called once on deploy)
+ * Instantly jobs now run in the dedicated worker service.
+ * This endpoint is kept for backward compatibility.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -17,28 +16,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }
 
-    console.log('[Instantly] Initializing jobs and worker...')
-
-    // Initialize repeatable jobs
-    await initializeInstantlyJobs()
-
-    // Start the worker (listens for jobs)
-    startInstantlyWorker()
-
     return NextResponse.json({
-      status: 'initialized',
-      message: 'Instantly BullMQ jobs created and worker started',
-      jobs: [
-        'daily-sync @ 8:00 AM ET',
-        'midday-check @ 1:00 PM ET',
-        'webhook-reconciliation @ hourly',
-        'nightly-reconciliation @ 2:00 AM ET',
-      ],
+      status: 'ok',
+      message: 'Instantly jobs run in the dedicated worker service — not in the web process',
     })
   } catch (error) {
     console.error('Initialization error:', error)
     return NextResponse.json(
-      { error: 'Failed to initialize', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Failed', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }

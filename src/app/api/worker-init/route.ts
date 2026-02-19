@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server'
-import { startWorkersOnce, getWorkerStatus } from '@/worker/worker-manager'
 
+// Workers now run in a dedicated Railway service (npm run worker).
+// This endpoint is kept for backward compatibility but no longer starts workers.
 export async function GET() {
-  await startWorkersOnce()
-  const status = getWorkerStatus()
-  return NextResponse.json({ 
+  return NextResponse.json({
     status: 'ok',
-    redis: true,
-    reason: status.workerStarted ? 'Worker started' : 'Worker failed to start',
-    workerStarted: status.workerStarted, 
-    error: status.error 
+    message: 'Workers run in dedicated worker service — not in the web process',
+    workerStarted: true,
   })
 }
