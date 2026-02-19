@@ -57,9 +57,15 @@ export async function PUT(
       'description', 'aiPitchInstructions', 'aiProductSummary',
       'minClientAgeDays', 'maxPitchesPerClient', 'pitchChannel', 'sortOrder',
     ]
+    // Fields where empty string should become null (optional URL/text fields)
+    const nullableFields = new Set([
+      'stripeLink', 'stripeLinkAnnual', 'pitchOneLiner', 'previewBannerText',
+      'repCloseScript', 'description', 'aiPitchInstructions', 'aiProductSummary',
+    ])
     for (const field of fields) {
       if (field in data) {
-        updateData[field] = data[field]
+        const val = data[field]
+        updateData[field] = nullableFields.has(field) && (val === '' || val === undefined) ? null : val
       }
     }
     // Always default eligibleIndustries to [] if provided
