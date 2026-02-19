@@ -763,24 +763,6 @@ export default function MessagesPage() {
         </div>
       </div>
 
-      {/* Twilio Status */}
-      <Card className={`p-4 ${twilioStatus === 'connected' ? 'border-green-300 bg-green-50' : twilioStatus === 'disconnected' ? 'border-amber-300 bg-amber-50' : 'border-gray-300'}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {twilioStatus === 'connected' ? <CheckCircle size={20} className="text-green-600" /> : <AlertCircle size={20} className="text-amber-600" />}
-            <div>
-              <span className="font-semibold text-sm text-gray-900">
-                Twilio SMS {twilioStatus === 'connected' ? 'Connected' : 'Not Connected'}
-              </span>
-              {twilioStatus !== 'connected' && (
-                <p className="text-xs text-gray-500">Add Twilio credentials to Railway to enable SMS</p>
-              )}
-            </div>
-          </div>
-          {twilioStatus === 'connected' && <Badge variant="default">Active</Badge>}
-        </div>
-      </Card>
-
       {/* Inbox Tabs — Teal active indicator */}
       <div className="flex border-b border-gray-200">
         {[
