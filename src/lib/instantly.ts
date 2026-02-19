@@ -417,70 +417,94 @@ async function pushLeadsPerCampaign(calculations: any) {
       continue
     }
 
-    // Format for Instantly API with full custom variables
-    // These map to {{variable}} merge tags in email sequences
-    const pushLeads = leadsToPush.map((lead) => {
-      const deliveryDate = new Date()
-      deliveryDate.setDate(deliveryDate.getDate() + 3)
-      const deliveryStr = deliveryDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
-
-      return {
-        email: lead.email || undefined,
-        first_name: lead.firstName || undefined,
-        last_name: lead.lastName || undefined,
-        company_name: lead.companyName || undefined,
-        website: lead.website || undefined,
-        phone: lead.phone || undefined,
-        // Custom variables for email sequence merge tags
-        preview_url: lead.previewUrl || '',
-        personalization: lead.personalization || '',
-        industry: formatIndustry(lead.industry) || 'home service',
-        location: [lead.city, lead.state].filter(Boolean).join(', ') || '',
-        delivery_date: deliveryStr,
-      }
-    })
+    // Push leads individually to Instantly V2 API with controlled concurrency
+    const CONCURRENCY = 5
+    let totalPushed = 0
+    const successIds: string[] = []
 
     try {
-      // Push to Instantly API
-      const response = await fetch(`${INSTANTLY_API_BASE}/leads`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          campaign_id: campaignId,
-          leads: pushLeads,
-        }),
-      })
+      for (let i = 0; i < leadsToPush.length; i += CONCURRENCY) {
+        const chunk = leadsToPush.slice(i, i + CONCURRENCY)
 
-      if (!response.ok) {
-        throw new Error(`Push failed: ${response.statusText}`)
+        const pushResults = await Promise.allSettled(
+          chunk.map(async (lead) => {
+            const deliveryDate = new Date()
+            deliveryDate.setDate(deliveryDate.getDate() + 3)
+            const deliveryStr = deliveryDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+
+            // Parse personalization if stored as JSON
+            let personalizationLine = ''
+            try {
+              const p = typeof lead.personalization === 'string' ? JSON.parse(lead.personalization) : lead.personalization
+              personalizationLine = p?.firstLine || ''
+            } catch { personalizationLine = lead.personalization || '' }
+
+            const response = await fetch(`${INSTANTLY_API_BASE}/leads`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: lead.email,
+                first_name: lead.firstName || '',
+                last_name: lead.lastName || '',
+                company_name: lead.companyName || '',
+                website: lead.website || '',
+                phone: lead.phone || '',
+                personalization: personalizationLine,
+                campaign_id: campaignId,
+                skip_if_in_workspace: false,
+                skip_if_in_campaign: false,
+                custom_variables: {
+                  preview_url: lead.previewUrl || '',
+                  industry: formatIndustry(lead.industry) || 'home service',
+                  location: [lead.city, lead.state].filter(Boolean).join(', ') || '',
+                  delivery_date: deliveryStr,
+                },
+              }),
+            })
+
+            if (!response.ok) {
+              const errBody = await response.text()
+              throw new Error(`${response.status}: ${errBody.substring(0, 200)}`)
+            }
+
+            return lead.id
+          })
+        )
+
+        for (const result of pushResults) {
+          if (result.status === 'fulfilled') {
+            successIds.push(result.value)
+            totalPushed++
+          }
+        }
       }
 
-      // Update leads in database
-      await prisma.lead.updateMany({
-        where: {
-          id: { in: leadsToPush.map((l) => l.id) },
-        },
-        data: {
-          instantlyStatus: 'IN_SEQUENCE',
-          instantlyAddedDate: new Date(),
-          instantlyCurrentStep: 1,
-          instantlyCampaignId: campaignId,
-        },
-      })
+      // Update successful leads in database
+      if (successIds.length > 0) {
+        await prisma.lead.updateMany({
+          where: { id: { in: successIds } },
+          data: {
+            instantlyStatus: 'IN_SEQUENCE',
+            instantlyAddedDate: new Date(),
+            instantlyCurrentStep: 1,
+            instantlyCampaignId: campaignId,
+          },
+        })
+      }
 
       results[campaignId] = {
-        pushed: leadsToPush.length,
-        reason: 'Successfully pushed',
+        pushed: totalPushed,
+        reason: totalPushed > 0 ? 'Successfully pushed' : 'All leads failed to push',
       }
 
-      console.log(`[Instantly] Campaign ${campaignId}: pushed ${leadsToPush.length} leads`)
+      console.log(`[Instantly] Campaign ${campaignId}: pushed ${totalPushed}/${leadsToPush.length} leads`)
     } catch (error) {
       console.error(`[Instantly] Campaign ${campaignId}: push failed`, error)
       results[campaignId] = {
-        pushed: 0,
+        pushed: totalPushed,
         reason: `Push failed: ${error instanceof Error ? error.message : String(error)}`,
       }
     }

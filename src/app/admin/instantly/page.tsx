@@ -181,7 +181,8 @@ function InstantlyDashboard() {
         setTimeout(() => setPushResult(null), 7000)
         fetchStats()
       } else {
-        setPushError(data.error || 'Push failed')
+        const errorDetail = data.error || data.errors?.[0] || data.details || `Push failed (${data.pushed || 0}/${data.total || 0})`
+        setPushError(errorDetail)
       }
     } catch (err) {
       setPushError(err instanceof Error ? err.message : 'Push request failed')
