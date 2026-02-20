@@ -21,7 +21,7 @@ import {
   ChevronDown, ChevronUp, DollarSign,
   Edit3, Star,
   ArrowLeft, Phone, Mail,
-  CheckCircle, Eye, X, Trash2,
+  CheckCircle, Eye, X, Trash2, MessageSquare,
   RefreshCw
 } from 'lucide-react'
 
@@ -304,6 +304,23 @@ export default function ClientsPage() {
             alert('Failed to delete client')
           }
         } catch (e) { console.error('Delete failed:', e) }
+      }}
+      onDeleteMessages={async () => {
+        try {
+          const res = await fetch(`/api/clients/${selectedClient.id}/messages`, { method: 'DELETE' })
+          if (res.ok) {
+            const data = await res.json()
+            alert(`Deleted ${data.count} messages`)
+            // Refresh client data to clear messages from UI
+            const refreshRes = await fetch(`/api/clients/${selectedClient.id}`)
+            if (refreshRes.ok) {
+              const refreshData = await refreshRes.json()
+              setSelectedClient(refreshData.client)
+            }
+          } else {
+            alert('Failed to delete messages')
+          }
+        } catch (e) { console.error('Delete messages failed:', e) }
       }}
       profileTab={profileTab}
       setProfileTab={setProfileTab}
@@ -665,7 +682,7 @@ export default function ClientsPage() {
 // ═══════════════════════════════════════════════
 // CLIENT PROFILE VIEW
 // ═══════════════════════════════════════════════
-function ClientProfile({ client, onBack, onUpdate, onDelete, profileTab, setProfileTab }: any) {
+function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, profileTab, setProfileTab }: any) {
   const contact = client.contactName || (client.lead ? `${client.lead.firstName} ${client.lead.lastName || ''}`.trim() : '')
   const phone = client.phone || client.lead?.phone || ''
   const email = client.email || client.lead?.email || ''
@@ -900,6 +917,21 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, profileTab, setProf
                 >
                   <Trash2 size={14} className="mr-2" />
                   Cancel Client
+                </Button>
+              </div>
+              <div className="pt-4 border-t border-red-100">
+                <p className="text-sm text-gray-500 mb-2">Delete all message history for this client. The client record stays intact.</p>
+                <Button
+                  variant="destructive"
+                  className="bg-orange-600 hover:bg-orange-700"
+                  onClick={() => {
+                    if (confirm(`Delete ALL messages for ${client.companyName}?\n\nThis will permanently remove every message in their thread. The client record itself will not be affected.\n\nThis cannot be undone.`)) {
+                      onDeleteMessages()
+                    }
+                  }}
+                >
+                  <MessageSquare size={14} className="mr-2" />
+                  Delete All Messages
                 </Button>
               </div>
               <div className="pt-4 border-t border-red-100">
