@@ -61,6 +61,16 @@ export default function LeadsPage() {
   )
 }
 
+/** Safely render any value as a string in JSX — prevents React Error #31 */
+function safeRender(value: any, fallback: string = '—'): string {
+  if (value === null || value === undefined) return fallback
+  if (typeof value === 'string') return value || fallback
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  if (Array.isArray(value)) return value.map(v => typeof v === 'string' ? v : JSON.stringify(v)).join(', ') || fallback
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value)
+}
+
 function LeadsPageInner() {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
@@ -1214,10 +1224,10 @@ function LeadsPageInner() {
                                   personalizationData.tier === 'S' ? 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-300' :
                                   personalizationData.tier === 'A' ? 'bg-blue-100 text-blue-800 ring-1 ring-blue-300' :
                                   'bg-gray-100 text-gray-600 ring-1 ring-gray-300'
-                                }`}>{personalizationData.tier}</span>
+                                }`}>{safeRender(personalizationData.tier)}</span>
                               )}
                               <Sparkles size={13} className="text-purple-500 flex-shrink-0" />
-                              <span className="truncate">{personalizationData.firstLine}</span>
+                              <span className="truncate">{safeRender(personalizationData.firstLine)}</span>
                               {/* Hover tooltip showing full personalization */}
                               <div className="hidden group-hover/pers:block absolute left-0 top-full z-50 mt-1 w-80 bg-white border border-purple-200 rounded-lg shadow-xl p-4 space-y-2" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
@@ -1228,29 +1238,40 @@ function LeadsPageInner() {
                                       personalizationData.tier === 'S' ? 'bg-yellow-100 text-yellow-800' :
                                       personalizationData.tier === 'A' ? 'bg-blue-100 text-blue-800' :
                                       'bg-gray-100 text-gray-600'
-                                    }`}>Tier {personalizationData.tier}</span>
+                                    }`}>Tier {safeRender(personalizationData.tier)}</span>
                                   )}
                                 </div>
                                 <div>
                                   <div className="text-[10px] font-semibold text-purple-600 uppercase tracking-wider mb-0.5">First Line</div>
-                                  <p className="text-xs text-gray-800 leading-relaxed">{personalizationData.firstLine}</p>
+                                  <p className="text-xs text-gray-800 leading-relaxed">{safeRender(personalizationData.firstLine)}</p>
                                 </div>
                                 {personalizationData.hook && (
                                   <div>
                                     <div className="text-[10px] font-semibold text-purple-600 uppercase tracking-wider mb-0.5">Hook</div>
-                                    <p className="text-xs text-gray-700">{personalizationData.hook}</p>
+                                    <p className="text-xs text-gray-700">{safeRender(personalizationData.hook)}</p>
                                   </div>
                                 )}
                                 {personalizationData.angle && (
                                   <div>
                                     <div className="text-[10px] font-semibold text-purple-600 uppercase tracking-wider mb-0.5">Angle</div>
-                                    <p className="text-xs text-gray-700">{personalizationData.angle}</p>
+                                    <p className="text-xs text-gray-700">{safeRender(personalizationData.angle)}</p>
                                   </div>
                                 )}
                                 {personalizationData.websiteCopy && (
                                   <div>
                                     <div className="text-[10px] font-semibold text-purple-600 uppercase tracking-wider mb-0.5">Website Copy</div>
-                                    <p className="text-xs text-gray-600 italic">{personalizationData.websiteCopy}</p>
+                                    {typeof personalizationData.websiteCopy === 'object' ? (
+                                      <div className="space-y-0.5">
+                                        {personalizationData.websiteCopy.heroHeadline && (
+                                          <p className="text-xs text-gray-700 font-medium">{String(personalizationData.websiteCopy.heroHeadline)}</p>
+                                        )}
+                                        {personalizationData.websiteCopy.heroSubheadline && (
+                                          <p className="text-xs text-gray-600 italic">{String(personalizationData.websiteCopy.heroSubheadline)}</p>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <p className="text-xs text-gray-600 italic">{safeRender(personalizationData.websiteCopy)}</p>
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -1258,7 +1279,7 @@ function LeadsPageInner() {
                           ) : <span className="text-gray-400">—</span>}
                         </td>
                         <td className="p-3 text-sm text-gray-700 max-w-[150px]">
-                          <div className="truncate" title={lead.notes || ''}>{lead.notes || '—'}</div>
+                          <div className="truncate" title={safeRender(lead.notes, '')}>{safeRender(lead.notes)}</div>
                         </td>
                         {/* Sticky right: Assigned To */}
                         <td className={`sticky right-[200px] z-10 ${rowBg} p-3 whitespace-nowrap border-l border-gray-100 shadow-[-2px_0_4px_rgba(0,0,0,0.06)]`}>
@@ -1350,31 +1371,42 @@ function LeadsPageInner() {
                                         personalizationData.tier === 'S' ? 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-300' :
                                         personalizationData.tier === 'A' ? 'bg-blue-100 text-blue-700 ring-1 ring-blue-300' :
                                         'bg-gray-100 text-gray-600 ring-1 ring-gray-300'
-                                      }`}>Tier {personalizationData.tier}</span>
+                                      }`}>Tier {safeRender(personalizationData.tier)}</span>
                                     )}
                                   </div>
                                   {personalizationData ? (
                                     <div className="space-y-3">
                                       <div>
                                         <div className="text-xs font-medium text-purple-600 uppercase tracking-wider mb-1">First Line</div>
-                                        <p className="text-sm text-gray-800 leading-relaxed">{personalizationData.firstLine || '—'}</p>
+                                        <p className="text-sm text-gray-800 leading-relaxed">{safeRender(personalizationData.firstLine)}</p>
                                       </div>
                                       {personalizationData.hook && (
                                         <div>
                                           <div className="text-xs font-medium text-purple-600 uppercase tracking-wider mb-1">Hook</div>
-                                          <p className="text-sm text-gray-700">{personalizationData.hook}</p>
+                                          <p className="text-sm text-gray-700">{safeRender(personalizationData.hook)}</p>
                                         </div>
                                       )}
                                       {personalizationData.angle && (
                                         <div>
                                           <div className="text-xs font-medium text-purple-600 uppercase tracking-wider mb-1">Angle</div>
-                                          <p className="text-sm text-gray-700">{personalizationData.angle}</p>
+                                          <p className="text-sm text-gray-700">{safeRender(personalizationData.angle)}</p>
                                         </div>
                                       )}
                                       {personalizationData.websiteCopy && (
                                         <div>
                                           <div className="text-xs font-medium text-purple-600 uppercase tracking-wider mb-1">Website Copy</div>
-                                          <p className="text-sm text-gray-600 italic">{personalizationData.websiteCopy}</p>
+                                          {typeof personalizationData.websiteCopy === 'object' ? (
+                                            <div className="space-y-1">
+                                              {personalizationData.websiteCopy.heroHeadline && (
+                                                <p className="text-sm text-gray-700 font-medium">{String(personalizationData.websiteCopy.heroHeadline)}</p>
+                                              )}
+                                              {personalizationData.websiteCopy.heroSubheadline && (
+                                                <p className="text-sm text-gray-600 italic">{String(personalizationData.websiteCopy.heroSubheadline)}</p>
+                                              )}
+                                            </div>
+                                          ) : (
+                                            <p className="text-sm text-gray-600 italic">{safeRender(personalizationData.websiteCopy)}</p>
+                                          )}
                                         </div>
                                       )}
                                     </div>
@@ -1403,7 +1435,7 @@ function LeadsPageInner() {
                                       {lead.enrichedAddress && (
                                         <div className="flex items-start gap-2">
                                           <MapPin size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                                          <span className="text-sm text-gray-700">{lead.enrichedAddress}</span>
+                                          <span className="text-sm text-gray-700">{safeRender(lead.enrichedAddress)}</span>
                                         </div>
                                       )}
                                       {lead.enrichedServices && Array.isArray(lead.enrichedServices) && lead.enrichedServices.length > 0 && (
