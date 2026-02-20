@@ -23,7 +23,7 @@ type ServiceStatus = {
 
 type SettingsData = Record<string, any>
 
-type TabId = 'company' | 'sequences' | 'personalization' | 'targets' | 'team' | 'api' | 'diagnostics'
+type TabId = 'company' | 'sequences' | 'personalization' | 'targets' | 'team' | 'api' | 'diagnostics' | 'ai_templates'
 
 // ── Helper Components ──────────────────────────────────────────
 
@@ -249,6 +249,11 @@ export default function SettingsPage() {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [envLinks, setEnvLinks] = useState<Record<string, { set: boolean; preview: string }>>({})
 
+  // AI scenario templates
+  const [scenarioTemplates, setScenarioTemplates] = useState<Record<string, { instructions_override: string; enabled: boolean }>>({})
+  const [editingScenario, setEditingScenario] = useState<string | null>(null)
+  const [firstMessageTemplates, setFirstMessageTemplates] = useState<Record<string, string>>({})
+
   const [newProduct, setNewProduct] = useState({
     name: '', price: '', recurring: true, isCore: false,
     stripeLink: '', month1Price: '', recurringPrice: '', annualPrice: '',
@@ -357,6 +362,10 @@ export default function SettingsPage() {
       if (s.targets && typeof s.targets === 'object') setTargets({ ...DEFAULT_TARGETS, ...s.targets })
       if (s.instantly_campaigns && typeof s.instantly_campaigns === 'object') setCampaigns(s.instantly_campaigns)
       if (s.rep_targets && typeof s.rep_targets === 'object') setRepTargets(s.rep_targets)
+      if (s.close_engine_scenarios && typeof s.close_engine_scenarios === 'object') {
+        setScenarioTemplates(s.close_engine_scenarios.scenarios || {})
+        setFirstMessageTemplates(s.close_engine_scenarios.firstMessages || {})
+      }
 
       setSettingsLoaded(true)
     } catch (e) {
@@ -534,8 +543,17 @@ export default function SettingsPage() {
   }
 
   const handleDeleteProduct = async (id: string, name: string) => {
-    if (!confirm(`Deactivate "${name}"? It will no longer appear in AI prompts or recommendations.`)) return
+    if (!confirm(`Delete "${name}" permanently? This removes it from the system. Historical pitch data is preserved.`)) return
     await fetch(`/api/upsell-products/${id}`, { method: 'DELETE' })
+    await fetchProducts()
+  }
+
+  const handleDeactivateProduct = async (id: string, active: boolean) => {
+    await fetch(`/api/upsell-products/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active: !active }),
+    })
     await fetchProducts()
   }
 
@@ -789,6 +807,7 @@ export default function SettingsPage() {
     { id: 'team' as TabId, label: 'Team', icon: <Users size={16} /> },
     { id: 'api' as TabId, label: 'API Keys', icon: <Key size={16} /> },
     { id: 'diagnostics' as TabId, label: 'Diagnostics', icon: <Activity size={16} /> },
+    { id: 'ai_templates' as TabId, label: 'AI Templates', icon: <Sparkles size={16} /> },
   ]
 
   const connectedCount = services?.filter(s => s.connected === true).length ?? 0
@@ -1263,8 +1282,11 @@ export default function SettingsPage() {
                             {verify && <span className={`text-xs px-2 py-0.5 rounded-full ${verify.valid ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{verify.valid ? 'Live' : 'Failed'}</span>}
                             {pitchCount > 0 && <span className="text-xs text-gray-500">{paidCount}/{pitchCount} converted</span>}
                             {product.stripeLink && <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleVerifyLink(product.id, product.stripeLink)}><Shield size={12} className="mr-1" /> Verify</Button>}
+                            <Button variant="outline" size="sm" className={`h-7 text-xs ${product.active ? '' : 'border-green-300 text-green-600 hover:bg-green-50'}`} onClick={() => handleDeactivateProduct(product.id, product.active)}>
+                              {product.active ? 'Deactivate' : 'Reactivate'}
+                            </Button>
                             <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setEditingProductId(product.id); setEditingProductData({ ...product }); setShowUpsellTargeting(false) }}><Pencil size={12} className="mr-1" /> Edit</Button>
-                            <button onClick={() => handleDeleteProduct(product.id, product.name)} className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"><Trash2 size={14} /></button>
+                            <button onClick={() => handleDeleteProduct(product.id, product.name)} className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all" title="Delete permanently"><Trash2 size={14} /></button>
                           </div>
                         </div>
                       )}
@@ -1297,7 +1319,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════
+      {/* ════════════════════════════════════════════════��══════════
           TAB: SEQUENCES
          ═══════════════════════════════════════════════════════════ */}
       {activeTab === 'sequences' && (
@@ -2391,6 +2413,150 @@ export default function SettingsPage() {
 
       {activeTab === 'diagnostics' && (
         <DiagnosticsPanel />
+      )}
+
+      {activeTab === 'ai_templates' && (
+        <div className="space-y-6">
+          {/* Stage Instruction Overrides */}
+          <Card className="p-6">
+            <SectionHeader
+              title="Close Engine Stage Templates"
+              description="Customize AI instructions for each conversation stage. Leave blank to use the built-in defaults."
+            />
+            <div className="space-y-3">
+              {[
+                { stage: 'INITIATED', label: 'Initiated', desc: 'Opening message when a new lead enters the funnel' },
+                { stage: 'QUALIFYING', label: 'Qualifying', desc: 'Collecting core info (services, hours, photos)' },
+                { stage: 'COLLECTING_INFO', label: 'Collecting Info', desc: 'Follow-up questions after core questions answered' },
+                { stage: 'BUILDING', label: 'Building', desc: 'Site is being built, keep lead engaged' },
+                { stage: 'PREVIEW_SENT', label: 'Preview Sent', desc: 'Waiting for lead feedback on preview' },
+                { stage: 'EDIT_LOOP', label: 'Edit Loop', desc: 'Lead wants changes to their preview' },
+                { stage: 'PAYMENT_SENT', label: 'Payment Sent', desc: 'Payment link sent, handling pricing questions' },
+                { stage: 'STALLED', label: 'Stalled', desc: 'Lead went quiet, follow-up needed' },
+                { stage: 'CLOSED_LOST', label: 'Closed Lost', desc: 'Lead declined, handle re-engagement' },
+              ].map(({ stage, label, desc }) => {
+                const override = scenarioTemplates[stage]?.instructions_override || ''
+                const isEditing = editingScenario === stage
+
+                return (
+                  <div key={stage} className="border rounded-lg overflow-hidden">
+                    <div
+                      className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => setEditingScenario(isEditing ? null : stage)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${override ? 'bg-blue-500' : 'bg-gray-300'}`} />
+                        <div>
+                          <span className="font-medium text-gray-900">{label}</span>
+                          <span className="text-xs text-gray-500 ml-2">{desc}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {override && <span className="text-xs text-blue-600 font-medium">Custom</span>}
+                        <ChevronDown size={16} className={`text-gray-400 transition-transform ${isEditing ? 'rotate-180' : ''}`} />
+                      </div>
+                    </div>
+
+                    {isEditing && (
+                      <div className="px-4 pb-4 border-t bg-gray-50/50">
+                        <textarea
+                          className="w-full mt-3 p-3 border rounded-md text-sm font-mono resize-y min-h-[120px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          value={override}
+                          onChange={(e) => setScenarioTemplates(prev => ({
+                            ...prev,
+                            [stage]: { instructions_override: e.target.value, enabled: true }
+                          }))}
+                          placeholder="Leave blank to use default instructions for this stage..."
+                        />
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-xs text-gray-400">
+                            Variables: {'{{firstName}}'} {'{{companyName}}'} {'{{siteBuildFee}}'} {'{{monthlyHosting}}'}
+                          </p>
+                          {override && (
+                            <button
+                              onClick={() => setScenarioTemplates(prev => {
+                                const updated = { ...prev }
+                                delete updated[stage]
+                                return updated
+                              })}
+                              className="text-xs text-red-500 hover:text-red-700"
+                            >
+                              Reset to default
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </Card>
+
+          {/* First Message Templates */}
+          <Card className="p-6">
+            <SectionHeader
+              title="First Message Templates"
+              description="Customize the opening message for each entry point. These are sent as-is (not AI-generated)."
+            />
+            <div className="space-y-4">
+              {[
+                { key: 'INSTANTLY_REPLY', label: 'Email Reply', desc: 'Lead replied to an Instantly email', default: 'Hey {firstName}! Saw your reply about the website \u2014 excited to get {companyName} set up. Quick question: What are the top 3 services you want highlighted on your site?' },
+                { key: 'SMS_REPLY', label: 'SMS Reply', desc: 'Lead replied to an SMS', default: 'Hey {firstName}! Great to hear from you. Let\'s get {companyName}\'s site built. Quick question to start: What are the top 3 services you want front and center on your website?' },
+                { key: 'REP_CLOSE', label: 'Rep Close', desc: 'Rep handed off a lead', default: 'Hey {firstName}! Just spoke with the team \u2014 let\'s get your site live. Quick question: What are the top 3 services {companyName} offers that you want highlighted?' },
+                { key: 'PREVIEW_CTA', label: 'Preview CTA', desc: 'Lead clicked the preview CTA', default: 'Hey {firstName}! Saw you\'re ready to get your site live \u2014 love it. Quick question before we build it out: What are the top 3 services {companyName} offers that you want front and center?' },
+              ].map(({ key, label, desc, default: defaultTemplate }) => {
+                const customTemplate = firstMessageTemplates[key] || ''
+
+                return (
+                  <div key={key} className="border rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-medium text-gray-900 text-sm">{label}</span>
+                      <span className="text-xs text-gray-500">{desc}</span>
+                      {customTemplate && <span className="text-xs text-blue-600 font-medium ml-auto">Custom</span>}
+                    </div>
+                    <textarea
+                      className="w-full p-3 border rounded-md text-sm resize-y min-h-[80px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      value={customTemplate || defaultTemplate}
+                      onChange={(e) => setFirstMessageTemplates(prev => ({
+                        ...prev,
+                        [key]: e.target.value
+                      }))}
+                      placeholder={defaultTemplate}
+                    />
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-xs text-gray-400">Variables: {'{firstName}'} {'{companyName}'}</p>
+                      {customTemplate && (
+                        <button
+                          onClick={() => setFirstMessageTemplates(prev => {
+                            const updated = { ...prev }
+                            delete updated[key]
+                            return updated
+                          })}
+                          className="text-xs text-red-500 hover:text-red-700"
+                        >
+                          Reset to default
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </Card>
+
+          {/* Save */}
+          <div className="flex justify-end">
+            <SaveButton
+              onClick={() => saveSetting('close_engine_scenarios', {
+                scenarios: scenarioTemplates,
+                firstMessages: firstMessageTemplates,
+              })}
+              saving={savingKey === 'close_engine_scenarios'}
+              saved={savedKey === 'close_engine_scenarios'}
+            />
+          </div>
+        </div>
       )}
 
     </div>

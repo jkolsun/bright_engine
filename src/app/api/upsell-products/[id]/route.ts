@@ -7,9 +7,10 @@ export const dynamic = 'force-dynamic'
 // GET /api/upsell-products/[id]
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
@@ -17,7 +18,7 @@ export async function GET(
     }
 
     const product = await prisma.upsellProduct.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { pitches: { orderBy: { pitchedAt: 'desc' }, take: 50 } }
     })
 
@@ -32,16 +33,16 @@ export async function GET(
 // PUT /api/upsell-products/[id]
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: productId } = await params
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }
 
-    const productId = params.id
     if (!productId) {
       return NextResponse.json({ error: 'Missing product ID' }, { status: 400 })
     }
@@ -88,26 +89,55 @@ export async function PUT(
   }
 }
 
-// DELETE /api/upsell-products/[id] — Soft delete
+// DELETE /api/upsell-products/[id] — Soft delete (sets deletedAt + deactivates)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }
 
-    const product = await prisma.upsellProduct.update({
-      where: { id: params.id },
-      data: { active: false }
-    })
+    // Check for existing pitches
+    const pitchCount = await prisma.upsellPitch.count({ where: { productId: id } })
 
-    return NextResponse.json({ product, message: 'Deactivated' })
+    if (pitchCount > 0) {
+      // Soft delete — has historical pitch data
+      await prisma.upsellProduct.update({
+        where: { id },
+        data: { deletedAt: new Date(), active: false },
+      })
+    } else {
+      // No pitches — safe to hard delete
+      await prisma.upsellProduct.delete({ where: { id } })
+    }
+
+    // Clean up clientSequences settings JSON to remove this product
+    try {
+      const settingsRow = await prisma.settings.findUnique({ where: { key: 'client_sequences' } })
+      if (settingsRow?.value && typeof settingsRow.value === 'object') {
+        const sequences = settingsRow.value as any
+        if (sequences.upsellProducts && Array.isArray(sequences.upsellProducts)) {
+          sequences.upsellProducts = sequences.upsellProducts.filter(
+            (p: any) => p.id !== id && p.key !== id
+          )
+          await prisma.settings.update({
+            where: { key: 'client_sequences' },
+            data: { value: sequences },
+          })
+        }
+      }
+    } catch {
+      // Non-fatal — settings cleanup is best effort
+    }
+
+    return NextResponse.json({ success: true, message: 'Deleted' })
   } catch (error) {
-    console.error('Error deactivating product:', error)
-    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+    console.error('Error deleting product:', error)
+    return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 })
   }
 }

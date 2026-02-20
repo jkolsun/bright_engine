@@ -161,22 +161,35 @@ export default function ImportPage() {
   // Download leads as CSV
   const downloadCSV = (leads: any[]) => {
     if (!leads.length) return
-    const headers = ['First Name', 'Last Name', 'Company', 'Email', 'Phone', 'City', 'State', 'Industry', 'Website', 'Status', 'Rating', 'Reviews', 'Preview URL']
-    const rows = leads.map(l => [
-      l.firstName || '',
-      l.lastName || '',
-      l.companyName || '',
-      l.email || '',
-      l.phone || '',
-      l.city || '',
-      l.state || '',
-      l.industry || '',
-      l.website || '',
-      l.status || '',
-      l.enrichedRating || '',
-      l.enrichedReviews || '',
-      l.previewUrl || '',
-    ])
+    const headers = [
+      'First Name', 'Last Name', 'Company', 'Email', 'Phone', 'City', 'State',
+      'Industry', 'Website', 'Status', 'Rating', 'Reviews', 'Preview URL',
+      'Personalization Line', 'Personalization Hook', 'Personalization Tier',
+    ]
+    const rows = leads.map(l => {
+      let persData: any = null
+      try {
+        persData = l.personalization ? JSON.parse(l.personalization) : null
+      } catch { /* ignore */ }
+      return [
+        l.firstName || '',
+        l.lastName || '',
+        l.companyName || '',
+        l.email || '',
+        l.phone || '',
+        l.city || '',
+        l.state || '',
+        l.industry || '',
+        l.website || '',
+        l.status || '',
+        l.enrichedRating ?? '',
+        l.enrichedReviews ?? '',
+        l.previewUrl || '',
+        persData?.firstLine || '',
+        persData?.hook || '',
+        persData?.tier || '',
+      ]
+    })
     const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
@@ -484,30 +497,33 @@ export default function ImportPage() {
                   </Button>
                 </div>
 
-                {/* Stats */}
+                {/* Stats — computed from actual lead data, not metadata */}
                 {(() => {
-                  const meta = (importDetail.import.metadata as any) || {}
+                  const leads = importDetail.leads
+                  const enriched = leads.filter((l: any) => l.enrichedRating != null || l.enrichedAddress).length
+                  const previews = leads.filter((l: any) => l.previewUrl).length
+                  const personalized = leads.filter((l: any) => l.personalization).length
                   return (
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
                       <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <p className="text-xl font-bold text-blue-600">{meta.created || importDetail.leads.length}</p>
+                        <p className="text-xl font-bold text-blue-600">{leads.length}</p>
                         <p className="text-xs text-gray-600">Created</p>
                       </div>
                       <div className="text-center p-3 bg-green-50 rounded-lg">
-                        <p className="text-xl font-bold text-green-600">{meta.enriched || 0}</p>
+                        <p className="text-xl font-bold text-green-600">{enriched}</p>
                         <p className="text-xs text-gray-600">Enriched</p>
                       </div>
                       <div className="text-center p-3 bg-purple-50 rounded-lg">
-                        <p className="text-xl font-bold text-purple-600">{meta.previews || 0}</p>
+                        <p className="text-xl font-bold text-purple-600">{previews}</p>
                         <p className="text-xs text-gray-600">Previews</p>
                       </div>
                       <div className="text-center p-3 bg-amber-50 rounded-lg">
-                        <p className="text-xl font-bold text-amber-600">{meta.personalized || 0}</p>
+                        <p className="text-xl font-bold text-amber-600">{personalized}</p>
                         <p className="text-xs text-gray-600">Personalized</p>
                       </div>
                       <div className="text-center p-3 bg-gray-50 rounded-lg">
-                        <p className="text-xl font-bold text-gray-600">{meta.skipped || 0}</p>
-                        <p className="text-xs text-gray-600">Skipped</p>
+                        <p className="text-xl font-bold text-gray-600">{leads.length - enriched}</p>
+                        <p className="text-xs text-gray-600">Not Enriched</p>
                       </div>
                     </div>
                   )

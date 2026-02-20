@@ -166,7 +166,7 @@ export async function processCloseEngineFirstMessage(conversationId: string): Pr
   const context = await getConversationContext(conversationId)
   const lead = context.lead
 
-  const firstMessage = getFirstMessageTemplate(context.conversation.entryPoint, lead)
+  const firstMessage = await getFirstMessageTemplate(context.conversation.entryPoint, lead)
 
   // Check autonomy
   const autonomy = await checkAutonomy(conversationId, 'SEND_MESSAGE')

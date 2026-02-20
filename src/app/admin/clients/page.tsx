@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { formatCurrency } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
 import React, { useState, useEffect, useCallback } from 'react'
 import {
   Search, Download, Plus, ExternalLink, Users,
@@ -52,6 +53,7 @@ function getHealthBadge(score: number) {
 }
 
 function getClientStage(client: any) {
+  if (client.hostingStatus === 'DEACTIVATED') return { label: 'Deactivated', color: 'bg-orange-100 text-orange-700', icon: Clock }
   if (client.hostingStatus === 'CANCELLED') return { label: 'Cancelled', color: 'bg-gray-100 text-gray-700', icon: XCircle }
   if (client.hostingStatus === 'FAILED_PAYMENT') return { label: 'Payment Failed', color: 'bg-red-100 text-red-700', icon: AlertTriangle }
   if (client.hostingStatus === 'GRACE_PERIOD') return { label: 'Grace Period', color: 'bg-amber-100 text-amber-700', icon: Clock }
@@ -70,6 +72,7 @@ function getDaysSince(date: string | null) {
 }
 
 export default function ClientsPage() {
+  const router = useRouter()
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -266,6 +269,7 @@ export default function ClientsPage() {
     const matchesStatus =
       statusFilter === 'all' ||
       (statusFilter === 'ACTIVE' && client.hostingStatus === 'ACTIVE') ||
+      (statusFilter === 'DEACTIVATED' && client.hostingStatus === 'DEACTIVATED') ||
       (statusFilter === 'CANCELLED' && client.hostingStatus === 'CANCELLED') ||
       (statusFilter === 'FAILED_PAYMENT' && (client.hostingStatus === 'FAILED_PAYMENT' || client.hostingStatus === 'GRACE_PERIOD')) ||
       (statusFilter === 'AT_RISK' && getHealthScore(client) < 50 && client.hostingStatus === 'ACTIVE') ||
@@ -282,6 +286,7 @@ export default function ClientsPage() {
     onboarding: clients.filter(c => !c.siteUrl && !c.siteLiveDate && c.hostingStatus === 'ACTIVE').length,
     failedPayment: clients.filter(c => c.hostingStatus === 'FAILED_PAYMENT' || c.hostingStatus === 'GRACE_PERIOD').length,
     totalMRR: clients.filter(c => c.hostingStatus === 'ACTIVE').reduce((sum, c) => sum + (c.monthlyRevenue || 0), 0),
+    deactivated: clients.filter(c => c.hostingStatus === 'DEACTIVATED').length,
     cancelled: clients.filter(c => c.hostingStatus === 'CANCELLED').length,
   }
 
@@ -494,6 +499,7 @@ export default function ClientsPage() {
                 <option value="ONBOARDING">Onboarding</option>
                 <option value="AT_RISK">At Risk</option>
                 <option value="FAILED_PAYMENT">Payment Issues</option>
+                <option value="DEACTIVATED">Deactivated</option>
                 <option value="CANCELLED">Cancelled</option>
               </select>
               {allTags.length > 0 && (
@@ -617,9 +623,18 @@ export default function ClientsPage() {
                             </>
                           )}
                           <td className="p-4 text-right">
-                            <button onClick={(e) => { e.stopPropagation(); setExpandedClient(isExpanded ? null : client.id) }} className="p-1 hover:bg-gray-100 rounded">
-                              {isExpanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
-                            </button>
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); router.push(`/admin/messages?clientId=${client.id}`) }}
+                                title="Open Chat"
+                                className="p-1.5 rounded-md text-teal-600 hover:bg-teal-50 transition-colors"
+                              >
+                                <MessageSquare size={15} />
+                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); setExpandedClient(isExpanded ? null : client.id) }} className="p-1 hover:bg-gray-100 rounded">
+                                {isExpanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                         {isExpanded && (
@@ -905,7 +920,42 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, p
           <Card className="p-6 border-red-200">
             <h3 className="font-semibold text-red-600 mb-2">Danger Zone</h3>
             <div className="space-y-4">
+              {/* Deactivate / Reactivate */}
               <div>
+                {client.hostingStatus === 'DEACTIVATED' ? (
+                  <>
+                    <p className="text-sm text-gray-500 mb-2">Reactivate this client. They will be set back to ACTIVE.</p>
+                    <Button
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      onClick={() => {
+                        if (confirm(`Reactivate ${client.companyName}?`)) {
+                          onUpdate({ hostingStatus: 'ACTIVE' })
+                        }
+                      }}
+                    >
+                      <RefreshCw size={14} className="mr-2" />
+                      Reactivate Client
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-500 mb-2">Deactivate this client. They stay in the system but are paused and hidden from AI.</p>
+                    <Button
+                      className="bg-orange-500 hover:bg-orange-600 text-white"
+                      onClick={() => {
+                        if (confirm(`Deactivate ${client.companyName}? They can be reactivated later.`)) {
+                          onUpdate({ hostingStatus: 'DEACTIVATED' })
+                        }
+                      }}
+                    >
+                      <Clock size={14} className="mr-2" />
+                      Deactivate Client
+                    </Button>
+                  </>
+                )}
+              </div>
+              {/* Cancel */}
+              <div className="pt-4 border-t border-red-100">
                 <p className="text-sm text-gray-500 mb-2">Cancel this client. Their site will be taken offline.</p>
                 <Button
                   variant="destructive"
@@ -915,10 +965,11 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, p
                     }
                   }}
                 >
-                  <Trash2 size={14} className="mr-2" />
+                  <XCircle size={14} className="mr-2" />
                   Cancel Client
                 </Button>
               </div>
+              {/* Delete Messages */}
               <div className="pt-4 border-t border-red-100">
                 <p className="text-sm text-gray-500 mb-2">Delete all message history for this client. The client record stays intact.</p>
                 <Button
@@ -934,6 +985,7 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, p
                   Delete All Messages
                 </Button>
               </div>
+              {/* Hard Delete */}
               <div className="pt-4 border-t border-red-100">
                 <p className="text-sm text-red-500 mb-2">Permanently delete this client and all their data (messages, revenue, commissions). This cannot be undone.</p>
                 <Button

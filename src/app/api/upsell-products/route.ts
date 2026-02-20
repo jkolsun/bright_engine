@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     }
 
     const products = await prisma.upsellProduct.findMany({
+      where: { deletedAt: null },
       include: {
         pitches: {
           select: {

@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '200')
     const offset = parseInt(searchParams.get('offset') || '0')
 
-    const where: any = {}
+    const where: any = { deletedAt: null }
     if (status) where.hostingStatus = status
     if (tag) where.tags = { has: tag }
     if (search) {

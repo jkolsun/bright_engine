@@ -57,20 +57,57 @@ export async function GET(request: NextRequest) {
       }))._sum.amount || 0,
     }
 
-    // Get MRR
+    // Get MRR from actual PAID revenue records (not projected client.monthlyRevenue)
     const activeClients = await prisma.client.count({
-      where: { hostingStatus: 'ACTIVE' },
+      where: { hostingStatus: 'ACTIVE', deletedAt: null },
     })
 
-    const hostingMRR = activeClients * 39
-
-    const upsellRevenue = await prisma.client.findMany({
-      where: { hostingStatus: 'ACTIVE' },
-      select: { monthlyRevenue: true },
+    // MRR = sum of most recent PAID HOSTING_MONTHLY revenue per active client in last 60 days
+    const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
+    const recentHostingRevenue = await prisma.revenue.findMany({
+      where: {
+        type: 'HOSTING_MONTHLY',
+        status: 'PAID',
+        createdAt: { gte: sixtyDaysAgo },
+        client: { hostingStatus: 'ACTIVE', deletedAt: null },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { clientId: true, amount: true },
     })
 
-    const totalMRR = upsellRevenue.reduce((sum, client) => sum + client.monthlyRevenue, 0)
-    const upsellMRR = totalMRR - hostingMRR
+    // Dedupe to most recent payment per client
+    const latestPerClient = new Map<string, number>()
+    for (const r of recentHostingRevenue) {
+      if (!latestPerClient.has(r.clientId)) {
+        latestPerClient.set(r.clientId, r.amount)
+      }
+    }
+    const hostingMRR = Array.from(latestPerClient.values()).reduce((sum, amt) => sum + amt, 0)
+
+    // Upsell MRR from recurring upsell revenue in last 60 days
+    const recentUpsellRevenue = await prisma.revenue.findMany({
+      where: {
+        type: 'UPSELL',
+        status: 'PAID',
+        recurring: true,
+        createdAt: { gte: sixtyDaysAgo },
+        client: { hostingStatus: 'ACTIVE', deletedAt: null },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { clientId: true, amount: true, product: true },
+    })
+
+    // Dedupe upsell by client+product
+    const latestUpsellPerClient = new Map<string, number>()
+    for (const r of recentUpsellRevenue) {
+      const key = `${r.clientId}-${r.product || ''}`
+      if (!latestUpsellPerClient.has(key)) {
+        latestUpsellPerClient.set(key, r.amount)
+      }
+    }
+    const upsellMRR = Array.from(latestUpsellPerClient.values()).reduce((sum, amt) => sum + amt, 0)
+
+    const totalMRR = hostingMRR + upsellMRR
 
     // Add today's numbers
     const [todayLeads, todayHot, todayPaid, pipelineCounts] = await Promise.all([
@@ -91,8 +128,8 @@ export async function GET(request: NextRequest) {
       where: { eventType: { in: ['PREVIEW_CTA_CLICKED', 'PREVIEW_CALL_CLICKED'] } }
     })
     
-    // Count total clients for dashboard
-    const totalClients = await prisma.client.count()
+    // Count total clients for dashboard (exclude soft-deleted)
+    const totalClients = await prisma.client.count({ where: { deletedAt: null } })
 
     return NextResponse.json({
       // Flat keys that the dashboard expects

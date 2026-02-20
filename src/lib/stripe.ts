@@ -62,6 +62,7 @@ export async function getPaymentLinkDynamic(
     const product = await prisma.upsellProduct.findFirst({
       where: {
         active: true,
+        deletedAt: null,
         OR: [
           { name: { contains: productName, mode: 'insensitive' } },
           { id: productName },
@@ -112,7 +113,7 @@ export async function getAllPaymentLinks(): Promise<Array<{
 }>> {
   try {
     const products = await prisma.upsellProduct.findMany({
-      where: { active: true, stripeLink: { not: null } },
+      where: { active: true, deletedAt: null, stripeLink: { not: null } },
       orderBy: [{ isCore: 'desc' }, { sortOrder: 'asc' }],
     })
     return products

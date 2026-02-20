@@ -5,9 +5,10 @@ import { verifySession } from '@/lib/session'
 // GET /api/clients/[id] - Get client detail
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     // Admin-only access check - sensitive client/financial data
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
@@ -16,7 +17,7 @@ export async function GET(
     }
 
     const client = await prisma.client.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         lead: true,
         analytics: true,
@@ -60,9 +61,10 @@ export async function GET(
 // PUT /api/clients/[id] - Update client
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     // Admin-only access check
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
@@ -73,7 +75,7 @@ export async function PUT(
     const data = await request.json()
 
     const client = await prisma.client.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...data,
         updatedAt: new Date()
@@ -92,19 +94,19 @@ export async function PUT(
 
 // DELETE /api/clients/[id] - Delete client
 // ?hard=true → permanently delete from database (cascades to messages, commissions, revenue, etc.)
-// default → soft delete (mark as CANCELLED)
+// default → soft delete (sets deletedAt timestamp)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: clientId } = await params
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }
 
-    const clientId = params.id
     const { searchParams } = new URL(request.url)
     const hard = searchParams.get('hard') === 'true'
 
@@ -121,8 +123,6 @@ export async function DELETE(
 
     if (hard) {
       // Hard delete: remove from database entirely
-      // Prisma cascade will delete: messages, commissions, revenue, analytics, editRequests, sequenceProgress, referrals, siteAnalytics
-      // ClawdbotActivity clientId will be set to null (onDelete: SetNull)
       await prisma.client.delete({ where: { id: clientId } })
 
       return NextResponse.json({
@@ -131,15 +131,15 @@ export async function DELETE(
       })
     }
 
-    // Soft delete: mark as CANCELLED
+    // Soft delete: set deletedAt timestamp
     const updated = await prisma.client.update({
       where: { id: clientId },
-      data: { hostingStatus: 'CANCELLED' }
+      data: { deletedAt: new Date() }
     })
 
     return NextResponse.json({
       success: true,
-      message: 'Client cancelled successfully',
+      message: 'Client deleted successfully',
       client: updated
     })
   } catch (error) {

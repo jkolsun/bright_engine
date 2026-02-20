@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { formatPhone } from '@/lib/utils'
 import React, { useState, useEffect } from 'react'
 import {
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react'
 
 export default function LeadsPage() {
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [repFilter, setRepFilter] = useState<string>('all')
@@ -1263,6 +1265,13 @@ export default function LeadsPage() {
                                 <Eye size={15} />
                               </button>
                             )}
+                            <button
+                              onClick={() => router.push(`/admin/messages?leadId=${lead.id}`)}
+                              title="Open Chat"
+                              className="p-1.5 rounded-md text-teal-600 hover:bg-teal-50 transition-colors"
+                            >
+                              <MessageSquare size={15} />
+                            </button>
                             <button
                               onClick={() => openEditLeadDialog(lead)}
                               title="Edit"

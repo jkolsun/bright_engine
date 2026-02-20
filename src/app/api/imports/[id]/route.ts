@@ -43,6 +43,8 @@ export async function GET(
           status: true,
           enrichedRating: true,
           enrichedReviews: true,
+          enrichedAddress: true,
+          enrichedServices: true,
           previewUrl: true,
           personalization: true,
         },

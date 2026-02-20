@@ -4,7 +4,8 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import {
   MessageSquare, AlertCircle, CheckCircle, Send, ArrowLeft,
   Settings, AlertTriangle, RefreshCw, Search, Mail, Phone
@@ -60,6 +61,16 @@ function timeSince(date: string): string {
 }
 
 export default function MessagesPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading messages...</div>}>
+      <MessagesPageInner />
+    </Suspense>
+  )
+}
+
+function MessagesPageInner() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const [viewMode, setViewMode] = useState<ViewMode>('inbox')
   const [inboxTab, setInboxTab] = useState<InboxTab>('pre_client')
   const [messages, setMessages] = useState<any[]>([])
@@ -93,6 +104,7 @@ export default function MessagesPage() {
 
   // Auto-refresh
   const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const deepLinkHandled = useRef(false)
 
   useEffect(() => {
     checkTwilioStatus()
@@ -310,6 +322,48 @@ export default function MessagesPage() {
   })()
 
   const postClientConvs = groupedConversations.filter(c => c.conversationType === 'post_client')
+
+  // Deep-link: auto-open conversation from ?leadId= or ?clientId= URL params
+  useEffect(() => {
+    if (deepLinkHandled.current || loading) return
+    const leadId = searchParams.get('leadId')
+    const clientId = searchParams.get('clientId')
+    if (!leadId && !clientId) return
+
+    if (leadId && closeConversations.length > 0) {
+      const match = closeConversations.find((c: any) => c.leadId === leadId)
+      if (match) {
+        deepLinkHandled.current = true
+        setInboxTab('pre_client')
+        setSelectedCloseConv(match)
+        setViewMode('conversation')
+        loadConversationDetail(match.id)
+        // Clean URL without triggering navigation
+        router.replace('/admin/messages', { scroll: false })
+      } else {
+        // No close-engine conversation yet — check grouped messages
+        const msgMatch = groupedConversations.find((c: any) => c.leadId === leadId)
+        if (msgMatch) {
+          deepLinkHandled.current = true
+          setInboxTab('all')
+          setSelectedConversation(msgMatch)
+          setViewMode('conversation')
+          router.replace('/admin/messages', { scroll: false })
+        }
+      }
+    }
+
+    if (clientId && groupedConversations.length > 0) {
+      const match = groupedConversations.find((c: any) => c.clientId === clientId)
+      if (match) {
+        deepLinkHandled.current = true
+        setInboxTab('post_client')
+        setSelectedConversation(match)
+        setViewMode('conversation')
+        router.replace('/admin/messages', { scroll: false })
+      }
+    }
+  }, [loading, closeConversations, groupedConversations, searchParams, router])
 
   // Check for NEW CLIENT badge (paid within 24 hours)
   const isNewClient = (conv: any) => {

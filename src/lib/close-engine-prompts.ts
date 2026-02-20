@@ -7,6 +7,7 @@
 
 import type { ConversationContext } from './close-engine'
 import { getPricingConfig } from './pricing-config'
+import { prisma } from './db'
 
 // ============================================
 // Models
@@ -153,11 +154,21 @@ export async function buildPreClientSystemPrompt(context: ConversationContext): 
   const stage = conversation.stage
   const pricingConfig = await getPricingConfig()
 
-  // Get stage-specific instructions
-  const stageInstructionFn = STAGE_INSTRUCTIONS[stage]
-  let stageInstructions = stageInstructionFn
-    ? stageInstructionFn(context)
-    : `Unknown stage: ${stage}. Respond helpfully and set escalate: true.`
+  // Load custom scenario overrides from settings
+  const templates = await getScenarioTemplates()
+  const customOverride = templates?.scenarios?.[stage]
+  const hasOverride = customOverride?.enabled && customOverride?.instructions_override?.trim()
+
+  // Get stage-specific instructions (custom override takes priority)
+  let stageInstructions: string
+  if (hasOverride) {
+    stageInstructions = customOverride!.instructions_override
+  } else {
+    const stageInstructionFn = STAGE_INSTRUCTIONS[stage]
+    stageInstructions = stageInstructionFn
+      ? stageInstructionFn(context)
+      : `Unknown stage: ${stage}. Respond helpfully and set escalate: true.`
+  }
 
   // Replace pricing placeholders in stage instructions
   stageInstructions = stageInstructions
@@ -183,6 +194,17 @@ You are a sales team member for Bright Automations, a company that builds profes
 - NEVER make promises about specific timelines you can't guarantee.
 - NEVER abbreviate "Bright Automations" to "BA" — always use the full name or say "we"/"us"/"our team".
 - Always use the lead's FULL company name as stored. Never abbreviate it.
+
+[SMS FORMATTING RULES]
+- Never use dashes, bullet points, numbered lists, or colons in texts.
+- Never use em-dashes (\u2014) or semicolons.
+- Max 2 sentences per text. Keep it SHORT.
+- Write like you're texting a friend who owns a business, not writing an email.
+- Use their first name, not their company name.
+- Never start with "Hi there!" or "Hey there!" or "Hello!"
+- Never say "I'd be happy to" or "I'd love to" or "absolutely."
+- Don't use exclamation marks more than once per message.
+- If they ask a question, answer it directly.
 
 [CURRENT STAGE: ${stage}]
 ${stageInstructions}
@@ -234,11 +256,18 @@ const FIRST_MESSAGE_TEMPLATES: Record<string, string> = {
   PREVIEW_CTA: `Hey {firstName}! Saw you're ready to get your site live — love it. Quick question before we build it out: What are the top 3 services {companyName} offers that you want front and center?`,
 }
 
-export function getFirstMessageTemplate(
+export async function getFirstMessageTemplate(
   entryPoint: string,
   lead: { firstName: string; companyName: string }
-): string {
-  const template = FIRST_MESSAGE_TEMPLATES[entryPoint] || FIRST_MESSAGE_TEMPLATES.SMS_REPLY
+): Promise<string> {
+  // Check for custom first message templates from settings
+  const templates = await getScenarioTemplates()
+  const customTemplate = templates?.firstMessages?.[entryPoint]
+
+  const template = (customTemplate?.trim())
+    ? customTemplate
+    : (FIRST_MESSAGE_TEMPLATES[entryPoint] || FIRST_MESSAGE_TEMPLATES.SMS_REPLY)
+
   return template
     .replace(/\{firstName\}/g, lead.firstName)
     .replace(/\{companyName\}/g, lead.companyName)
@@ -283,6 +312,16 @@ You are the account manager for Bright Automations. You manage the ongoing relat
 - NEVER mention AI, Claude, bots, automation, or that you're automated.
 - If asked who you are: "This is the Bright Automations team!"
 
+[SMS FORMATTING RULES]
+- Never use dashes, bullet points, numbered lists, or colons in texts.
+- Never use em-dashes (\u2014) or semicolons.
+- Max 2 sentences per text. Keep it SHORT.
+- Write like you're texting a friend who owns a business, not writing an email.
+- Use their first name, not their company name.
+- Never say "I'd be happy to" or "I'd love to" or "absolutely."
+- Don't use exclamation marks more than once per message.
+- If they ask a question, answer it directly.
+
 [CLIENT CONTEXT]
 Company: ${companyName}
 Plan: ${plan} | Monthly: $${monthlyRevenue}
@@ -303,6 +342,31 @@ You MUST respond with valid JSON only. No text before or after the JSON.
   "escalate": true/false,
   "escalateReason": "reason" or null
 }`
+}
+
+// ============================================
+// getScenarioTemplates() — load custom overrides from settings
+// ============================================
+
+let scenarioCache: { data: any; ts: number } | null = null
+const SCENARIO_CACHE_TTL = 60_000 // 1 minute
+
+async function getScenarioTemplates(): Promise<{ scenarios: Record<string, { instructions_override: string; enabled: boolean }>; firstMessages: Record<string, string> } | null> {
+  // Simple in-memory cache to avoid hitting DB on every message
+  if (scenarioCache && Date.now() - scenarioCache.ts < SCENARIO_CACHE_TTL) {
+    return scenarioCache.data
+  }
+  try {
+    const setting = await prisma.settings.findUnique({
+      where: { key: 'close_engine_scenarios' },
+    })
+    const data = (setting?.value as any) || null
+    scenarioCache = { data, ts: Date.now() }
+    return data
+  } catch (error) {
+    console.warn('[CloseEngine] Failed to load scenario templates:', error)
+    return null
+  }
 }
 
 // ============================================

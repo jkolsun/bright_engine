@@ -139,6 +139,14 @@ RULES:
 8. Do NOT start with the company name as subject.
 9. If you reference a quote or award, make sure it reads as a COMPLETE thought — never a fragment.
 
+CRITICAL FORMAT RULES:
+- NEVER use em-dashes (—), en-dashes (–), or hyphens (-) as separators.
+- NEVER use semicolons, colons, or bullet points.
+- Write ONE complete sentence with a period at the end.
+- The sentence must flow naturally as the first line of a cold email body.
+- Write like you're texting a business owner, not writing a report.
+- No quotation marks in your output.
+
 OUTPUT FORMAT:
 LINE: [your opener]
 TIER: [S/A/B — must match the tier of the data you referenced]
@@ -237,6 +245,11 @@ function validateLine(line: string, companyName: string): ValidationResult {
     if (lineLower.includes(phrase)) {
       return { isValid: false, issues: [`Generic phrase: '${phrase}'`], action: 'retry' }
     }
+  }
+
+  // Check for separator dashes
+  if (/\s[-–—]\s/.test(line)) {
+    issues.push('Contains dash separator — rewrite as flowing sentence')
   }
 
   // Company name as grammatical subject (bad pattern)
@@ -492,6 +505,28 @@ function generateSmartFallback(companyName: string, lead: any, artifact: Artifac
 }
 
 // ============================================
+// POST-PROCESSOR: Clean personalization lines
+// ============================================
+
+function cleanPersonalizationLine(line: string): string {
+  // Remove surrounding quotes
+  line = line.replace(/^["']|["']$/g, '').trim()
+  // Remove leading dashes/bullets
+  line = line.replace(/^[-–—•*]\s*/, '')
+  // Replace em-dashes/en-dashes with commas
+  line = line.replace(/\s*[—–]\s*/g, ', ')
+  // Replace standalone hyphens used as separators (not in compound words)
+  line = line.replace(/\s+-\s+/g, ', ')
+  // Remove double spaces
+  line = line.replace(/\s{2,}/g, ' ')
+  // Ensure ends with period
+  if (line && !'.!?'.includes(line[line.length - 1])) {
+    line += '.'
+  }
+  return line.trim()
+}
+
+// ============================================
 // PARSE CLAUDE RESPONSE
 // ============================================
 
@@ -512,16 +547,8 @@ function parseClaudeResponse(raw: string): { line: string; tier: string; type: s
   const artifactMatch = raw.match(/ARTIFACT:\s*([\s\S]+?)(?=\n\s*(?:TIER:|TYPE:|LINE:)|$)/i)
   if (artifactMatch) result.artifact = artifactMatch[1].trim()
 
-  // Clean quotes
-  let line = result.line
-  if ((line.startsWith('"') && line.endsWith('"')) || (line.startsWith("'") && line.endsWith("'"))) {
-    line = line.slice(1, -1)
-  }
-
-  // Ensure punctuation
-  if (line && !'.!?'.includes(line[line.length - 1])) {
-    line += '.'
-  }
+  // Clean quotes and run post-processor
+  let line = cleanPersonalizationLine(result.line)
 
   // Capitalize first letter
   if (line && line[0] >= 'a' && line[0] <= 'z') {
@@ -858,6 +885,9 @@ async function generateWebsiteCopy(
 // ============================================
 
 async function storeResult(leadId: string, companyName: string, result: PersonalizationResult) {
+  // Run post-processor on firstLine before storing
+  result.firstLine = cleanPersonalizationLine(result.firstLine)
+
   await prisma.lead.update({
     where: { id: leadId },
     data: {

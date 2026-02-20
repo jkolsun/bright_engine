@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
       revenueByMonth,
     ] = await Promise.all([
       prisma.client.findMany({
+        where: { deletedAt: null },
         select: {
           id: true,
           hostingStatus: true,
@@ -38,18 +39,21 @@ export async function GET(request: NextRequest) {
       }),
       prisma.client.count({
         where: {
+          deletedAt: null,
           createdAt: { gte: startOfMonth },
           hostingStatus: 'ACTIVE',
         }
       }),
       prisma.client.count({
         where: {
+          deletedAt: null,
           churnedDate: { gte: startOfMonth },
           hostingStatus: 'CANCELLED',
         }
       }),
       prisma.client.count({
         where: {
+          deletedAt: null,
           hostingStatus: { in: ['FAILED_PAYMENT', 'GRACE_PERIOD'] }
         }
       }),
@@ -77,7 +81,25 @@ export async function GET(request: NextRequest) {
     ])
 
     const active = allClients.filter(c => c.hostingStatus === 'ACTIVE')
-    const mrr = active.reduce((sum, c) => sum + (c.monthlyRevenue || 0), 0)
+    // MRR from actual PAID revenue (not projected client.monthlyRevenue)
+    const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
+    const recentPaidRevenue = await prisma.revenue.findMany({
+      where: {
+        type: 'HOSTING_MONTHLY',
+        status: 'PAID',
+        createdAt: { gte: sixtyDaysAgo },
+        client: { hostingStatus: 'ACTIVE', deletedAt: null },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { clientId: true, amount: true },
+    })
+    const latestPerClient = new Map<string, number>()
+    for (const r of recentPaidRevenue) {
+      if (!latestPerClient.has(r.clientId)) {
+        latestPerClient.set(r.clientId, r.amount)
+      }
+    }
+    const mrr = Array.from(latestPerClient.values()).reduce((sum, amt) => sum + amt, 0)
     const avgLtv = active.length > 0
       ? Math.round(active.reduce((sum, c) => {
           const months = Math.max(1, Math.ceil((Date.now() - new Date(c.createdAt).getTime()) / (1000 * 60 * 60 * 24 * 30)))
