@@ -9,14 +9,14 @@ import {
   ArrowLeft, Phone, Mail, MapPin, Calendar, TrendingUp, Eye, MousePointer,
   MessageSquare, Clock, CheckCircle, Send, ExternalLink, DollarSign, User
 } from 'lucide-react'
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect } from 'react'
 
 interface LeadDetailPageProps {
-  params: Promise<{ id: string }>
+  params: { id: string }
 }
 
 export default function LeadDetailPage({ params }: LeadDetailPageProps) {
-  const { id } = use(params)
+  const { id } = params
   const [activeTab, setActiveTab] = useState<'timeline' | 'messages' | 'analytics'>('timeline')
   const [lead, setLead] = useState<any>(null)
   const [loading, setLoading] = useState(true)
