@@ -89,9 +89,11 @@ export async function PATCH(
         ...(data.status && { status: data.status }),
         ...(data.name && { name: data.name }),
         ...(data.email && { email: data.email }),
-        ...(data.phone && { phone: data.phone }),
+        ...(data.phone !== undefined && { phone: data.phone }),
         ...(data.role && { role: data.role }),
+        ...(data.portalType && { portalType: data.portalType }),
         ...(data.commissionRate !== undefined && { commissionRate: data.commissionRate }),
+        ...(data.dailyLeadCap !== undefined && { dailyLeadCap: data.dailyLeadCap }),
         ...(passwordHash && { passwordHash }),
       },
     })

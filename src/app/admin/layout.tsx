@@ -15,8 +15,8 @@ import {
   Target,
   Mail,
   Radio,
-  UserPlus,
 } from 'lucide-react'
+import { BriefingModal } from '@/components/admin/BriefingModal'
 
 export const dynamic = 'force-dynamic'
 
@@ -97,20 +97,13 @@ export default function AdminLayout({
 
         <div className="p-4 border-t border-slate-700 space-y-2">
           <Link
-            href="/admin/reps/performance"
+            href="/admin/reps"
             className="flex items-center gap-2 text-sm text-slate-300 hover:text-white w-full transition-colors px-3 py-2 rounded-lg hover:bg-slate-700/50"
           >
             <Users size={18} />
-            Rep Management
+            Sales Team
           </Link>
-          <Link
-            href="/admin/part-time-reps"
-            className="flex items-center gap-2 text-sm text-slate-300 hover:text-white w-full transition-colors px-3 py-2 rounded-lg hover:bg-slate-700/50"
-          >
-            <UserPlus size={18} />
-            Part-Time Reps
-          </Link>
-          <button 
+          <button
             onClick={handleLogout}
             disabled={isLoggingOut}
             className="flex items-center gap-2 text-sm text-slate-300 hover:text-white w-full transition-colors px-3 py-2 rounded-lg hover:bg-slate-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -125,6 +118,8 @@ export default function AdminLayout({
       <main className="flex-1 overflow-auto">
         {children}
       </main>
+
+      <BriefingModal />
     </div>
   )
 }

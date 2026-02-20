@@ -115,6 +115,12 @@ async function handleLogin(request: NextRequest): Promise<Response> {
       void migratePassword()
     }
 
+    // Update lastSeenAt for briefing tracking (fire-and-forget)
+    void prisma.user.update({
+      where: { id: user.id },
+      data: { lastSeenAt: new Date() },
+    }).catch(() => {})
+
     // Determine redirect URL based on user role and portal type
     const redirectUrl = user.role === 'ADMIN'
       ? '/admin/dashboard'
