@@ -19,12 +19,44 @@ export interface EnrichmentResult {
 }
 
 export async function enrichLead(leadId: string): Promise<EnrichmentResult> {
+  // Check daily SerpAPI budget before making any calls
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+
+  const todayUsage = await prisma.apiCost.count({
+    where: {
+      service: 'serpapi',
+      createdAt: { gte: todayStart },
+    },
+  })
+
+  // 250 credits/month ÷ 30 days ≈ 8/day on free plan
+  // Adjust this number when plan is upgraded:
+  // $50 plan = 5,000/month → 166/day
+  // $130 plan = 30,000/month → 1,000/day
+  const DAILY_SERPAPI_LIMIT = 8
+
+  if (todayUsage >= DAILY_SERPAPI_LIMIT) {
+    console.log(`[ENRICHMENT] Daily SerpAPI limit reached (${todayUsage}/${DAILY_SERPAPI_LIMIT}). Skipping enrichment for lead ${leadId}.`)
+    return {}
+  }
+
   const lead = await prisma.lead.findUnique({
     where: { id: leadId },
   })
 
   if (!lead) {
     throw new Error('Lead not found')
+  }
+
+  // Skip if already enriched
+  if (lead.enrichedRating != null || lead.enrichedAddress) {
+    console.log(`[ENRICHMENT] Lead ${leadId} already enriched. Skipping.`)
+    return {
+      address: lead.enrichedAddress || undefined,
+      rating: lead.enrichedRating ? Number(lead.enrichedRating) : undefined,
+      reviews: lead.enrichedReviews ? Number(lead.enrichedReviews) : undefined,
+    }
   }
 
   try {

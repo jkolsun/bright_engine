@@ -166,7 +166,52 @@ export async function processCloseEngineFirstMessage(conversationId: string): Pr
   const context = await getConversationContext(conversationId)
   const lead = context.lead
 
-  const firstMessage = await getFirstMessageTemplate(context.conversation.entryPoint, lead)
+  const template = await getFirstMessageTemplate(context.conversation.entryPoint, lead)
+
+  // Route first message through AI — template is used as a guideline
+  let firstMessage = template
+  try {
+    const aiSettingsRaw = await prisma.settings.findUnique({ where: { key: 'ai_handler' } })
+    const aiSettings = (aiSettingsRaw?.value as any) || {}
+    const globalPrompt = aiSettings.humanizingPrompt || ''
+
+    const entryLabel = context.conversation.entryPoint.replace(/_/g, ' ').toLowerCase()
+
+    const client = getAnthropicClient()
+    const aiResponse = await client.messages.create({
+      model: MODELS.PRE_CLIENT,
+      max_tokens: 300,
+      system: `You write first-contact text messages for a web design agency. Be casual, friendly, and human. 1-2 sentences max. Never use emojis excessively. ${globalPrompt}`,
+      messages: [{
+        role: 'user',
+        content: `SCENARIO: ${entryLabel}
+Use this template as your approach (adapt naturally, don't copy word-for-word):
+"${template}"
+
+Lead: ${lead.firstName} from ${lead.companyName} (${lead.industry || 'service business'})
+${lead.previewUrl ? `Preview URL: ${lead.previewUrl}` : 'No preview yet.'}
+
+Write ONE text message. 1-2 sentences max. Casual and human. Do not include quotes around the message.`,
+      }],
+    })
+
+    const aiText = aiResponse.content
+      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+      .map(block => block.text)
+      .join('')
+      .trim()
+
+    if (aiText && aiText.length > 10 && aiText.length < 500) {
+      firstMessage = aiText
+    }
+
+    await prisma.apiCost.create({
+      data: { service: 'anthropic', operation: 'close_engine_first_message', cost: 0.01 },
+    }).catch(() => {})
+  } catch (aiError) {
+    console.warn('[CloseEngine] AI first message generation failed, using template:', aiError)
+    // Fall back to template — already set above
+  }
 
   // Check autonomy
   const autonomy = await checkAutonomy(conversationId, 'SEND_MESSAGE')
@@ -212,6 +257,7 @@ export async function processCloseEngineFirstMessage(conversationId: string): Pr
         aiDecisionLog: {
           trigger: context.conversation.entryPoint,
           messageType: isCta ? 'first_message_cta' : 'first_message',
+          templateUsed: template !== firstMessage ? 'ai_adapted' : 'template_fallback',
           delaySeconds: delay,
           leadStatus: lead.status,
           leadPriority: lead.priority,

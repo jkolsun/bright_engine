@@ -1157,7 +1157,11 @@ function LeadsPageInner() {
 
                   let personalizationData: any = null
                   try {
-                    personalizationData = lead.personalization ? JSON.parse(lead.personalization) : null
+                    if (lead.personalization) {
+                      personalizationData = typeof lead.personalization === 'string'
+                        ? JSON.parse(lead.personalization)
+                        : lead.personalization
+                    }
                   } catch { /* ignore */ }
 
                   return (
@@ -1409,11 +1413,11 @@ function LeadsPageInner() {
                                             <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Services</span>
                                           </div>
                                           <div className="flex flex-wrap gap-1">
-                                            {(lead.enrichedServices as string[]).slice(0, 8).map((svc: string, i: number) => (
-                                              <span key={i} className="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full">{svc}</span>
+                                            {(lead.enrichedServices as any[]).slice(0, 8).map((svc: any, i: number) => (
+                                              <span key={i} className="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full">{typeof svc === 'string' ? svc : String(svc)}</span>
                                             ))}
-                                            {(lead.enrichedServices as string[]).length > 8 && (
-                                              <span className="text-xs text-gray-400">+{(lead.enrichedServices as string[]).length - 8} more</span>
+                                            {(lead.enrichedServices as any[]).length > 8 && (
+                                              <span className="text-xs text-gray-400">+{(lead.enrichedServices as any[]).length - 8} more</span>
                                             )}
                                           </div>
                                         </div>
@@ -1423,8 +1427,8 @@ function LeadsPageInner() {
                                           <Clock size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
                                           <div className="text-xs text-gray-600">
                                             {Array.isArray(lead.enrichedHours) ? (
-                                              lead.enrichedHours.slice(0, 3).map((h: string, i: number) => (
-                                                <div key={i}>{h}</div>
+                                              lead.enrichedHours.slice(0, 3).map((h: any, i: number) => (
+                                                <div key={i}>{typeof h === 'string' ? h : JSON.stringify(h)}</div>
                                               ))
                                             ) : (
                                               <span>Hours available</span>

@@ -375,7 +375,7 @@ export default function SettingsPage() {
     }
   }
 
-  // ── Save a settings key ──────────��─────────────────────────
+  // ── Save a settings key ─���────────��─────────────────────────
   const saveSetting = async (key: string, value: any) => {
     setSavingKey(key)
     setSavedKey(null)
@@ -2122,7 +2122,7 @@ export default function SettingsPage() {
 
       {/* ═══════════════════════════════════════════════════════════
           TAB: TARGETS
-         ═══════════════════════════════════════════════════════════ */}
+         ════════════════════════════════════════════════��══════════ */}
       {activeTab === 'targets' && (
         <div className="space-y-6">
           {/* Daily Rep Targets */}
@@ -2497,7 +2497,7 @@ export default function SettingsPage() {
           <Card className="p-6">
             <SectionHeader
               title="First Message Templates"
-              description="Set the first message for each entry point. These are sent directly — the AI takes over for all follow-up messages."
+              description="Set the tone and approach for each entry point. The AI uses these as guidelines and adapts the wording naturally to each lead."
             />
             <div className="space-y-4">
               {[

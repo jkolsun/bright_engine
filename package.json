@@ -5,13 +5,13 @@
   "scripts": {
     "dev": "next dev",
     "build": "NODE_OPTIONS='--max-old-space-size=1024' next build",
-    "start": "NODE_OPTIONS='--max-old-space-size=512' next start",
+    "start": "NODE_OPTIONS='--max-old-space-size=768' next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
     "db:push": "prisma db push --accept-data-loss",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "worker": "tsx src/worker/index.ts",
+    "worker": "NODE_OPTIONS='--max-old-space-size=384' tsx src/worker/index.ts",
     "test:workflow": "npx tsx tests/workflow-test.ts"
   },
   "dependencies": {

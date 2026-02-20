@@ -1238,8 +1238,8 @@ function MessagesPageInner() {
                 }}
               >
                 <div>
-                  <div className="font-medium text-sm">{r.name}</div>
-                  <div className="text-xs text-gray-500">{r.company}{r.phone ? ` • ${r.phone}` : ''}</div>
+                  <div className="font-medium text-sm">{String(r.name || '')}</div>
+                  <div className="text-xs text-gray-500">{String(r.company || '')}{r.phone ? ` • ${String(r.phone)}` : ''}</div>
                 </div>
                 <Badge variant={r.type === 'client' ? 'default' : 'secondary'} className="text-xs">{r.type}</Badge>
               </button>
