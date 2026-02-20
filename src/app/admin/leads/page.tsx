@@ -105,11 +105,15 @@ export default function LeadsPage() {
   }
 
   const fetchLeadEvents = async (leadId: string) => {
-    if (expandedLeadEvents[leadId]) return // Already fetched
+    if (expandedLeadEvents[leadId]?.length > 0) return // Already fetched with results
     try {
       const res = await fetch(`/api/leads/${leadId}`)
-      const data = await res.json()
-      setExpandedLeadEvents(prev => ({ ...prev, [leadId]: data.lead?.events || [] }))
+      if (res.ok) {
+        const data = await res.json()
+        setExpandedLeadEvents(prev => ({ ...prev, [leadId]: data.lead?.events || [] }))
+      } else {
+        setExpandedLeadEvents(prev => ({ ...prev, [leadId]: [] }))
+      }
     } catch {
       setExpandedLeadEvents(prev => ({ ...prev, [leadId]: [] }))
     }
@@ -1159,7 +1163,7 @@ export default function LeadsPage() {
                         <td className="p-3 whitespace-nowrap text-sm text-center text-gray-700">
                           {lead.enrichedReviews ?? '—'}
                         </td>
-                        <td className="p-3 text-sm text-gray-700 max-w-[250px]">
+                        <td className="p-3 text-sm text-gray-700 max-w-[250px] relative group/pers">
                           {personalizationData?.firstLine ? (
                             <div className="flex items-center gap-1.5">
                               {personalizationData.tier && (
@@ -1171,6 +1175,42 @@ export default function LeadsPage() {
                               )}
                               <Sparkles size={13} className="text-purple-500 flex-shrink-0" />
                               <span className="truncate">{personalizationData.firstLine}</span>
+                              {/* Hover tooltip showing full personalization */}
+                              <div className="hidden group-hover/pers:block absolute left-0 top-full z-50 mt-1 w-80 bg-white border border-purple-200 rounded-lg shadow-xl p-4 space-y-2" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
+                                  <Sparkles size={14} className="text-purple-500" />
+                                  <span className="text-xs font-semibold text-purple-700 uppercase tracking-wider">AI Personalization</span>
+                                  {personalizationData.tier && (
+                                    <span className={`ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                      personalizationData.tier === 'S' ? 'bg-yellow-100 text-yellow-800' :
+                                      personalizationData.tier === 'A' ? 'bg-blue-100 text-blue-800' :
+                                      'bg-gray-100 text-gray-600'
+                                    }`}>Tier {personalizationData.tier}</span>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="text-[10px] font-semibold text-purple-600 uppercase tracking-wider mb-0.5">First Line</div>
+                                  <p className="text-xs text-gray-800 leading-relaxed">{personalizationData.firstLine}</p>
+                                </div>
+                                {personalizationData.hook && (
+                                  <div>
+                                    <div className="text-[10px] font-semibold text-purple-600 uppercase tracking-wider mb-0.5">Hook</div>
+                                    <p className="text-xs text-gray-700">{personalizationData.hook}</p>
+                                  </div>
+                                )}
+                                {personalizationData.angle && (
+                                  <div>
+                                    <div className="text-[10px] font-semibold text-purple-600 uppercase tracking-wider mb-0.5">Angle</div>
+                                    <p className="text-xs text-gray-700">{personalizationData.angle}</p>
+                                  </div>
+                                )}
+                                {personalizationData.websiteCopy && (
+                                  <div>
+                                    <div className="text-[10px] font-semibold text-purple-600 uppercase tracking-wider mb-0.5">Website Copy</div>
+                                    <p className="text-xs text-gray-600 italic">{personalizationData.websiteCopy}</p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           ) : <span className="text-gray-400">—</span>}
                         </td>
