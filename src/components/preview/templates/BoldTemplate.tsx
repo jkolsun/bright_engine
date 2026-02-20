@@ -203,11 +203,11 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
   ]
 
   const faqs = [
-    { q: 'How fast can you get here?', a: 'We respond same-day for most requests. For emergencies, we can often be there within hours. Call us and we\'ll give you an honest timeline.' },
-    { q: 'Do you charge for estimates?', a: 'Never. Every estimate is free, detailed, and comes with zero pressure. We believe in earning your business, not trapping you into it.' },
-    { q: `Where does ${lead.companyName} work?`, a: `We serve ${location || 'the local area'} and surrounding communities. If you\'re not sure, call us — chances are we cover your neighborhood.` },
-    { q: 'Are you licensed and insured?', a: 'Absolutely — fully licensed, bonded, and insured with comprehensive liability coverage. Your property is protected.' },
-    { q: 'What if something goes wrong?', a: "We make it right. Period. Every job is backed by our satisfaction guarantee. If you\'re not happy, we come back until you are." },
+    { q: 'How fast can you get here?', a: 'Same-day response for most requests — call us anytime.' },
+    { q: 'Do you charge for estimates?', a: 'Never. Every estimate is free with zero pressure.' },
+    { q: `Where does ${lead.companyName} work?`, a: `We serve ${location || 'the local area'} and surrounding communities.` },
+    { q: 'Are you licensed and insured?', a: 'Fully licensed, bonded, and insured on every job.' },
+    { q: 'What if something goes wrong?', a: "Every job is backed by our satisfaction guarantee." },
   ]
 
   useEffect(() => {
@@ -268,7 +268,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         <div className="absolute top-1/4 right-0 w-[600px] h-[600px] bg-orange-500/10 rounded-full translate-x-1/3 blur-3xl" />
         <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-red-600/8 rounded-full translate-y-1/2 blur-3xl" />
 
-        <div className="relative max-w-7xl mx-auto w-full px-5 sm:px-8 py-32">
+        <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-32">
           {hasRating && (
             <div className="inline-flex items-center gap-2.5 bg-white/8 backdrop-blur-md border border-white/10 rounded-full px-5 py-2.5 mb-8">
               <div className="flex gap-0.5">
@@ -285,21 +285,17 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
             {wc?.heroHeadline || lead.companyName}
           </h1>
 
-          <p className="text-lg sm:text-xl md:text-2xl text-white/55 mb-4 max-w-2xl leading-relaxed">
-            {wc?.heroSubheadline || config.tagline}
-          </p>
-
           {location && (
-            <p className="text-base text-white/35 mb-12 flex items-center gap-2">
-              <MapPin size={16} className="text-orange-400" />
-              Proudly serving {location} and surrounding areas
-            </p>
+            <div className="inline-flex items-center gap-2 bg-white/8 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 mb-10">
+              <MapPin size={14} className="text-orange-400" />
+              <span className="text-sm text-white/60 font-medium">{location}</span>
+            </div>
           )}
 
           <div className="flex flex-col sm:flex-row gap-4">
             {lead.phone && (
               <a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white px-10 py-5 rounded-xl font-black text-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-2xl shadow-orange-500/20">
-                <Phone size={22} />Call Now — Free Estimate
+                <Phone size={22} />Call Now
               </a>
             )}
             <button onClick={onCTAClick} className="inline-flex items-center justify-center gap-2.5 bg-white/8 backdrop-blur-sm border border-white/15 text-white px-10 py-5 rounded-xl font-bold text-lg hover:bg-white hover:text-gray-900 transition-all duration-300 group">
@@ -315,7 +311,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       </section>
 
       {/* ═══════ OVERLAPPING STATS COUNTER ═══════ */}
-      <section className="relative z-10 px-5 sm:px-8 -mt-16">
+      <section className="relative z-10 px-4 sm:px-6 md:px-8 -mt-16">
         <div className="max-w-5xl mx-auto">
           <div className="bg-gray-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 md:p-10 shadow-2xl shadow-black/40">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
@@ -354,29 +350,23 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
 
       {/* ═══════ SERVICES — Numbered Vertical List ═══════ */}
       {services.length > 0 && (
-        <section id="services" className="py-24 sm:py-28 px-5 sm:px-8">
+        <section id="services" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
           <div className="max-w-5xl mx-auto">
-            <div className="mb-16">
+            <div className="mb-14">
               <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">
                 <Wrench size={12} />Services
               </div>
-              <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-4">What We Do</h2>
-              <p className="text-gray-500 text-lg max-w-lg">Expert {industryLabel} — done right, on time, every time.</p>
+              <h2 className="font-display text-4xl md:text-5xl font-black text-white">What We Do</h2>
             </div>
 
             <div className="divide-y divide-gray-800/60">
               {services.slice(0, 8).map((service, i) => (
-                <div key={i} className="group flex items-center justify-between py-6 cursor-pointer hover:pl-3 transition-all duration-300" onClick={onCTAClick}>
+                <div key={i} className="group flex items-center justify-between py-5 cursor-pointer hover:pl-3 transition-all duration-300" onClick={onCTAClick}>
                   <div className="flex items-center gap-6">
                     <span className="text-xs text-gray-600 font-mono tabular-nums w-6 font-bold">{String(i + 1).padStart(2, '0')}</span>
                     <h3 className="text-base sm:text-lg font-bold text-gray-200 group-hover:text-white transition-colors">{service}</h3>
                   </div>
-                  <div className="flex items-center gap-4">
-                    {wc?.serviceDescriptions?.[service] && (
-                      <p className="hidden md:block text-sm text-gray-600 max-w-xs text-right leading-relaxed">{wc.serviceDescriptions[service]}</p>
-                    )}
-                    <ArrowRight size={16} className="text-gray-700 group-hover:text-orange-400 group-hover:translate-x-1 transition-all flex-shrink-0" />
-                  </div>
+                  <ArrowRight size={16} className="text-gray-700 group-hover:text-orange-400 group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </div>
               ))}
             </div>
@@ -391,17 +381,14 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       )}
 
       {/* ═══════ URGENCY STRIP ═══════ */}
-      <section className="relative py-10 px-5 sm:px-8 bg-gradient-to-r from-orange-500 via-red-500 to-orange-500 overflow-hidden">
+      <section className="relative py-10 px-4 sm:px-6 md:px-8 bg-gradient-to-r from-orange-500 via-red-500 to-orange-500 overflow-hidden">
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
         <div className="relative max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
           <div className="flex items-center gap-5">
             <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
               <Zap size={26} className="text-white" />
             </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-black text-white">Need Help Fast?</p>
-              <p className="text-white/75 text-base sm:text-lg">Same-day response — call us anytime.</p>
-            </div>
+            <p className="text-xl sm:text-2xl font-black text-white">Need Help Fast?</p>
           </div>
           {lead.phone && (
             <a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center gap-2.5 bg-white text-gray-900 px-8 py-4 rounded-xl font-black text-base sm:text-lg hover:bg-gray-100 transition-all shadow-xl flex-shrink-0">
@@ -413,32 +400,39 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
 
       {/* ═══════ GALLERY — Asymmetric Masonry ═══════ */}
       {photos.length > 0 && (
-        <section id="work" className="py-24 sm:py-28 px-5 sm:px-8 bg-gray-900/30">
+        <section id="work" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-16">
+            <div className="text-center mb-10">
               <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">
                 <Camera size={12} />Our Work
               </div>
-              <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-4">Results Speak Louder</h2>
+              <h2 className="font-display text-4xl md:text-5xl font-black text-white">Results Speak Louder</h2>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-12 gap-3 sm:gap-4">
-              {photos.slice(0, 5).map((photo, i) => {
-                const spans = ['md:col-span-8', 'md:col-span-4', 'md:col-span-4', 'md:col-span-4', 'md:col-span-4']
-                return (
-                  <div key={i} className={`group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-orange-500/30 transition-all duration-500 ${i === 0 ? 'col-span-2 ' : ''}${spans[i]}`}>
-                    <div className={i === 0 ? 'aspect-[16/9]' : 'aspect-[4/3]'}><img src={photo} alt={`Project ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" /></div>
+            {/* First photo hero-sized */}
+            {photos[0] && (
+              <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-orange-500/30 transition-all duration-500 mb-3 sm:mb-4">
+                <div className="aspect-[4/3] sm:aspect-[16/9]"><img src={photos[0]} alt="Project 1" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" /></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+              </div>
+            )}
+            {/* Remaining photos in grid */}
+            {photos.length > 1 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                {photos.slice(1, 7).map((photo, i) => (
+                  <div key={i} className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-orange-500/30 transition-all duration-500">
+                    <div className="aspect-[4/3]"><img src={photo} alt={`Project ${i + 2}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" /></div>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
                   </div>
-                )
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}
 
       {/* ═══════ ABOUT — Editorial with Value Props ═══════ */}
-      <section id="about" className="py-24 sm:py-28 px-5 sm:px-8">
+      <section id="about" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
             <div className="lg:col-span-3">
@@ -446,10 +440,9 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
               <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-8 leading-[0.95]">
                 Built on Hard Work<br />& Results.
               </h2>
-              <div className="space-y-5 text-gray-400 leading-relaxed text-base sm:text-lg">
-                <p>{wc?.aboutParagraph1 || `${lead.companyName} isn't just another ${industryLabel} company.${location ? ` We're a team of dedicated professionals in ${location} who take pride in every single job.` : ` We're dedicated professionals who take pride in every job.`}`}</p>
-                <p>{wc?.aboutParagraph2 || `From emergency calls to planned projects, we bring the same intensity and commitment. Our crew shows up on time, works hard, and doesn't leave until the job is done right.`}</p>
-              </div>
+              <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
+                {wc?.aboutParagraph1 || `${lead.companyName} — dedicated ${industryLabel} professionals${location ? ` in ${location}` : ''}. We show up on time and get the job done right.`}
+              </p>
 
               {/* Value props folded in (replaces old "Why Choose Us" card section) */}
               <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -476,7 +469,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                   {Array.from({ length: 5 }, (_, i) => <Star key={i} size={14} className="text-amber-400 fill-current" />)}
                 </div>
                 <p className="text-white text-base italic leading-relaxed mb-4">
-                  "{lead.companyName} absolutely crushed it. Fast, professional, and the quality was top-notch. Already recommended them to everyone."
+                  "Fast, professional, and top-notch quality. Highly recommended."
                 </p>
                 <div className="w-8 h-0.5 bg-orange-500 rounded-full mb-2" />
                 <span className="text-gray-500 text-xs font-semibold">Satisfied Customer{location ? ` · ${location}` : ''}</span>
@@ -512,21 +505,21 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       </section>
 
       {/* ═══════ TESTIMONIALS — Staggered Editorial ═══════ */}
-      <section className="py-24 sm:py-28 px-5 sm:px-8 bg-gray-900/30">
+      <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">Reviews</div>
             <h2 className="font-display text-4xl md:text-5xl font-black text-white">What People Say</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { quote: `${lead.companyName} was fantastic from start to finish. Professional, clean, affordable. Will absolutely call again.`, name: 'Homeowner', loc: location || 'Local' },
-              { quote: 'Fast response, excellent work. They explained everything clearly and finished ahead of schedule. Can\'t ask for more.', name: 'Property Manager', loc: location || 'Local' },
-              { quote: 'Fair pricing, quality workmanship, and genuinely good people. This is how every service company should operate.', name: 'Repeat Customer', loc: location || 'Local' },
+              { quote: 'Professional, clean, and affordable. Will absolutely call again.', name: 'Homeowner', loc: location || 'Local' },
+              { quote: 'Fast response, excellent work, and finished ahead of schedule.', name: 'Property Manager', loc: location || 'Local' },
+              { quote: 'Fair pricing and genuinely quality workmanship.', name: 'Repeat Customer', loc: location || 'Local' },
             ].map((r, i) => (
-              <div key={i} className={`bg-gray-950/60 border border-gray-800/40 rounded-2xl p-8 hover:border-orange-500/20 transition-all duration-300 ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
-                <div className="flex gap-0.5 mb-5">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={14} className="text-amber-400 fill-current" />)}</div>
-                <p className="text-gray-300 text-base leading-relaxed mb-6 italic">"{r.quote}"</p>
+              <div key={i} className={`bg-gray-950/60 border border-gray-800/40 rounded-2xl p-7 hover:border-orange-500/20 transition-all duration-300 ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
+                <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={14} className="text-amber-400 fill-current" />)}</div>
+                <p className="text-gray-300 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
                 <div className="flex items-center gap-3 text-xs">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center"><span className="text-white text-[11px] font-bold">{r.name[0]}</span></div>
                   <div><span className="font-bold text-gray-300">{r.name}</span><span className="text-gray-600"> — {r.loc}</span></div>
@@ -538,9 +531,9 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       </section>
 
       {/* ═══════ FAQ ═══════ */}
-      <section id="faq" className="py-24 sm:py-28 px-5 sm:px-8">
+      <section id="faq" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-14">
+          <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">FAQ</div>
             <h2 className="font-display text-3xl md:text-4xl font-black text-white">Questions? Answered.</h2>
           </div>
@@ -551,13 +544,12 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       </section>
 
       {/* ═══════ CONTACT — Two Column with Form ═══════ */}
-      <section id="contact" className="py-24 sm:py-28 px-5 sm:px-8 bg-gray-900/30">
+      <section id="contact" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
             <div>
               <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">Contact</div>
-              <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-6 leading-[0.95]">Let's Get to Work.</h2>
-              <p className="text-gray-400 text-base sm:text-lg leading-relaxed mb-10 max-w-md">{wc?.closingBody || `Don't wait — contact ${lead.companyName} today for a free, no-obligation estimate.`}</p>
+              <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-8 leading-[0.95]">Get Your Free Estimate.</h2>
               <div className="space-y-5">
                 {lead.phone && (
                   <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 group">
@@ -603,7 +595,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       </section>
 
       {/* ═══════ FOOTER ═══════ */}
-      <footer className="bg-black py-16 px-5 sm:px-8">
+      <footer className="bg-black py-16 px-4 sm:px-6 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
             <div>

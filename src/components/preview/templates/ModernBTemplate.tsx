@@ -131,11 +131,11 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
     { id: 'faq', label: 'FAQ' }, { id: 'contact', label: 'Contact' },
   ]
   const faqs = [
-    { q: 'How do I get a free quote?', a: 'Call us or use the contact form below. We respond same-day with a detailed, no-obligation estimate.' },
-    { q: 'What areas do you serve?', a: `We serve ${location || 'the local area'} and surrounding communities. Call us to confirm coverage.` },
-    { q: 'Are you licensed and insured?', a: 'Fully licensed, bonded, and insured with comprehensive liability coverage on every project.' },
-    { q: 'How quickly can you start?', a: 'Most projects start within 1–2 weeks. Urgent needs get expedited scheduling.' },
-    { q: 'Is your work guaranteed?', a: "Absolutely — backed by our satisfaction guarantee. If it's not right, we fix it." },
+    { q: 'How do I get a free quote?', a: 'Call us or use the form below — we respond same-day.' },
+    { q: 'What areas do you serve?', a: `We serve ${location || 'the local area'} and surrounding communities.` },
+    { q: 'Are you licensed and insured?', a: 'Yes — fully licensed, bonded, and insured on every project.' },
+    { q: 'How quickly can you start?', a: 'Most projects start within 1-2 weeks.' },
+    { q: 'Is your work guaranteed?', a: "Every job is backed by our satisfaction guarantee." },
   ]
   useEffect(() => { const h = () => setScrolled(window.scrollY > 50); window.addEventListener('scroll', h, { passive: true }); return () => window.removeEventListener('scroll', h) }, [])
 
@@ -170,7 +170,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
       <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} />
 
       {/* ═══════ HERO — Split ═══════ */}
-      <section id="hero" className="relative pt-32 pb-20 sm:pb-28 px-5 sm:px-8 overflow-hidden">
+      <section id="hero" className="relative pt-32 pb-16 sm:pb-20 md:pb-24 px-4 sm:px-6 md:px-8 overflow-hidden">
         <div className="absolute top-[-5%] left-[-10%] w-[500px] h-[500px] bg-gradient-to-br from-violet-100/50 to-purple-50/20 rounded-full blur-3xl" />
         <div className="absolute bottom-[-10%] right-[-8%] w-[400px] h-[400px] bg-gradient-to-tl from-fuchsia-50/30 to-violet-50/10 rounded-full blur-3xl" />
         <div className="relative max-w-7xl mx-auto">
@@ -180,16 +180,10 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                 <Sparkles size={14} />
                 {hasRating ? `${lead.enrichedRating}-Star Rated` : 'Top Rated'}{location ? ` · ${location}` : ''}
               </div>
-              <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 mb-6 tracking-tight leading-[1.08]">{wc?.heroHeadline || lead.companyName}</h1>
-              <p className="text-lg sm:text-xl text-gray-500 mb-10 leading-relaxed max-w-lg">{wc?.heroSubheadline || config.tagline}</p>
+              <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 mb-8 tracking-tight leading-[1.08]">{wc?.heroHeadline || lead.companyName}</h1>
               <div className="flex flex-col sm:flex-row gap-4">
-                {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white px-9 py-4 rounded-full font-semibold text-base hover:from-violet-600 hover:to-purple-700 transition-all shadow-lg hover:-translate-y-0.5"><Phone size={18} />Call Now — Free Quote</a>)}
+                {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white px-9 py-4 rounded-full font-semibold text-base hover:from-violet-600 hover:to-purple-700 transition-all shadow-lg hover:-translate-y-0.5"><Phone size={18} />Call Now</a>)}
                 <button onClick={onCTAClick} className="inline-flex items-center justify-center gap-2.5 bg-white border-2 border-gray-200 text-gray-700 px-9 py-4 rounded-full font-semibold text-base hover:border-violet-300 hover:text-violet-600 transition-all group">{config.ctaText}<ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></button>
-              </div>
-              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-gray-400 text-sm">
-                <span className="flex items-center gap-1.5"><Shield size={14} />Licensed & Insured</span>
-                <span className="flex items-center gap-1.5"><Clock size={14} />Same-Day Response</span>
-                <span className="flex items-center gap-1.5"><CheckCircle size={14} />Satisfaction Guaranteed</span>
               </div>
             </div>
             {/* Right — Stats + Quick CTA */}
@@ -199,7 +193,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                 <div className="relative">
                   {hasRating && (<div className="flex items-center gap-2 mb-6"><div className="flex gap-0.5">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={18} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-amber-400 fill-current' : 'text-gray-200'} />)}</div><span className="font-bold text-gray-900 text-lg">{lead.enrichedRating}</span>{lead.enrichedReviews && <span className="text-sm text-gray-400">({lead.enrichedReviews} reviews)</span>}</div>)}
                   <h3 className="text-xl font-bold text-gray-900 mb-2">Get Your Free Quote</h3>
-                  <p className="text-gray-400 text-sm mb-6">No obligation · Same-day response</p>
+                  <p className="text-gray-400 text-sm mb-6">Same-day response</p>
                   <button onClick={onCTAClick} className="w-full bg-gradient-to-r from-violet-500 to-purple-600 text-white py-3.5 rounded-xl font-bold text-base hover:from-violet-600 hover:to-purple-700 transition-all shadow-md mb-3">Request a Quote</button>
                   {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-600 py-3 rounded-xl font-medium text-sm hover:border-violet-300 hover:text-violet-600 transition-all"><Phone size={15} />Or call {lead.phone}</a>)}
                 </div>
@@ -210,7 +204,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
       </section>
 
       {/* ═══════ PROOF STRIP ═══════ */}
-      <section className="py-4 px-5 sm:px-8 border-y border-gray-100 bg-gray-50/50">
+      <section className="py-4 px-4 sm:px-6 md:px-8 border-y border-gray-100 bg-gray-50/50">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
           {hasRating && <span className="flex items-center gap-2 text-gray-700 font-semibold"><Star size={13} className="text-amber-400 fill-current" />{lead.enrichedRating} Rating</span>}
           {lead.enrichedReviews && (<><span className="text-gray-200 hidden sm:inline">•</span><span className="text-gray-500">{lead.enrichedReviews}+ Reviews</span></>)}
@@ -224,24 +218,20 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
 
       {/* ═══════ SERVICES ═══════ */}
       {services.length > 0 && (
-        <section id="services" className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+        <section id="services" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
           <div className="max-w-5xl mx-auto">
-            <div className="max-w-xl mb-16">
+            <div className="max-w-xl mb-14">
               <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100">Services</div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-4">What we do.</h2>
-              <p className="text-gray-500 text-base">Expert {industryLabel} solutions with transparent pricing.</p>
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">What we do.</h2>
             </div>
             <div className="divide-y divide-gray-100">
               {services.slice(0, 8).map((service, i) => (
-                <div key={i} className="group flex items-center justify-between py-6 cursor-pointer hover:pl-2 transition-all duration-300" onClick={onCTAClick}>
+                <div key={i} className="group flex items-center justify-between py-5 cursor-pointer hover:pl-2 transition-all duration-300" onClick={onCTAClick}>
                   <div className="flex items-center gap-5">
                     <span className="text-xs text-violet-300 font-mono tabular-nums w-6 font-bold">{String(i + 1).padStart(2, '0')}</span>
                     <h3 className="text-base sm:text-lg font-semibold text-gray-800 group-hover:text-violet-600 transition-colors">{service}</h3>
                   </div>
-                  <div className="flex items-center gap-4">
-                    {wc?.serviceDescriptions?.[service] && <p className="hidden md:block text-sm text-gray-400 max-w-xs text-right">{wc.serviceDescriptions[service]}</p>}
-                    <ArrowRight size={16} className="text-gray-300 group-hover:text-violet-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
-                  </div>
+                  <ArrowRight size={16} className="text-gray-300 group-hover:text-violet-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </div>
               ))}
             </div>
@@ -253,26 +243,24 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
       )}
 
       {/* ═══════ VIOLET CTA BAND ═══════ */}
-      <section className="relative py-20 sm:py-24 overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600">
+      <section className="relative py-16 sm:py-20 md:py-24 overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600">
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
-        <div className="relative max-w-4xl mx-auto px-5 sm:px-8 text-center">
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 md:px-8 text-center">
           <Quote size={36} className="text-white/15 mx-auto mb-5" />
-          <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-snug">{wc?.closingHeadline || "Quality work. Honest pricing. Guaranteed satisfaction."}</p>
-          {location && <p className="mt-5 text-white/50 text-sm font-medium">Proudly serving {location}</p>}
+          <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-snug">{wc?.closingHeadline || "Quality work. Honest pricing. Guaranteed."}</p>
         </div>
       </section>
 
       {/* ═══════ ABOUT ═══════ */}
-      <section id="about" className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+      <section id="about" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
             <div className="lg:col-span-3">
               <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100">About {lead.companyName}</div>
               <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-6">Your trusted {industryLabel} professionals.</h2>
-              <div className="space-y-4 text-gray-500 text-base leading-relaxed">
-                <p>{wc?.aboutParagraph1 || `At ${lead.companyName}, we believe every client deserves exceptional service.${location ? ` Based in ${location}, we've built our reputation on honest work and results.` : " We've built our reputation on honest work and results."}`}</p>
-                <p>{wc?.aboutParagraph2 || 'Our team is fully licensed and insured, bringing deep expertise to every project. From consultation to walkthrough, we keep you informed and ensure complete satisfaction.'}</p>
-              </div>
+              <p className="text-gray-500 text-base leading-relaxed">
+                {wc?.aboutParagraph1 || `${lead.companyName} delivers expert ${industryLabel}${location ? ` in ${location}` : ''}. Licensed, insured, and dedicated to getting it right.`}
+              </p>
               <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {[
                   { val: hasRating ? `${lead.enrichedRating}` : '5.0', label: 'Rating' },
@@ -285,7 +273,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
             <div className="lg:col-span-2 flex flex-col gap-5">
               <div className="bg-violet-50/40 border border-violet-100 rounded-2xl p-7">
                 <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={14} className="text-amber-400 fill-current" />)}</div>
-                <p className="text-gray-700 text-base italic leading-relaxed mb-4">"{lead.companyName} did an outstanding job. Professional, on time, and the quality was excellent."</p>
+                <p className="text-gray-700 text-base italic leading-relaxed mb-4">"Outstanding quality and genuinely professional service."</p>
                 <div className="w-8 h-0.5 bg-violet-200 rounded-full mb-2" />
                 <span className="text-gray-400 text-xs font-medium">Happy Customer{location ? ` · ${location}` : ''}</span>
               </div>
@@ -305,41 +293,51 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
 
       {/* ═══════ GALLERY ═══════ */}
       {photos.length > 0 && (
-        <section id="gallery" className="py-20 sm:py-28 px-5 sm:px-8 bg-gray-50/50">
+        <section id="gallery" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-50/50">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center max-w-xl mx-auto mb-14">
+            <div className="text-center max-w-xl mx-auto mb-10">
               <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100"><Camera size={12} />Portfolio</div>
               <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Our recent work.</h2>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-              {photos.slice(0, 6).map((photo, i) => (
-                <div key={i} className={`relative overflow-hidden rounded-2xl group border border-gray-100 hover:border-violet-200 transition-all ${i === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}>
-                  <img src={photo} alt={`Project ${i + 1}`} className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${i === 0 ? 'aspect-square md:aspect-[4/3]' : 'aspect-square'}`} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-              ))}
-            </div>
+            {/* First photo hero-sized */}
+            {photos[0] && (
+              <div className="relative overflow-hidden rounded-2xl group border border-gray-100 hover:border-violet-200 transition-all mb-3 sm:mb-4">
+                <img src={photos[0]} alt="Project 1" className="w-full object-cover aspect-[4/3] sm:aspect-[16/9] transition-transform duration-700 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            )}
+            {/* Remaining photos in grid */}
+            {photos.length > 1 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                {photos.slice(1, 7).map((photo, i) => (
+                  <div key={i} className="relative overflow-hidden rounded-2xl group border border-gray-100 hover:border-violet-200 transition-all">
+                    <img src={photo} alt={`Project ${i + 2}`} className="w-full object-cover aspect-[4/3] transition-transform duration-700 group-hover:scale-105" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}
 
       {/* ═══════ TESTIMONIALS ═══════ */}
-      <section className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+      <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100">Reviews</div>
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">What clients say.</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { quote: `${lead.companyName} delivered exceptional results. Professional, transparent, and the quality speaks for itself.`, name: 'Homeowner', loc: lead.city || 'Local' },
-              { quote: 'Responsive, knowledgeable, and meticulous. They explained everything clearly and finished on schedule.', name: 'Property Manager', loc: lead.city || 'Local' },
-              { quote: 'Fair pricing, expert work, and a team that genuinely cares. Already booked them for our next project.', name: 'Repeat Client', loc: lead.city || 'Local' },
+              { quote: 'Exceptional results — professional, transparent, and top quality.', name: 'Homeowner', loc: lead.city || 'Local' },
+              { quote: 'Responsive, knowledgeable, and finished right on schedule.', name: 'Property Manager', loc: lead.city || 'Local' },
+              { quote: `Already booked ${lead.companyName} for our next project.`, name: 'Repeat Client', loc: lead.city || 'Local' },
             ].map((r, i) => (
-              <div key={i} className={`bg-gray-50/50 border border-gray-100 rounded-2xl p-8 hover:border-violet-200 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
-                <div className="flex gap-0.5 mb-5">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
-                <p className="text-gray-600 text-base leading-relaxed mb-6 italic">"{r.quote}"</p>
-                <div className="flex items-center gap-3 text-sm pt-4 border-t border-gray-100">
+              <div key={i} className={`bg-gray-50/50 border border-gray-100 rounded-2xl p-7 hover:border-violet-200 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
+                <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
+                <p className="text-gray-600 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
+                <div className="flex items-center gap-3 text-sm pt-3 border-t border-gray-100">
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center"><span className="text-violet-600 font-bold text-xs">{r.name[0]}</span></div>
                   <div><span className="font-semibold text-gray-800">{r.name}</span><span className="text-gray-400"> — {r.loc}</span></div>
                 </div>
@@ -350,9 +348,9 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
       </section>
 
       {/* ═══════ FAQ ═══════ */}
-      <section id="faq" className="py-20 sm:py-28 px-5 sm:px-8 bg-gray-50/50">
+      <section id="faq" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-50/50">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-14">
+          <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100">FAQ</div>
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Common questions.</h2>
           </div>
@@ -363,13 +361,12 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
       </section>
 
       {/* ═══════ CONTACT ═══════ */}
-      <section id="contact" className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+      <section id="contact" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
             <div>
               <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100">Contact</div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-6">Let's talk about your project.</h2>
-              <p className="text-gray-500 text-base leading-relaxed mb-10">{wc?.closingBody || `Get a free estimate from ${lead.companyName} today. No obligation, no pressure — just honest advice.`}</p>
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-8">Get your free estimate.</h2>
               <div className="space-y-5">
                 {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-sm"><Phone size={20} className="text-white" /></div><div><p className="text-sm font-bold text-gray-800">{lead.phone}</p><p className="text-xs text-gray-400">Call or text anytime</p></div></a>)}
                 {lead.email && (<a href={`mailto:${lead.email}`} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-sm"><Mail size={20} className="text-white" /></div><div><p className="text-sm font-bold text-gray-800">{lead.email}</p><p className="text-xs text-gray-400">We reply fast</p></div></a>)}
@@ -399,7 +396,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
       </section>
 
       {/* ═══════ FOOTER ═══════ */}
-      <footer className="bg-gray-950 py-14 px-5 sm:px-8">
+      <footer className="bg-gray-950 py-14 px-4 sm:px-6 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
             <div>

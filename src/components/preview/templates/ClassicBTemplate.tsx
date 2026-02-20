@@ -167,11 +167,11 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
   ]
 
   const faqs = [
-    { q: 'How do I get a free estimate?', a: `Just give us a call or fill out the contact form. We'll get back to you within 24 hours with a detailed, no-obligation quote.` },
-    { q: 'What areas do you serve?', a: `We proudly serve ${location || 'the local area'} and surrounding communities. Not sure if we cover your area? Just ask.` },
-    { q: 'Are you licensed and insured?', a: 'Yes — fully licensed, bonded, and insured with comprehensive liability coverage for your peace of mind.' },
-    { q: 'How quickly can you start?', a: 'Most projects begin within 1–2 weeks of your approved estimate. For urgent needs, we offer expedited scheduling.' },
-    { q: 'Do you guarantee your work?', a: "Every job is backed by our satisfaction guarantee. If something isn't right, we come back and fix it — no questions asked." },
+    { q: 'How do I get a free estimate?', a: 'Call us or fill out the contact form — we respond within 24 hours.' },
+    { q: 'What areas do you serve?', a: `We serve ${location || 'the local area'} and surrounding communities.` },
+    { q: 'Are you licensed and insured?', a: 'Fully licensed, bonded, and insured with comprehensive coverage.' },
+    { q: 'How quickly can you start?', a: 'Most projects begin within 1–2 weeks of your approved estimate.' },
+    { q: 'Do you guarantee your work?', a: 'Every job is backed by our satisfaction guarantee.' },
   ]
 
   useEffect(() => {
@@ -214,20 +214,19 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
       <section id="hero" className="relative min-h-[100svh] flex items-center overflow-hidden bg-gradient-to-br from-green-800 via-green-900 to-emerald-900">
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-emerald-400/10 rounded-full -translate-y-1/3 translate-x-1/4 blur-3xl" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-green-400/8 rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl" />
-        <div className="relative max-w-7xl mx-auto w-full px-5 sm:px-8 py-32">
+        <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-32">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
             <div>
-              {location && (<div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-8 border border-white/10"><Leaf size={14} className="text-emerald-300" /><span className="text-sm font-medium text-emerald-200">Trusted in {location}</span></div>)}
+              {location && (<div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-8 border border-white/10"><MapPin size={14} className="text-emerald-300" /><span className="text-sm font-medium text-emerald-200">{location}</span></div>)}
               <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight leading-[1.08]">{wc?.heroHeadline || lead.companyName}</h1>
-              <p className="text-lg sm:text-xl text-white/65 mb-10 leading-relaxed max-w-lg">{wc?.heroSubheadline || config.tagline}</p>
+              <p className="text-base sm:text-lg text-white/55 mb-10 max-w-lg">{config.tagline}</p>
               <div className="flex flex-col sm:flex-row gap-4">
                 {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 bg-white text-green-900 px-8 py-4 rounded-xl font-bold text-base hover:bg-green-50 transition-all shadow-xl"><Phone size={18} />Call Now — Free Estimate</a>)}
                 <button onClick={onCTAClick} className="inline-flex items-center justify-center gap-2.5 bg-white/10 border border-white/20 text-white px-8 py-4 rounded-xl font-semibold text-base hover:bg-white hover:text-green-900 transition-all duration-300 group">{config.ctaText}<ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></button>
               </div>
               <div className="mt-10 flex flex-wrap gap-x-6 gap-y-2 text-white/35 text-sm">
                 <span className="flex items-center gap-1.5"><Shield size={14} />Licensed & Insured</span>
-                <span className="flex items-center gap-1.5"><Clock size={14} />Same-Day Response</span>
-                <span className="flex items-center gap-1.5"><CheckCircle size={14} />Satisfaction Guaranteed</span>
+                {location && <span className="flex items-center gap-1.5"><MapPin size={14} />{location}</span>}
               </div>
             </div>
             <div className="flex justify-center lg:justify-end">
@@ -245,28 +244,24 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
 
       {/* ═══════ SERVICES ═══════ */}
       {services.length > 0 && (
-        <section id="services" className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+        <section id="services" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
           <div className="max-w-5xl mx-auto">
-            <div className="max-w-xl mb-16">
+            <div className="max-w-xl mb-12 sm:mb-16">
               <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-3">What We Do</p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-green-950 leading-tight mb-4">Services built around your needs.</h2>
-              <p className="text-green-800/50 text-base leading-relaxed">Every property is different. We tailor our approach to deliver exactly what yours requires.</p>
+              <h2 className="text-3xl sm:text-4xl font-bold text-green-950 leading-tight">Our Services</h2>
             </div>
             <div className="divide-y divide-green-100">
               {services.slice(0, 8).map((service, i) => (
-                <div key={i} className="group flex items-center justify-between py-6 cursor-pointer hover:pl-2 transition-all duration-300" onClick={onCTAClick}>
+                <div key={i} className="group flex items-center justify-between py-5 sm:py-6 cursor-pointer hover:pl-2 transition-all duration-300" onClick={onCTAClick}>
                   <div className="flex items-center gap-5">
                     <span className="text-xs text-green-300 font-mono tabular-nums w-6 font-bold">{String(i + 1).padStart(2, '0')}</span>
                     <h3 className="text-base sm:text-lg font-semibold text-green-900 group-hover:text-green-700 transition-colors">{service}</h3>
                   </div>
-                  <div className="flex items-center gap-4">
-                    {wc?.serviceDescriptions?.[service] && <p className="hidden md:block text-sm text-green-600/40 max-w-xs text-right">{wc.serviceDescriptions[service]}</p>}
-                    <ArrowRight size={16} className="text-green-300 group-hover:text-green-600 group-hover:translate-x-1 transition-all flex-shrink-0" />
-                  </div>
+                  <ArrowRight size={16} className="text-green-300 group-hover:text-green-600 group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </div>
               ))}
             </div>
-            <div className="mt-12 flex justify-center">
+            <div className="mt-10 sm:mt-12 flex justify-center">
               <button onClick={onCTAClick} className="flex items-center gap-2 bg-gradient-to-r from-green-700 to-emerald-600 text-white px-7 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-all shadow-md">Request a Free Estimate<ArrowRight size={16} /></button>
             </div>
           </div>
@@ -274,7 +269,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
       )}
 
       {/* ═══════ FULL-BLEED QUOTE ═══════ */}
-      <section className="relative py-24 sm:py-32 overflow-hidden bg-gradient-to-r from-green-700 via-emerald-700 to-green-800">
+      <section className="relative py-16 sm:py-20 md:py-28 overflow-hidden bg-gradient-to-r from-green-700 via-emerald-700 to-green-800">
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
         <div className="relative max-w-4xl mx-auto px-5 sm:px-8 text-center">
           <Quote size={40} className="text-white/15 mx-auto mb-6" />
@@ -284,7 +279,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
       </section>
 
       {/* ═══════ ABOUT ═══════ */}
-      <section id="about" className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+      <section id="about" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-center">
             <div className="lg:col-span-5">
@@ -293,9 +288,8 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
             <div className="lg:col-span-7">
               <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-4">Our Story</p>
               <h2 className="text-3xl sm:text-4xl font-bold text-green-950 leading-tight mb-6">Built on trust. Driven by community.</h2>
-              <div className="space-y-4 text-green-800/55 text-base leading-relaxed">
-                <p>{wc?.aboutParagraph1 || `${lead.companyName} has been providing reliable ${industryLabel} services${location ? ` to homeowners throughout ${location}` : ' to local homeowners'}. We built this company on old-fashioned values: show up on time, do honest work, and stand behind every job.`}</p>
-                <p>{wc?.aboutParagraph2 || `Our team brings years of hands-on experience to every project. Whether it's a small repair or a complete overhaul, we approach every job with the same care and professionalism.`}</p>
+              <div className="text-green-800/55 text-base leading-relaxed">
+                <p>{wc?.aboutParagraph1 || `${lead.companyName} delivers trusted ${industryLabel}${location ? ` across ${location}` : ''} — honest work, every time.`}</p>
               </div>
               <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {(wc?.valueProps || [
@@ -313,40 +307,52 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
 
       {/* ═══════ GALLERY ═══════ */}
       {photos.length > 1 && (
-        <section id="gallery" className="py-20 sm:py-28 px-5 sm:px-8 bg-green-50/40">
+        <section id="gallery" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-green-50/40">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center max-w-xl mx-auto mb-14">
+            <div className="text-center max-w-xl mx-auto mb-10 sm:mb-14">
               <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-3">Our Work</p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-green-950">See the difference quality makes.</h2>
+              <h2 className="text-3xl sm:text-4xl font-bold text-green-950">See the difference.</h2>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-              {photos.slice(0, 6).map((photo, i) => (
-                <div key={i} className={`relative overflow-hidden rounded-xl group cursor-pointer border border-green-100/50 hover:border-green-300/50 transition-all ${i === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}>
-                  <img src={photo} alt={`Project ${i + 1}`} className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${i === 0 ? 'aspect-square md:aspect-[4/3]' : 'aspect-square'}`} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                </div>
-              ))}
+
+            {/* Hero photo full width */}
+            <div className="mb-3 sm:mb-4">
+              <div className="relative overflow-hidden rounded-xl group cursor-pointer border border-green-100/50 hover:border-green-300/50 transition-all">
+                <img src={photos[0]} alt="Project 1" className="w-full object-cover aspect-[16/9] sm:aspect-[2/1] transition-transform duration-700 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </div>
             </div>
+
+            {/* Remaining photos */}
+            {photos.length > 2 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                {photos.slice(1, 5).map((photo, i) => (
+                  <div key={i} className="relative overflow-hidden rounded-xl group cursor-pointer border border-green-100/50 hover:border-green-300/50 transition-all">
+                    <img src={photo} alt={`Project ${i + 2}`} className="w-full object-cover aspect-[4/3] transition-transform duration-700 group-hover:scale-105" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}
 
       {/* ═══════ TESTIMONIALS ═══════ */}
-      <section className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+      <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12 sm:mb-16">
             <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-3">Reviews</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-green-950">What our customers say.</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { quote: `${lead.companyName} did an outstanding job. Professional from start to finish and the quality exceeded our expectations.`, name: 'Sarah M.', loc: lead.city || 'Local' },
-              { quote: `Honest, reliable, and truly skilled. Wouldn't hesitate to recommend them to anyone.`, name: 'James R.', loc: lead.city || 'Local' },
-              { quote: 'From the initial quote to the finished project, everything was handled with professionalism and care.', name: 'Linda K.', loc: lead.city || 'Local' },
+              { quote: `Outstanding work — professional and exceeded expectations.`, name: 'Sarah M.', loc: lead.city || 'Local' },
+              { quote: `Honest, reliable, and truly skilled. Highly recommend.`, name: 'James R.', loc: lead.city || 'Local' },
+              { quote: 'Great professionalism and care from start to finish.', name: 'Linda K.', loc: lead.city || 'Local' },
             ].map((r, i) => (
-              <div key={i} className={`bg-green-50/50 border border-green-100 rounded-2xl p-8 hover:border-green-200 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
-                <div className="flex gap-0.5 mb-5">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
-                <p className="text-green-800/65 text-base leading-relaxed mb-6 italic">"{r.quote}"</p>
+              <div key={i} className={`bg-green-50/50 border border-green-100 rounded-2xl p-7 sm:p-8 hover:border-green-200 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
+                <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
+                <p className="text-green-800/65 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
                 <div className="flex items-center gap-3 text-sm pt-4 border-t border-green-100">
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-200 to-emerald-200 flex items-center justify-center"><span className="text-green-700 font-bold text-xs">{r.name[0]}</span></div>
                   <div><span className="font-semibold text-green-900">{r.name}</span><span className="text-green-600/40"> — {r.loc}</span></div>
@@ -358,7 +364,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
       </section>
 
       {/* ═══════ FAQ ═══════ */}
-      <section id="faq" className="py-20 sm:py-28 px-5 sm:px-8 bg-green-50/40">
+      <section id="faq" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-green-50/40">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-14">
             <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-3">Common Questions</p>
@@ -371,13 +377,13 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
       </section>
 
       {/* ═══════ CONTACT ═══════ */}
-      <section id="contact" className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+      <section id="contact" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-4">Get In Touch</p>
               <h2 className="text-3xl sm:text-4xl font-bold text-green-950 leading-tight mb-6">Ready to get started?</h2>
-              <p className="text-green-800/50 text-base leading-relaxed mb-10">{wc?.closingBody || `Contact ${lead.companyName} today for a free, no-obligation estimate. We're here to help.`}</p>
+              <p className="text-green-800/50 text-base leading-relaxed mb-10">{wc?.closingBody || `Free estimates, fast response. Reach out today.`}</p>
               <div className="space-y-5">
                 {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 group"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-700 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm"><Phone size={20} className="text-white" /></div><div><p className="text-sm font-bold text-green-900">{lead.phone}</p><p className="text-xs text-green-600/40">Call or text anytime</p></div></a>)}
                 {lead.email && (<a href={`mailto:${lead.email}`} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-700 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm"><Mail size={20} className="text-white" /></div><div><p className="text-sm font-bold text-green-900">{lead.email}</p><p className="text-xs text-green-600/40">We reply fast</p></div></a>)}
@@ -407,7 +413,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
       </section>
 
       {/* ═══════ FOOTER ═══════ */}
-      <footer className="bg-green-950 py-14 px-5 sm:px-8">
+      <footer className="bg-green-950 py-14 px-4 sm:px-6 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
             <div>

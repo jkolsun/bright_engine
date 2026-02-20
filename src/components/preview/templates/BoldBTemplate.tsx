@@ -318,11 +318,11 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
   ]
 
   const faqs = [
-    { q: 'How fast can you start?', a: 'Most jobs begin within 1–2 weeks of your approved quote. For urgent needs, we offer expedited scheduling — just let us know.' },
-    { q: 'Do you offer free estimates?', a: "Always. We'll come out, assess the job, and give you an honest, detailed quote — no pressure, no obligation." },
-    { q: `What areas does ${lead.companyName} cover?`, a: `We serve ${location || 'the local area'} and surrounding communities. Not sure if we cover your area? Give us a call — we probably do.` },
-    { q: 'Are you licensed and insured?', a: 'Fully licensed, bonded, and insured. We carry comprehensive liability coverage so you never have to worry.' },
-    { q: 'What if I\'m not happy with the work?', a: "Then we're not done. Every job comes with our satisfaction guarantee. If something isn't right, we come back and fix it — no questions asked." },
+    { q: 'How fast can you start?', a: 'Most jobs begin within 1–2 weeks of your approved quote.' },
+    { q: 'Do you offer free estimates?', a: 'Always — no pressure, no obligation.' },
+    { q: `What areas does ${lead.companyName} cover?`, a: `We serve ${location || 'the local area'} and surrounding communities.` },
+    { q: 'Are you licensed and insured?', a: 'Fully licensed, bonded, and insured with comprehensive coverage.' },
+    { q: 'What if I\'m not happy with the work?', a: 'Every job comes with our satisfaction guarantee — we make it right.' },
   ]
 
   useEffect(() => {
@@ -446,7 +446,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-blue-500/8 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-cyan-500/5 rounded-full blur-3xl" />
 
-        <div className="relative max-w-4xl mx-auto w-full px-5 sm:px-8 py-32 text-center">
+        <div className="relative max-w-4xl mx-auto w-full px-4 sm:px-6 md:px-8 py-32 text-center">
           {/* Rating Badge */}
           {hasRating && (
             <div className="inline-flex items-center gap-2.5 bg-white/8 backdrop-blur-md border border-white/10 rounded-full px-5 py-2.5 mb-8">
@@ -467,8 +467,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
             {wc?.heroHeadline || lead.companyName}
           </h1>
 
-          <p className="text-lg sm:text-xl md:text-2xl text-white/45 mb-12 max-w-2xl mx-auto leading-relaxed">
-            {wc?.heroSubheadline || config.tagline}
+          <p className="text-base sm:text-lg text-white/40 mb-12 max-w-xl mx-auto">
+            {config.tagline}
           </p>
 
           {/* CTA Row */}
@@ -503,7 +503,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
       {/* ═══════════════════════════════════════════
           PROOF WALL — Inline strip
           ═══════════════════════════════════════════ */}
-      <section className="py-5 px-5 sm:px-8 border-y border-white/5 bg-gray-900/40">
+      <section className="py-4 sm:py-5 px-4 sm:px-6 md:px-8 border-y border-white/5 bg-gray-900/40">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
             {hasRating && (
@@ -545,20 +545,17 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           SERVICES — Numbered Vertical List (no cards)
           ═══════════════════════════════════════════ */}
       {services.length > 0 && (
-        <section id="services" className="py-24 sm:py-28 px-5 sm:px-8">
+        <section id="services" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
           <div className="max-w-5xl mx-auto">
             {/* Section Header */}
-            <div className="mb-16">
+            <div className="mb-12 sm:mb-16">
               <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
                 <Wrench size={12} />
                 Services
               </div>
-              <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-4">
+              <h2 className="font-display text-4xl md:text-5xl font-black text-white">
                 What We Do
               </h2>
-              <p className="text-gray-500 text-lg max-w-lg">
-                Expert {industryLabel} — every service tailored to your property.
-              </p>
             </div>
 
             {/* Service List */}
@@ -566,7 +563,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               {services.slice(0, 8).map((service, i) => (
                 <div
                   key={i}
-                  className="group flex items-center justify-between py-6 cursor-pointer hover:pl-3 transition-all duration-300"
+                  className="group flex items-center justify-between py-5 sm:py-6 cursor-pointer hover:pl-3 transition-all duration-300"
                   onClick={onCTAClick}
                 >
                   <div className="flex items-center gap-6">
@@ -577,25 +574,18 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                       {service}
                     </h3>
                   </div>
-                  <div className="flex items-center gap-4">
-                    {wc?.serviceDescriptions?.[service] && (
-                      <p className="hidden md:block text-sm text-gray-600 max-w-xs text-right leading-relaxed">
-                        {wc.serviceDescriptions[service]}
-                      </p>
-                    )}
-                    <ArrowRight
-                      size={16}
-                      className="text-gray-700 group-hover:text-blue-400 group-hover:translate-x-1 transition-all flex-shrink-0"
-                    />
-                  </div>
+                  <ArrowRight
+                    size={16}
+                    className="text-gray-700 group-hover:text-blue-400 group-hover:translate-x-1 transition-all flex-shrink-0"
+                  />
                 </div>
               ))}
             </div>
 
-            <div className="mt-14 flex justify-center">
+            <div className="mt-12 sm:mt-14 flex justify-center">
               <button
                 onClick={onCTAClick}
-                className="flex items-center gap-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-8 py-4 rounded-xl font-bold text-base hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/15 hover:shadow-blue-500/30"
+                className="flex items-center gap-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-8 py-3.5 sm:py-4 rounded-xl font-bold text-base hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/15 hover:shadow-blue-500/30"
               >
                 Request a Quote
                 <ArrowRight size={18} />
@@ -608,7 +598,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
       {/* ═══════════════════════════════════════════
           FULL-BLEED STATEMENT
           ═══════════════════════════════════════════ */}
-      <section className="relative py-24 sm:py-32 overflow-hidden">
+      <section className="relative py-16 sm:py-20 md:py-28 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500" />
         <div
           className="absolute inset-0 opacity-10"
@@ -633,41 +623,52 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           GALLERY — Asymmetric Masonry
           ═══════════════════════════════════════════ */}
       {photos.length > 0 && (
-        <section id="work" className="py-24 sm:py-28 px-5 sm:px-8 bg-gray-900/30">
+        <section id="work" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-16">
+            <div className="text-center mb-10 sm:mb-16">
               <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
                 <Camera size={12} />
                 Our Work
               </div>
-              <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-4">
+              <h2 className="font-display text-4xl md:text-5xl font-black text-white">
                 See the Results
               </h2>
             </div>
 
-            {/* Asymmetric Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-12 gap-3 sm:gap-4">
-              {photos.slice(0, 5).map((photo, i) => {
-                const spans = ['md:col-span-7', 'md:col-span-5', 'md:col-span-4', 'md:col-span-4', 'md:col-span-4']
-                return (
+            {/* Hero photo full width */}
+            <div className="mb-3 sm:mb-4">
+              <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-blue-500/30 transition-all duration-500">
+                <div className="aspect-[16/9] sm:aspect-[2/1]">
+                  <img
+                    src={photos[0]}
+                    alt={`${lead.companyName} project 1`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+              </div>
+            </div>
+
+            {/* Remaining photos grid */}
+            {photos.length > 1 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                {photos.slice(1, 5).map((photo, i) => (
                   <div
                     key={i}
-                    className={`group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-blue-500/30 transition-all duration-500 ${
-                      i === 0 ? 'col-span-2 ' : ''
-                    }${spans[i] || 'md:col-span-4'}`}
+                    className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-blue-500/30 transition-all duration-500"
                   >
-                    <div className={`${i === 0 ? 'aspect-[16/9]' : 'aspect-[4/3]'}`}>
+                    <div className="aspect-[4/3]">
                       <img
                         src={photo}
-                        alt={`${lead.companyName} project ${i + 1}`}
+                        alt={`${lead.companyName} project ${i + 2}`}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                       />
                     </div>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
                   </div>
-                )
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -675,7 +676,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
       {/* ═══════════════════════════════════════════
           ABOUT — Editorial with Pull-Quote
           ═══════════════════════════════════════════ */}
-      <section id="about" className="py-24 sm:py-28 px-5 sm:px-8">
+      <section id="about" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
             {/* Content */}
@@ -686,18 +687,10 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-8 leading-[0.95]">
                 Built on Trust.<br />Proven by Work.
               </h2>
-              <div className="space-y-5 text-gray-400 leading-relaxed text-base sm:text-lg">
+              <div className="text-gray-400 leading-relaxed text-base sm:text-lg">
                 <p>
                   {wc?.aboutParagraph1 ||
-                    `${lead.companyName} isn't just another ${industryLabel} company.${
-                      location
-                        ? ` We're a team of dedicated professionals in ${location} who take pride in every single job.`
-                        : ` We're a team of dedicated professionals who take pride in every single job.`
-                    }`}
-                </p>
-                <p>
-                  {wc?.aboutParagraph2 ||
-                    `From emergency calls to planned projects, we bring the same level of care and commitment. Our crew shows up on time, works efficiently, and doesn't leave until the job is done right.`}
+                    `${lead.companyName} is ${location ? `${location}'s` : 'your'} trusted ${industryLabel} team — dedicated to quality on every job.`}
                 </p>
               </div>
 
@@ -725,7 +718,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               <div className="relative bg-gray-900/50 border border-blue-500/15 rounded-2xl p-7">
                 <Quote size={28} className="text-blue-500/20 mb-3" />
                 <p className="text-white text-base italic leading-relaxed mb-4">
-                  "Absolutely outstanding work. They arrived on time, were incredibly professional, and the quality exceeded our expectations."
+                  "Outstanding work — professional, on time, and top quality."
                 </p>
                 <div className="flex items-center gap-2">
                   <div className="flex gap-0.5">
@@ -739,8 +732,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
 
               {/* Quick Contact */}
               <div className="bg-gray-900/50 border border-gray-800/60 rounded-2xl p-7">
-                <h3 className="font-bold text-white text-base mb-1">Ready to get started?</h3>
-                <p className="text-gray-600 text-xs mb-5">Free estimate · Same-day response</p>
+                <h3 className="font-bold text-white text-base mb-4">Ready to get started?</h3>
                 <div className="space-y-3.5">
                   {lead.phone && (
                     <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-3 group">
@@ -785,9 +777,9 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
       {/* ═══════════════════════════════════════════
           TESTIMONIALS — Editorial Pull-Quotes
           ═══════════════════════════════════════════ */}
-      <section className="py-24 sm:py-28 px-5 sm:px-8 bg-gray-900/30">
+      <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12 sm:mb-16">
             <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
               <Sparkles size={12} />
               Reviews
@@ -800,22 +792,22 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           {/* Staggered layout instead of even grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { quote: `${lead.companyName} was fantastic from start to finish. Professional, clean, and affordable. Will absolutely call again.`, name: 'Homeowner', loc: location || 'Local' },
-              { quote: `Fast response and excellent work. They explained everything clearly and completed the job ahead of schedule. Couldn't be happier.`, name: 'Property Manager', loc: location || 'Local' },
-              { quote: `Great experience from the first call to project completion. Fair pricing, quality workmanship, and genuinely good people.`, name: 'Repeat Customer', loc: location || 'Local' },
+              { quote: `Professional, clean, and affordable. Will absolutely call again.`, name: 'Homeowner', loc: location || 'Local' },
+              { quote: `Fast response and excellent work — completed ahead of schedule.`, name: 'Property Manager', loc: location || 'Local' },
+              { quote: `Fair pricing, quality workmanship, genuinely great people.`, name: 'Repeat Customer', loc: location || 'Local' },
             ].map((review, i) => (
               <div
                 key={i}
-                className={`bg-gray-950/60 border border-gray-800/40 rounded-2xl p-8 hover:border-blue-500/20 transition-all duration-300 ${
+                className={`bg-gray-950/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8 hover:border-blue-500/20 transition-all duration-300 ${
                   i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''
                 }`}
               >
-                <div className="flex gap-0.5 mb-5">
+                <div className="flex gap-0.5 mb-4">
                   {Array.from({ length: 5 }, (_, j) => (
                     <Star key={j} size={14} className="text-blue-400 fill-current" />
                   ))}
                 </div>
-                <p className="text-gray-300 text-base leading-relaxed mb-6 italic">
+                <p className="text-gray-300 text-base leading-relaxed mb-5 italic">
                   "{review.quote}"
                 </p>
                 <div className="flex items-center gap-3 text-xs">
@@ -836,7 +828,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
       {/* ═══════════════════════════════════════════
           FAQ — Accordion
           ═══════════════════════════════════════════ */}
-      <section id="faq" className="py-24 sm:py-28 px-5 sm:px-8">
+      <section id="faq" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
@@ -864,9 +856,9 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
       {/* ═══════════════════════════════════════════
           CONTACT — Two Column with Form
           ═══════════════════════════════════════════ */}
-      <section id="contact" className="py-24 sm:py-28 px-5 sm:px-8 bg-gray-900/30">
+      <section id="contact" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
             {/* Info Side */}
             <div>
               <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
@@ -875,8 +867,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-6 leading-[0.95]">
                 Let's Talk.
               </h2>
-              <p className="text-gray-400 text-base sm:text-lg leading-relaxed mb-10 max-w-md">
-                {wc?.closingBody || `Don't wait — contact ${lead.companyName} today for a free, no-obligation estimate. We respond fast.`}
+              <p className="text-gray-400 text-base leading-relaxed mb-10 max-w-md">
+                {wc?.closingBody || `Free estimates, fast response. Reach out today.`}
               </p>
 
               <div className="space-y-5">
@@ -988,7 +980,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
       {/* ═══════════════════════════════════════════
           FOOTER
           ═══════════════════════════════════════════ */}
-      <footer className="bg-black py-16 px-5 sm:px-8">
+      <footer className="bg-black py-14 sm:py-16 px-4 sm:px-6 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
             {/* Brand */}

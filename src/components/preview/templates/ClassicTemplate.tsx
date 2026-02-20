@@ -133,11 +133,11 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
   ]
 
   const faqs = [
-    { q: 'How do I request an estimate?', a: `Simple — call us or fill out the contact form below. We'll schedule a convenient time and provide a detailed, written estimate at no cost.` },
-    { q: 'What areas do you serve?', a: `We serve ${location || 'the local area'} and surrounding communities. Not sure if we cover your neighborhood? Give us a call and ask.` },
-    { q: 'Are you licensed and insured?', a: 'Absolutely — fully licensed, bonded, and insured with comprehensive coverage. Your property is always protected.' },
-    { q: 'How soon can you start?', a: 'Most projects begin within 1–2 weeks. For urgent needs, we offer expedited scheduling — just let us know your timeline.' },
-    { q: 'Do you stand behind your work?', a: "Every job is backed by our satisfaction guarantee. If something isn't right, we come back and fix it — period." },
+    { q: 'How do I request an estimate?', a: 'Call us or fill out the contact form — it\'s free.' },
+    { q: 'What areas do you serve?', a: `We serve ${location || 'the local area'} and surrounding communities.` },
+    { q: 'Are you licensed and insured?', a: 'Fully licensed, bonded, and insured with comprehensive coverage.' },
+    { q: 'How soon can you start?', a: 'Most projects begin within 1–2 weeks of your approved estimate.' },
+    { q: 'Do you stand behind your work?', a: 'Every job is backed by our satisfaction guarantee.' },
   ]
 
   useEffect(() => {
@@ -181,13 +181,16 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
         <div className="absolute inset-0 bg-black/10" />
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 rounded-full -translate-y-1/3 translate-x-1/3 blur-3xl" />
         <div className="absolute bottom-0 left-0 w-[350px] h-[350px] bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl" />
-        <div className="relative max-w-4xl mx-auto w-full px-5 sm:px-8 py-32 text-center">
-          <p className="text-white/50 text-sm uppercase tracking-[0.2em] font-semibold mb-6">
-            {location ? `Trusted ${industryLabel} · ${location}` : `Professional ${industryLabel}`}
-          </p>
+        <div className="relative max-w-4xl mx-auto w-full px-4 sm:px-6 md:px-8 py-32 text-center">
+          {location && (
+            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-8 border border-white/10">
+              <MapPin size={14} className="text-white/60" />
+              <span className="text-sm font-medium text-white/70">{location}</span>
+            </div>
+          )}
           <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight leading-[1.05]">{wc?.heroHeadline || lead.companyName}</h1>
           <div className="w-16 h-0.5 bg-white/25 mx-auto my-6 rounded-full" />
-          <p className="text-lg md:text-xl text-white/75 mb-10 max-w-2xl mx-auto leading-relaxed">{wc?.heroSubheadline || config.tagline}</p>
+          <p className="text-base sm:text-lg text-white/60 mb-10 max-w-xl mx-auto">{config.tagline}</p>
           {hasRating && (
             <div className="inline-flex items-center gap-2.5 bg-white/12 backdrop-blur-sm rounded-full px-5 py-2.5 mb-10 border border-white/10">
               <div className="flex gap-0.5">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={15} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-yellow-300 fill-current' : 'text-white/20'} />)}</div>
@@ -204,7 +207,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
       </section>
 
       {/* ═══════ PROOF STRIP ═══════ */}
-      <section className="py-4 px-5 sm:px-8 bg-white border-b border-stone-200/60">
+      <section className="py-4 px-4 sm:px-6 md:px-8 bg-white border-b border-stone-200/60">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
           {hasRating && (<span className="flex items-center gap-2 text-stone-700 font-semibold"><Star size={13} className="text-amber-400 fill-current" />{lead.enrichedRating} Rating</span>)}
           {lead.enrichedReviews && (<><span className="text-stone-200 hidden sm:inline">•</span><span className="text-stone-500">{lead.enrichedReviews}+ Customers</span></>)}
@@ -218,28 +221,24 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
 
       {/* ═══════ SERVICES — Numbered List ═══════ */}
       {services.length > 0 && (
-        <section id="services" className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+        <section id="services" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
           <div className="max-w-5xl mx-auto">
-            <div className="max-w-xl mb-16">
+            <div className="max-w-xl mb-12 sm:mb-16">
               <p className="text-xs uppercase tracking-[0.2em] font-semibold text-stone-400 mb-3">Our Services</p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 leading-tight mb-4">What we do best.</h2>
-              <p className="text-stone-500 text-base leading-relaxed">Comprehensive {industryLabel} solutions for homes and businesses.</p>
+              <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 leading-tight">What we do best.</h2>
             </div>
             <div className="divide-y divide-stone-100">
               {services.slice(0, 8).map((service, i) => (
-                <div key={i} className="group flex items-center justify-between py-6 cursor-pointer hover:pl-2 transition-all duration-300" onClick={onCTAClick}>
+                <div key={i} className="group flex items-center justify-between py-5 sm:py-6 cursor-pointer hover:pl-2 transition-all duration-300" onClick={onCTAClick}>
                   <div className="flex items-center gap-5">
                     <span className="text-xs text-stone-300 font-mono tabular-nums w-6 font-bold">{String(i + 1).padStart(2, '0')}</span>
                     <h3 className="text-base sm:text-lg font-semibold text-stone-800 group-hover:text-stone-600 transition-colors">{service}</h3>
                   </div>
-                  <div className="flex items-center gap-4">
-                    {wc?.serviceDescriptions?.[service] && <p className="hidden md:block text-sm text-stone-400 max-w-xs text-right">{wc.serviceDescriptions[service]}</p>}
-                    <ArrowRight size={16} className="text-stone-300 group-hover:text-stone-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
-                  </div>
+                  <ArrowRight size={16} className="text-stone-300 group-hover:text-stone-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </div>
               ))}
             </div>
-            <div className="mt-12 flex justify-center">
+            <div className="mt-10 sm:mt-12 flex justify-center">
               <button onClick={onCTAClick} className={`flex items-center gap-2 bg-gradient-to-r ${config.gradient} text-white px-7 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-all shadow-md`}>Request a Free Estimate<ArrowRight size={16} /></button>
             </div>
           </div>
@@ -247,7 +246,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
       )}
 
       {/* ═══════ FULL-BLEED QUOTE ═══════ */}
-      <section className={`relative py-24 sm:py-32 overflow-hidden bg-gradient-to-r ${config.gradient}`}>
+      <section className={`relative py-16 sm:py-20 md:py-28 overflow-hidden bg-gradient-to-r ${config.gradient}`}>
         <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
         <div className="relative max-w-4xl mx-auto px-5 sm:px-8 text-center">
           <Quote size={40} className="text-white/15 mx-auto mb-6" />
@@ -258,15 +257,14 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
       </section>
 
       {/* ═══════ ABOUT ═══════ */}
-      <section id="about" className="py-20 sm:py-28 px-5 sm:px-8 bg-stone-50">
+      <section id="about" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-stone-50">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
             <div className="lg:col-span-3">
               <p className="text-xs uppercase tracking-[0.2em] font-semibold text-stone-400 mb-4">About Us</p>
               <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 leading-tight mb-6">A name you can trust.</h2>
-              <div className="space-y-4 text-stone-600 text-base leading-relaxed">
-                <p>{wc?.aboutParagraph1 || `${lead.companyName} has been providing reliable ${industryLabel} services${location ? ` to homeowners throughout ${location}` : ' to local homeowners'}. We built this company on old-fashioned values: show up on time, do honest work, stand behind every job.`}</p>
-                <p>{wc?.aboutParagraph2 || `Our team brings years of hands-on experience to every project. Whether it's a small repair or a major undertaking, we bring the same care and professionalism.`}</p>
+              <div className="text-stone-600 text-base leading-relaxed">
+                <p>{wc?.aboutParagraph1 || `${lead.companyName} delivers reliable ${industryLabel}${location ? ` across ${location}` : ''} — on time, honest, and guaranteed.`}</p>
               </div>
               <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {(wc?.valueProps || [
@@ -281,13 +279,12 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
             <div className="lg:col-span-2 flex flex-col gap-5">
               <div className="bg-white border border-stone-200/60 rounded-2xl p-7">
                 <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={14} className="text-amber-400 fill-current" />)}</div>
-                <p className="text-stone-700 text-base italic leading-relaxed mb-4">"{lead.companyName} did an outstanding job. Professional from start to finish and the quality exceeded our expectations."</p>
+                <p className="text-stone-700 text-base italic leading-relaxed mb-4">"Professional from start to finish — quality exceeded expectations."</p>
                 <div className="w-8 h-0.5 bg-stone-200 rounded-full mb-2" />
                 <span className="text-stone-400 text-xs font-medium">Happy Homeowner{location ? ` · ${location}` : ''}</span>
               </div>
               <div className="bg-white border border-stone-200/60 rounded-2xl p-7">
-                <h3 className="font-bold text-stone-800 text-base mb-1">Ready to get started?</h3>
-                <p className="text-stone-400 text-xs mb-5">Free estimate · Same-day response</p>
+                <h3 className="font-bold text-stone-800 text-base mb-4">Ready to get started?</h3>
                 <div className="space-y-3.5">
                   {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-3"><div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${config.gradient} flex items-center justify-center flex-shrink-0`}><Phone size={14} className="text-white" /></div><div><p className="text-[11px] text-stone-400 uppercase tracking-wider font-bold">Phone</p><p className="text-sm font-bold text-stone-800">{lead.phone}</p></div></a>)}
                   {lead.email && (<a href={`mailto:${lead.email}`} className="flex items-center gap-3"><div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${config.gradient} flex items-center justify-center flex-shrink-0`}><Mail size={14} className="text-white" /></div><div><p className="text-[11px] text-stone-400 uppercase tracking-wider font-bold">Email</p><p className="text-sm font-bold text-stone-800">{lead.email}</p></div></a>)}
@@ -301,40 +298,52 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
 
       {/* ═══════ GALLERY ═══════ */}
       {photos.length > 0 && (
-        <section id="gallery" className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+        <section id="gallery" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center max-w-xl mx-auto mb-14">
+            <div className="text-center max-w-xl mx-auto mb-10 sm:mb-14">
               <p className="text-xs uppercase tracking-[0.2em] font-semibold text-stone-400 mb-3">Portfolio</p>
               <h2 className="text-3xl sm:text-4xl font-bold text-stone-900">Quality you can see.</h2>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-              {photos.slice(0, 6).map((photo, i) => (
-                <div key={i} className={`relative overflow-hidden rounded-xl group border border-stone-200/50 hover:border-stone-300/50 transition-all ${i === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}>
-                  <img src={photo} alt={`Project ${i + 1}`} className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${i === 0 ? 'aspect-square md:aspect-[4/3]' : 'aspect-square'}`} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                </div>
-              ))}
+
+            {/* Hero photo full width */}
+            <div className="mb-3 sm:mb-4">
+              <div className="relative overflow-hidden rounded-xl group border border-stone-200/50 hover:border-stone-300/50 transition-all">
+                <img src={photos[0]} alt="Project 1" className="w-full object-cover aspect-[16/9] sm:aspect-[2/1] transition-transform duration-700 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </div>
             </div>
+
+            {/* Remaining photos */}
+            {photos.length > 1 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                {photos.slice(1, 5).map((photo, i) => (
+                  <div key={i} className="relative overflow-hidden rounded-xl group border border-stone-200/50 hover:border-stone-300/50 transition-all">
+                    <img src={photo} alt={`Project ${i + 2}`} className="w-full object-cover aspect-[4/3] transition-transform duration-700 group-hover:scale-105" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}
 
       {/* ═══════ TESTIMONIALS ═══════ */}
-      <section className="py-20 sm:py-28 px-5 sm:px-8 bg-stone-50">
+      <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-stone-50">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12 sm:mb-16">
             <p className="text-xs uppercase tracking-[0.2em] font-semibold text-stone-400 mb-3">Testimonials</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-stone-900">Trusted by the community.</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { quote: `${lead.companyName} was professional from start to finish. The quality of work exceeded our expectations. Highly recommended.`, name: 'Sarah M.', loc: lead.city || 'Local' },
-              { quote: `Honest, reliable, and skilled. Showed up on time, communicated clearly, and left the site cleaner than they found it.`, name: 'James R.', loc: lead.city || 'Local' },
-              { quote: 'From estimate to completion, everything was handled with care and professionalism. Fair pricing, great results.', name: 'Linda K.', loc: lead.city || 'Local' },
+              { quote: `Professional, high quality, and highly recommended.`, name: 'Sarah M.', loc: lead.city || 'Local' },
+              { quote: `Honest, reliable, and skilled — showed up on time every time.`, name: 'James R.', loc: lead.city || 'Local' },
+              { quote: 'Fair pricing and great results from start to finish.', name: 'Linda K.', loc: lead.city || 'Local' },
             ].map((r, i) => (
-              <div key={i} className={`bg-white border border-stone-200/60 rounded-2xl p-8 hover:border-stone-300/60 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
-                <div className="flex gap-0.5 mb-5">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
-                <p className="text-stone-600 text-base leading-relaxed mb-6 italic">"{r.quote}"</p>
+              <div key={i} className={`bg-white border border-stone-200/60 rounded-2xl p-7 sm:p-8 hover:border-stone-300/60 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
+                <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
+                <p className="text-stone-600 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
                 <div className="flex items-center gap-3 text-sm pt-4 border-t border-stone-100">
                   <div className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center"><span className="text-stone-600 font-bold text-xs">{r.name[0]}</span></div>
                   <div><span className="font-semibold text-stone-800">{r.name}</span><span className="text-stone-400"> — {r.loc}</span></div>
@@ -346,7 +355,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
       </section>
 
       {/* ═══════ FAQ ═══════ */}
-      <section id="faq" className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+      <section id="faq" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-14">
             <p className="text-xs uppercase tracking-[0.2em] font-semibold text-stone-400 mb-3">Common Questions</p>
@@ -359,13 +368,13 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
       </section>
 
       {/* ═══════ CONTACT ═══════ */}
-      <section id="contact" className="py-20 sm:py-28 px-5 sm:px-8 bg-stone-50">
+      <section id="contact" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-stone-50">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] font-semibold text-stone-400 mb-4">Contact</p>
               <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 leading-tight mb-6">Get in touch.</h2>
-              <p className="text-stone-500 text-base leading-relaxed mb-10">{wc?.closingBody || `Contact ${lead.companyName} today for a free, no-obligation estimate. We're here to help.`}</p>
+              <p className="text-stone-500 text-base leading-relaxed mb-10">{wc?.closingBody || `Free estimates, fast response. Reach out today.`}</p>
               <div className="space-y-5">
                 {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4"><div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center flex-shrink-0 shadow-sm`}><Phone size={20} className="text-white" /></div><div><p className="text-sm font-bold text-stone-800">{lead.phone}</p><p className="text-xs text-stone-400">Call or text anytime</p></div></a>)}
                 {lead.email && (<a href={`mailto:${lead.email}`} className="flex items-center gap-4"><div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center flex-shrink-0 shadow-sm`}><Mail size={20} className="text-white" /></div><div><p className="text-sm font-bold text-stone-800">{lead.email}</p><p className="text-xs text-stone-400">We reply fast</p></div></a>)}
@@ -395,7 +404,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
       </section>
 
       {/* ═══════ FOOTER ═══════ */}
-      <footer className="bg-stone-900 py-14 px-5 sm:px-8">
+      <footer className="bg-stone-900 py-14 px-4 sm:px-6 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
             <div>

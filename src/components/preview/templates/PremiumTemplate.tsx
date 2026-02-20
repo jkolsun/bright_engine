@@ -13,7 +13,6 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   Phone, MapPin, Star, Shield, CheckCircle, ArrowRight, Mail,
-  Quote,
   MessageCircle, X, Send, ChevronDown, Menu, ChevronRight,
   Minus, Plus, Facebook, Instagram
 } from 'lucide-react'
@@ -133,11 +132,11 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
     { id: 'faq', label: 'FAQ' }, { id: 'contact', label: 'Contact' },
   ]
   const faqs = [
-    { q: 'How does the consultation process work?', a: 'We begin with a thorough assessment of your needs, then provide a detailed, transparent estimate — all at no cost or obligation.' },
-    { q: 'What areas do you serve?', a: `We serve ${location || 'the local area'} and surrounding communities. Contact us to confirm coverage in your area.` },
-    { q: 'Are you fully licensed and insured?', a: 'Yes — fully licensed, bonded, and insured with comprehensive coverage on every project we undertake.' },
-    { q: 'How soon can a project begin?', a: 'Most projects begin within 1–2 weeks of approval. Priority scheduling is available for time-sensitive needs.' },
-    { q: 'What guarantees do you offer?', a: 'Every project is backed by our satisfaction guarantee. We stand behind our work — completely.' },
+    { q: 'How does the consultation work?', a: 'Free assessment of your needs followed by a transparent, no-obligation estimate.' },
+    { q: 'What areas do you serve?', a: `We serve ${location || 'the local area'} and surrounding communities.` },
+    { q: 'Are you licensed and insured?', a: 'Fully licensed, bonded, and insured on every project.' },
+    { q: 'How soon can work begin?', a: 'Most projects start within 1–2 weeks of approval.' },
+    { q: 'What guarantees do you offer?', a: 'Every project is backed by our complete satisfaction guarantee.' },
   ]
 
   return (
@@ -175,15 +174,13 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
         <div className={`absolute inset-0 bg-gradient-to-br ${config.gradient}`} />
         <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-amber-500/5 rounded-full -translate-y-1/2 blur-3xl" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-amber-500/3 rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl" />
-        <div className="relative max-w-7xl mx-auto w-full px-5 sm:px-8 py-32">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-32">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-amber-400/40 mb-6 font-medium">Premium {industryLabel}</p>
+              {location && <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-amber-400/50 mb-6 font-medium"><MapPin size={12} className="text-amber-500/40" />{location}</p>}
               <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light text-white mb-6 tracking-tight leading-[1.05]">{lead.companyName}</h1>
               <div className="w-20 h-0.5 bg-gradient-to-r from-amber-500 to-amber-300 mb-6" />
-              <p className="text-lg sm:text-xl text-gray-400 leading-relaxed mb-4">{wc?.heroHeadline || config.tagline}</p>
-              {wc?.heroSubheadline && <p className="text-base text-gray-500 leading-relaxed mb-6">{wc.heroSubheadline}</p>}
-              {location && <p className="text-gray-600 flex items-center gap-2.5 text-sm mb-8"><MapPin size={14} className="text-amber-500/40" />Serving {location} and surrounding areas</p>}
+              <p className="text-lg sm:text-xl text-gray-400 leading-relaxed mb-8">{wc?.heroHeadline || config.tagline}</p>
               <div className="flex flex-col sm:flex-row gap-4">
                 {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 text-black px-10 py-4 rounded-xl font-semibold text-lg shadow-lg" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}><Phone size={20} />Call Now</a>)}
                 <button onClick={onCTAClick} className="inline-flex items-center justify-center gap-2.5 border border-amber-500/30 text-amber-400 px-10 py-4 rounded-xl font-semibold text-lg hover:bg-amber-500 hover:text-black transition-all duration-300 group">{config.ctaText}<ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></button>
@@ -191,8 +188,8 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
             </div>
             <div className="border border-amber-500/15 rounded-3xl p-8 md:p-10 bg-gray-950/60 backdrop-blur-md shadow-2xl shadow-amber-500/5">
               {hasRating && (<div className="flex items-center gap-3 mb-6"><div className="flex gap-0.5">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={16} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-amber-400 fill-current' : 'text-gray-700'} />)}</div><span className="text-amber-400 font-semibold text-sm">{lead.enrichedRating}-Star Rated</span>{lead.enrichedReviews && <span className="text-gray-600 text-sm">({lead.enrichedReviews})</span>}</div>)}
-              <h2 className="font-display text-xl font-light text-white mb-3">Schedule a consultation</h2>
-              <p className="text-gray-500 text-sm mb-6">Free estimate · No obligation · Same-day response</p>
+              <h2 className="font-display text-xl font-light text-white mb-3">Get a free consultation</h2>
+              <p className="text-gray-500 text-sm mb-6">No obligation · Same-day response</p>
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <input type="text" placeholder="Name" className="px-4 py-3 rounded-xl bg-gray-800 border border-gray-700 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-400/30 placeholder:text-gray-600" />
@@ -208,7 +205,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
       </section>
 
       {/* ═══════ PROOF STRIP ═══════ */}
-      <section className="py-4 px-5 sm:px-8 border-y border-amber-500/8 bg-gray-900/40">
+      <section className="py-4 px-4 sm:px-6 md:px-8 border-y border-amber-500/8 bg-gray-900/40">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
           {hasRating && <span className="flex items-center gap-2 text-gray-400 font-medium"><Star size={13} className="text-amber-400 fill-current" />{lead.enrichedRating} Rating</span>}
           {lead.enrichedReviews && (<><span className="text-gray-800 hidden sm:inline">•</span><span className="text-gray-500">{lead.enrichedReviews}+ Reviews</span></>)}
@@ -220,24 +217,20 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
 
       {/* ═══════ SERVICES ═══════ */}
       {services.length > 0 && (
-        <section id="services" className="py-20 sm:py-28 px-5 sm:px-8 bg-gray-950">
+        <section id="services" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-950">
           <div className="max-w-5xl mx-auto">
-            <div className="max-w-xl mb-16">
+            <div className="max-w-xl mb-12 sm:mb-16">
               <p className="text-xs uppercase tracking-[0.25em] text-amber-400/40 mb-3 font-medium">Our Expertise</p>
-              <h2 className="text-3xl sm:text-4xl font-light text-white leading-tight mb-4">Services.</h2>
-              <p className="text-gray-500 text-base">Comprehensive {industryLabel} solutions delivered with precision and care.</p>
+              <h2 className="text-3xl sm:text-4xl font-light text-white leading-tight">Services.</h2>
             </div>
             <div className="divide-y divide-gray-800/50">
               {services.slice(0, 8).map((service, i) => (
-                <div key={i} className="group flex items-center justify-between py-6 cursor-pointer hover:pl-2 transition-all duration-300" onClick={onCTAClick}>
+                <div key={i} className="group flex items-center justify-between py-5 sm:py-6 cursor-pointer hover:pl-2 transition-all duration-300" onClick={onCTAClick}>
                   <div className="flex items-center gap-5">
                     <span className="text-xs text-amber-400/30 font-mono tabular-nums w-6 font-medium">{String(i + 1).padStart(2, '0')}</span>
                     <h3 className="text-base sm:text-lg font-medium text-gray-300 group-hover:text-amber-400 transition-colors">{service}</h3>
                   </div>
-                  <div className="flex items-center gap-4">
-                    {wc?.serviceDescriptions?.[service] && <p className="hidden md:block text-sm text-gray-600 max-w-xs text-right">{wc.serviceDescriptions[service]}</p>}
-                    <ArrowRight size={16} className="text-gray-700 group-hover:text-amber-400 group-hover:translate-x-1 transition-all flex-shrink-0" />
-                  </div>
+                  <ArrowRight size={16} className="text-gray-700 group-hover:text-amber-400 group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </div>
               ))}
             </div>
@@ -246,25 +239,24 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
       )}
 
       {/* ═══════ AMBER CTA BAND ═══════ */}
-      <section className="relative py-20 sm:py-24 overflow-hidden" style={{ background: 'linear-gradient(135deg, #d97706, #b45309)' }}>
+      <section className="relative py-16 sm:py-20 md:py-24 overflow-hidden" style={{ background: 'linear-gradient(135deg, #d97706, #b45309)' }}>
         <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
-        <div className="relative max-w-4xl mx-auto px-5 sm:px-8 text-center">
-          <Quote size={36} className="text-black/10 mx-auto mb-5" />
-          <p className="text-2xl sm:text-3xl md:text-4xl font-light text-white leading-snug tracking-tight">{wc?.closingHeadline || "Excellence in every detail. Satisfaction in every outcome."}</p>
-          {location && <p className="mt-5 text-white/40 text-sm font-medium tracking-wide">Serving {location}</p>}
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 md:px-8 text-center">
+          <p className="text-2xl sm:text-3xl md:text-4xl font-light text-white leading-snug tracking-tight">{wc?.closingHeadline || "Excellence in every detail."}</p>
+          {location && <p className="mt-4 text-white/40 text-sm font-medium tracking-wide">{location}</p>}
         </div>
       </section>
 
       {/* ═══════ ABOUT ═══════ */}
-      <section id="about" className="py-20 sm:py-28 px-5 sm:px-8 bg-gray-950">
+      <section id="about" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-950">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
             <div className="lg:col-span-3">
               <p className="text-xs uppercase tracking-[0.25em] text-amber-400/40 mb-3 font-medium">About</p>
               <h2 className="text-3xl sm:text-4xl font-light text-white leading-tight mb-6">{lead.companyName}</h2>
               <div className="space-y-4 text-gray-400 text-base leading-relaxed">
-                <p>{wc?.aboutParagraph1 || `${lead.companyName} represents a commitment to excellence in ${industryLabel}.${location ? ` Serving ${location}, we` : ' We'} combine deep expertise with a client-first philosophy to deliver results that exceed expectations.`}</p>
-                <p>{wc?.aboutParagraph2 || 'Our seasoned professionals bring meticulous attention to detail to every engagement. We develop customized solutions — never one-size-fits-all.'}</p>
+                <p>{wc?.aboutParagraph1 || `${lead.companyName} delivers expert ${industryLabel}${location ? ` in ${location}` : ''} with a client-first approach.`}</p>
+                {wc?.aboutParagraph2 && <p>{wc.aboutParagraph2}</p>}
               </div>
               <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {(wc?.valueProps || [
@@ -291,16 +283,16 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
 
       {/* ═══════ GALLERY ═══════ */}
       {photos.length > 0 && (
-        <section id="gallery" className="py-20 sm:py-28 px-5 sm:px-8 bg-gray-900/40">
+        <section id="gallery" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/40">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center max-w-xl mx-auto mb-14">
+            <div className="text-center max-w-xl mx-auto mb-10 sm:mb-14">
               <p className="text-xs uppercase tracking-[0.25em] text-amber-400/40 mb-3 font-medium">Portfolio</p>
               <h2 className="text-3xl sm:text-4xl font-light text-white">Our work.</h2>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               {photos.slice(0, 6).map((photo, i) => (
-                <div key={i} className={`relative overflow-hidden rounded-2xl group border border-gray-800/50 hover:border-amber-500/20 transition-all ${i === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}>
-                  <img src={photo} alt={`Project ${i + 1}`} className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${i === 0 ? 'aspect-square md:aspect-[4/3]' : 'aspect-square'}`} />
+                <div key={i} className={`relative overflow-hidden rounded-2xl group border border-gray-800/50 hover:border-amber-500/20 transition-all ${i === 0 ? 'col-span-1 sm:col-span-2 sm:row-span-2' : ''}`}>
+                  <img src={photo} alt={`Project ${i + 1}`} className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${i === 0 ? 'aspect-[4/3]' : 'aspect-[4/3] sm:aspect-square'}`} />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               ))}
@@ -310,21 +302,21 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
       )}
 
       {/* ═══════ TESTIMONIALS ═══════ */}
-      <section className="py-20 sm:py-28 px-5 sm:px-8 bg-gray-950 border-y border-amber-500/5">
+      <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-950 border-y border-amber-500/5">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12 sm:mb-16">
             <p className="text-xs uppercase tracking-[0.25em] text-amber-400/40 mb-3 font-medium">Testimonials</p>
             <h2 className="text-3xl sm:text-4xl font-light text-white">What clients say.</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { quote: `${lead.companyName} delivered exceptional results. Their professionalism and attention to detail set them apart from everyone else.`, name: 'Client', loc: lead.city || 'Local' },
-              { quote: 'Thorough, transparent, and meticulous. The entire experience was handled with care and genuine expertise.', name: 'Homeowner', loc: lead.city || 'Local' },
-              { quote: 'Outstanding workmanship and a team that truly cares about quality. Results exceeded all expectations.', name: 'Property Owner', loc: lead.city || 'Local' },
+              { quote: `${lead.companyName} delivered exceptional results — truly top-notch.`, name: 'Client', loc: lead.city || 'Local' },
+              { quote: 'Thorough, transparent, and meticulous from start to finish.', name: 'Homeowner', loc: lead.city || 'Local' },
+              { quote: 'Outstanding quality and a team that genuinely cares.', name: 'Property Owner', loc: lead.city || 'Local' },
             ].map((r, i) => (
               <div key={i} className={`bg-gray-900/40 border border-gray-800/50 rounded-2xl p-8 hover:border-amber-500/15 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
-                <div className="flex gap-0.5 mb-5">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={15} className="text-amber-400 fill-current" />)}</div>
-                <p className="text-gray-400 text-base leading-relaxed mb-6 italic font-light">"{r.quote}"</p>
+                <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={15} className="text-amber-400 fill-current" />)}</div>
+                <p className="text-gray-400 text-base leading-relaxed mb-5 italic font-light">"{r.quote}"</p>
                 <div className="flex items-center gap-3 text-sm pt-4 border-t border-gray-800/50">
                   <div className="w-9 h-9 rounded-full bg-amber-400/10 flex items-center justify-center"><span className="text-amber-400 font-semibold text-xs">{r.name[0]}</span></div>
                   <div><span className="font-medium text-gray-300">{r.name}</span><span className="text-gray-600"> — {r.loc}</span></div>
@@ -336,9 +328,9 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
       </section>
 
       {/* ═══════ FAQ ═══════ */}
-      <section id="faq" className="py-20 sm:py-28 px-5 sm:px-8 bg-gray-950">
+      <section id="faq" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-950">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-14">
+          <div className="text-center mb-10 sm:mb-14">
             <p className="text-xs uppercase tracking-[0.25em] text-amber-400/40 mb-3 font-medium">FAQ</p>
             <h2 className="text-3xl sm:text-4xl font-light text-white">Common questions.</h2>
           </div>
@@ -349,13 +341,12 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
       </section>
 
       {/* ═══════ CONTACT ═══════ */}
-      <section id="contact" className="py-20 sm:py-28 px-5 sm:px-8 bg-gray-900/40">
+      <section id="contact" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/40">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
             <div>
               <p className="text-xs uppercase tracking-[0.25em] text-amber-400/40 mb-3 font-medium">Contact</p>
-              <h2 className="text-3xl sm:text-4xl font-light text-white leading-tight mb-6">Begin your project.</h2>
-              <p className="text-gray-500 text-base leading-relaxed mb-10">{wc?.closingBody || `Schedule a complimentary consultation with ${lead.companyName}. We look forward to exceeding your expectations.`}</p>
+              <h2 className="text-3xl sm:text-4xl font-light text-white leading-tight mb-8">Get in touch.</h2>
               <div className="space-y-5">
                 {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-amber-400/5 border border-amber-500/10 flex items-center justify-center flex-shrink-0"><Phone size={20} className="text-amber-400" /></div><div><p className="text-sm font-medium text-white">{lead.phone}</p><p className="text-xs text-gray-600">Call or text anytime</p></div></a>)}
                 {lead.email && (<a href={`mailto:${lead.email}`} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-amber-400/5 border border-amber-500/10 flex items-center justify-center flex-shrink-0"><Mail size={20} className="text-amber-400" /></div><div><p className="text-sm font-medium text-white">{lead.email}</p><p className="text-xs text-gray-600">We respond same-day</p></div></a>)}
@@ -385,7 +376,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
       </section>
 
       {/* ═══════ FOOTER ═══════ */}
-      <footer className="bg-black py-14 px-5 sm:px-8 border-t border-amber-500/8">
+      <footer className="bg-black py-14 px-4 sm:px-6 md:px-8 border-t border-amber-500/8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
             <div>

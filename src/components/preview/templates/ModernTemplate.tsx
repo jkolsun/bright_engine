@@ -131,11 +131,11 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
     { id: 'faq', label: 'FAQ' }, { id: 'contact', label: 'Contact' },
   ]
   const faqs = [
-    { q: 'How do I get a free estimate?', a: 'Call us or submit the contact form below. We respond same-day with a detailed, no-obligation quote.' },
-    { q: 'What areas do you serve?', a: `We serve ${location || 'the local area'} and surrounding communities. Give us a call to confirm.` },
-    { q: 'Are you licensed and insured?', a: 'Fully licensed, bonded, and insured with comprehensive liability coverage on every job.' },
-    { q: 'How soon can you start?', a: 'Most projects begin within 1–2 weeks. Urgent needs get expedited scheduling — just ask.' },
-    { q: 'Do you guarantee your work?', a: "Every project is backed by our satisfaction guarantee. Not happy? We fix it." },
+    { q: 'How do I get a free estimate?', a: 'Call us or submit the form below — we respond same-day.' },
+    { q: 'What areas do you serve?', a: `We serve ${location || 'the local area'} and surrounding communities.` },
+    { q: 'Are you licensed and insured?', a: 'Yes — fully licensed, bonded, and insured on every job.' },
+    { q: 'How soon can you start?', a: 'Most projects begin within 1-2 weeks.' },
+    { q: 'Do you guarantee your work?', a: "Every job is backed by our satisfaction guarantee." },
   ]
   useEffect(() => { const h = () => setScrolled(window.scrollY > 50); window.addEventListener('scroll', h, { passive: true }); return () => window.removeEventListener('scroll', h) }, [])
 
@@ -174,16 +174,15 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
         <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-gradient-to-bl from-teal-100/50 to-cyan-50/20 rounded-full blur-3xl" />
         <div className="absolute bottom-[-15%] left-[-8%] w-[500px] h-[500px] bg-gradient-to-tr from-cyan-100/40 to-teal-50/10 rounded-full blur-3xl" />
         <div className="absolute top-[30%] left-[55%] w-[250px] h-[250px] bg-gradient-to-br from-emerald-50/30 to-transparent rounded-full blur-3xl" />
-        <div className="relative max-w-4xl mx-auto w-full px-5 sm:px-8 py-32 text-center">
+        <div className="relative max-w-4xl mx-auto w-full px-4 sm:px-6 md:px-8 py-32 text-center">
           <div className="inline-flex items-center gap-2 bg-teal-50 border border-teal-100 text-teal-700 rounded-full px-5 py-2 text-sm font-semibold mb-8">
             <Sparkles size={14} />
             {hasRating ? `${lead.enrichedRating}-Star Rated` : 'Top Rated'}{location ? ` · ${location}` : ''}
           </div>
           <h1 className="font-display text-[2.75rem] sm:text-6xl md:text-7xl lg:text-8xl font-bold text-gray-900 mb-6 tracking-tight leading-[1.02]">{wc?.heroHeadline || lead.companyName}</h1>
-          <div className="w-24 h-1 bg-gradient-to-r from-teal-400 via-cyan-400 to-emerald-400 mx-auto mb-6 rounded-full" />
-          <p className="text-lg sm:text-xl md:text-2xl text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed font-light">{wc?.heroSubheadline || config.tagline}</p>
+          <div className="w-24 h-1 bg-gradient-to-r from-teal-400 via-cyan-400 to-emerald-400 mx-auto mb-8 rounded-full" />
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white px-10 py-4 rounded-full font-semibold text-lg hover:from-teal-600 hover:to-cyan-600 transition-all shadow-lg hover:-translate-y-0.5"><Phone size={20} />Call Now — Free Estimate</a>)}
+            {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white px-10 py-4 rounded-full font-semibold text-lg hover:from-teal-600 hover:to-cyan-600 transition-all shadow-lg hover:-translate-y-0.5"><Phone size={20} />Call Now</a>)}
             <button onClick={onCTAClick} className="inline-flex items-center justify-center gap-2.5 bg-white border-2 border-gray-200 text-gray-700 px-10 py-4 rounded-full font-semibold text-lg hover:border-teal-400 hover:text-teal-600 transition-all group">{config.ctaText}<ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></button>
           </div>
         </div>
@@ -191,7 +190,7 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
       </section>
 
       {/* ═══════ PROOF STRIP ═══════ */}
-      <section className="py-4 px-5 sm:px-8 border-b border-gray-100 bg-gray-50/50">
+      <section className="py-4 px-4 sm:px-6 md:px-8 border-b border-gray-100 bg-gray-50/50">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
           {hasRating && <span className="flex items-center gap-2 text-gray-700 font-semibold"><Star size={13} className="text-amber-400 fill-current" />{lead.enrichedRating} Rating</span>}
           {lead.enrichedReviews && (<><span className="text-gray-200 hidden sm:inline">•</span><span className="text-gray-500">{lead.enrichedReviews}+ Reviews</span></>)}
@@ -205,24 +204,20 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
 
       {/* ═══════ SERVICES ═══════ */}
       {services.length > 0 && (
-        <section id="services" className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+        <section id="services" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
           <div className="max-w-5xl mx-auto">
-            <div className="max-w-xl mb-16">
+            <div className="max-w-xl mb-14">
               <div className="inline-flex items-center gap-2 bg-teal-50 text-teal-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-teal-100"><Sparkles size={12} />Services</div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-4">What we offer.</h2>
-              <p className="text-gray-500 text-base">Professional {industryLabel} solutions tailored to your needs.</p>
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">What we offer.</h2>
             </div>
             <div className="divide-y divide-gray-100">
               {services.slice(0, 8).map((service, i) => (
-                <div key={i} className="group flex items-center justify-between py-6 cursor-pointer hover:pl-2 transition-all duration-300" onClick={onCTAClick}>
+                <div key={i} className="group flex items-center justify-between py-5 cursor-pointer hover:pl-2 transition-all duration-300" onClick={onCTAClick}>
                   <div className="flex items-center gap-5">
                     <span className="text-xs text-teal-300 font-mono tabular-nums w-6 font-bold">{String(i + 1).padStart(2, '0')}</span>
                     <h3 className="text-base sm:text-lg font-semibold text-gray-800 group-hover:text-teal-600 transition-colors">{service}</h3>
                   </div>
-                  <div className="flex items-center gap-4">
-                    {wc?.serviceDescriptions?.[service] && <p className="hidden md:block text-sm text-gray-400 max-w-xs text-right">{wc.serviceDescriptions[service]}</p>}
-                    <ArrowRight size={16} className="text-gray-300 group-hover:text-teal-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
-                  </div>
+                  <ArrowRight size={16} className="text-gray-300 group-hover:text-teal-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </div>
               ))}
             </div>
@@ -234,26 +229,24 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
       )}
 
       {/* ═══════ TEAL CTA BAND ═══════ */}
-      <section className="relative py-20 sm:py-24 overflow-hidden bg-gradient-to-r from-teal-600 via-cyan-600 to-teal-600">
+      <section className="relative py-16 sm:py-20 md:py-24 overflow-hidden bg-gradient-to-r from-teal-600 via-cyan-600 to-teal-600">
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
-        <div className="relative max-w-4xl mx-auto px-5 sm:px-8 text-center">
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 md:px-8 text-center">
           <Quote size={36} className="text-white/15 mx-auto mb-5" />
-          <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-snug">{wc?.closingHeadline || "Quality work. Honest pricing. Guaranteed satisfaction."}</p>
-          {location && <p className="mt-5 text-white/50 text-sm font-medium">Proudly serving {location}</p>}
+          <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-snug">{wc?.closingHeadline || "Quality work. Honest pricing. Guaranteed."}</p>
         </div>
       </section>
 
       {/* ═══════ ABOUT ═══════ */}
-      <section id="about" className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+      <section id="about" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
             <div className="lg:col-span-3">
               <div className="inline-flex items-center gap-2 bg-teal-50 text-teal-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-teal-100">About {lead.companyName}</div>
               <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-6">Your local {industryLabel} experts.</h2>
-              <div className="space-y-4 text-gray-500 text-base leading-relaxed">
-                <p>{wc?.aboutParagraph1 || `At ${lead.companyName}, every client deserves exceptional service.${location ? ` Based in ${location}, we've built our reputation on honest work and results.` : " We've built our reputation on honest work and results."}`}</p>
-                <p>{wc?.aboutParagraph2 || 'Our experienced team is fully licensed and insured. From consultation to final walkthrough, we keep you informed and ensure satisfaction.'}</p>
-              </div>
+              <p className="text-gray-500 text-base leading-relaxed">
+                {wc?.aboutParagraph1 || `${lead.companyName} delivers top-quality ${industryLabel}${location ? ` in ${location}` : ''}. Licensed, insured, and committed to your satisfaction.`}
+              </p>
               <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {(wc?.valueProps || [
                   { title: 'Licensed & Insured', description: 'Full protection on every job' },
@@ -267,7 +260,7 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
             <div className="lg:col-span-2 flex flex-col gap-5">
               <div className="bg-teal-50/40 border border-teal-100 rounded-2xl p-7">
                 <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={14} className="text-amber-400 fill-current" />)}</div>
-                <p className="text-gray-700 text-base italic leading-relaxed mb-4">"{lead.companyName} was outstanding. Professional, on time, and the quality exceeded expectations."</p>
+                <p className="text-gray-700 text-base italic leading-relaxed mb-4">"Outstanding quality and truly professional service."</p>
                 <div className="w-8 h-0.5 bg-teal-200 rounded-full mb-2" />
                 <span className="text-gray-400 text-xs font-medium">Happy Homeowner{location ? ` · ${location}` : ''}</span>
               </div>
@@ -287,41 +280,51 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
 
       {/* ═══════ GALLERY ═══════ */}
       {photos.length > 0 && (
-        <section id="gallery" className="py-20 sm:py-28 px-5 sm:px-8 bg-gray-50/50">
+        <section id="gallery" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-50/50">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center max-w-xl mx-auto mb-14">
+            <div className="text-center max-w-xl mx-auto mb-10">
               <div className="inline-flex items-center gap-2 bg-teal-50 text-teal-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-teal-100"><Camera size={12} />Portfolio</div>
               <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Our recent work.</h2>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-              {photos.slice(0, 6).map((photo, i) => (
-                <div key={i} className={`relative overflow-hidden rounded-2xl group border border-gray-100 hover:border-teal-200 transition-all ${i === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}>
-                  <img src={photo} alt={`Project ${i + 1}`} className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${i === 0 ? 'aspect-square md:aspect-[4/3]' : 'aspect-square'}`} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-              ))}
-            </div>
+            {/* First photo hero-sized */}
+            {photos[0] && (
+              <div className="relative overflow-hidden rounded-2xl group border border-gray-100 hover:border-teal-200 transition-all mb-3 sm:mb-4">
+                <img src={photos[0]} alt="Project 1" className="w-full object-cover aspect-[4/3] sm:aspect-[16/9] transition-transform duration-700 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+            )}
+            {/* Remaining photos in grid */}
+            {photos.length > 1 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                {photos.slice(1, 7).map((photo, i) => (
+                  <div key={i} className="relative overflow-hidden rounded-2xl group border border-gray-100 hover:border-teal-200 transition-all">
+                    <img src={photo} alt={`Project ${i + 2}`} className="w-full object-cover aspect-[4/3] transition-transform duration-700 group-hover:scale-105" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}
 
       {/* ═══════ TESTIMONIALS ═══════ */}
-      <section className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+      <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 bg-teal-50 text-teal-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-teal-100">Reviews</div>
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">What customers say.</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { quote: `${lead.companyName} was outstanding from start to finish. Professional, thorough, and the results speak for themselves.`, name: 'Homeowner', loc: lead.city || 'Local' },
-              { quote: 'On time, communicative, and meticulous. They explained the process clearly and delivered exactly what they promised.', name: 'Property Manager', loc: lead.city || 'Local' },
-              { quote: `Already recommended ${lead.companyName} to all our neighbors. Fair pricing and quality that's hard to find.`, name: 'Repeat Client', loc: lead.city || 'Local' },
+              { quote: 'Professional, thorough, and the results speak for themselves.', name: 'Homeowner', loc: lead.city || 'Local' },
+              { quote: 'On time, communicative, and delivered exactly as promised.', name: 'Property Manager', loc: lead.city || 'Local' },
+              { quote: `Already recommended ${lead.companyName} to all our neighbors.`, name: 'Repeat Client', loc: lead.city || 'Local' },
             ].map((r, i) => (
-              <div key={i} className={`bg-gray-50/50 border border-gray-100 rounded-2xl p-8 hover:border-teal-200 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
-                <div className="flex gap-0.5 mb-5">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
-                <p className="text-gray-600 text-base leading-relaxed mb-6 italic">"{r.quote}"</p>
-                <div className="flex items-center gap-3 text-sm pt-4 border-t border-gray-100">
+              <div key={i} className={`bg-gray-50/50 border border-gray-100 rounded-2xl p-7 hover:border-teal-200 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
+                <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
+                <p className="text-gray-600 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
+                <div className="flex items-center gap-3 text-sm pt-3 border-t border-gray-100">
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-100 to-cyan-100 flex items-center justify-center"><span className="text-teal-600 font-bold text-xs">{r.name[0]}</span></div>
                   <div><span className="font-semibold text-gray-800">{r.name}</span><span className="text-gray-400"> — {r.loc}</span></div>
                 </div>
@@ -332,9 +335,9 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
       </section>
 
       {/* ═══════ FAQ ═══════ */}
-      <section id="faq" className="py-20 sm:py-28 px-5 sm:px-8 bg-gray-50/50">
+      <section id="faq" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-50/50">
         <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-14">
+          <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 bg-teal-50 text-teal-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-teal-100">FAQ</div>
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Common questions.</h2>
           </div>
@@ -345,13 +348,12 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
       </section>
 
       {/* ═══════ CONTACT ═══════ */}
-      <section id="contact" className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+      <section id="contact" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
             <div>
               <div className="inline-flex items-center gap-2 bg-teal-50 text-teal-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-teal-100">Contact</div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-6">Let's discuss your project.</h2>
-              <p className="text-gray-500 text-base leading-relaxed mb-10">{wc?.closingBody || `Get a free estimate from ${lead.companyName}. No obligation, no pressure — just honest advice.`}</p>
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-8">Get your free estimate.</h2>
               <div className="space-y-5">
                 {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-sm"><Phone size={20} className="text-white" /></div><div><p className="text-sm font-bold text-gray-800">{lead.phone}</p><p className="text-xs text-gray-400">Call or text anytime</p></div></a>)}
                 {lead.email && (<a href={`mailto:${lead.email}`} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-sm"><Mail size={20} className="text-white" /></div><div><p className="text-sm font-bold text-gray-800">{lead.email}</p><p className="text-xs text-gray-400">We reply fast</p></div></a>)}
@@ -381,7 +383,7 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
       </section>
 
       {/* ═══════ FOOTER ═══════ */}
-      <footer className="bg-gray-950 py-14 px-5 sm:px-8">
+      <footer className="bg-gray-950 py-14 px-4 sm:px-6 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
             <div>
