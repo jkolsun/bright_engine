@@ -375,7 +375,7 @@ export default function SettingsPage() {
     }
   }
 
-  // ── Save a settings key ────────────────────────────────────
+  // ── Save a settings key ──────────��─────────────────────────
   const saveSetting = async (key: string, value: any) => {
     setSavingKey(key)
     setSavedKey(null)
@@ -2497,7 +2497,7 @@ export default function SettingsPage() {
           <Card className="p-6">
             <SectionHeader
               title="First Message Templates"
-              description="Customize the opening message for each entry point. These are sent as-is (not AI-generated)."
+              description="Set the first message for each entry point. These are sent directly — the AI takes over for all follow-up messages."
             />
             <div className="space-y-4">
               {[

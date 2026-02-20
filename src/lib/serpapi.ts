@@ -52,6 +52,17 @@ export async function enrichLead(leadId: string): Promise<EnrichmentResult> {
       }
     }
 
+    // Query 5: Strip common legal suffixes (LLC, PC, Inc, PLLC, LLP, PA, etc.)
+    const cleanName = lead.companyName
+      .replace(/,?\s*(LLC|L\.L\.C\.|PC|P\.C\.|Inc\.?|PLLC|LLP|PA|P\.A\.)$/i, '')
+      .trim()
+    if (cleanName !== lead.companyName) {
+      if (lead.city && lead.state) {
+        queries.push(`${cleanName} ${lead.city} ${lead.state}`)
+      }
+      queries.push(cleanName)
+    }
+
     // Deduplicate queries
     const uniqueQueries = [...new Set(queries)]
 

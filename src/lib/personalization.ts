@@ -128,6 +128,13 @@ EXAMPLES OF BAD OPENERS (never write like this):
 - "Your focus on X really sets you apart from the generalists." ← vague, could apply to anyone
 - "Your services in Dallas show your dedication to the community." ← empty, could be anyone
 
+TONE — OBSERVATION STYLE:
+- Write as someone who OBSERVED something interesting about the business.
+- Start with "Saw your...", "Noticed your...", "Your..." or "Came across your...".
+- NEVER start with the company name as the subject.
+- NEVER start with "Your team provides..." or "Your company offers..." or "Your business delivers...".
+- The line should feel like a genuine personal observation, not a description.
+
 RULES:
 1. ALWAYS use the highest-tier artifact provided. S > A > B. Never use B-tier data when S-tier is available.
 2. Open with a SPECIFIC detail — a number, a service, a credential, an award. Something only THEY have.
@@ -250,6 +257,17 @@ function validateLine(line: string, companyName: string): ValidationResult {
   // Check for separator dashes
   if (/\s[-–—]\s/.test(line)) {
     issues.push('Contains dash separator — rewrite as flowing sentence')
+  }
+
+  // Statement style check — should be observation style, not description
+  const statementPatterns = [
+    /^your (team|company|business|firm) (provides|offers|delivers|specializes|has been|is)/i,
+    /^(the |)[A-Z][\w\s&'-]+ (provides|offers|is a|has been|delivers|specializes)/i,
+  ]
+  for (const pattern of statementPatterns) {
+    if (pattern.test(line)) {
+      issues.push('Statement style — rewrite as observation (use "Saw your..." or "Noticed your...")')
+    }
   }
 
   // Company name as grammatical subject (bad pattern)

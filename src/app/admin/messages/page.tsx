@@ -7,8 +7,14 @@ import { Input } from '@/components/ui/input'
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   MessageSquare, AlertCircle, CheckCircle, Send, ArrowLeft,
-  Settings, AlertTriangle, RefreshCw, Search, Mail, Phone
+  Settings, AlertTriangle, RefreshCw, Search, Mail, Phone, Plus
 } from 'lucide-react'
 
 type ViewMode = 'inbox' | 'conversation' | 'settings'
@@ -101,6 +107,11 @@ function MessagesPageInner() {
 
   // Search
   const [searchTerm, setSearchTerm] = useState('')
+
+  // New Chat
+  const [newChatOpen, setNewChatOpen] = useState(false)
+  const [chatSearch, setChatSearch] = useState('')
+  const [chatSearchResults, setChatSearchResults] = useState<any[]>([])
 
   // Auto-refresh
   const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -244,6 +255,29 @@ function MessagesPageInner() {
   useEffect(() => {
     if (viewMode === 'settings') loadAiSettings()
   }, [viewMode, loadAiSettings])
+
+  // New Chat search with debounce
+  useEffect(() => {
+    if (!chatSearch || chatSearch.length < 2) {
+      setChatSearchResults([])
+      return
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const [leadsRes, clientsRes] = await Promise.all([
+          fetch(`/api/leads?search=${encodeURIComponent(chatSearch)}&limit=5`),
+          fetch(`/api/clients?search=${encodeURIComponent(chatSearch)}&limit=5`),
+        ])
+        const leads = leadsRes.ok ? (await leadsRes.json()).leads || [] : []
+        const clients = clientsRes.ok ? (await clientsRes.json()).clients || [] : []
+        setChatSearchResults([
+          ...leads.map((l: any) => ({ id: l.id, type: 'lead', name: `${l.firstName} ${l.lastName || ''}`.trim(), company: l.companyName, phone: l.phone })),
+          ...clients.map((c: any) => ({ id: c.id, type: 'client', name: c.contactName || c.companyName, company: c.companyName, phone: c.phone })),
+        ])
+      } catch { setChatSearchResults([]) }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [chatSearch])
 
   const handleSendMessage = async () => {
     if (!messageInput.trim()) return
@@ -939,6 +973,9 @@ function MessagesPageInner() {
           <p className="text-gray-500 mt-1">Unified inbox — AI handler + manual override</p>
         </div>
         <div className="flex gap-3">
+          <Button size="sm" onClick={() => setNewChatOpen(true)}>
+            <Plus size={16} className="mr-1" /> New Chat
+          </Button>
           <Button variant="outline" size="sm" disabled={refreshing} onClick={async () => { setRefreshing(true); await Promise.all([loadMessages(), loadCloseConversations()]); setRefreshing(false) }}>
             <RefreshCw size={14} className={`mr-1 ${refreshing ? 'animate-spin' : ''}`} /> {refreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
@@ -1165,6 +1202,51 @@ function MessagesPageInner() {
           )}
         </>
       )}
+
+      {/* New Chat Dialog */}
+      <Dialog open={newChatOpen} onOpenChange={(v) => { setNewChatOpen(v); if (!v) { setChatSearch(''); setChatSearchResults([]) } }}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader><DialogTitle>New Conversation</DialogTitle></DialogHeader>
+          <Input placeholder="Search by name, company, or phone..." value={chatSearch} onChange={(e) => setChatSearch(e.target.value)} autoFocus />
+          <div className="max-h-60 overflow-y-auto mt-2 space-y-1">
+            {chatSearchResults.length === 0 && chatSearch.length >= 2 && (
+              <p className="text-sm text-gray-400 text-center py-4">No results</p>
+            )}
+            {chatSearchResults.map((r: any) => (
+              <button
+                key={`${r.type}-${r.id}`}
+                className="w-full text-left p-3 hover:bg-gray-50 rounded-md flex items-center justify-between"
+                onClick={() => {
+                  const existing = groupedConversations.find((c: any) =>
+                    (r.type === 'lead' && c.leadId === r.id) || (r.type === 'client' && c.clientId === r.id)
+                  )
+                  if (existing) {
+                    setSelectedConversation(existing)
+                  } else {
+                    setSelectedConversation({
+                      key: `new-${r.id}`, clientId: r.type === 'client' ? r.id : null,
+                      leadId: r.type === 'lead' ? r.id : null, name: r.name || r.company,
+                      phone: r.phone || '', isClient: r.type === 'client',
+                      conversationType: r.type === 'client' ? 'post_client' : 'pre_client',
+                      messages: [], lastMessage: null, escalated: false, aiHandling: false,
+                    })
+                  }
+                  setViewMode('conversation')
+                  setNewChatOpen(false)
+                  setChatSearch('')
+                  setChatSearchResults([])
+                }}
+              >
+                <div>
+                  <div className="font-medium text-sm">{r.name}</div>
+                  <div className="text-xs text-gray-500">{r.company}{r.phone ? ` • ${r.phone}` : ''}</div>
+                </div>
+                <Badge variant={r.type === 'client' ? 'default' : 'secondary'} className="text-xs">{r.type}</Badge>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

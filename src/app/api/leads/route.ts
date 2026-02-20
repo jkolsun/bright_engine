@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
   const source = searchParams.get('source')
   const priority = searchParams.get('priority')
   const assignedTo = searchParams.get('assignedTo')
+  const search = searchParams.get('search')
   const limit = parseInt(searchParams.get('limit') || '50')
   const offset = parseInt(searchParams.get('offset') || '0')
 
@@ -39,6 +40,15 @@ export async function GET(request: NextRequest) {
   
   if (source) where.source = source
   if (priority) where.priority = priority
+  if (search) {
+    where.OR = [
+      { firstName: { contains: search, mode: 'insensitive' } },
+      { lastName: { contains: search, mode: 'insensitive' } },
+      { companyName: { contains: search, mode: 'insensitive' } },
+      { phone: { contains: search } },
+      { email: { contains: search, mode: 'insensitive' } },
+    ]
+  }
   if (assignedTo) {
     if (assignedTo === 'unassigned') {
       where.assignedToId = null
@@ -50,13 +60,38 @@ export async function GET(request: NextRequest) {
     const [leads, total] = await Promise.all([
       prisma.lead.findMany({
         where,
-        include: {
-          assignedTo: {
-            select: { id: true, name: true, email: true }
-          },
-          folder: {
-            select: { id: true, name: true, color: true }
-          }
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          companyName: true,
+          email: true,
+          phone: true,
+          industry: true,
+          city: true,
+          state: true,
+          status: true,
+          priority: true,
+          source: true,
+          website: true,
+          previewUrl: true,
+          folderId: true,
+          assignedToId: true,
+          assignedTo: { select: { id: true, name: true } },
+          enrichedRating: true,
+          enrichedReviews: true,
+          enrichedAddress: true,
+          // Heavy fields loaded on-demand via /api/leads/[id]
+          // enrichedServices, enrichedPhotos, enrichedHours, personalization
+          notes: true,
+          campaign: true,
+          sourceDetail: true,
+          instantlyCampaignId: true,
+          personalization: true,
+          enrichedServices: true,
+          enrichedHours: true,
+          createdAt: true,
+          updatedAt: true,
         },
         orderBy: { createdAt: 'desc' },
         take: limit,

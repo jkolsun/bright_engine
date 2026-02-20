@@ -24,7 +24,44 @@ import {
   LayoutGrid, List, ChevronLeft, RefreshCw
 } from 'lucide-react'
 
+class LeadsErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: string }
+> {
+  constructor(props: any) {
+    super(props)
+    this.state = { hasError: false, error: '' }
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error: `${error.message}\n${error.stack}` }
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <h2 className="text-lg font-bold text-red-800">Leads Page Error</h2>
+            <pre className="text-xs text-red-500 mt-4 p-3 bg-red-100 rounded overflow-auto max-h-40">{this.state.error}</pre>
+            <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md text-sm">
+              Reload
+            </button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 export default function LeadsPage() {
+  return (
+    <LeadsErrorBoundary>
+      <LeadsPageInner />
+    </LeadsErrorBoundary>
+  )
+}
+
+function LeadsPageInner() {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -90,7 +127,7 @@ export default function LeadsPage() {
 
   const fetchLeads = async () => {
     try {
-      const res = await fetch('/api/leads?limit=500')
+      const res = await fetch('/api/leads?limit=100')
       const data = await res.json()
       setLeads(data.leads || [])
     } catch (error) {
