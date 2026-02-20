@@ -90,13 +90,14 @@ export async function PUT(
   }
 }
 
-// DELETE /api/clients/[id] - Soft delete (mark as CANCELLED)
+// DELETE /api/clients/[id] - Delete client
+// ?hard=true → permanently delete from database (cascades to messages, commissions, revenue, etc.)
+// default → soft delete (mark as CANCELLED)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    // Admin-only access check
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
@@ -104,6 +105,8 @@ export async function DELETE(
     }
 
     const clientId = params.id
+    const { searchParams } = new URL(request.url)
+    const hard = searchParams.get('hard') === 'true'
 
     const client = await prisma.client.findUnique({
       where: { id: clientId }
@@ -116,17 +119,27 @@ export async function DELETE(
       )
     }
 
+    if (hard) {
+      // Hard delete: remove from database entirely
+      // Prisma cascade will delete: messages, commissions, revenue, analytics, editRequests, sequenceProgress, referrals, siteAnalytics
+      // ClawdbotActivity clientId will be set to null (onDelete: SetNull)
+      await prisma.client.delete({ where: { id: clientId } })
+
+      return NextResponse.json({
+        success: true,
+        message: `Client "${client.companyName}" permanently deleted`,
+      })
+    }
+
     // Soft delete: mark as CANCELLED
     const updated = await prisma.client.update({
       where: { id: clientId },
-      data: {
-        hostingStatus: 'CANCELLED'
-      }
+      data: { hostingStatus: 'CANCELLED' }
     })
 
     return NextResponse.json({
       success: true,
-      message: 'Client deleted successfully',
+      message: 'Client cancelled successfully',
       client: updated
     })
   } catch (error) {

@@ -81,7 +81,9 @@ export async function GET(request: NextRequest) {
     ])
 
     // Calculate preview engagement metrics
-    const totalLeads = await prisma.lead.count()
+    const totalLeads = await prisma.lead.count({
+      where: { NOT: { status: 'CLOSED_LOST' } }
+    })
     const previewViews = await prisma.leadEvent.count({
       where: { eventType: 'PREVIEW_VIEWED' }
     })

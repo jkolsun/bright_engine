@@ -293,6 +293,18 @@ export default function ClientsPage() {
       client={selectedClient}
       onBack={() => { setViewMode('list'); setSelectedClient(null) }}
       onUpdate={(data: any) => handleUpdateClient(selectedClient.id, data)}
+      onDelete={async () => {
+        try {
+          const res = await fetch(`/api/clients/${selectedClient.id}?hard=true`, { method: 'DELETE' })
+          if (res.ok) {
+            setSelectedClient(null)
+            setViewMode('list')
+            await fetchClients()
+          } else {
+            alert('Failed to delete client')
+          }
+        } catch (e) { console.error('Delete failed:', e) }
+      }}
       profileTab={profileTab}
       setProfileTab={setProfileTab}
     />
@@ -653,7 +665,7 @@ export default function ClientsPage() {
 // ═══════════════════════════════════════════════
 // CLIENT PROFILE VIEW
 // ═══════════════════════════════════════════════
-function ClientProfile({ client, onBack, onUpdate, profileTab, setProfileTab }: any) {
+function ClientProfile({ client, onBack, onUpdate, onDelete, profileTab, setProfileTab }: any) {
   const contact = client.contactName || (client.lead ? `${client.lead.firstName} ${client.lead.lastName || ''}`.trim() : '')
   const phone = client.phone || client.lead?.phone || ''
   const email = client.email || client.lead?.email || ''
@@ -875,18 +887,37 @@ function ClientProfile({ client, onBack, onUpdate, profileTab, setProfileTab }: 
           {/* Danger Zone */}
           <Card className="p-6 border-red-200">
             <h3 className="font-semibold text-red-600 mb-2">Danger Zone</h3>
-            <p className="text-sm text-gray-500 mb-4">Cancel this client. Their site will be taken offline.</p>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (confirm(`Are you sure you want to cancel ${client.companyName}? Their hosting will be set to CANCELLED.`)) {
-                  onUpdate({ hostingStatus: 'CANCELLED' })
-                }
-              }}
-            >
-              <Trash2 size={14} className="mr-2" />
-              Cancel Client
-            </Button>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-500 mb-2">Cancel this client. Their site will be taken offline.</p>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    if (confirm(`Are you sure you want to cancel ${client.companyName}? Their hosting will be set to CANCELLED.`)) {
+                      onUpdate({ hostingStatus: 'CANCELLED' })
+                    }
+                  }}
+                >
+                  <Trash2 size={14} className="mr-2" />
+                  Cancel Client
+                </Button>
+              </div>
+              <div className="pt-4 border-t border-red-100">
+                <p className="text-sm text-red-500 mb-2">Permanently delete this client and all their data (messages, revenue, commissions). This cannot be undone.</p>
+                <Button
+                  variant="destructive"
+                  className="bg-red-700 hover:bg-red-800"
+                  onClick={() => {
+                    if (confirm(`PERMANENTLY DELETE ${client.companyName}?\n\nThis will remove the client and ALL associated data (messages, payments, commissions) from the database forever.\n\nThis cannot be undone.`)) {
+                      onDelete()
+                    }
+                  }}
+                >
+                  <Trash2 size={14} className="mr-2" />
+                  Permanently Delete
+                </Button>
+              </div>
+            </div>
           </Card>
         </div>
       )}
