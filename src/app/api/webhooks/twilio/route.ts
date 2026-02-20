@@ -10,7 +10,11 @@ export async function POST(request: NextRequest) {
     const provider = getSMSProvider()
 
     // Validate Twilio signature (PRODUCTION SECURITY)
-    const isValid = await provider.validateWebhookSignature(request, request.url)
+    // request.url is the internal Railway URL — reconstruct public URL from proxy headers
+    const proto = request.headers.get('x-forwarded-proto') || 'https'
+    const host = request.headers.get('host') || ''
+    const publicUrl = `${proto}://${host}/api/webhooks/twilio`
+    const isValid = await provider.validateWebhookSignature(request, publicUrl)
     if (!isValid && process.env.NODE_ENV === 'production') {
       console.error('Invalid Twilio signature')
       return NextResponse.json(
