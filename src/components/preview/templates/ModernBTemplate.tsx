@@ -1,8 +1,123 @@
-import { Phone, MapPin, Star, Shield, Clock, CheckCircle, ArrowRight, Award, Mail, ChevronRight, Sparkles, Users, Camera, BadgeCheck, ThumbsUp, Zap } from 'lucide-react'
+'use client'
+/*
+ * MODERN-B TEMPLATE — "Prism"
+ * Design Direction: Modern SaaS, violet/purple
+ * Brand Voice: Technical & Precise + warm
+ * Layout: Split Hero → Proof Strip → Numbered Services → Violet CTA Band → Editorial About → Gallery → Testimonials → FAQ → Contact → Footer
+ *
+ * CHANGES: +chatbot +social nav +mobile drawer +FAQ +contact form +sticky mobile CTA
+ * Removed: alternating feature blocks, badge row, service area, floating phone
+ * Services → numbered list, gallery → asymmetric, hero CTA card simplified
+ */
+
+import { useState, useEffect, useRef } from 'react'
+import {
+  Phone, MapPin, Star, Shield, Clock, CheckCircle, ArrowRight, Mail,
+  Sparkles, Camera, Quote,
+  MessageCircle, X, Send, ChevronDown, Menu, ChevronRight,
+  Minus, Plus, Facebook, Instagram
+} from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
 
+function GoogleIcon({ size = 15, className = '' }: { size?: number; className?: string }) {
+  return (<svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>)
+}
+
+function ChatbotWidget({ companyName, accentColor = '#8b5cf6' }: { companyName: string; accentColor?: string }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [messages, setMessages] = useState<{from: string; text: string}[]>([])
+  const [input, setInput] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const endRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+  useEffect(() => {
+    if (isOpen && messages.length === 0) { setIsTyping(true); const t = setTimeout(() => { setMessages([{ from: 'bot', text: `Hi! 👋 Welcome to ${companyName}. Looking for a quote or have a question? I'm here to help.` }]); setIsTyping(false) }, 800); return () => clearTimeout(t) }
+    if (isOpen) setTimeout(() => inputRef.current?.focus(), 100)
+  }, [isOpen, companyName])
+  const quickReplies = ['Get a free quote', 'What services do you offer?', 'Hours & availability']
+  const handleSend = (text?: string) => {
+    const msg = text || input.trim(); if (!msg) return
+    setMessages(p => [...p, { from: 'user', text: msg }]); setInput(''); setIsTyping(true)
+    setTimeout(() => {
+      let reply = "Thanks for reaching out! A team member will follow up shortly. Call us for the fastest response."
+      if (msg.toLowerCase().includes('quote') || msg.toLowerCase().includes('estimate')) reply = "We'd love to get you a free quote! Describe your project or call us directly for a quick estimate."
+      else if (msg.toLowerCase().includes('service')) reply = "We offer a full range of services — scroll down or tell me what you need!"
+      else if (msg.toLowerCase().includes('hour')) reply = "We're available Monday through Saturday with same-day response. Call anytime!"
+      setMessages(p => [...p, { from: 'bot', text: reply }]); setIsTyping(false)
+    }, 1200)
+  }
+  return (
+    <>
+      <button onClick={() => setIsOpen(!isOpen)} className="fixed bottom-5 right-5 z-[100] group sm:bottom-5 bottom-[88px]" aria-label="Chat">
+        <div className="w-[58px] h-[58px] rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-105" style={{ background: `linear-gradient(135deg, ${accentColor}, #a855f7)` }}>
+          {isOpen ? <X size={22} className="text-white" /> : <MessageCircle size={22} className="text-white" />}
+        </div>
+        {!isOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-15" style={{ background: accentColor }} />}
+        {!isOpen && (<div className="absolute bottom-full right-0 mb-3 whitespace-nowrap bg-white text-gray-700 text-sm font-semibold px-4 py-2 rounded-xl shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Chat with us<div className="absolute top-full right-6 w-2 h-2 bg-white transform rotate-45 -translate-y-1" /></div>)}
+      </button>
+      {isOpen && (
+        <div className="fixed sm:bottom-24 bottom-[152px] right-5 z-[100] w-[370px] max-w-[calc(100vw-2.5rem)] bg-white rounded-2xl shadow-2xl border border-violet-100 overflow-hidden">
+          <div className="px-5 py-4 text-white" style={{ background: `linear-gradient(135deg, ${accentColor}, #a855f7)` }}>
+            <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"><MessageCircle size={18} className="text-white" /></div><div><p className="font-bold text-sm">{companyName}</p><div className="flex items-center gap-1.5"><span className="w-2 h-2 bg-green-300 rounded-full animate-pulse" /><span className="text-xs text-white/80">Online now</span></div></div></div>
+            <p className="text-[10px] text-white/40 mt-2.5 tracking-wide uppercase">AI Assistant by Bright Automations · Included with your website</p>
+          </div>
+          <div className="h-[280px] overflow-y-auto px-4 py-4 space-y-3 bg-violet-50/20">
+            {messages.map((msg, i) => (<div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[80%] px-4 py-2.5 text-sm leading-relaxed ${msg.from === 'user' ? 'text-white rounded-2xl rounded-br-sm' : 'bg-white text-gray-700 rounded-2xl rounded-bl-sm shadow-sm border border-violet-50'}`} style={msg.from === 'user' ? { background: accentColor } : undefined}>{msg.text}</div></div>))}
+            {isTyping && (<div className="flex justify-start"><div className="bg-white px-4 py-3 rounded-2xl rounded-bl-sm shadow-sm border border-violet-50"><div className="flex gap-1"><span className="w-2 h-2 bg-violet-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} /><span className="w-2 h-2 bg-violet-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} /><span className="w-2 h-2 bg-violet-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} /></div></div></div>)}
+            <div ref={endRef} />
+          </div>
+          {messages.length <= 1 && (<div className="px-4 pb-2 flex gap-2 flex-wrap bg-violet-50/20">{quickReplies.map((qr, i) => (<button key={i} onClick={() => handleSend(qr)} className="text-xs px-3 py-1.5 rounded-full border border-violet-200 text-violet-600 hover:bg-violet-50 transition-all">{qr}</button>))}</div>)}
+          <div className="px-4 py-3 border-t border-violet-50 bg-white"><div className="flex gap-2"><input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder="Type a message..." className="flex-1 text-sm px-4 py-2.5 rounded-full bg-violet-50/50 border border-violet-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-400/30 placeholder:text-gray-400" /><button onClick={() => handleSend()} disabled={!input.trim()} className="w-10 h-10 rounded-full flex items-center justify-center text-white transition-all disabled:opacity-30" style={{ background: accentColor }}><Send size={15} /></button></div></div>
+        </div>
+      )}
+    </>
+  )
+}
+
+function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick, onCTAClick }: { isOpen: boolean; onClose: () => void; companyName: string; sections: { id: string; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void }) {
+  if (!isOpen) return null
+  return (
+    <div className="fixed inset-0 z-[90] lg:hidden">
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute right-0 top-0 bottom-0 w-[300px] bg-white shadow-2xl">
+        <div className="p-6 h-full flex flex-col">
+          <div className="flex justify-between items-center mb-10"><span className="text-lg font-bold text-gray-900">{companyName}</span><button onClick={onClose} className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500"><X size={18} /></button></div>
+          <nav className="space-y-1 flex-1">{sections.map((s) => (<a key={s.id} href={`#${s.id}`} onClick={onClose} className="flex items-center justify-between px-4 py-3.5 rounded-xl text-gray-700 hover:bg-violet-50 transition-all text-[15px] font-medium">{s.label}<ChevronRight size={16} className="text-gray-300" /></a>))}</nav>
+          <div className="flex gap-3 mb-5">
+            <a href="#" className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:text-violet-600 transition-colors"><Facebook size={16} /></a>
+            <a href="#" className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:text-violet-600 transition-colors"><Instagram size={16} /></a>
+            <a href="#" className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:text-violet-600 transition-colors"><GoogleIcon size={16} /></a>
+          </div>
+          <div className="space-y-3">
+            {phone && (<a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gray-100 text-gray-800 font-bold text-sm border border-gray-200"><Phone size={16} />Call {phone}</a>)}
+            <button onClick={() => { onCTAClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold text-sm">Get Free Quote</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function FAQItem({ question, answer, isOpen, onToggle }: { question: string; answer: string; isOpen: boolean; onToggle: () => void }) {
+  return (
+    <div className="border-b border-gray-100 last:border-0">
+      <button onClick={onToggle} className="w-full flex items-center justify-between py-5 text-left group">
+        <span className="text-[15px] font-medium text-gray-800 group-hover:text-violet-600 transition-colors pr-6">{question}</span>
+        <span className="flex-shrink-0 w-8 h-8 rounded-full bg-violet-50 group-hover:bg-violet-100 flex items-center justify-center transition-all">
+          {isOpen ? <Minus size={14} className="text-violet-600" /> : <Plus size={14} className="text-violet-300" />}
+        </span>
+      </button>
+      <div className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-[200px] opacity-100 pb-5' : 'max-h-0 opacity-0'}`}><p className="text-sm text-gray-500 leading-relaxed pr-14">{answer}</p></div>
+    </div>
+  )
+}
+// ═══════ MAIN TEMPLATE ═══════
 export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick, websiteCopy }: TemplateProps) {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const [openFAQ, setOpenFAQ] = useState<number | null>(null)
   const services = lead.enrichedServices || []
   const photos = lead.enrichedPhotos || []
   const industryLabel = lead.industry.toLowerCase().replace(/_/g, ' ')
@@ -10,123 +125,83 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
   const hasRating = lead.enrichedRating && lead.enrichedRating > 0
   const wc = websiteCopy
 
+  const navSections = [
+    { id: 'hero', label: 'Home' }, { id: 'services', label: 'Services' },
+    { id: 'about', label: 'About' }, { id: 'gallery', label: 'Work' },
+    { id: 'faq', label: 'FAQ' }, { id: 'contact', label: 'Contact' },
+  ]
+  const faqs = [
+    { q: 'How do I get a free quote?', a: 'Call us or use the contact form below. We respond same-day with a detailed, no-obligation estimate.' },
+    { q: 'What areas do you serve?', a: `We serve ${location || 'the local area'} and surrounding communities. Call us to confirm coverage.` },
+    { q: 'Are you licensed and insured?', a: 'Fully licensed, bonded, and insured with comprehensive liability coverage on every project.' },
+    { q: 'How quickly can you start?', a: 'Most projects start within 1–2 weeks. Urgent needs get expedited scheduling.' },
+    { q: 'Is your work guaranteed?', a: "Absolutely — backed by our satisfaction guarantee. If it's not right, we fix it." },
+  ]
+  useEffect(() => { const h = () => setScrolled(window.scrollY > 50); window.addEventListener('scroll', h, { passive: true }); return () => window.removeEventListener('scroll', h) }, [])
+
   return (
-    <div className="preview-template min-h-screen bg-white">
+    <div className="preview-template min-h-screen bg-white antialiased">
       <DisclaimerBanner variant="modern" companyName={lead.companyName} />
 
-      {/* ─── Sticky Glass Nav ─── */}
-      <nav className="sticky top-0 z-40 glass border-b border-gray-200/40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-[72px] flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {lead.logo && <img src={lead.logo} alt="" className="w-9 h-9 rounded-xl object-cover ring-2 ring-violet-100" />}
-            <span className="font-display text-xl font-bold text-gray-900 tracking-tight">{lead.companyName}</span>
-          </div>
-          <div className="flex items-center gap-4">
-            {lead.phone && (
-              <a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden md:inline-flex items-center gap-2 text-sm text-gray-500 hover:text-violet-600 transition-colors font-medium">
-                <Phone size={15} />
-                {lead.phone}
-              </a>
-            )}
-            <button onClick={onCTAClick} className="bg-gradient-to-r from-violet-500 to-purple-600 text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:from-violet-600 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg animate-cta-glow-violet">
-              Get a Free Quote
-            </button>
+      {/* ═══════ NAV ═══════ */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-white/95 backdrop-blur-xl shadow-sm border-b border-gray-100' : 'bg-white/50 backdrop-blur-md'}`}>
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <div className="flex items-center justify-between h-[68px]">
+            <div className="flex items-center gap-3">
+              {lead.logo && <img src={lead.logo} alt="" className="h-8 w-8 rounded-xl object-cover ring-2 ring-violet-100" />}
+              <span className="text-lg font-bold text-gray-900 tracking-tight">{lead.companyName}</span>
+            </div>
+            <div className="hidden lg:flex items-center gap-1">{navSections.map((s) => (<a key={s.id} href={`#${s.id}`} className="px-3 py-2 rounded-lg text-[13px] font-medium text-gray-500 hover:text-violet-600 hover:bg-violet-50 transition-all">{s.label}</a>))}</div>
+            <div className="flex items-center gap-3">
+              <div className="hidden md:flex items-center gap-0.5 text-gray-400">
+                <a href="#" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-violet-50 hover:text-violet-500 transition-all"><Facebook size={14} /></a>
+                <a href="#" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-violet-50 hover:text-violet-500 transition-all"><Instagram size={14} /></a>
+                <a href="#" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-violet-50 hover:text-violet-500 transition-all"><GoogleIcon size={13} /></a>
+              </div>
+              <div className="hidden md:block w-px h-5 bg-gray-200" />
+              {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-sm text-gray-500 hover:text-violet-600 font-medium"><Phone size={14} />{lead.phone}</a>)}
+              <button onClick={onCTAClick} className="hidden sm:flex bg-gradient-to-r from-violet-500 to-purple-600 text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:from-violet-600 hover:to-purple-700 transition-all shadow-md">Free Quote</button>
+              <button onClick={() => setMobileNavOpen(true)} className="lg:hidden w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600"><Menu size={20} /></button>
+            </div>
           </div>
         </div>
       </nav>
 
-      {/* ─── Split Hero ─── */}
-      <section className="relative py-20 md:py-32 px-4 sm:px-6 overflow-hidden bg-mesh-light">
-        <div className="absolute top-[-5%] left-[-10%] w-[500px] h-[500px] bg-gradient-to-br from-violet-200/40 to-purple-100/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '9s' }} />
-        <div className="absolute bottom-[-10%] right-[-8%] w-[450px] h-[450px] bg-gradient-to-tl from-fuchsia-100/30 to-violet-50/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '7s' }} />
+      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} />
 
-        <div className="relative max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <div className="animate-fade-in-up">
-              <div className="inline-flex items-center gap-2 bg-violet-50 border border-violet-200/60 text-violet-700 rounded-full px-4 py-2 text-sm font-semibold mb-6">
+      {/* ═══════ HERO — Split ═══════ */}
+      <section id="hero" className="relative pt-32 pb-20 sm:pb-28 px-5 sm:px-8 overflow-hidden">
+        <div className="absolute top-[-5%] left-[-10%] w-[500px] h-[500px] bg-gradient-to-br from-violet-100/50 to-purple-50/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-[-10%] right-[-8%] w-[400px] h-[400px] bg-gradient-to-tl from-fuchsia-50/30 to-violet-50/10 rounded-full blur-3xl" />
+        <div className="relative max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-violet-50 border border-violet-100 text-violet-600 rounded-full px-4 py-2 text-sm font-semibold mb-6">
                 <Sparkles size={14} />
-                {hasRating ? `${lead.enrichedRating}-Star Rated` : 'Top Rated'} • {location || 'Your Area'}
+                {hasRating ? `${lead.enrichedRating}-Star Rated` : 'Top Rated'}{location ? ` · ${location}` : ''}
               </div>
-              <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 tracking-tight leading-[1.1]">
-                {wc?.heroHeadline || `Expert ${industryLabel.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} You Can Trust`}
-              </h1>
-              <p className="text-lg md:text-xl text-gray-500 mb-4 leading-relaxed">
-                {wc?.heroSubheadline || `${lead.companyName} delivers premium ${industryLabel} services with transparent pricing and guaranteed satisfaction.`}
-              </p>
-              {location && (
-                <p className="text-gray-400 mb-10 flex items-center gap-2 text-base">
-                  <MapPin size={16} className="text-violet-500" />
-                  Serving {location} and surrounding areas
-                </p>
-              )}
+              <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-gray-900 mb-6 tracking-tight leading-[1.08]">{wc?.heroHeadline || lead.companyName}</h1>
+              <p className="text-lg sm:text-xl text-gray-500 mb-10 leading-relaxed max-w-lg">{wc?.heroSubheadline || config.tagline}</p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <a
-                  href={`tel:${lead.phone}`}
-                  onClick={onCallClick}
-                  className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white px-9 py-4 rounded-full font-semibold text-lg hover:from-violet-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 animate-cta-glow-violet"
-                >
-                  <Phone size={20} />
-                  Call Now — It&apos;s Free
-                </a>
-                <button
-                  onClick={onCTAClick}
-                  className="inline-flex items-center justify-center gap-2.5 bg-white border-2 border-gray-200 text-gray-700 px-9 py-4 rounded-full font-semibold text-lg hover:border-violet-400 hover:text-violet-600 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
-                >
-                  {config.ctaText}
-                  <ArrowRight size={18} />
-                </button>
+                {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white px-9 py-4 rounded-full font-semibold text-base hover:from-violet-600 hover:to-purple-700 transition-all shadow-lg hover:-translate-y-0.5"><Phone size={18} />Call Now — Free Quote</a>)}
+                <button onClick={onCTAClick} className="inline-flex items-center justify-center gap-2.5 bg-white border-2 border-gray-200 text-gray-700 px-9 py-4 rounded-full font-semibold text-base hover:border-violet-300 hover:text-violet-600 transition-all group">{config.ctaText}<ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></button>
+              </div>
+              <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-gray-400 text-sm">
+                <span className="flex items-center gap-1.5"><Shield size={14} />Licensed & Insured</span>
+                <span className="flex items-center gap-1.5"><Clock size={14} />Same-Day Response</span>
+                <span className="flex items-center gap-1.5"><CheckCircle size={14} />Satisfaction Guaranteed</span>
               </div>
             </div>
-
-            {/* CTA Card with Rating */}
-            <div className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
-              <div className="bg-white rounded-3xl border border-gray-100 shadow-xl p-8 md:p-10 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-violet-50 to-transparent rounded-bl-full" />
+            {/* Right — Stats + Quick CTA */}
+            <div className="flex justify-center lg:justify-end">
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-xl p-8 w-full max-w-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-violet-50 to-transparent rounded-bl-full" />
                 <div className="relative">
-                  {hasRating && (
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="flex gap-0.5">
-                        {Array.from({ length: 5 }, (_, i) => (
-                          <Star key={i} size={20} className={i < Math.floor(lead.enrichedRating!) ? 'text-amber-400 fill-current' : 'text-gray-200'} />
-                        ))}
-                      </div>
-                      <span className="font-display text-xl font-bold text-gray-900">{lead.enrichedRating}</span>
-                      {lead.enrichedReviews && <span className="text-sm text-gray-400">({lead.enrichedReviews} reviews)</span>}
-                    </div>
-                  )}
-                  <h3 className="font-display text-2xl font-bold text-gray-900 mb-2">Get Your Free Estimate</h3>
-                  <p className="text-gray-500 mb-8">No obligation. Same-day response guaranteed.</p>
-
-                  <div className="space-y-3 mb-8">
-                    {[
-                      'Free, no-obligation assessment',
-                      'Licensed and fully insured',
-                      'Transparent, upfront pricing',
-                      'Same-day response time',
-                    ].map((item, i) => (
-                      <div key={i} className="flex items-center gap-3 text-gray-600">
-                        <CheckCircle size={18} className="text-violet-500 flex-shrink-0" />
-                        <span className="text-sm">{item}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={onCTAClick}
-                    className="w-full bg-gradient-to-r from-violet-500 to-purple-600 text-white py-4 rounded-xl font-bold text-lg hover:from-violet-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl mb-4"
-                  >
-                    Request a Quote
-                  </button>
-                  {lead.phone && (
-                    <a
-                      href={`tel:${lead.phone}`}
-                      onClick={onCallClick}
-                      className="w-full inline-flex items-center justify-center gap-2 border-2 border-gray-200 text-gray-700 py-3.5 rounded-xl font-semibold hover:border-violet-300 hover:text-violet-600 transition-all duration-300"
-                    >
-                      <Phone size={16} />
-                      Or call {lead.phone}
-                    </a>
-                  )}
+                  {hasRating && (<div className="flex items-center gap-2 mb-6"><div className="flex gap-0.5">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={18} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-amber-400 fill-current' : 'text-gray-200'} />)}</div><span className="font-bold text-gray-900 text-lg">{lead.enrichedRating}</span>{lead.enrichedReviews && <span className="text-sm text-gray-400">({lead.enrichedReviews} reviews)</span>}</div>)}
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Get Your Free Quote</h3>
+                  <p className="text-gray-400 text-sm mb-6">No obligation · Same-day response</p>
+                  <button onClick={onCTAClick} className="w-full bg-gradient-to-r from-violet-500 to-purple-600 text-white py-3.5 rounded-xl font-bold text-base hover:from-violet-600 hover:to-purple-700 transition-all shadow-md mb-3">Request a Quote</button>
+                  {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-600 py-3 rounded-xl font-medium text-sm hover:border-violet-300 hover:text-violet-600 transition-all"><Phone size={15} />Or call {lead.phone}</a>)}
                 </div>
               </div>
             </div>
@@ -134,298 +209,229 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
         </div>
       </section>
 
-      {/* ─── Horizontal Badge Row ─── */}
-      <section className="py-8 px-4 sm:px-6 border-b border-gray-100 bg-white">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {[
-              { icon: Shield, label: wc?.valueProps?.[0]?.title || 'Licensed & Insured' },
-              { icon: Award, label: wc?.valueProps?.[1]?.title || 'Top Rated' },
-              { icon: Clock, label: wc?.valueProps?.[2]?.title || 'Same-Day Response' },
-              { icon: BadgeCheck, label: 'Satisfaction Guaranteed' },
-              { icon: ThumbsUp, label: hasRating ? `${lead.enrichedRating}-Star Rated` : 'Trusted Pros' },
-            ].map((badge, i) => (
-              <div key={i} className="inline-flex items-center gap-2 bg-violet-50/60 border border-violet-100 rounded-full px-5 py-2.5 text-sm font-medium text-violet-700 hover:bg-violet-50 transition-colors duration-200">
-                <badge.icon size={15} />
-                {badge.label}
-              </div>
-            ))}
-          </div>
+      {/* ═══════ PROOF STRIP ═══════ */}
+      <section className="py-4 px-5 sm:px-8 border-y border-gray-100 bg-gray-50/50">
+        <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
+          {hasRating && <span className="flex items-center gap-2 text-gray-700 font-semibold"><Star size={13} className="text-amber-400 fill-current" />{lead.enrichedRating} Rating</span>}
+          {lead.enrichedReviews && (<><span className="text-gray-200 hidden sm:inline">•</span><span className="text-gray-500">{lead.enrichedReviews}+ Reviews</span></>)}
+          <span className="text-gray-200 hidden sm:inline">•</span>
+          <span className="flex items-center gap-1.5 text-gray-500"><Shield size={13} />Licensed & Insured</span>
+          {location && (<><span className="text-gray-200 hidden sm:inline">•</span><span className="flex items-center gap-1.5 text-gray-500"><MapPin size={13} />{location}</span></>)}
+          <span className="text-gray-200 hidden sm:inline">•</span>
+          <span className="flex items-center gap-1.5 text-gray-500"><Clock size={13} />Same-Day Response</span>
         </div>
       </section>
 
-      {/* ─── Alternating Feature Sections for Services ─── */}
+      {/* ═══════ SERVICES ═══════ */}
       {services.length > 0 && (
-        <div>
-          {services.slice(0, 4).map((service, i) => {
-            const isEven = i % 2 === 0
-            const serviceIcons = [Sparkles, Zap, CheckCircle, Award]
-            const ServiceIcon = serviceIcons[i % serviceIcons.length]
-            const desc = wc?.serviceDescriptions?.[service] || `Expert ${service.toLowerCase()} solutions delivered with precision, quality materials, and meticulous attention to detail. We handle projects of every size with the same level of care and professionalism.`
-
-            return (
-              <section
-                key={i}
-                className={`py-20 px-4 sm:px-6 ${isEven ? 'bg-white' : 'bg-violet-50/30'}`}
-              >
-                <div className="max-w-6xl mx-auto">
-                  <div className={`grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center ${!isEven ? 'md:[direction:rtl]' : ''}`}>
-                    <div className={!isEven ? 'md:[direction:ltr]' : ''}>
-                      <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-sm font-semibold mb-5">
-                        Service {String(i + 1).padStart(2, '0')}
-                      </div>
-                      <h3 className="font-display text-3xl md:text-4xl font-bold text-gray-900 mb-5">{service}</h3>
-                      <p className="text-gray-500 text-lg leading-relaxed mb-8">{desc}</p>
-                      <button
-                        onClick={onCTAClick}
-                        className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-500 to-purple-600 text-white px-8 py-3.5 rounded-full font-semibold hover:from-violet-600 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg"
-                      >
-                        Get a Quote
-                        <ArrowRight size={16} />
-                      </button>
-                    </div>
-                    <div className={`flex justify-center ${!isEven ? 'md:[direction:ltr]' : ''}`}>
-                      <div className="relative">
-                        <div className="w-48 h-48 md:w-56 md:h-56 rounded-3xl bg-gradient-to-br from-violet-100 to-purple-50 flex items-center justify-center">
-                          <div className="w-28 h-28 md:w-32 md:h-32 rounded-2xl bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center shadow-xl">
-                            <ServiceIcon size={48} className="text-white" />
-                          </div>
-                        </div>
-                        <div className="absolute -top-3 -right-3 w-20 h-20 bg-gradient-to-br from-fuchsia-100/50 to-transparent rounded-full blur-xl" />
-                        <div className="absolute -bottom-3 -left-3 w-16 h-16 bg-gradient-to-br from-violet-100/40 to-transparent rounded-full blur-xl" />
-                      </div>
-                    </div>
+        <section id="services" className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+          <div className="max-w-5xl mx-auto">
+            <div className="max-w-xl mb-16">
+              <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100">Services</div>
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-4">What we do.</h2>
+              <p className="text-gray-500 text-base">Expert {industryLabel} solutions with transparent pricing.</p>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {services.slice(0, 8).map((service, i) => (
+                <div key={i} className="group flex items-center justify-between py-6 cursor-pointer hover:pl-2 transition-all duration-300" onClick={onCTAClick}>
+                  <div className="flex items-center gap-5">
+                    <span className="text-xs text-violet-300 font-mono tabular-nums w-6 font-bold">{String(i + 1).padStart(2, '0')}</span>
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-800 group-hover:text-violet-600 transition-colors">{service}</h3>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {wc?.serviceDescriptions?.[service] && <p className="hidden md:block text-sm text-gray-400 max-w-xs text-right">{wc.serviceDescriptions[service]}</p>}
+                    <ArrowRight size={16} className="text-gray-300 group-hover:text-violet-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
                   </div>
                 </div>
-              </section>
-            )
-          })}
-        </div>
+              ))}
+            </div>
+            <div className="mt-12 flex justify-center">
+              <button onClick={onCTAClick} className="flex items-center gap-2 bg-gradient-to-r from-violet-500 to-purple-600 text-white px-7 py-3.5 rounded-full font-semibold text-sm hover:from-violet-600 hover:to-purple-700 transition-all shadow-md">Get a Free Quote<ArrowRight size={16} /></button>
+            </div>
+          </div>
+        </section>
       )}
 
-      {/* ─── Full-Width Social Proof Banner ─── */}
-      <section className="relative py-14 px-4 sm:px-6 bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600 overflow-hidden">
-        <div className="absolute inset-0 bg-noise opacity-10" />
-        <div className="relative max-w-5xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12 text-center md:text-left">
-            {hasRating && (
-              <div className="flex items-center gap-3">
-                <div className="flex gap-0.5">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <Star key={i} size={22} className={i < Math.floor(lead.enrichedRating!) ? 'text-amber-300 fill-current' : 'text-white/30'} />
-                  ))}
-                </div>
-                <span className="text-white font-display text-2xl font-bold">{lead.enrichedRating}</span>
-                {lead.enrichedReviews && <span className="text-white/70">({lead.enrichedReviews}+ reviews)</span>}
+      {/* ═══════ VIOLET CTA BAND ═══════ */}
+      <section className="relative py-20 sm:py-24 overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600">
+        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+        <div className="relative max-w-4xl mx-auto px-5 sm:px-8 text-center">
+          <Quote size={36} className="text-white/15 mx-auto mb-5" />
+          <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-snug">{wc?.closingHeadline || "Quality work. Honest pricing. Guaranteed satisfaction."}</p>
+          {location && <p className="mt-5 text-white/50 text-sm font-medium">Proudly serving {location}</p>}
+        </div>
+      </section>
+
+      {/* ═══════ ABOUT ═══════ */}
+      <section id="about" className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
+            <div className="lg:col-span-3">
+              <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100">About {lead.companyName}</div>
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-6">Your trusted {industryLabel} professionals.</h2>
+              <div className="space-y-4 text-gray-500 text-base leading-relaxed">
+                <p>{wc?.aboutParagraph1 || `At ${lead.companyName}, we believe every client deserves exceptional service.${location ? ` Based in ${location}, we've built our reputation on honest work and results.` : " We've built our reputation on honest work and results."}`}</p>
+                <p>{wc?.aboutParagraph2 || 'Our team is fully licensed and insured, bringing deep expertise to every project. From consultation to walkthrough, we keep you informed and ensure complete satisfaction.'}</p>
               </div>
-            )}
-            <div className="hidden md:block w-px h-10 bg-white/20" />
-            <div className="flex items-center gap-2.5">
-              <Users size={20} className="text-white/80" />
-              <span className="text-white font-semibold text-lg">
-                Trusted by homeowners in {location || 'your area'}
-              </span>
+              <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { val: hasRating ? `${lead.enrichedRating}` : '5.0', label: 'Rating' },
+                  { val: lead.enrichedReviews ? `${lead.enrichedReviews}+` : '100+', label: 'Reviews' },
+                  { val: '100%', label: 'Satisfaction' },
+                  { val: '24hr', label: 'Response' },
+                ].map((s, i) => (<div key={i} className="p-4 rounded-xl bg-violet-50/50 border border-violet-100 text-center"><p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-purple-600">{s.val}</p><p className="text-xs text-gray-500 mt-1">{s.label}</p></div>))}
+              </div>
             </div>
-            <div className="hidden md:block w-px h-10 bg-white/20" />
-            <a
-              href={`tel:${lead.phone}`}
-              onClick={onCallClick}
-              className="inline-flex items-center gap-2 bg-white text-violet-700 px-6 py-3 rounded-full font-bold hover:bg-gray-50 transition-all shadow-lg"
-            >
-              <Phone size={18} />
-              Call Now
-            </a>
+            <div className="lg:col-span-2 flex flex-col gap-5">
+              <div className="bg-violet-50/40 border border-violet-100 rounded-2xl p-7">
+                <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={14} className="text-amber-400 fill-current" />)}</div>
+                <p className="text-gray-700 text-base italic leading-relaxed mb-4">"{lead.companyName} did an outstanding job. Professional, on time, and the quality was excellent."</p>
+                <div className="w-8 h-0.5 bg-violet-200 rounded-full mb-2" />
+                <span className="text-gray-400 text-xs font-medium">Happy Customer{location ? ` · ${location}` : ''}</span>
+              </div>
+              <div className="bg-gray-50 border border-gray-100 rounded-2xl p-7">
+                <h3 className="font-bold text-gray-800 text-base mb-1">Ready to get started?</h3>
+                <p className="text-gray-400 text-xs mb-5">Free quote · Same-day response</p>
+                <div className="space-y-3.5">
+                  {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-3"><div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0"><Phone size={14} className="text-white" /></div><div><p className="text-[11px] text-gray-400 uppercase tracking-wider font-bold">Phone</p><p className="text-sm font-bold text-gray-800">{lead.phone}</p></div></a>)}
+                  {lead.email && (<a href={`mailto:${lead.email}`} className="flex items-center gap-3"><div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0"><Mail size={14} className="text-white" /></div><div><p className="text-[11px] text-gray-400 uppercase tracking-wider font-bold">Email</p><p className="text-sm font-bold text-gray-800">{lead.email}</p></div></a>)}
+                  {lead.enrichedAddress && (<div className="flex items-center gap-3"><div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0"><MapPin size={14} className="text-white" /></div><div><p className="text-[11px] text-gray-400 uppercase tracking-wider font-bold">Location</p><p className="text-sm font-bold text-gray-800">{lead.enrichedAddress}</p></div></div>)}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ─── About Section ─── */}
-      <section className="py-24 px-4 sm:px-6 bg-white">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-sm font-semibold mb-5">
-              About {lead.companyName}
+      {/* ═══════ GALLERY ═══════ */}
+      {photos.length > 0 && (
+        <section id="gallery" className="py-20 sm:py-28 px-5 sm:px-8 bg-gray-50/50">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center max-w-xl mx-auto mb-14">
+              <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100"><Camera size={12} />Portfolio</div>
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Our recent work.</h2>
             </div>
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-gray-900 mb-8 leading-tight">
-              Your Trusted {industryLabel.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} Professionals
-            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+              {photos.slice(0, 6).map((photo, i) => (
+                <div key={i} className={`relative overflow-hidden rounded-2xl group border border-gray-100 hover:border-violet-200 transition-all ${i === 0 ? 'md:col-span-2 md:row-span-2' : ''}`}>
+                  <img src={photo} alt={`Project ${i + 1}`} className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${i === 0 ? 'aspect-square md:aspect-[4/3]' : 'aspect-square'}`} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              ))}
+            </div>
           </div>
+        </section>
+      )}
 
-          <div className="space-y-6 text-gray-600 text-lg leading-relaxed mb-14">
-            <p>
-              {wc?.aboutParagraph1 || `At ${lead.companyName}, we believe every client deserves exceptional ${industryLabel} service delivered with integrity and professionalism.${location ? ` Based in ${location}, we've built our reputation on honest work, transparent pricing, and results that speak for themselves.` : ' We\'ve built our reputation on honest work, transparent pricing, and results that speak for themselves.'}`}
-            </p>
-            <p>
-              {wc?.aboutParagraph2 || 'Our team of experienced professionals is fully licensed and insured, bringing deep expertise to every project — no matter the size. From initial consultation to final walkthrough, we keep you informed and ensure complete satisfaction.'}
-            </p>
+      {/* ═══════ TESTIMONIALS ═══════ */}
+      <section className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100">Reviews</div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">What clients say.</h2>
           </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { value: hasRating ? `${lead.enrichedRating}` : '5.0', label: 'Star Rating' },
-              { value: lead.enrichedReviews ? `${lead.enrichedReviews}+` : '100+', label: lead.enrichedReviews ? 'Reviews' : 'Projects' },
-              { value: '100%', label: 'Satisfaction' },
-              { value: 'Same Day', label: 'Response Time' },
-            ].map((stat, i) => (
-              <div key={i} className="p-6 rounded-2xl bg-violet-50/50 border border-violet-100">
-                <p className="font-display text-3xl md:text-4xl font-bold text-gradient-violet">{stat.value}</p>
-                <p className="text-sm text-gray-500 font-medium mt-2">{stat.label}</p>
+              { quote: `${lead.companyName} delivered exceptional results. Professional, transparent, and the quality speaks for itself.`, name: 'Homeowner', loc: lead.city || 'Local' },
+              { quote: 'Responsive, knowledgeable, and meticulous. They explained everything clearly and finished on schedule.', name: 'Property Manager', loc: lead.city || 'Local' },
+              { quote: 'Fair pricing, expert work, and a team that genuinely cares. Already booked them for our next project.', name: 'Repeat Client', loc: lead.city || 'Local' },
+            ].map((r, i) => (
+              <div key={i} className={`bg-gray-50/50 border border-gray-100 rounded-2xl p-8 hover:border-violet-200 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
+                <div className="flex gap-0.5 mb-5">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
+                <p className="text-gray-600 text-base leading-relaxed mb-6 italic">"{r.quote}"</p>
+                <div className="flex items-center gap-3 text-sm pt-4 border-t border-gray-100">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center"><span className="text-violet-600 font-bold text-xs">{r.name[0]}</span></div>
+                  <div><span className="font-semibold text-gray-800">{r.name}</span><span className="text-gray-400"> — {r.loc}</span></div>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── Gallery ─── */}
-      {photos.length > 0 && (
-        <section className="py-24 px-4 sm:px-6 bg-gradient-to-b from-gray-50 to-white">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-sm font-semibold mb-4">
-                <Camera size={14} />
-                Portfolio
-              </div>
-              <h2 className="font-display text-4xl md:text-5xl font-bold text-gray-900 mb-4">Our Recent Work</h2>
-              <p className="text-gray-500 text-lg">See the quality and craftsmanship we bring to every project.</p>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[180px] md:auto-rows-[200px]">
-              {photos.slice(0, 8).map((photo, i) => {
-                const isFeatured = i === 0
-                return (
-                  <div
-                    key={i}
-                    className={`group relative bg-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 ${
-                      isFeatured ? 'col-span-2 row-span-2' : ''
-                    }`}
-                  >
-                    <img
-                      src={photo}
-                      alt={`${lead.companyName} project ${i + 1}`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    {isFeatured && (
-                      <div className="absolute bottom-4 left-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <button onClick={onCTAClick} className="inline-flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-gray-900 text-sm font-semibold px-4 py-2 rounded-full">
-                          <Camera size={14} />
-                          Get a Quote
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+      {/* ═══════ FAQ ═══════ */}
+      <section id="faq" className="py-20 sm:py-28 px-5 sm:px-8 bg-gray-50/50">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100">FAQ</div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Common questions.</h2>
           </div>
-        </section>
-      )}
-
-      {/* ─── Service Area ─── */}
-      {location && (
-        <section className="py-20 px-4 sm:px-6 bg-white">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center mx-auto mb-8 shadow-lg">
-              <MapPin size={32} className="text-white" />
-            </div>
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-gray-900 mb-6">Serving {location}</h2>
-            <p className="text-gray-500 text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-              {lead.companyName} proudly serves {lead.city} and the greater {lead.state} area.
-              We&apos;re your local {industryLabel} experts — always nearby and ready to help.
-            </p>
-            <div className="inline-flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-full px-7 py-3.5 shadow-sm">
-              <Users size={18} className="text-violet-500" />
-              <span className="text-gray-700 font-semibold">Locally owned and operated</span>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ─── Final CTA Section ─── */}
-      <section className="relative py-24 px-4 sm:px-6 bg-gradient-to-br from-violet-600 via-purple-600 to-violet-700 overflow-hidden">
-        <div className="absolute inset-0 bg-noise opacity-10" />
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-400/20 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl" />
-        <div className="relative max-w-4xl mx-auto text-center">
-          <h2 className="font-display text-4xl md:text-5xl font-bold text-white mb-6">
-            {wc?.closingHeadline || 'Ready to Get Started?'}
-          </h2>
-          <p className="text-xl text-white/80 mb-12 max-w-xl mx-auto leading-relaxed">
-            {wc?.closingBody || 'Get a free estimate on your project today. No obligation, no pressure — just honest advice from local professionals.'}
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href={`tel:${lead.phone}`}
-              onClick={onCallClick}
-              className="inline-flex items-center justify-center gap-2.5 bg-white text-violet-700 px-10 py-4 rounded-full font-bold text-lg hover:bg-gray-50 transition-all duration-300 shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
-            >
-              <Phone size={20} />
-              {lead.phone || 'Call Now'}
-            </a>
-            <button
-              onClick={onCTAClick}
-              className="inline-flex items-center justify-center gap-2.5 border-2 border-white/50 text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-white hover:text-violet-700 transition-all duration-300"
-            >
-              {config.ctaText}
-            </button>
+          <div className="bg-white rounded-2xl border border-gray-100 px-6 sm:px-8 shadow-sm">
+            {faqs.map((f, i) => <FAQItem key={i} question={f.q} answer={f.a} isOpen={openFAQ === i} onToggle={() => setOpenFAQ(openFAQ === i ? null : i)} />)}
           </div>
         </div>
       </section>
 
-      {/* ─── Footer ─── */}
-      <footer className="bg-gray-950 py-16 px-4 sm:px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+      {/* ═══════ CONTACT ═══════ */}
+      <section id="contact" className="py-20 sm:py-28 px-5 sm:px-8 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
             <div>
-              <h3 className="font-display text-white font-bold text-xl mb-4">{lead.companyName}</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Professional {industryLabel} services{location ? ` in ${location}` : ''}.
-                Quality workmanship, honest pricing, and customer satisfaction guaranteed.
-              </p>
-              {hasRating && (
-                <div className="flex items-center gap-2 mt-4">
-                  <div className="flex gap-0.5">
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <Star key={i} size={12} className={i < Math.floor(lead.enrichedRating!) ? 'text-amber-400 fill-current' : 'text-gray-700'} />
-                    ))}
-                  </div>
-                  <span className="text-gray-400 text-sm">{lead.enrichedRating} rating</span>
+              <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100">Contact</div>
+              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-6">Let's talk about your project.</h2>
+              <p className="text-gray-500 text-base leading-relaxed mb-10">{wc?.closingBody || `Get a free estimate from ${lead.companyName} today. No obligation, no pressure — just honest advice.`}</p>
+              <div className="space-y-5">
+                {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-sm"><Phone size={20} className="text-white" /></div><div><p className="text-sm font-bold text-gray-800">{lead.phone}</p><p className="text-xs text-gray-400">Call or text anytime</p></div></a>)}
+                {lead.email && (<a href={`mailto:${lead.email}`} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-sm"><Mail size={20} className="text-white" /></div><div><p className="text-sm font-bold text-gray-800">{lead.email}</p><p className="text-xs text-gray-400">We reply fast</p></div></a>)}
+                {lead.enrichedAddress && (<div className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-sm"><MapPin size={20} className="text-white" /></div><div><p className="text-sm font-bold text-gray-800">{lead.enrichedAddress}</p><p className="text-xs text-gray-400">{location}</p></div></div>)}
+              </div>
+              <div className="flex gap-3 mt-10">
+                <a href="#" className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-violet-500 hover:border-violet-200 transition-all"><Facebook size={16} /></a>
+                <a href="#" className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-violet-500 hover:border-violet-200 transition-all"><Instagram size={16} /></a>
+                <a href="#" className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-violet-500 hover:border-violet-200 transition-all"><GoogleIcon size={16} /></a>
+              </div>
+            </div>
+            <div className="bg-gray-50 rounded-2xl border border-gray-100 p-7 sm:p-8">
+              <h3 className="text-lg font-bold text-gray-800 mb-1">Send us a message</h3>
+              <p className="text-xs text-gray-400 mb-6">We respond same-day.</p>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div><label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Name</label><input type="text" placeholder="Your name" className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-300 placeholder:text-gray-300 transition-all" /></div>
+                  <div><label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Phone</label><input type="tel" placeholder="(555) 555-5555" className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-300 placeholder:text-gray-300 transition-all" /></div>
                 </div>
-              )}
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Quick Links</h4>
-              <ul className="space-y-3 text-sm text-gray-400">
-                <li className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer"><ChevronRight size={12} className="text-violet-400" /> Our Services</li>
-                <li className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer"><ChevronRight size={12} className="text-violet-400" /> About Us</li>
-                <li className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer"><ChevronRight size={12} className="text-violet-400" /> Contact</li>
-                <li className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer"><ChevronRight size={12} className="text-violet-400" /> Free Estimate</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Contact</h4>
-              <div className="space-y-3 text-sm text-gray-400">
-                {lead.phone && <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-2.5 hover:text-white transition-colors"><Phone size={14} className="text-violet-400" /> {lead.phone}</a>}
-                {lead.email && <a href={`mailto:${lead.email}`} className="flex items-center gap-2.5 hover:text-white transition-colors"><Mail size={14} className="text-violet-400" /> {lead.email}</a>}
-                {lead.enrichedAddress && <p className="flex items-center gap-2.5"><MapPin size={14} className="text-violet-400" /> {lead.enrichedAddress}</p>}
+                <div><label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Email</label><input type="email" placeholder="your@email.com" className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-300 placeholder:text-gray-300 transition-all" /></div>
+                <div><label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Project details</label><textarea rows={4} placeholder="Tell us about your project..." className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-300 placeholder:text-gray-300 transition-all resize-none" /></div>
+                <button onClick={onCTAClick} className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-semibold text-sm hover:from-violet-600 hover:to-purple-700 transition-all shadow-md">Send Message</button>
               </div>
             </div>
           </div>
-          <div className="border-t border-gray-800 pt-10 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} {lead.companyName}. All rights reserved.</p>
-            {location && <p className="text-gray-600 text-xs">Professional {industryLabel} services in {location}</p>}
+        </div>
+      </section>
+
+      {/* ═══════ FOOTER ═══════ */}
+      <footer className="bg-gray-950 py-14 px-5 sm:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
+            <div>
+              <span className="text-white font-bold text-lg">{lead.companyName}</span>
+              <p className="text-gray-400 text-sm leading-relaxed mt-3">Professional {industryLabel}{location ? ` in ${location}` : ''}. Quality workmanship, guaranteed.</p>
+              {hasRating && (<div className="flex items-center gap-2 mt-4"><div className="flex gap-0.5">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={11} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-amber-400 fill-current' : 'text-gray-700'} />)}</div><span className="text-gray-500 text-xs">{lead.enrichedRating} rating</span></div>)}
+              <div className="flex gap-2.5 mt-5">
+                <a href="#" className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-white transition-all"><Facebook size={13} /></a>
+                <a href="#" className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-white transition-all"><Instagram size={13} /></a>
+                <a href="#" className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-white transition-all"><GoogleIcon size={12} /></a>
+              </div>
+            </div>
+            <div><h4 className="text-white font-semibold mb-4 text-xs uppercase tracking-[0.15em]">Services</h4><ul className="space-y-2.5 text-sm text-gray-400">{services.slice(0, 5).map((s, i) => <li key={i} className="flex items-center gap-2 hover:text-gray-200 transition-colors cursor-pointer"><CheckCircle size={11} className="text-violet-500 flex-shrink-0" />{s}</li>)}</ul></div>
+            <div><h4 className="text-white font-semibold mb-4 text-xs uppercase tracking-[0.15em]">Contact</h4><div className="space-y-3 text-sm text-gray-400">{lead.phone && <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-2.5 hover:text-white transition-colors"><Phone size={13} className="text-violet-400" />{lead.phone}</a>}{lead.email && <a href={`mailto:${lead.email}`} className="flex items-center gap-2.5 hover:text-white transition-colors"><Mail size={13} className="text-violet-400" />{lead.email}</a>}{lead.enrichedAddress && <p className="flex items-center gap-2.5"><MapPin size={13} className="text-violet-400 flex-shrink-0" />{lead.enrichedAddress}</p>}</div></div>
+          </div>
+          <div className="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-gray-500 text-xs">&copy; {new Date().getFullYear()} {lead.companyName}. All rights reserved.</p>
+            {location && <p className="text-gray-600 text-xs">Professional {industryLabel} · {location}</p>}
           </div>
         </div>
       </footer>
 
-      {/* ─── Floating Phone Button ─── */}
-      <a
-        href={`tel:${lead.phone}`}
-        onClick={onCallClick}
-        className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-white flex items-center justify-center shadow-2xl hover:shadow-xl hover:from-violet-600 hover:to-purple-700 transition-all duration-300 hover:scale-110 animate-cta-glow-violet"
-        aria-label="Call us"
-      >
-        <Phone size={26} />
-      </a>
+      {/* ═══════ STICKY MOBILE CTA ═══════ */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 sm:hidden bg-white/95 backdrop-blur-xl border-t border-gray-100 px-4 py-3">
+        <div className="flex gap-3">
+          {lead.phone && <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-100 text-gray-800 font-semibold text-sm border border-gray-200"><Phone size={16} />Call</a>}
+          <button onClick={onCTAClick} className="flex-[2] flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-semibold text-sm">Free Quote</button>
+        </div>
+      </div>
+
+      <ChatbotWidget companyName={lead.companyName} />
+      <div className="h-20 sm:h-0" />
     </div>
   )
 }
