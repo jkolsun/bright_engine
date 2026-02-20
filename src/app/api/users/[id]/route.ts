@@ -6,9 +6,10 @@ import bcrypt from 'bcryptjs'
 // GET /api/users/[id] - Get user details with related data
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
@@ -16,7 +17,7 @@ export async function GET(
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         assignedLeads: {
           orderBy: { createdAt: 'desc' },
@@ -65,9 +66,10 @@ export async function GET(
 // PATCH /api/users/[id] - Update user
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     // Admin-only access check - managing user accounts
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
@@ -84,7 +86,7 @@ export async function PATCH(
     }
 
     const user = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(data.status && { status: data.status }),
         ...(data.name && { name: data.name }),
@@ -111,9 +113,10 @@ export async function PATCH(
 // DELETE /api/users/[id] - Soft delete (mark as INACTIVE)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     // Admin-only access check
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
@@ -121,7 +124,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }
 
-    const userId = params.id
+    const userId = id
 
     const user = await prisma.user.findUnique({
       where: { id: userId }

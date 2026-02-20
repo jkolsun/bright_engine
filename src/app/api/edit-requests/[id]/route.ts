@@ -7,9 +7,10 @@ export const dynamic = 'force-dynamic'
 // PUT /api/edit-requests/[id] - Update edit request (approve, reject, etc.)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
@@ -34,7 +35,7 @@ export async function PUT(
     }
 
     const editRequest = await prisma.editRequest.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     })
 
@@ -48,16 +49,17 @@ export async function PUT(
 // DELETE /api/edit-requests/[id]
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }
 
-    await prisma.editRequest.delete({ where: { id: params.id } })
+    await prisma.editRequest.delete({ where: { id } })
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting edit request:', error)

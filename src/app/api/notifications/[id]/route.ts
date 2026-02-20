@@ -4,13 +4,14 @@ import { prisma } from '@/lib/db'
 // PUT /api/notifications/[id] - Mark notification as read
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const { read } = await request.json()
 
     const notification = await prisma.notification.update({
-      where: { id: params.id },
+      where: { id },
       data: { read: read ?? true }
     })
 
@@ -27,11 +28,13 @@ export async function PUT(
 // DELETE /api/notifications/[id] - Delete notification
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
+
     await prisma.notification.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json({ success: true })

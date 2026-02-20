@@ -8,9 +8,10 @@ import { prisma } from '@/lib/db'
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const { repId } = await request.json()
 
     if (!repId) {
@@ -34,7 +35,7 @@ export async function PUT(
 
     // Assign lead to rep
     const lead = await prisma.lead.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         assignedToId: repId,
         updatedAt: new Date(),

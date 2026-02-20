@@ -5,9 +5,10 @@ import { verifySession } from '@/lib/session'
 // PATCH /api/admin/leads/[id] - Admin edit lead (reassign, change status, etc)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     // Admin-only access check
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
@@ -18,7 +19,7 @@ export async function PATCH(
     const data = await request.json()
 
     const lead = await prisma.lead.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(data.assignedToId && { assignedToId: data.assignedToId }),
         ...(data.status && { status: data.status }),
@@ -55,9 +56,10 @@ export async function PATCH(
 // GET /api/admin/leads/[id] - Get lead details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     // Admin-only access check
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
@@ -66,7 +68,7 @@ export async function GET(
     }
 
     const lead = await prisma.lead.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         assignedTo: {
           select: { id: true, name: true, email: true }

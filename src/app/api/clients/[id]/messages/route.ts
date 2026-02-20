@@ -7,16 +7,17 @@ export const dynamic = 'force-dynamic'
 // DELETE /api/clients/[id]/messages - Delete all messages for a client
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }
 
-    const clientId = params.id
+    const clientId = id
 
     const client = await prisma.client.findUnique({
       where: { id: clientId },

@@ -4,11 +4,13 @@ import { prisma } from '@/lib/db'
 // GET /api/preview/[id] - Get preview data
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
+
     const lead = await prisma.lead.findUnique({
-      where: { previewId: params.id },
+      where: { previewId: id },
     })
 
     if (!lead) {

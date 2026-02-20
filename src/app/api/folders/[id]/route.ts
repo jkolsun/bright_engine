@@ -7,9 +7,10 @@ export const dynamic = 'force-dynamic'
 // PUT /api/folders/[id] — Rename or recolor a folder
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
@@ -26,7 +27,7 @@ export async function PUT(
     }
 
     const folder = await prisma.leadFolder.update({
-      where: { id: params.id },
+      where: { id },
       data,
     })
 
@@ -40,9 +41,10 @@ export async function PUT(
 // DELETE /api/folders/[id] — Delete a folder (leads become unfoldered)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
@@ -51,12 +53,12 @@ export async function DELETE(
 
     // Unfolder all leads in this folder first
     await prisma.lead.updateMany({
-      where: { folderId: params.id },
+      where: { folderId: id },
       data: { folderId: null },
     })
 
     await prisma.leadFolder.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ success: true, message: 'Folder deleted' })

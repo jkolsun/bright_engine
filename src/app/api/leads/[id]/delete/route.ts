@@ -5,16 +5,17 @@ import { verifySession } from '@/lib/session'
 // DELETE /api/leads/[id]/delete - Hard delete lead
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }
 
-    const leadId = params.id
+    const leadId = id
 
     const lead = await prisma.lead.findUnique({
       where: { id: leadId }

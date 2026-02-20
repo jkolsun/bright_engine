@@ -5,17 +5,20 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | null | undefined): string {
+  if (amount == null || isNaN(amount)) return '$0.00'
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
   }).format(amount)
 }
 
-export function formatPhone(phone: string): string {
-  // Format as (123) 456-7890
+export function formatPhone(phone: string | null | undefined): string {
+  if (!phone) return '—'
   const cleaned = phone.replace(/\D/g, '')
-  const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/)
+  // Handle 11-digit numbers starting with 1 (US country code)
+  const digits = cleaned.length === 11 && cleaned.startsWith('1') ? cleaned.slice(1) : cleaned
+  const match = digits.match(/^(\d{3})(\d{3})(\d{4})$/)
   if (match) {
     return `(${match[1]}) ${match[2]}-${match[3]}`
   }

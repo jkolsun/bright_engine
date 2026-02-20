@@ -4,11 +4,12 @@ import { prisma } from '@/lib/db'
 // GET /api/leads/[id] - Get lead detail with timeline
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const lead = await prisma.lead.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         assignedTo: {
           select: { id: true, name: true, email: true }
@@ -54,9 +55,10 @@ export async function GET(
 // PUT /api/leads/[id] - Update lead
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const data = await request.json()
 
     // Whitelist allowed fields to prevent injection
@@ -81,7 +83,7 @@ export async function PUT(
     }
 
     const lead = await prisma.lead.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...allowed,
         updatedAt: new Date(),
@@ -110,11 +112,12 @@ export async function PUT(
 // DELETE /api/leads/[id] - Hard delete
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const lead = await prisma.lead.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!lead) {
@@ -124,7 +127,7 @@ export async function DELETE(
       )
     }
 
-    await prisma.lead.delete({ where: { id: params.id } })
+    await prisma.lead.delete({ where: { id } })
 
     return NextResponse.json({
       success: true,
