@@ -340,6 +340,7 @@ function MessagesPageInner() {
           aiHandling: false,
           healthScore: msg.client?.healthScore,
           hostingStatus: msg.client?.hostingStatus,
+          autonomyLevel: msg.client?.autonomyLevel || msg.lead?.autonomyLevel || 'FULL_AUTO',
           channels: new Set<string>(),
         })
       }
@@ -703,9 +704,28 @@ function MessagesPageInner() {
           </div>
           <div className="flex items-center gap-2 text-sm">
             <span className="text-gray-500">AI:</span>
-            <select className="px-2 py-1 border rounded text-sm" defaultValue="on">
-              <option value="on">ON</option>
-              <option value="off">OFF</option>
+            <select
+              className="px-2 py-1 border rounded text-sm"
+              value={selectedConversation.autonomyLevel || 'FULL_AUTO'}
+              onChange={async (e) => {
+                const newLevel = e.target.value
+                const id = selectedConversation.clientId || selectedConversation.leadId
+                const endpoint = selectedConversation.clientId
+                  ? `/api/clients/${id}`
+                  : `/api/leads/${id}`
+                try {
+                  await fetch(endpoint, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ autonomyLevel: newLevel }),
+                  })
+                  setSelectedConversation((prev: any) => ({ ...prev, autonomyLevel: newLevel }))
+                } catch (err) { console.error('Failed to update AI setting:', err) }
+              }}
+            >
+              <option value="FULL_AUTO">Full Auto</option>
+              <option value="SEMI_AUTO">Semi-Auto</option>
+              <option value="MANUAL">Manual (Off)</option>
             </select>
           </div>
         </div>

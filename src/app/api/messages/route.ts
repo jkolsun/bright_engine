@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
               companyName: true,
               phone: true,
               email: true,
+              autonomyLevel: true,
             }
           },
           client: {
@@ -37,6 +38,7 @@ export async function GET(request: NextRequest) {
               id: true,
               companyName: true,
               email: true,
+              autonomyLevel: true,
             }
           }
         },

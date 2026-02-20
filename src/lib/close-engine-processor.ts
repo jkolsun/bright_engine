@@ -387,9 +387,16 @@ export async function processCloseEngineInbound(
       where: { id: conversationId },
       data: { collectedData: merged },
     })
+
+    // Sync extracted fields to lead record so they're available for site building
+    const leadUpdate: Record<string, unknown> = { qualificationData: merged }
+    const extracted = claudeResponse.extractedData as Record<string, unknown>
+    if (extracted.services) leadUpdate.enrichedServices = extracted.services
+    if (extracted.hours) leadUpdate.enrichedHours = extracted.hours
+
     await prisma.lead.update({
       where: { id: lead.id },
-      data: { qualificationData: merged },
+      data: leadUpdate,
     })
   }
 

@@ -76,6 +76,7 @@ export async function PUT(
       'state',
       'website',
       'industry',
+      'autonomyLevel',
     ]
 
     for (const key of safeFields) {
