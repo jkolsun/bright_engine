@@ -10,7 +10,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { prisma } from './db'
 import { sendSMSViaProvider } from './sms-provider'
 import { buildPostClientSystemPrompt } from './close-engine-prompts'
-import { calculateDelay } from './close-engine-processor'
+import { calculateDelay, shouldAIRespond } from './close-engine-processor'
 import { getPricingConfig } from './pricing-config'
 
 const POST_CLIENT_MODEL = 'claude-haiku-4-5-20251001'
@@ -45,6 +45,20 @@ export async function processPostClientInbound(
     orderBy: { createdAt: 'asc' },
     take: 20,
   })
+
+  // AI conversation awareness — should we respond at all?
+  const isReactionContext = message.startsWith('[REACTION:')
+  if (!isReactionContext) {
+    const lastOutbound = await prisma.message.findFirst({
+      where: { clientId, direction: 'OUTBOUND' },
+      orderBy: { createdAt: 'desc' },
+      select: { content: true },
+    })
+    if (!shouldAIRespond(message, lastOutbound?.content || null)) {
+      console.log(`[PostClient] Skipping response — conversation awareness: "${message.substring(0, 40)}"`)
+      return
+    }
+  }
 
   const daysSinceLaunch = client.siteLiveDate
     ? Math.floor((Date.now() - client.siteLiveDate.getTime()) / (1000 * 60 * 60 * 24))

@@ -515,6 +515,7 @@ function MessagesPageInner() {
                 const isOutbound = msg.direction === 'OUTBOUND'
                 const isAi = msg.aiGenerated || msg.senderType === 'AI' || msg.senderType === 'CLAWDBOT'
                 const isSystem = msg.senderType === 'SYSTEM'
+                const isReaction = !!msg.reactionType
 
                 if (isSystem) {
                   return (
@@ -526,9 +527,30 @@ function MessagesPageInner() {
                   )
                 }
 
+                {/* Reaction messages render as compact inline badges */}
+                if (isReaction) {
+                  return (
+                    <div key={msg.id} className="flex justify-start">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs text-gray-600">
+                        <span className="text-base">{msg.reactionEmoji || msg.reactionType}</span>
+                        <span>{selectedCloseConv.lead?.firstName || 'Lead'} reacted</span>
+                        <span className="text-gray-400">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </div>
+                  )
+                }
+
                 return (
                   <div key={msg.id} className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] ${isOutbound ? 'bg-gray-50 border-gray-200' : 'bg-blue-100 border-blue-300'} border rounded-lg p-3`}>
+                    <div className={`max-w-[70%] ${isOutbound ? 'bg-gray-50 border-gray-200' : 'bg-blue-100 border-blue-300'} border rounded-lg p-3 relative`}>
+                      {/* Reaction badge overlay — shows if another message reacted to this one */}
+                      {detailMessages.some((r: any) => r.reactionToId === msg.id && r.reactionEmoji) && (
+                        <div className="absolute -bottom-2 -right-1 flex gap-0.5">
+                          {detailMessages.filter((r: any) => r.reactionToId === msg.id).map((r: any) => (
+                            <span key={r.id} className="bg-white border border-gray-200 rounded-full px-1 text-sm shadow-sm">{r.reactionEmoji}</span>
+                          ))}
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 mb-1">
                         {/* Channel badge */}
                         {msg.channel === 'EMAIL' ? (
@@ -698,6 +720,7 @@ function MessagesPageInner() {
                 const isOutbound = msg.direction === 'OUTBOUND'
                 const isAi = msg.aiGenerated || msg.senderType === 'AI' || msg.senderType === 'CLAWDBOT'
                 const isSystem = msg.senderType === 'SYSTEM'
+                const isReaction = !!msg.reactionType
 
                 if (isSystem) {
                   return (
@@ -709,9 +732,30 @@ function MessagesPageInner() {
                   )
                 }
 
+                {/* Reaction messages render as compact inline badges */}
+                if (isReaction) {
+                  return (
+                    <div key={msg.id} className="flex justify-start">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs text-gray-600">
+                        <span className="text-base">{msg.reactionEmoji || msg.reactionType}</span>
+                        <span>{selectedConversation.name.split(' ')[0]} reacted</span>
+                        <span className="text-gray-400">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </div>
+                  )
+                }
+
                 return (
                   <div key={msg.id} className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] ${isOutbound ? 'bg-gray-50 border-gray-200' : 'bg-blue-100 border-blue-300'} border rounded-lg p-3`}>
+                    <div className={`max-w-[70%] ${isOutbound ? 'bg-gray-50 border-gray-200' : 'bg-blue-100 border-blue-300'} border rounded-lg p-3 relative`}>
+                      {/* Reaction badge overlay */}
+                      {convMessages.some((r: any) => r.reactionToId === msg.id && r.reactionEmoji) && (
+                        <div className="absolute -bottom-2 -right-1 flex gap-0.5">
+                          {convMessages.filter((r: any) => r.reactionToId === msg.id).map((r: any) => (
+                            <span key={r.id} className="bg-white border border-gray-200 rounded-full px-1 text-sm shadow-sm">{r.reactionEmoji}</span>
+                          ))}
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 mb-1">
                         {/* Channel badge */}
                         {msg.channel === 'EMAIL' ? (

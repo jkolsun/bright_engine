@@ -405,6 +405,11 @@ model Message {
   mediaUrls    Json?          @map("media_urls") // Array of image/media URLs from MMS
   mediaType    String?        @map("media_type") // logo, team_photo, project_photo, document, unknown
 
+  // iMessage Reactions
+  reactionType    String?     @map("reaction_type") // like, love, laugh, emphasize, dislike, question
+  reactionToId    String?     @map("reaction_to_id") // ID of the original message being reacted to
+  reactionEmoji   String?     @map("reaction_emoji") // Display emoji
+
   // Twilio data
   twilioSid  String?          @unique @map("twilio_sid")
   twilioStatus String?        @map("twilio_status")

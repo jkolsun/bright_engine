@@ -61,6 +61,95 @@ export async function POST(request: NextRequest) {
       include: { lead: true }
     })
 
+    // ── iMessage Reaction Detection ──
+    const reaction = parseReaction(body)
+
+    if (reaction.isReaction && reaction.isRemoval) {
+      // Reaction removal — silently ignore, return empty TwiML
+      console.log(`[Twilio] Ignoring reaction removal from ${from}`)
+      return new NextResponse(
+        '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+        { headers: { 'Content-Type': 'text/xml' } }
+      )
+    }
+
+    if (reaction.isReaction && reaction.reactionType) {
+      // It's a reaction — log it, attach to original message, then route to AI with context
+      console.log(`[Twilio] iMessage reaction: ${reaction.reactionType} from ${from}`)
+
+      const targetLeadId = lead?.id || client?.leadId || undefined
+      const targetClientId = client?.id
+
+      // Find the original message being reacted to (match by content snippet)
+      let originalMessageId: string | undefined
+      if (reaction.originalText && targetLeadId) {
+        const originalMsg = await prisma.message.findFirst({
+          where: {
+            leadId: targetLeadId,
+            content: { contains: reaction.originalText.substring(0, 50) },
+          },
+          orderBy: { createdAt: 'desc' },
+          select: { id: true },
+        })
+        originalMessageId = originalMsg?.id
+      }
+
+      // Log the reaction as a message with reaction metadata
+      await logInboundSMSViaProvider({
+        from,
+        body,
+        sid,
+        leadId: targetLeadId,
+        clientId: targetClientId,
+        mediaUrls,
+      })
+
+      // Update the logged message with reaction fields
+      if (sid) {
+        await prisma.message.update({
+          where: { twilioSid: sid },
+          data: {
+            reactionType: reaction.reactionType,
+            reactionToId: originalMessageId || null,
+            reactionEmoji: reaction.reactionEmoji,
+          },
+        }).catch(() => {})
+      }
+
+      // Route reaction to AI with translated context
+      const reactionContext = translateReactionForAI(reaction, body)
+
+      if (reactionContext.shouldRoute && lead) {
+        const { processCloseEngineInbound } = await import('@/lib/close-engine')
+        const activeConversation = await prisma.closeEngineConversation.findUnique({
+          where: { leadId: lead.id },
+        })
+        if (activeConversation && !['COMPLETED', 'CLOSED_LOST'].includes(activeConversation.stage)) {
+          try {
+            await processCloseEngineInbound(activeConversation.id, reactionContext.aiMessage)
+          } catch (err) {
+            console.error('[Twilio] Close Engine reaction processing failed:', err)
+          }
+        }
+      }
+
+      if (reactionContext.shouldRoute && client) {
+        try {
+          const { processPostClientInbound } = await import('@/lib/post-client-engine')
+          await processPostClientInbound(client.id, reactionContext.aiMessage)
+        } catch (err) {
+          console.error('[Twilio] Post-client reaction processing failed:', err)
+        }
+      }
+
+      return new NextResponse(
+        '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+        { headers: { 'Content-Type': 'text/xml' } }
+      )
+    }
+
+    // ── Normal message flow (non-reaction) ──
+
     // Log inbound message
     await logInboundSMSViaProvider({
       from,
@@ -165,6 +254,116 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// ── iMessage Reaction Detection ──
+
+interface ParsedReaction {
+  isReaction: boolean
+  isRemoval: boolean
+  reactionType: 'like' | 'love' | 'laugh' | 'emphasize' | 'dislike' | 'question' | null
+  reactionEmoji: string | null
+  originalText: string | null
+}
+
+function parseReaction(body: string): ParsedReaction {
+  const noReaction: ParsedReaction = { isReaction: false, isRemoval: false, reactionType: null, reactionEmoji: null, originalText: null }
+
+  // Removal patterns — silently ignore
+  const removalPatterns = [
+    /^Removed a (?:like|heart|laugh|exclamation|dislike|question mark) from "(.+)"$/i,
+    /^Removed an? .+ from "(.+)"$/i,
+  ]
+  for (const pattern of removalPatterns) {
+    if (pattern.test(body)) {
+      return { isReaction: true, isRemoval: true, reactionType: null, reactionEmoji: null, originalText: null }
+    }
+  }
+
+  // Reaction patterns
+  const reactionMap: Array<{ pattern: RegExp; type: ParsedReaction['reactionType']; emoji: string }> = [
+    { pattern: /^Liked "(.+)"$/i, type: 'like', emoji: '\uD83D\uDC4D' },
+    { pattern: /^Loved "(.+)"$/i, type: 'love', emoji: '\u2764\uFE0F' },
+    { pattern: /^Laughed at "(.+)"$/i, type: 'laugh', emoji: '\uD83D\uDE02' },
+    { pattern: /^Emphasized "(.+)"$/i, type: 'emphasize', emoji: '\u203C\uFE0F' },
+    { pattern: /^Disliked "(.+)"$/i, type: 'dislike', emoji: '\uD83D\uDC4E' },
+    { pattern: /^Questioned "(.+)"$/i, type: 'question', emoji: '\u2753' },
+  ]
+
+  for (const { pattern, type, emoji } of reactionMap) {
+    const match = body.match(pattern)
+    if (match) {
+      return { isReaction: true, isRemoval: false, reactionType: type, reactionEmoji: emoji, originalText: match[1] }
+    }
+  }
+
+  return noReaction
+}
+
+/**
+ * Translates an iMessage reaction into AI-understandable context.
+ * Like/Love on a yes/no question → "Yes"
+ * Dislike → empathy trigger
+ * Simple Like on a statement → no response needed
+ */
+function translateReactionForAI(
+  reaction: ParsedReaction,
+  _rawBody: string
+): { shouldRoute: boolean; aiMessage: string } {
+  const original = reaction.originalText || ''
+
+  // Dislike always routes — trigger empathy
+  if (reaction.reactionType === 'dislike') {
+    return {
+      shouldRoute: true,
+      aiMessage: `[REACTION: The lead reacted with a thumbs-down to your message: "${original}". They seem unhappy or disagree. Respond with empathy and ask what's wrong or what they'd prefer instead. Keep it short.]`,
+    }
+  }
+
+  // Question mark always routes — they're confused
+  if (reaction.reactionType === 'question') {
+    return {
+      shouldRoute: true,
+      aiMessage: `[REACTION: The lead put a question mark on your message: "${original}". They seem confused. Clarify what you meant in simple terms.]`,
+    }
+  }
+
+  // Like/Love on a question → treat as "Yes"
+  const isQuestion = original.includes('?')
+  if ((reaction.reactionType === 'like' || reaction.reactionType === 'love') && isQuestion) {
+    return {
+      shouldRoute: true,
+      aiMessage: `[REACTION: The lead liked/loved your question: "${original}". This means YES — they agree. Move forward accordingly. Don't ask "was that a yes?" — just proceed.]`,
+    }
+  }
+
+  // Love on a statement → positive signal, brief acknowledgment
+  if (reaction.reactionType === 'love') {
+    return {
+      shouldRoute: true,
+      aiMessage: `[REACTION: The lead loved your message: "${original}". They're excited. A brief positive acknowledgment is fine but keep it to one short sentence. Don't over-respond.]`,
+    }
+  }
+
+  // Laugh → positive, no response needed usually
+  if (reaction.reactionType === 'laugh') {
+    return { shouldRoute: false, aiMessage: '' }
+  }
+
+  // Emphasize → acknowledgment, they're highlighting importance
+  if (reaction.reactionType === 'emphasize') {
+    return {
+      shouldRoute: true,
+      aiMessage: `[REACTION: The lead emphasized your message: "${original}". They're highlighting this as important. A brief acknowledgment that you hear them is fine.]`,
+    }
+  }
+
+  // Simple Like on a statement → no response needed
+  if (reaction.reactionType === 'like') {
+    return { shouldRoute: false, aiMessage: '' }
+  }
+
+  return { shouldRoute: false, aiMessage: '' }
 }
 
 function checkInterestSignal(message: string): boolean {

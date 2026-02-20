@@ -299,6 +299,22 @@ export async function processCloseEngineInbound(
     }
   }
 
+  // 0.5 AI conversation awareness — should we respond at all?
+  const isReactionContext = enrichedMessage.startsWith('[REACTION:')
+  if (!isReactionContext) {
+    // Get last outbound message for this lead
+    const lastOutbound = await prisma.message.findFirst({
+      where: { leadId: lead.id, direction: 'OUTBOUND' },
+      orderBy: { createdAt: 'desc' },
+      select: { content: true },
+    })
+
+    if (!shouldAIRespond(enrichedMessage, lastOutbound?.content || null)) {
+      console.log(`[CloseEngine] Skipping response — conversation awareness: "${inboundMessage.substring(0, 40)}"`)
+      return // Stay silent
+    }
+  }
+
   // 1. Check for escalation keywords
   const escalation = checkEscalation(inboundMessage)
   if (escalation.shouldEscalate) {
@@ -517,6 +533,100 @@ export async function processCloseEngineInbound(
       data: { questionsAsked: asked },
     })
   }
+}
+
+// ============================================
+// shouldAIRespond() — Conversation awareness
+// ============================================
+
+/**
+ * Determines if the AI should respond to a message or stay silent.
+ * Prevents annoying infinite acknowledgment loops:
+ *   client: "sounds good" → AI: "Great!" → client: "thanks" → AI: "You're welcome!" → forever
+ *
+ * Returns false (skip response) when:
+ * 1. Inbound is a conversation closer AND our last message was also a closer/wrapup
+ * 2. Inbound is a bare acknowledgment with no question or request
+ */
+export function shouldAIRespond(
+  inboundMessage: string,
+  lastOutboundContent: string | null,
+): boolean {
+  const inbound = inboundMessage.toLowerCase().trim()
+
+  // Conversation closers / bare acknowledgments
+  const closers = [
+    'ok', 'okay', 'k', 'kk',
+    'thanks', 'thank you', 'thx', 'ty',
+    'sounds good', 'sounds great',
+    'cool', 'nice', 'sweet', 'awesome', 'perfect', 'great', 'got it',
+    'will do', 'for sure', 'bet', 'word', 'alright', 'aight',
+    'good to know', 'appreciate it', 'much appreciated',
+    'noted', 'understood',
+  ]
+
+  // Single emoji acknowledgments
+  const emojiAcks = [
+    '\uD83D\uDC4D', '\uD83D\uDC4D\uD83C\uDFFB', '\uD83D\uDC4D\uD83C\uDFFC', '\uD83D\uDC4D\uD83C\uDFFD', '\uD83D\uDC4D\uD83C\uDFFE', '\uD83D\uDC4D\uD83C\uDFFF', // thumbs up variants
+    '\uD83D\uDE4F', // folded hands / thank you
+    '\u2705', // check mark
+    '\uD83D\uDC4C', // ok hand
+    '\uD83D\uDE0A', '\uD83D\uDE42', '\uD83D\uDE04', // smiles
+    '\u2764\uFE0F', '\u2764', // hearts
+    '\uD83D\uDD25', // fire
+  ]
+
+  // Check if inbound is a bare closer
+  const isCloser = closers.some(c => inbound === c || inbound === c + '!' || inbound === c + '.')
+  const isEmojiAck = emojiAcks.includes(inbound.trim())
+
+  if (!isCloser && !isEmojiAck) {
+    // Not a conversation closer — always respond
+    return true
+  }
+
+  // It IS a closer/ack — now check if our last message was a wrapup
+  if (!lastOutboundContent) {
+    // No previous outbound — this might be a reply to initial outreach, respond
+    return true
+  }
+
+  const lastOut = lastOutboundContent.toLowerCase().trim()
+
+  // AI closing patterns — if our last message looks like a wrapup, don't respond to an ack
+  const aiClosingPatterns = [
+    'let me know', 'reach out', 'here if you need',
+    'happy to help', 'glad to help', 'help anytime',
+    'don\'t hesitate', 'feel free',
+    'have a great', 'have a good', 'talk soon', 'take care',
+    'you\'re all set', 'all set', 'good to go',
+    'we\'ll get', 'working on it', 'on it',
+    'sounds like a plan', 'we\'re on it',
+  ]
+
+  const lastMessageWasClosing = aiClosingPatterns.some(p => lastOut.includes(p))
+
+  // If our last message was a closing statement AND inbound is just an ack → stay silent
+  if (lastMessageWasClosing) {
+    return false
+  }
+
+  // If the inbound contains a question mark, always respond
+  if (inbound.includes('?')) {
+    return true
+  }
+
+  // If the closer is "thanks" / "thank you" and our last message wasn't a closer,
+  // a brief "you're welcome" is ok — but if it's just "ok" / "cool" / emoji, skip
+  const isThanks = ['thanks', 'thank you', 'thx', 'ty', 'appreciate it', 'much appreciated'].some(t => inbound === t || inbound === t + '!')
+  if (isThanks) {
+    // Respond to thanks only if our last message was substantive (contained useful info)
+    // If our last message was also short (< 40 chars), it was probably a closer itself
+    return lastOutboundContent.length > 40
+  }
+
+  // Plain "ok", "cool", "got it", emoji → don't respond
+  return false
 }
 
 // ============================================
