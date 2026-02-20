@@ -13,7 +13,7 @@ import { getPricingConfig } from './pricing-config'
 // ============================================
 
 export const MODELS = {
-  PRE_CLIENT: 'claude-sonnet-4-5-20250514',
+  PRE_CLIENT: 'claude-sonnet-4-6',
   POST_CLIENT: 'claude-haiku-4-5-20251001',
 } as const
 
