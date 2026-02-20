@@ -121,17 +121,20 @@ function MessagesPageInner() {
     checkTwilioStatus()
     loadMessages()
     loadCloseConversations()
+  }, [])
 
-    // Auto-refresh every 10 seconds
+  // Adaptive polling: 3s in conversation view, 10s in inbox
+  useEffect(() => {
+    const interval = viewMode === 'conversation' ? 3000 : 10000
     refreshRef.current = setInterval(() => {
       loadMessages()
       loadCloseConversations()
-    }, 10000)
-
+      if (conversationDetail) loadConversationDetail(conversationDetail.id)
+    }, interval)
     return () => {
       if (refreshRef.current) clearInterval(refreshRef.current)
     }
-  }, [])
+  }, [viewMode, conversationDetail?.id])
 
   const checkTwilioStatus = async () => {
     try {
@@ -551,6 +554,19 @@ function MessagesPageInner() {
                       <div className="text-sm text-gray-800 whitespace-pre-wrap">
                         {msg.channel === 'EMAIL' ? msg.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ') : msg.content}
                       </div>
+                      {/* MMS Images */}
+                      {msg.mediaUrls && Array.isArray(msg.mediaUrls) && msg.mediaUrls.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {msg.mediaUrls.map((url: string, idx: number) => (
+                            <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
+                              <img src={url} alt={`MMS ${idx + 1}`} className="max-w-[200px] max-h-[200px] rounded-lg border border-gray-200 object-cover" />
+                            </a>
+                          ))}
+                          {msg.mediaType && (
+                            <span className="text-[10px] text-gray-400 self-end">{msg.mediaType}</span>
+                          )}
+                        </div>
+                      )}
                       {/* Delivery status */}
                       {isOutbound && (
                         <div className={`text-[10px] mt-1 ${
@@ -721,6 +737,19 @@ function MessagesPageInner() {
                       <div className="text-sm text-gray-800 whitespace-pre-wrap">
                         {msg.channel === 'EMAIL' ? msg.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ') : msg.content}
                       </div>
+                      {/* MMS Images */}
+                      {msg.mediaUrls && Array.isArray(msg.mediaUrls) && msg.mediaUrls.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {msg.mediaUrls.map((url: string, idx: number) => (
+                            <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
+                              <img src={url} alt={`MMS ${idx + 1}`} className="max-w-[200px] max-h-[200px] rounded-lg border border-gray-200 object-cover" />
+                            </a>
+                          ))}
+                          {msg.mediaType && (
+                            <span className="text-[10px] text-gray-400 self-end">{msg.mediaType}</span>
+                          )}
+                        </div>
+                      )}
                       {/* Delivery status */}
                       {isOutbound && (
                         <div className={`text-[10px] mt-1 ${

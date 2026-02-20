@@ -154,6 +154,7 @@ export async function logInboundSMSViaProvider(options: {
       content: options.body,
       twilioSid: options.sid,
       twilioStatus: 'received',
+      mediaUrls: options.mediaUrls && options.mediaUrls.length > 0 ? options.mediaUrls : undefined,
     },
   })
 }

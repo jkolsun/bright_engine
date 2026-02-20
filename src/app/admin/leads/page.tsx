@@ -1152,6 +1152,7 @@ function LeadsPageInner() {
                   <th className="text-center p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Reviews</th>
                   <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Personalization</th>
                   <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Notes</th>
+                  <th className="text-center p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Build</th>
                   {/* Sticky right: Assigned To, Status, Actions */}
                   <th className="sticky right-[200px] z-20 bg-gray-50 text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap border-l border-gray-200 shadow-[-2px_0_4px_rgba(0,0,0,0.06)]">Assigned To</th>
                   <th className="sticky right-[100px] z-20 bg-gray-50 text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
@@ -1280,6 +1281,10 @@ function LeadsPageInner() {
                         </td>
                         <td className="p-3 text-sm text-gray-700 max-w-[150px]">
                           <div className="truncate" title={safeRender(lead.notes, '')}>{safeRender(lead.notes)}</div>
+                        </td>
+                        {/* Build Pipeline Dots */}
+                        <td className="p-3 text-center">
+                          <BuildDotsInline step={lead.buildStep} completed={!!lead.buildCompletedAt} error={lead.buildError} />
                         </td>
                         {/* Sticky right: Assigned To */}
                         <td className={`sticky right-[200px] z-10 ${rowBg} p-3 whitespace-nowrap border-l border-gray-100 shadow-[-2px_0_4px_rgba(0,0,0,0.06)]`}>
@@ -1683,6 +1688,37 @@ function LeadsPageInner() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+const BUILD_STEPS_INLINE = ['E', 'P', 'A', 'S', 'D'] as const
+const BUILD_STEP_MAP: Record<string, number> = { ENRICHMENT: 0, PREVIEW: 1, PERSONALIZATION: 2, SCRIPTS: 3, DISTRIBUTION: 4 }
+const BUILD_COLORS = ['bg-blue-500', 'bg-purple-500', 'bg-amber-500', 'bg-teal-500', 'bg-green-500']
+
+function BuildDotsInline({ step, completed, error }: { step: string | null; completed: boolean; error: string | null }) {
+  if (!step && !completed) return <span className="text-gray-300 text-xs">&mdash;</span>
+  if (error) return <span className="text-red-500 text-xs font-medium" title={error}>Failed</span>
+  if (completed) return <span className="text-green-600 text-xs font-medium">Done</span>
+
+  const currentIdx = BUILD_STEP_MAP[step || ''] ?? -1
+  return (
+    <div className="flex items-center gap-0.5 justify-center">
+      {BUILD_STEPS_INLINE.map((label, idx) => (
+        <div
+          key={label}
+          className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
+            idx < currentIdx
+              ? `${BUILD_COLORS[idx]} text-white`
+              : idx === currentIdx
+              ? `${BUILD_COLORS[idx]} text-white animate-pulse`
+              : 'bg-gray-200 text-gray-400'
+          }`}
+          title={['Enrichment', 'Preview', 'Personalization', 'Scripts', 'Distribution'][idx]}
+        >
+          {label}
+        </div>
+      ))}
     </div>
   )
 }

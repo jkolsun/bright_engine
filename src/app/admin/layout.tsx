@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
@@ -15,6 +15,8 @@ import {
   Target,
   Mail,
   Radio,
+  ShieldCheck,
+  Zap,
 } from 'lucide-react'
 import { BriefingModal } from '@/components/admin/BriefingModal'
 
@@ -27,6 +29,23 @@ export default function AdminLayout({
 }) {
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [pendingApprovals, setPendingApprovals] = useState(0)
+
+  // Poll for pending approvals count
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const res = await fetch('/api/admin/approvals?status=PENDING&limit=1')
+        if (res.ok) {
+          const data = await res.json()
+          setPendingApprovals(data.pendingCount || 0)
+        }
+      } catch { /* silent */ }
+    }
+    fetchCount()
+    const interval = setInterval(fetchCount, 10_000)
+    return () => clearInterval(interval)
+  }, [])
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -78,6 +97,12 @@ export default function AdminLayout({
           <NavLink href="/admin/messages" icon={<MessageSquare size={20} />}>
             Messages
           </NavLink>
+          <NavLink href="/admin/approvals" icon={<ShieldCheck size={20} />} badge={pendingApprovals}>
+            Approvals
+          </NavLink>
+          <NavLink href="/admin/build-queue" icon={<Zap size={20} />}>
+            Build Queue
+          </NavLink>
           <NavLink href="/admin/outbound" icon={<Target size={20} />}>
             Sales Rep Tracker
           </NavLink>
@@ -124,22 +149,29 @@ export default function AdminLayout({
   )
 }
 
-function NavLink({ 
-  href, 
-  icon, 
-  children 
-}: { 
+function NavLink({
+  href,
+  icon,
+  children,
+  badge,
+}: {
   href: string
   icon: React.ReactNode
-  children: React.ReactNode 
+  children: React.ReactNode
+  badge?: number
 }) {
   return (
-    <Link 
+    <Link
       href={href}
       className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-300 rounded-lg hover:bg-slate-700/50 hover:text-white transition-all duration-200"
     >
       {icon}
-      {children}
+      <span className="flex-1">{children}</span>
+      {badge != null && badge > 0 && (
+        <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+          {badge}
+        </span>
+      )}
     </Link>
   )
 }

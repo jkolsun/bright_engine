@@ -94,6 +94,18 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // ── AI VISION: classify MMS images ──
+    if (lead && mediaUrls && mediaUrls.length > 0) {
+      try {
+        const { processInboundImages } = await import('@/lib/ai-vision')
+        // Find the message we just logged to get its ID
+        const recentMsg = sid ? await prisma.message.findUnique({ where: { twilioSid: sid }, select: { id: true } }) : null
+        await processInboundImages(lead.id, recentMsg?.id, mediaUrls)
+      } catch (err) {
+        console.error('[Twilio] AI Vision processing failed:', err)
+      }
+    }
+
     // ── CLOSE ENGINE HANDLER ──
     if (lead) {
       const { processCloseEngineInbound, triggerCloseEngine } = await import('@/lib/close-engine')

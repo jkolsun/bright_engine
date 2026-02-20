@@ -64,9 +64,22 @@ async function startWorkers() {
       async (job) => {
         console.log(`🚀 [ENRICHMENT] Processing job ${job.id} for lead ${job.data.leadId}`)
         const { leadId } = job.data
-        
+        const stepStart = Date.now()
+
+        // Mark build started
+        await prisma.lead.update({
+          where: { id: leadId },
+          data: { buildStep: 'ENRICHMENT', buildStartedAt: new Date(), buildError: null, buildCompletedAt: null },
+        }).catch(() => {})
+
         await enrichLead(leadId)
-        
+
+        // Record step timing
+        await prisma.lead.update({
+          where: { id: leadId },
+          data: { buildEnrichmentMs: Date.now() - stepStart },
+        }).catch(() => {})
+
         console.log(`✅ [ENRICHMENT] Completed job ${job.id} for lead ${leadId}`)
         return { success: true }
       },
@@ -91,7 +104,11 @@ async function startWorkers() {
       async (job) => {
         console.log(`Processing preview job: ${job.id}`)
         const { leadId } = job.data
-        return await generatePreview({ leadId })
+        const stepStart = Date.now()
+        await prisma.lead.update({ where: { id: leadId }, data: { buildStep: 'PREVIEW' } }).catch(() => {})
+        const result = await generatePreview({ leadId })
+        await prisma.lead.update({ where: { id: leadId }, data: { buildPreviewMs: Date.now() - stepStart } }).catch(() => {})
+        return result
       },
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
       { connection }
@@ -103,10 +120,13 @@ async function startWorkers() {
       async (job) => {
         console.log(`Processing personalization job: ${job.id}`)
         const { leadId } = job.data
+        const stepStart = Date.now()
+        await prisma.lead.update({ where: { id: leadId }, data: { buildStep: 'PERSONALIZATION' } }).catch(() => {})
         // Step 1: Serper web research (enhances quality, non-fatal if fails)
         try { await fetchSerperResearch(leadId) } catch (e) { console.warn('Serper research failed, continuing:', e) }
         // Step 2: AI personalization (required)
         const result = await generatePersonalization(leadId)
+        await prisma.lead.update({ where: { id: leadId }, data: { buildPersonalizationMs: Date.now() - stepStart } }).catch(() => {})
         return { success: true, result }
       },
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
@@ -119,7 +139,10 @@ async function startWorkers() {
       async (job) => {
         console.log(`Processing script job: ${job.id}`)
         const { leadId } = job.data
+        const stepStart = Date.now()
+        await prisma.lead.update({ where: { id: leadId }, data: { buildStep: 'SCRIPTS' } }).catch(() => {})
         const script = await generateRepScript(leadId)
+        await prisma.lead.update({ where: { id: leadId }, data: { buildScriptsMs: Date.now() - stepStart } }).catch(() => {})
         return { success: !!script }
       },
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
@@ -132,7 +155,11 @@ async function startWorkers() {
       async (job) => {
         console.log(`Processing distribution job: ${job.id}`)
         const { leadId, channel } = job.data
-        return await distributeLead({ leadId, channel: channel || 'BOTH' })
+        const stepStart = Date.now()
+        await prisma.lead.update({ where: { id: leadId }, data: { buildStep: 'DISTRIBUTION' } }).catch(() => {})
+        const result = await distributeLead({ leadId, channel: channel || 'BOTH' })
+        await prisma.lead.update({ where: { id: leadId }, data: { buildDistributionMs: Date.now() - stepStart } }).catch(() => {})
+        return result
       },
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
       { connection }
@@ -155,9 +182,13 @@ async function startWorkers() {
       if (job?.data?.leadId) await addDistributionJob({ leadId: job.data.leadId, channel: 'BOTH' })
     })
 
-    // After distribution completes, calculate engagement score
+    // After distribution completes, mark build done + calculate engagement score
     distributionWorker.on('completed', async (job) => {
       if (job?.data?.leadId) {
+        await prisma.lead.update({
+          where: { id: job.data.leadId },
+          data: { buildStep: 'COMPLETE', buildCompletedAt: new Date() },
+        }).catch(() => {})
         try { await calculateEngagementScore(job.data.leadId) } catch (e) { console.warn('Engagement calc failed:', e) }
       }
     })
@@ -277,25 +308,40 @@ async function startWorkers() {
       { connection }
     )
 
-    // Error handlers
-    enrichmentWorker.on('failed', (job, err) => {
+    // Error handlers — record buildError on the lead for pipeline visibility
+    enrichmentWorker.on('failed', async (job, err) => {
       console.error(`Enrichment job ${job?.id} failed:`, err)
+      if (job?.data?.leadId) {
+        await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `ENRICHMENT: ${err.message}` } }).catch(() => {})
+      }
     })
 
-    previewWorker.on('failed', (job, err) => {
+    previewWorker.on('failed', async (job, err) => {
       console.error(`Preview job ${job?.id} failed:`, err)
+      if (job?.data?.leadId) {
+        await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `PREVIEW: ${err.message}` } }).catch(() => {})
+      }
     })
 
-    personalizationWorker.on('failed', (job, err) => {
+    personalizationWorker.on('failed', async (job, err) => {
       console.error(`Personalization job ${job?.id} failed:`, err)
+      if (job?.data?.leadId) {
+        await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `PERSONALIZATION: ${err.message}` } }).catch(() => {})
+      }
     })
 
-    scriptWorker.on('failed', (job, err) => {
+    scriptWorker.on('failed', async (job, err) => {
       console.error(`Script job ${job?.id} failed:`, err)
+      if (job?.data?.leadId) {
+        await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `SCRIPTS: ${err.message}` } }).catch(() => {})
+      }
     })
 
-    distributionWorker.on('failed', (job, err) => {
+    distributionWorker.on('failed', async (job, err) => {
       console.error(`Distribution job ${job?.id} failed:`, err)
+      if (job?.data?.leadId) {
+        await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `DISTRIBUTION: ${err.message}` } }).catch(() => {})
+      }
     })
 
     sequenceWorker.on('failed', (job, err) => {

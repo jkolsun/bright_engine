@@ -279,10 +279,25 @@ Write ONE text message. 1-2 sentences max. Casual and human. Do not include quot
 export async function processCloseEngineInbound(
   conversationId: string,
   inboundMessage: string,
-  _mediaUrls?: string[]
+  mediaUrls?: string[]
 ): Promise<void> {
   const context = await getConversationContext(conversationId)
   const lead = context.lead
+
+  // 0. If MMS images present, enrich the inbound message with AI vision context
+  let enrichedMessage = inboundMessage
+  if (mediaUrls && mediaUrls.length > 0) {
+    try {
+      const { classifyImage } = await import('./ai-vision')
+      const classifications = await Promise.all(mediaUrls.map(url => classifyImage(url)))
+      const imageContext = classifications
+        .map(c => `[Image: ${c.type} — ${c.description}]`)
+        .join(' ')
+      enrichedMessage = `${inboundMessage} ${imageContext}`.trim()
+    } catch (err) {
+      console.error('[CloseEngine] AI Vision failed:', err)
+    }
+  }
 
   // 1. Check for escalation keywords
   const escalation = checkEscalation(inboundMessage)
@@ -317,7 +332,7 @@ export async function processCloseEngineInbound(
       model: MODELS.PRE_CLIENT,
       max_tokens: 500,
       system: systemPrompt,
-      messages: [{ role: 'user', content: inboundMessage }],
+      messages: [{ role: 'user', content: enrichedMessage }],
     })
 
     const rawText = apiResponse.content
@@ -402,9 +417,16 @@ export async function processCloseEngineInbound(
     : 'SEND_MESSAGE' as const
   const autonomy = await checkAutonomy(conversationId, actionType)
 
+  // Count recent messages for smart delay (active chat = faster responses)
+  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000)
+  const recentCount = await prisma.message.count({
+    where: { leadId: lead.id, createdAt: { gte: fiveMinAgo } },
+  })
+
   const delay = calculateDelay(
     claudeResponse.replyText.length,
-    claudeResponse.readyToBuild ? 'detailed' : 'standard'
+    claudeResponse.readyToBuild ? 'detailed' : 'standard',
+    recentCount
   )
 
   if (autonomy.requiresApproval) {
@@ -501,19 +523,40 @@ export async function processCloseEngineInbound(
 // calculateDelay()
 // ============================================
 
-export function calculateDelay(messageLength: number, messageType: string): number {
+/**
+ * Smart AI delay — adapts based on conversation tempo.
+ * Active back-and-forth: 4-12s (feels like a real person typing)
+ * First messages / cold leads: 30-60s (doesn't feel robotic)
+ * Payment links: 15-45s (fast but not instant)
+ *
+ * @param messageLength - Length of the AI response
+ * @param messageType - Type of message being sent
+ * @param recentMessageCount - Number of messages in last 5 minutes (measures active chat)
+ */
+export function calculateDelay(messageLength: number, messageType: string, recentMessageCount?: number): number {
+  // Active back-and-forth detection: if 3+ messages in last 5 min, use fast delays
+  const isActiveChat = (recentMessageCount ?? 0) >= 3
+
+  if (isActiveChat) {
+    // Active conversation: 4-12 seconds — feels like typing
+    const typingTime = Math.min(messageLength / 30, 8) // ~30 chars/sec typing speed
+    const jitter = Math.random() * 4 - 2
+    return Math.max(4, Math.round(4 + typingTime + jitter))
+  }
+
+  // Standard delays for non-active conversations
   const base =
-    messageType === 'first_message_cta' ? 30  // CTA click = high intent, respond fast
-    : messageType === 'first_message' ? 60    // Was 120
-    : messageType === 'payment_link' ? 45     // Was 90
-    : messageType === 'acknowledgment' ? 20   // Was 30
-    : messageType === 'detailed' ? 40         // Was 60
-    : 30                                      // Was 45
+    messageType === 'first_message_cta' ? 15  // CTA click = high intent
+    : messageType === 'first_message' ? 45    // First contact — not too eager
+    : messageType === 'payment_link' ? 20     // Payment = business, be prompt
+    : messageType === 'acknowledgment' ? 8    // Quick ack
+    : messageType === 'detailed' ? 25         // Thoughtful response
+    : 15                                      // Default
 
-  const lengthFactor = Math.min(messageLength / 200, 1) * 30 // Was /150 * 60
-  const jitter = Math.random() * 20 - 10 // Was ±15, now ±10
+  const lengthFactor = Math.min(messageLength / 200, 1) * 15
+  const jitter = Math.random() * 10 - 5
 
-  return Math.max(15, Math.round(base + lengthFactor + jitter))
+  return Math.max(4, Math.round(base + lengthFactor + jitter))
 }
 
 // ============================================
