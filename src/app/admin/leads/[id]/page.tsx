@@ -9,13 +9,14 @@ import {
   ArrowLeft, Phone, Mail, MapPin, Calendar, TrendingUp, Eye, MousePointer,
   MessageSquare, Clock, CheckCircle, Send, ExternalLink, DollarSign, User
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, use } from 'react'
 
 interface LeadDetailPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default function LeadDetailPage({ params }: LeadDetailPageProps) {
+  const { id } = use(params)
   const [activeTab, setActiveTab] = useState<'timeline' | 'messages' | 'analytics'>('timeline')
   const [lead, setLead] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -27,7 +28,7 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
     const fetchLead = async () => {
       try {
         setLoading(true)
-        const response = await fetch(`/api/leads/${params.id}`)
+        const response = await fetch(`/api/leads/${id}`)
         
         if (!response.ok) {
           throw new Error('Failed to fetch lead')
@@ -45,7 +46,7 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
     }
 
     fetchLead()
-  }, [params.id])
+  }, [id])
 
   const handleSendSms = async () => {
     if (!smsText.trim() || sendingSms) return
@@ -55,7 +56,7 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          leadId: params.id,
+          leadId: id,
           to: lead.phone,
           content: smsText,
           channel: 'SMS',
@@ -65,7 +66,7 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
       })
       setSmsText('')
       // Refresh lead to show new message
-      const res = await fetch(`/api/leads/${params.id}`)
+      const res = await fetch(`/api/leads/${id}`)
       if (res.ok) { const data = await res.json(); setLead(data.lead) }
     } catch (err) { console.error('SMS send failed:', err) }
     finally { setSendingSms(false) }
@@ -116,18 +117,19 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
                   {lead.firstName} {lead.lastName}
                 </h1>
                 <p className="text-lg text-gray-600 mt-1">{lead.companyName}</p>
+                <span className="text-xs text-gray-400 font-mono">ID: {id.slice(0, 12)}...</span>
                 <div className="flex items-center gap-4 mt-2">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Phone size={14} />
-                    {formatPhone(lead.phone)}
+                    {lead.phone ? formatPhone(lead.phone) : '—'}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Mail size={14} />
-                    {lead.email}
+                    {lead.email || '—'}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <MapPin size={14} />
-                    {lead.city}, {lead.state}
+                    {[lead.city, lead.state].filter(Boolean).join(', ') || '—'}
                   </div>
                 </div>
               </div>
@@ -178,7 +180,7 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
               const newStatus = e.target.value
               if (newStatus === lead.status) return
               try {
-                const res = await fetch(`/api/leads/${params.id}`, {
+                const res = await fetch(`/api/leads/${id}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ status: newStatus })
@@ -313,7 +315,7 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
             {activeTab === 'analytics' && (
               <Card className="p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Engagement Analytics</h3>
-                <EngagementPanel leadId={params.id} />
+                <EngagementPanel leadId={id} />
               </Card>
             )}
           </div>

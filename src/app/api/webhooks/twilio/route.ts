@@ -23,15 +23,35 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const { from, body, sid, mediaUrls } = await provider.parseInboundWebhook(formData)
 
-    // Find lead or client by phone
+    // Normalize phone number for flexible matching
+    const digits = from.replace(/\D/g, '')
+    const withPlus = digits.startsWith('1') ? `+${digits}` : `+1${digits}`
+    const withoutPlus = digits.startsWith('1') ? digits : `1${digits}`
+    const justNumber = digits.startsWith('1') ? digits.slice(1) : digits
+
+    // Find lead or client by phone (try multiple formats)
     const lead = await prisma.lead.findFirst({
-      where: { phone: from }
+      where: {
+        OR: [
+          { phone: from },
+          { phone: withPlus },
+          { phone: withoutPlus },
+          { phone: justNumber },
+          { phone: digits },
+        ]
+      }
     })
 
     const client = await prisma.client.findFirst({
       where: {
         lead: {
-          phone: from
+          OR: [
+            { phone: from },
+            { phone: withPlus },
+            { phone: withoutPlus },
+            { phone: justNumber },
+            { phone: digits },
+          ]
         }
       },
       include: { lead: true }

@@ -437,7 +437,7 @@ export default function MessagesPage() {
 
                 return (
                   <div key={msg.id} className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] ${isOutbound ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'} border rounded-lg p-3`}>
+                    <div className={`max-w-[70%] ${isOutbound ? 'bg-gray-50 border-gray-200' : 'bg-blue-100 border-blue-300'} border rounded-lg p-3`}>
                       <div className="flex items-center gap-2 mb-1">
                         {/* Channel badge */}
                         {msg.channel === 'EMAIL' ? (
@@ -607,7 +607,7 @@ export default function MessagesPage() {
 
                 return (
                   <div key={msg.id} className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] ${isOutbound ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'} border rounded-lg p-3`}>
+                    <div className={`max-w-[70%] ${isOutbound ? 'bg-gray-50 border-gray-200' : 'bg-blue-100 border-blue-300'} border rounded-lg p-3`}>
                       <div className="flex items-center gap-2 mb-1">
                         {/* Channel badge */}
                         {msg.channel === 'EMAIL' ? (

@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
         state: data.state || undefined,
         timezone: data.timezone || getTimezoneFromState(data.state) || 'America/New_York',
         website: data.website || undefined,
-        source: (data.source || 'COLD_EMAIL') as any,
+        source: (data.source || 'MANUAL') as any,
         sourceDetail: data.sourceDetail || undefined,
         previewId: previewId,
         previewUrl: `${process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || 'https://brightengine-production.up.railway.app'}/preview/${previewId}`,

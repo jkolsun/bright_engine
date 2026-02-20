@@ -43,7 +43,7 @@ export default function LeadsPage() {
     city: '',
     state: '',
     industry: '',
-    source: 'COLD_EMAIL'
+    source: 'MANUAL'
   })
 
   // Folder state
@@ -224,7 +224,7 @@ export default function LeadsPage() {
       const cleanData = {
         ...formData,
         industry: formData.industry || 'GENERAL_CONTRACTING',
-        source: formData.source || 'COLD_EMAIL',
+        source: formData.source || 'MANUAL',
         lastName: formData.lastName || undefined,
         email: formData.email || undefined,
         city: formData.city || undefined,
@@ -248,7 +248,7 @@ export default function LeadsPage() {
           city: '',
           state: '',
           industry: '',
-          source: 'COLD_EMAIL'
+          source: 'MANUAL'
         })
         fetchLeads()
       } else {

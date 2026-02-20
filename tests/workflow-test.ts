@@ -409,80 +409,89 @@ async function phase3() {
   }
 
   // 3.1 Check if AI auto-response was created after CTA (triggered in Phase 2.4)
-  // Close Engine CTA delay: 30-60s base + AI generation time
-  log('INFO', '3.1 Waiting 75s for AI auto-response (Close Engine CTA delay: 30-60s + AI generation)...')
-  await sleep(75000)
+  // Close Engine CTA delay: 30-60s base + AI generation time (~10-20s)
+  // We'll check at 60s, then retry at 90s if needed
+  log('INFO', '3.1 Waiting 60s for AI auto-response (Close Engine CTA delay + AI generation)...')
+  await sleep(60000)
 
-  const msgs = await api(`/api/messages?limit=50`)
-  if (msgs.ok) {
-    const allMsgs = msgs.data?.messages || []
-    const leadMsgs = allMsgs.filter((m: any) => m.leadId === testLeadId)
-    const aiMsgs = leadMsgs.filter((m: any) => 
-      m.senderType === 'CLAWDBOT' || m.senderType === 'AI' || m.aiGenerated
-    )
+  let aiMsgs: any[] = []
+  let leadMsgs: any[] = []
 
-    if (aiMsgs.length > 0) {
-      log('PASS', `3.1 AI auto-response created (${aiMsgs.length} AI message(s))`)
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const msgs = await api(`/api/messages?limit=50`)
+    if (msgs.ok) {
+      const allMsgs = msgs.data?.messages || []
+      leadMsgs = allMsgs.filter((m: any) => m.leadId === testLeadId)
+      aiMsgs = leadMsgs.filter((m: any) =>
+        m.senderType === 'CLAWDBOT' || m.senderType === 'AI' || m.aiGenerated
+      )
+      if (aiMsgs.length > 0) break
+    }
+    if (attempt < 3) {
+      log('INFO', `3.1 No AI message yet (attempt ${attempt}/3), waiting 15s more...`)
+      await sleep(15000)
+    }
+  }
 
-      // Check the AI message details
-      const firstAi = aiMsgs[0]
+  if (aiMsgs.length > 0) {
+    log('PASS', `3.1 AI auto-response created (${aiMsgs.length} AI message(s))`)
 
-      // 3.2 Check response delay
-      if (firstAi.aiDelaySeconds !== undefined) {
-        if (firstAi.aiDelaySeconds <= 90) {
-          log('PASS', `3.2 AI response delay: ${firstAi.aiDelaySeconds}s (within 90s limit)`)
-        } else {
-          log('FAIL', `3.2 AI response delay: ${firstAi.aiDelaySeconds}s — should be ≤90s (Close Engine Fix 7)`)
-        }
+    // Check the AI message details
+    const firstAi = aiMsgs[0]
+
+    // 3.2 Check response delay
+    if (firstAi.aiDelaySeconds !== undefined && firstAi.aiDelaySeconds !== null) {
+      if (firstAi.aiDelaySeconds <= 90) {
+        log('PASS', `3.2 AI response delay: ${firstAi.aiDelaySeconds}s (within 90s limit)`)
       } else {
-        log('SKIP', '3.2 AI delay not recorded on message')
-      }
-
-      // 3.3 Check channel
-      if (firstAi.channel === 'SMS' || firstAi.channel === 'EMAIL') {
-        log('PASS', `3.3 AI message has channel: ${firstAi.channel}`)
-      } else {
-        log('FAIL', `3.3 AI message channel is "${firstAi.channel}" — should be SMS or EMAIL`)
-      }
-
-      // 3.4 Check AI decision log
-      if (firstAi.aiDecisionLog) {
-        log('PASS', '3.4 AI decision log present on message')
-        const dl = typeof firstAi.aiDecisionLog === 'string' 
-          ? JSON.parse(firstAi.aiDecisionLog) 
-          : firstAi.aiDecisionLog
-        if (dl.trigger) {
-          log('PASS', `3.4a Decision log has trigger: ${dl.trigger}`)
-        }
-        if (dl.channelUsed || dl.channel) {
-          log('PASS', `3.4b Decision log has channel: ${dl.channelUsed || dl.channel}`)
-        }
-      } else {
-        log('FAIL', '3.4 No AI decision log on message (Close Engine Fix 9)')
-      }
-
-      // 3.5 Check company name not abbreviated
-      if (firstAi.content && !firstAi.content.includes(' BA ') && !firstAi.content.match(/\bBA\b/)) {
-        log('PASS', '3.5 AI message does not abbreviate company name to "BA"')
-      } else if (firstAi.content?.includes(' BA ')) {
-        log('FAIL', '3.5 AI abbreviated company name to "BA" (Close Engine Fix 8)')
-      } else {
-        log('PASS', '3.5 AI message content OK')
-      }
-
-      // 3.6 Check delivery status field exists (twilioStatus for SMS, resendStatus for EMAIL)
-      const deliveryStatus = firstAi.twilioStatus || firstAi.resendStatus
-      if (deliveryStatus) {
-        log('PASS', `3.6 Delivery status present: ${deliveryStatus} (channel: ${firstAi.channel})`)
-      } else {
-        log('FAIL', '3.6 No delivery status on message (Close Engine Fix 11)')
+        log('FAIL', `3.2 AI response delay: ${firstAi.aiDelaySeconds}s — should be ≤90s (Close Engine Fix 7)`)
       }
     } else {
-      log('FAIL', '3.1 No AI auto-response found after CTA click')
-      log('SKIP', '3.2-3.6 Skipped — no AI message to inspect')
+      log('SKIP', '3.2 AI delay not recorded on message')
+    }
+
+    // 3.3 Check channel
+    if (firstAi.channel === 'SMS' || firstAi.channel === 'EMAIL') {
+      log('PASS', `3.3 AI message has channel: ${firstAi.channel}`)
+    } else {
+      log('FAIL', `3.3 AI message channel is "${firstAi.channel}" — should be SMS or EMAIL`)
+    }
+
+    // 3.4 Check AI decision log
+    if (firstAi.aiDecisionLog) {
+      log('PASS', '3.4 AI decision log present on message')
+      const dl = typeof firstAi.aiDecisionLog === 'string'
+        ? JSON.parse(firstAi.aiDecisionLog)
+        : firstAi.aiDecisionLog
+      if (dl.trigger) {
+        log('PASS', `3.4a Decision log has trigger: ${dl.trigger}`)
+      }
+      if (dl.channelUsed || dl.channel) {
+        log('PASS', `3.4b Decision log has channel: ${dl.channelUsed || dl.channel}`)
+      }
+    } else {
+      log('FAIL', '3.4 No AI decision log on message (Close Engine Fix 9)')
+    }
+
+    // 3.5 Check company name not abbreviated
+    if (firstAi.content && !firstAi.content.includes(' BA ') && !firstAi.content.match(/\bBA\b/)) {
+      log('PASS', '3.5 AI message does not abbreviate company name to "BA"')
+    } else if (firstAi.content?.includes(' BA ')) {
+      log('FAIL', '3.5 AI abbreviated company name to "BA" (Close Engine Fix 8)')
+    } else {
+      log('PASS', '3.5 AI message content OK')
+    }
+
+    // 3.6 Check delivery status field exists (twilioStatus for SMS, resendStatus for EMAIL)
+    const deliveryStatus = firstAi.twilioStatus || firstAi.resendStatus
+    if (deliveryStatus) {
+      log('PASS', `3.6 Delivery status present: ${deliveryStatus} (channel: ${firstAi.channel})`)
+    } else {
+      log('FAIL', '3.6 No delivery status on message (Close Engine Fix 11)')
     }
   } else {
-    log('FAIL', '3.x Cannot access messages API')
+    log('FAIL', '3.1 No AI auto-response found after CTA click (waited 90s with 3 retries)')
+    log('SKIP', '3.2-3.6 Skipped — no AI message to inspect')
   }
 
   // 3.7 Test manual message creation via POST /api/messages

@@ -8,7 +8,7 @@ import {
   CheckCircle2, AlertTriangle, XCircle, RefreshCw, Loader2,
   Save, Plus, Trash2, Phone, Link, Brain, Sparkles,
   BarChart3, ExternalLink, Eye, Search, ChevronDown, Split,
-  Pencil, Shield, AlertCircle, X, Info, RotateCcw
+  Pencil, Shield, AlertCircle, X, Info, RotateCcw, Activity
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 
@@ -23,7 +23,7 @@ type ServiceStatus = {
 
 type SettingsData = Record<string, any>
 
-type TabId = 'company' | 'sequences' | 'personalization' | 'targets' | 'team' | 'api'
+type TabId = 'company' | 'sequences' | 'personalization' | 'targets' | 'team' | 'api' | 'diagnostics'
 
 // ── Helper Components ──────────────────────────────────────────
 
@@ -788,6 +788,7 @@ export default function SettingsPage() {
     { id: 'targets' as TabId, label: 'Targets', icon: <BarChart3 size={16} /> },
     { id: 'team' as TabId, label: 'Team', icon: <Users size={16} /> },
     { id: 'api' as TabId, label: 'API Keys', icon: <Key size={16} /> },
+    { id: 'diagnostics' as TabId, label: 'Diagnostics', icon: <Activity size={16} /> },
   ]
 
   const connectedCount = services?.filter(s => s.connected === true).length ?? 0
@@ -2388,6 +2389,125 @@ export default function SettingsPage() {
         </Card>
       )}
 
+      {activeTab === 'diagnostics' && (
+        <DiagnosticsPanel />
+      )}
+
+    </div>
+  )
+}
+
+function DiagnosticsPanel() {
+  const [results, setResults] = useState<any>(null)
+  const [running, setRunning] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const runTest = async () => {
+    setRunning(true)
+    setError(null)
+    setResults(null)
+    try {
+      const res = await fetch('/api/admin/system-test', { method: 'POST' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setResults(data)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  const statusIcon = (s: string) =>
+    s === 'pass' ? '\u2705' : s === 'fail' ? '\u274C' : s === 'warn' ? '\u26A0\uFE0F' : '\u23ED\uFE0F'
+
+  const statusColor = (s: string) =>
+    s === 'pass' ? 'bg-green-50 border-green-200' :
+    s === 'fail' ? 'bg-red-50 border-red-200' :
+    s === 'warn' ? 'bg-amber-50 border-amber-200' :
+    'bg-gray-50 border-gray-200'
+
+  const grouped = results?.results?.reduce((acc: any, r: any) => {
+    if (!acc[r.category]) acc[r.category] = []
+    acc[r.category].push(r)
+    return acc
+  }, {}) || {}
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">System Diagnostics</h2>
+          <p className="text-sm text-gray-500">Tests every connection, service, and feature end-to-end</p>
+        </div>
+        <button
+          onClick={runTest}
+          disabled={running}
+          className={`px-6 py-3 rounded-xl font-bold text-white transition-all ${
+            running
+              ? 'bg-gray-400 cursor-wait'
+              : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl'
+          }`}
+        >
+          {running ? (
+            <span className="flex items-center gap-2">
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Testing...
+            </span>
+          ) : 'Run Full System Test'}
+        </button>
+      </div>
+
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+          Test failed to run: {error}
+        </div>
+      )}
+
+      {results && (
+        <div className={`p-6 rounded-xl border-2 ${
+          results.verdict === 'ALL_CLEAR' ? 'bg-green-50 border-green-300' :
+          results.verdict === 'ISSUES_FOUND' ? 'bg-amber-50 border-amber-300' :
+          'bg-red-50 border-red-300'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-bold">
+                {results.verdict === 'ALL_CLEAR' ? 'All Systems Go' :
+                 results.verdict === 'ISSUES_FOUND' ? 'Issues Found' :
+                 'Critical Failures'}
+              </div>
+              <div className="text-sm mt-1 opacity-70">
+                {results.summary.passed} passed | {results.summary.failed} failed | {results.summary.warned} warnings | {results.summary.skipped} skipped
+              </div>
+            </div>
+            <div className="text-right text-sm opacity-60">
+              <div>Completed in {results.duration}ms</div>
+              <div>{new Date(results.timestamp).toLocaleTimeString()}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {Object.entries(grouped).map(([category, tests]: [string, any]) => (
+        <div key={category}>
+          <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">{category}</h3>
+          <div className="space-y-1.5">
+            {tests.map((test: any, i: number) => (
+              <div key={i} className={`flex items-center justify-between p-3 rounded-lg border ${statusColor(test.status)}`}>
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">{statusIcon(test.status)}</span>
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">{test.name}</div>
+                    <div className="text-xs text-gray-500">{test.detail}</div>
+                  </div>
+                </div>
+                {test.ms > 0 && <span className="text-xs text-gray-400">{test.ms}ms</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

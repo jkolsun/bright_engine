@@ -14,19 +14,19 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { formatCurrency } from '@/lib/utils'
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   Search, Download, Plus, ExternalLink, Users,
   Clock, AlertTriangle, CheckCircle2, XCircle,
   ChevronDown, ChevronUp, DollarSign,
-  Edit3, TrendingUp, Star,
+  Edit3, Star,
   ArrowLeft, Phone, Mail,
-  CheckCircle, Eye, X, Zap, Gift,
+  CheckCircle, Eye, X, Trash2,
   RefreshCw
 } from 'lucide-react'
 
 // ─── Types ───
-type ViewMode = 'overview' | 'list' | 'edit-queue' | 'billing' | 'upsells' | 'sequences' | 'referrals' | 'profile'
+type ViewMode = 'overview' | 'list' | 'edit-queue' | 'billing' | 'profile'
 
 // ─── Health Score Logic ───
 function getHealthScore(client: any) {
@@ -69,29 +69,6 @@ function getDaysSince(date: string | null) {
   return Math.floor((Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24))
 }
 
-// ─── Default Sequences ───
-const DEFAULT_SEQUENCES: Record<string, any[]> = {
-  onboarding: [
-    { step: 1, delayDays: 0, channel: 'sms', content: "Welcome to Bright Automations! We're building your site now. ETA: 48 hours.", active: true },
-    { step: 2, delayDays: 2, channel: 'sms', content: 'Your site is live! Check it out: {{url}} Text us anytime for changes.', active: true },
-    { step: 3, delayDays: 7, channel: 'sms', content: "Hey {{firstName}}, how's the new site working? Need any changes?", active: true },
-    { step: 4, delayDays: 30, channel: 'email', content: 'First month stats + traffic report attached', active: true },
-  ],
-  upsell: [
-    { step: 1, delayDays: 45, channel: 'sms', content: 'Hey {{firstName}}, your site got {{visitors}} visitors this month. Want to turn those into calls? Our Google Business package helps you show up in maps.', active: true },
-    { step: 2, delayDays: 60, channel: 'email', content: "Stat report + SEO pitch — You're getting traffic but ranking page 3. SEO add-on moves you to page 1: {{link}}", active: true },
-    { step: 3, delayDays: 90, channel: 'sms', content: "{{firstName}}, you've been with us 3 months. Clients who add Google Ads see 4x more calls. Want a free preview of what your ads would look like?", active: true },
-  ],
-  anti_churn: [
-    { step: 1, delayDays: 0, channel: 'sms', content: "Hey {{firstName}}, heads up — your payment didn't go through. Want to update your card? {{payment_link}}", active: true },
-    { step: 2, delayDays: 3, channel: 'sms', content: "Just following up — your site is still live but we need to get billing sorted. {{payment_link}}", active: true },
-    { step: 3, delayDays: 7, channel: 'email', content: "Your Bright Automations site will go offline in 23 days if billing isn't resolved. Here's what you'll lose: {{stats}} Update now: {{payment_link}}", active: true },
-    { step: 4, delayDays: 14, channel: 'sms', content: "{{firstName}}, your site goes down in 16 days. You had {{visitors}} visitors last month. Let's keep that going: {{payment_link}}", active: true },
-    { step: 5, delayDays: 25, channel: 'sms', content: 'Last chance — your site goes offline in 5 days. Update your payment to keep it live: {{payment_link}}', active: true },
-    { step: 6, delayDays: 30, channel: 'sms', content: "Your site has been taken offline. Want to reactivate? Just update your payment and we'll have it back up same day: {{payment_link}}", active: true },
-  ],
-}
-
 export default function ClientsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [searchTerm, setSearchTerm] = useState('')
@@ -109,18 +86,6 @@ export default function ClientsPage() {
   const [editRequests, setEditRequests] = useState<any[]>([])
   const [editLoading, setEditLoading] = useState(false)
 
-  // Upsell state
-  const [upsellProducts, setUpsellProducts] = useState<any[]>([])
-  const [upsellPitches, setUpsellPitches] = useState<any[]>([])
-  const [upsellStats, setUpsellStats] = useState<any>({})
-
-  // Sequence state
-  const [sequences, setSequences] = useState<any[]>([])
-  const [activeSequenceTab, setActiveSequenceTab] = useState('onboarding')
-
-  // Referral state
-  const [referrals, setReferrals] = useState<any[]>([])
-  const [referralStats, setReferralStats] = useState<any>({})
 
   // Overview stats
   const [overviewStats, setOverviewStats] = useState<any>({ stats: {}, alerts: {} })
@@ -193,57 +158,9 @@ export default function ClientsPage() {
     }
   }, [])
 
-  const fetchUpsellData = useCallback(async () => {
-    try {
-      const [prodRes, pitchRes] = await Promise.all([
-        fetch('/api/upsell-products'),
-        fetch('/api/upsell-pitches'),
-      ])
-      if (prodRes.ok) {
-        const data = await prodRes.json()
-        setUpsellProducts(data.products || [])
-      }
-      if (pitchRes.ok) {
-        const data = await pitchRes.json()
-        setUpsellPitches(data.pitches || [])
-        setUpsellStats(data.stats || {})
-      }
-    } catch (error) {
-      console.error('Failed to fetch upsell data:', error)
-    }
-  }, [])
-
-  const fetchSequences = useCallback(async () => {
-    try {
-      const res = await fetch('/api/sequences')
-      if (res.ok) {
-        const data = await res.json()
-        setSequences(data.sequences || [])
-      }
-    } catch (error) {
-      console.error('Failed to fetch sequences:', error)
-    }
-  }, [])
-
-  const fetchReferrals = useCallback(async () => {
-    try {
-      const res = await fetch('/api/referrals')
-      if (res.ok) {
-        const data = await res.json()
-        setReferrals(data.referrals || [])
-        setReferralStats(data.stats || {})
-      }
-    } catch (error) {
-      console.error('Failed to fetch referrals:', error)
-    }
-  }, [])
-
   useEffect(() => {
     if (viewMode === 'edit-queue') fetchEditRequests()
-    if (viewMode === 'upsells') fetchUpsellData()
-    if (viewMode === 'sequences') fetchSequences()
-    if (viewMode === 'referrals') fetchReferrals()
-  }, [viewMode, fetchEditRequests, fetchUpsellData, fetchSequences, fetchReferrals])
+  }, [viewMode, fetchEditRequests])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -452,16 +369,10 @@ export default function ClientsPage() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Plan</label>
-                      <select value={formData.plan} onChange={(e) => {
-                        const plan = e.target.value
-                        const p = pricing.monthlyHosting
-                        const prices: Record<string, number> = { base: p, premium: p * 2, enterprise: p * 4 }
-                        setFormData(prev => ({ ...prev, plan, monthlyRevenue: prices[plan] || p }))
-                      }} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
-                        <option value="base">Base - ${pricing.monthlyHosting}/mo</option>
-                        <option value="premium">Premium - ${pricing.monthlyHosting * 2}/mo</option>
-                        <option value="enterprise">Enterprise - ${pricing.monthlyHosting * 4}/mo</option>
-                      </select>
+                      <div className="p-3 bg-blue-50 rounded-lg">
+                        <div className="font-medium">Website + Hosting</div>
+                        <div className="text-sm text-gray-600">${pricing.siteBuildFee} first month &middot; ${pricing.monthlyHosting}/mo after</div>
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -512,7 +423,7 @@ export default function ClientsPage() {
               </button>
             )}
             {overviewStats.alerts?.upsellFollowups > 0 && (
-              <button className="flex items-center gap-2 text-green-700 text-left" onClick={() => setViewMode('upsells')}>
+              <button className="flex items-center gap-2 text-green-700 text-left">
                 🟢 {overviewStats.alerts.upsellFollowups} upsell replies to follow up
               </button>
             )}
@@ -531,9 +442,6 @@ export default function ClientsPage() {
           { key: 'list', label: 'All Clients', icon: Users },
           { key: 'edit-queue', label: 'Edit Queue', icon: Edit3 },
           { key: 'billing', label: 'Billing', icon: DollarSign },
-          { key: 'upsells', label: 'Upsells', icon: TrendingUp },
-          { key: 'sequences', label: 'Sequences', icon: Zap },
-          { key: 'referrals', label: 'Referrals', icon: Gift },
         ].map(tab => (
           <Button key={tab.key} variant={viewMode === tab.key ? 'default' : 'outline'} size="sm" onClick={() => setViewMode(tab.key as ViewMode)}>
             <tab.icon size={14} className="mr-1.5" />{tab.label}
@@ -627,7 +535,8 @@ export default function ClientsPage() {
                       const pendingEdits = client.editRequests?.length || 0
 
                       return (
-                        <tr key={client.id} className="group hover:bg-gray-50">
+                        <React.Fragment key={client.id}>
+                        <tr className="group hover:bg-gray-50">
                           <td className="p-4" onClick={(e) => e.stopPropagation()}>
                             <input type="checkbox" className="rounded" checked={selectedClients.has(client.id)} onChange={() => toggleSelectClient(client.id)} />
                           </td>
@@ -684,6 +593,48 @@ export default function ClientsPage() {
                             </button>
                           </td>
                         </tr>
+                        {isExpanded && (
+                          <tr className="bg-gray-50">
+                            <td colSpan={viewMode === 'billing' ? 8 : 8} className="p-4">
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                <div>
+                                  <p className="text-gray-500 text-xs mb-1">Contact</p>
+                                  <p className="font-medium">{contact || '—'}</p>
+                                  {(client.phone || client.lead?.phone) && (
+                                    <p className="text-gray-600 flex items-center gap-1 mt-1"><Phone size={12} /> {client.phone || client.lead?.phone}</p>
+                                  )}
+                                  {(client.email || client.lead?.email) && (
+                                    <p className="text-gray-600 flex items-center gap-1 mt-1"><Mail size={12} /> {client.email || client.lead?.email}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 text-xs mb-1">Site</p>
+                                  {client.siteUrl ? (
+                                    <a href={`https://${client.siteUrl}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                                      {client.siteUrl} <ExternalLink size={12} />
+                                    </a>
+                                  ) : <p className="text-gray-400">Not set</p>}
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 text-xs mb-1">Billing</p>
+                                  <p className="font-medium">{formatCurrency(client.monthlyRevenue)}/mo</p>
+                                  <p className="text-gray-600 mt-1">{daysActive !== null ? `${daysActive} days active` : 'Not live yet'}</p>
+                                  <p className="text-gray-600 mt-1">Automation: {client.autonomyLevel || 'FULL_AUTO'}</p>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                  <p className="text-gray-500 text-xs mb-1">Actions</p>
+                                  <Button size="sm" variant="outline" onClick={() => { setSelectedClient(client); setViewMode('profile'); setProfileTab('overview') }}>
+                                    <Eye size={14} className="mr-1" /> View Profile
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={() => { setSelectedClient(client); setViewMode('profile'); setProfileTab('messages') }}>
+                                    <Mail size={14} className="mr-1" /> Messages
+                                  </Button>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </React.Fragment>
                       )
                     })}
                   </tbody>
@@ -695,12 +646,6 @@ export default function ClientsPage() {
       )}
 
       {viewMode === 'edit-queue' && <EditQueueView editRequests={editRequests} loading={editLoading} onAction={handleEditRequestAction} onBatchApprove={handleBatchApprove} onRefresh={fetchEditRequests} />}
-      {viewMode === 'upsells' && <UpsellView products={upsellProducts} pitches={upsellPitches} stats={upsellStats} />}
-      {viewMode === 'sequences' && <SequenceView sequences={sequences} activeTab={activeSequenceTab} setActiveTab={setActiveSequenceTab} onSave={async (name: string, steps: any[]) => {
-        await fetch('/api/sequences', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, steps }) })
-        fetchSequences()
-      }} />}
-      {viewMode === 'referrals' && <ReferralView referrals={referrals} stats={referralStats} />}
     </div>
   )
 }
@@ -787,7 +732,7 @@ function ClientProfile({ client, onBack, onUpdate, profileTab, setProfileTab }: 
 
       {/* Profile Tabs */}
       <div className="flex gap-2 flex-wrap">
-        {['overview', 'edit-requests', 'messages', 'billing', 'upsells', 'stat-reports', 'timeline'].map(tab => (
+        {['overview', 'edit-requests', 'messages', 'billing', 'stat-reports', 'timeline'].map(tab => (
           <Button key={tab} variant={profileTab === tab ? 'default' : 'outline'} size="sm" onClick={() => setProfileTab(tab)}>
             {tab.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
           </Button>
@@ -878,6 +823,71 @@ function ClientProfile({ client, onBack, onUpdate, profileTab, setProfileTab }: 
               </div>
             </div>
           </Card>
+
+          {/* Automation Mode */}
+          <Card className="p-6">
+            <h3 className="font-semibold text-gray-900 mb-4">Automation Mode</h3>
+            <p className="text-sm text-gray-500 mb-3">Controls how much autonomy the AI has for this client.</p>
+            <div className="flex gap-2">
+              {[
+                { value: 'FULL_AUTO', label: 'Full Auto', desc: 'AI handles everything' },
+                { value: 'SEMI_AUTO', label: 'Semi-Auto', desc: 'AI drafts, you approve' },
+                { value: 'MANUAL', label: 'Manual', desc: 'You handle everything' },
+              ].map(mode => (
+                <button
+                  key={mode.value}
+                  onClick={() => onUpdate({ autonomyLevel: mode.value })}
+                  className={`flex-1 p-3 rounded-lg border-2 text-center transition-all ${
+                    (client.autonomyLevel || 'FULL_AUTO') === mode.value
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-sm font-semibold">{mode.label}</div>
+                  <div className="text-xs text-gray-500 mt-1">{mode.desc}</div>
+                </button>
+              ))}
+            </div>
+          </Card>
+
+          {/* What AI Sees */}
+          <Card className="p-6">
+            <h3 className="font-semibold text-gray-900 mb-4">What AI Sees</h3>
+            <p className="text-sm text-gray-500 mb-3">Context passed to the AI when handling this client&apos;s conversations.</p>
+            <pre className="bg-gray-900 text-green-400 p-4 rounded-lg text-xs overflow-auto max-h-[300px]">
+              {JSON.stringify({
+                companyName: client.companyName,
+                contact,
+                phone,
+                email,
+                location,
+                plan: client.plan || 'base',
+                hostingStatus: client.hostingStatus,
+                autonomyLevel: client.autonomyLevel || 'FULL_AUTO',
+                aiAutoRespond: client.aiAutoRespond !== false,
+                daysActive,
+                healthScore,
+                tags: client.tags || [],
+              }, null, 2)}
+            </pre>
+          </Card>
+
+          {/* Danger Zone */}
+          <Card className="p-6 border-red-200">
+            <h3 className="font-semibold text-red-600 mb-2">Danger Zone</h3>
+            <p className="text-sm text-gray-500 mb-4">Cancel this client. Their site will be taken offline.</p>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (confirm(`Are you sure you want to cancel ${client.companyName}? Their hosting will be set to CANCELLED.`)) {
+                  onUpdate({ hostingStatus: 'CANCELLED' })
+                }
+              }}
+            >
+              <Trash2 size={14} className="mr-2" />
+              Cancel Client
+            </Button>
+          </Card>
         </div>
       )}
 
@@ -927,7 +937,7 @@ function ClientProfile({ client, onBack, onUpdate, profileTab, setProfileTab }: 
         </Card>
       )}
 
-      {['messages', 'edit-requests', 'upsells', 'stat-reports'].includes(profileTab) && (
+      {['messages', 'edit-requests', 'stat-reports'].includes(profileTab) && (
         <Card className="p-6">
           <h3 className="font-semibold text-gray-900 mb-4">{profileTab.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}</h3>
           <p className="text-sm text-gray-500">View full {profileTab.replace(/-/g, ' ')} in the dedicated tab above.</p>
@@ -1068,224 +1078,6 @@ function EditRequestCard({ request, onAction }: any) {
   )
 }
 
-// ═══════════════════════════════════════════════
-// UPSELL VIEW
-// ═══════════════════════════════════════════════
-function UpsellView({ products, pitches, stats }: any) {
-  return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-900">Upsells</h2>
-
-      <Card className="p-4">
-        <h3 className="font-semibold text-gray-800 mb-3">Available Upsell Products</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left p-3 font-medium text-gray-700">Product</th>
-                <th className="text-right p-3 font-medium text-gray-700">Price</th>
-                <th className="text-center p-3 font-medium text-gray-700">Type</th>
-                <th className="text-left p-3 font-medium text-gray-700">Stripe Link</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {products.length > 0 ? products.map((product: any) => (
-                <tr key={product.id}>
-                  <td className="p-3 font-medium">{product.name}</td>
-                  <td className="p-3 text-right">{formatCurrency(product.price)}{product.recurring ? '/mo' : ''}</td>
-                  <td className="p-3 text-center"><Badge variant={product.recurring ? 'default' : 'secondary'}>{product.recurring ? 'Monthly' : 'One-time'}</Badge></td>
-                  <td className="p-3 text-sm text-gray-500">{product.stripeLink || '—'}</td>
-                </tr>
-              )) : (
-                <tr><td colSpan={4} className="p-6 text-center text-gray-500">No upsell products configured yet.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {[
-          { v: stats.pitched || 0, l: 'Pitched' },
-          { v: stats.opened || 0, l: 'Opened' },
-          { v: stats.clicked || 0, l: 'Clicked' },
-          { v: stats.paid || 0, l: 'Paid' },
-        ].map(s => (
-          <Card key={s.l} className="p-4 text-center">
-            <div className="text-2xl font-bold">{s.v}</div>
-            <div className="text-xs text-gray-500">{s.l}</div>
-          </Card>
-        ))}
-        <Card className="p-4 text-center bg-green-50">
-          <div className="text-2xl font-bold text-green-700">{formatCurrency(stats.revenueAdded || 0)}/mo</div>
-          <div className="text-xs text-gray-500">Added MRR</div>
-        </Card>
-      </div>
-
-      <Card className="p-4">
-        <h3 className="font-semibold text-gray-800 mb-3">Recent Upsell Activity</h3>
-        {pitches.length > 0 ? (
-          <div className="space-y-2 text-sm">
-            {pitches.slice(0, 20).map((pitch: any) => (
-              <div key={pitch.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                <div><span className="font-medium">{pitch.product?.name}</span></div>
-                <Badge variant={pitch.status === 'paid' ? 'default' : 'secondary'} className="capitalize">{pitch.status}</Badge>
-              </div>
-            ))}
-          </div>
-        ) : <p className="text-gray-500 text-sm">No upsell pitches yet.</p>}
-      </Card>
-    </div>
-  )
-}
-
-// ═══════════════════════════════════════════════
-// SEQUENCE VIEW
-// ═══════════════════════════════════════════════
-function SequenceView({ sequences, activeTab, setActiveTab, onSave }: any) {
-  const labels: Record<string, string> = { onboarding: 'Onboarding', upsell: 'Upsell', anti_churn: 'Anti-Churn' }
-
-  const getSteps = (name: string) => {
-    const existing = sequences.find((s: any) => s.name === name)
-    if (existing) return existing.steps as any[]
-    return DEFAULT_SEQUENCES[name] || []
-  }
-
-  const [editingSteps, setEditingSteps] = useState<any[]>(getSteps(activeTab))
-
-  useEffect(() => {
-    setEditingSteps(getSteps(activeTab))
-  }, [activeTab, sequences])
-
-  const handleStepChange = (index: number, field: string, value: any) => {
-    const updated = [...editingSteps]
-    updated[index] = { ...updated[index], [field]: value }
-    setEditingSteps(updated)
-  }
-
-  return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-900">Sequences</h2>
-
-      <div className="flex gap-2">
-        {['onboarding', 'upsell', 'anti_churn'].map(name => (
-          <Button key={name} variant={activeTab === name ? 'default' : 'outline'} size="sm" onClick={() => setActiveTab(name)}>{labels[name]}</Button>
-        ))}
-      </div>
-
-      <Card className="p-6">
-        <h3 className="font-semibold text-gray-900 mb-4">{labels[activeTab]} Sequence</h3>
-        <div className="space-y-3">
-          <div className="grid grid-cols-12 gap-3 text-xs font-semibold text-gray-500 px-1">
-            <div className="col-span-1">Step</div>
-            <div className="col-span-2">Delay</div>
-            <div className="col-span-2">Channel</div>
-            <div className="col-span-5">Content</div>
-            <div className="col-span-1">Active</div>
-            <div className="col-span-1"></div>
-          </div>
-          {editingSteps.map((step: any, i: number) => (
-            <div key={i} className="grid grid-cols-12 gap-3 items-start bg-gray-50 rounded p-3">
-              <div className="col-span-1 text-sm font-medium text-gray-700 pt-2">{i + 1}</div>
-              <div className="col-span-2">
-                <div className="flex items-center gap-1">
-                  <Input type="number" value={step.delayDays} onChange={(e) => handleStepChange(i, 'delayDays', parseInt(e.target.value) || 0)} className="w-16 text-sm" />
-                  <span className="text-xs text-gray-500">days</span>
-                </div>
-              </div>
-              <div className="col-span-2">
-                <select value={step.channel} onChange={(e) => handleStepChange(i, 'channel', e.target.value)} className="w-full px-2 py-1.5 border rounded text-sm">
-                  <option value="sms">SMS</option>
-                  <option value="email">Email</option>
-                </select>
-              </div>
-              <div className="col-span-5">
-                <textarea value={step.content} onChange={(e) => handleStepChange(i, 'content', e.target.value)} className="w-full px-2 py-1.5 border rounded text-sm min-h-[60px]" />
-              </div>
-              <div className="col-span-1 pt-2">
-                <input type="checkbox" checked={step.active !== false} onChange={(e) => handleStepChange(i, 'active', e.target.checked)} className="rounded" />
-              </div>
-              <div className="col-span-1 pt-1">
-                <button onClick={() => setEditingSteps(editingSteps.filter((_: any, idx: number) => idx !== i))} className="text-red-400 hover:text-red-600 p-1"><X size={14} /></button>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="flex gap-3 mt-4">
-          <Button variant="outline" size="sm" onClick={() => {
-            const lastStep = editingSteps[editingSteps.length - 1]
-            setEditingSteps([...editingSteps, { step: editingSteps.length + 1, delayDays: (lastStep?.delayDays || 0) + 7, channel: 'sms', content: '', active: true }])
-          }}><Plus size={14} className="mr-1" /> Add Step</Button>
-          <Button size="sm" onClick={() => onSave(activeTab, editingSteps)}>Save Sequence</Button>
-          <Button variant="outline" size="sm" onClick={() => setEditingSteps(DEFAULT_SEQUENCES[activeTab] || [])}>Reset to Default</Button>
-        </div>
-
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <h4 className="text-sm font-semibold text-blue-800 mb-2">Available Variables</h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-blue-700">
-            {['{{firstName}}', '{{companyName}}', '{{url}}', '{{visitors}}', '{{calls}}', '{{payment_link}}', '{{link}}', '{{stats}}'].map(v => <code key={v}>{v}</code>)}
-          </div>
-        </div>
-      </Card>
-    </div>
-  )
-}
-
-// ═══════════════════════════════════════════════
-// REFERRAL VIEW
-// ═══════════════════════════════════════════════
-function ReferralView({ referrals, stats }: any) {
-  return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-900">Referrals</h2>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { v: stats.totalLinks || 0, l: 'Active Links' },
-          { v: stats.thisMonth || 0, l: 'This Month' },
-          { v: stats.converted || 0, l: 'Converted' },
-        ].map(s => (
-          <Card key={s.l} className="p-4 text-center">
-            <div className="text-2xl font-bold">{s.v}</div>
-            <div className="text-xs text-gray-500">{s.l}</div>
-          </Card>
-        ))}
-        <Card className="p-4 text-center bg-green-50">
-          <div className="text-2xl font-bold text-green-700">{formatCurrency(stats.creditsIssued || 0)}</div>
-          <div className="text-xs text-gray-500">Credits Issued</div>
-        </Card>
-      </div>
-
-      <Card className="p-4 bg-blue-50/50 border-blue-200">
-        <h3 className="font-semibold text-blue-800 mb-2">How It Works</h3>
-        <div className="text-sm text-blue-700 space-y-1">
-          <p>Each client gets a unique referral link</p>
-          <p>Referred lead enters pipeline with &quot;referral&quot; tag</p>
-          <p>When referral closes, referring client gets 1-month credit</p>
-          <p>Credit auto-applied to next billing cycle via Stripe</p>
-        </div>
-      </Card>
-
-      <Card className="p-4">
-        <h3 className="font-semibold text-gray-800 mb-3">Recent Referrals</h3>
-        {referrals.length > 0 ? (
-          <div className="space-y-3">
-            {referrals.map((ref: any) => (
-              <div key={ref.id} className="flex items-center justify-between py-2 border-b last:border-0 text-sm">
-                <div>
-                  <span className="font-medium">{ref.referrerClient?.companyName}</span>
-                  <span className="text-gray-500 ml-2">referred</span>
-                  <span className="font-medium ml-2">{ref.referredName}</span>
-                  {ref.referredCompany && <span className="text-gray-400 ml-1">({ref.referredCompany})</span>}
-                </div>
-                <Badge variant={ref.status === 'closed' ? 'default' : 'secondary'} className="capitalize">{ref.status === 'closed' ? 'CLOSED' : ref.status.replace(/_/g, ' ')}</Badge>
-              </div>
-            ))}
-          </div>
-        ) : <p className="text-gray-500 text-sm">No referrals yet.</p>}
-      </Card>
-    </div>
-  )
-}
 
 // ═══════════════════════════════════════════════
 // STAT CARD
