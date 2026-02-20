@@ -1341,13 +1341,13 @@ export default function LeadsPage() {
                                     </div>
                                     <h4 className="font-semibold text-gray-900 text-sm">Enrichment Data</h4>
                                   </div>
-                                  {(lead.enrichedRating || lead.enrichedAddress || lead.enrichedServices) ? (
+                                  {(lead.enrichedRating != null || lead.enrichedAddress || (Array.isArray(lead.enrichedServices) && lead.enrichedServices.length > 0)) ? (
                                     <div className="space-y-3">
-                                      {lead.enrichedRating && (
+                                      {lead.enrichedRating != null && (
                                         <div className="flex items-center gap-2">
                                           <Star size={14} className="text-amber-500" />
-                                          <span className="text-sm font-medium text-gray-900">{Number(lead.enrichedRating).toFixed(1)}</span>
-                                          <span className="text-xs text-gray-500">({lead.enrichedReviews || 0} reviews)</span>
+                                          <span className="text-sm font-medium text-gray-900">{Number(lead.enrichedRating || 0).toFixed(1)}</span>
+                                          <span className="text-xs text-gray-500">({lead.enrichedReviews ?? 0} reviews)</span>
                                         </div>
                                       )}
                                       {lead.enrichedAddress && (

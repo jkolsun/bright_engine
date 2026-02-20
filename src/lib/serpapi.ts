@@ -28,31 +28,72 @@ export async function enrichLead(leadId: string): Promise<EnrichmentResult> {
   }
 
   try {
-    // Build search query
-    const query = `${lead.companyName} ${lead.city} ${lead.state}`
+    // Build fallback queries — most specific to least specific
+    const queries: string[] = []
 
-    // Call SerpAPI Google Maps endpoint
-    const response = await fetch(
-      `https://serpapi.com/search.json?` +
-        new URLSearchParams({
-          api_key: SERPAPI_KEY,
-          engine: 'google_maps',
-          q: query,
-          type: 'search',
-        })
-    )
-
-    if (!response.ok) {
-      throw new Error(`SerpAPI error: ${response.statusText}`)
+    // Query 1: Full match (company + city + state)
+    if (lead.city && lead.state) {
+      queries.push(`${lead.companyName} ${lead.city} ${lead.state}`)
     }
 
-    const data = await response.json()
+    // Query 2: Company + state only (wider geographic search)
+    if (lead.state) {
+      queries.push(`${lead.companyName} ${lead.state}`)
+    }
 
-    // Parse first result
-    const result = data.local_results?.[0]
+    // Query 3: Company name only
+    queries.push(lead.companyName)
+
+    // Query 4: Phone number lookup (most reliable if we have it)
+    if (lead.phone) {
+      const digits = lead.phone.replace(/\D/g, '')
+      if (digits.length >= 10) {
+        queries.push(digits)
+      }
+    }
+
+    // Deduplicate queries
+    const uniqueQueries = [...new Set(queries)]
+
+    let result: any = null
+    let data: any = null
+
+    for (const query of uniqueQueries) {
+      console.log(`[ENRICHMENT] Trying query: "${query}" for lead ${leadId}`)
+
+      const response = await fetch(
+        `https://serpapi.com/search.json?` +
+          new URLSearchParams({
+            api_key: SERPAPI_KEY,
+            engine: 'google_maps',
+            q: query,
+            type: 'search',
+          })
+      )
+
+      // Log cost for each API call
+      await prisma.apiCost.create({
+        data: { service: 'serpapi', operation: 'enrichment', cost: 0.002 },
+      })
+
+      if (!response.ok) {
+        console.warn(`[ENRICHMENT] SerpAPI error for query "${query}": ${response.statusText}`)
+        continue
+      }
+
+      data = await response.json()
+      result = data.local_results?.[0]
+
+      if (result) {
+        console.log(`[ENRICHMENT] Found result on query: "${query}"`)
+        break
+      }
+
+      console.log(`[ENRICHMENT] No results for query: "${query}", trying next...`)
+    }
 
     if (!result) {
-      console.log('No SerpAPI results found for:', query)
+      console.log(`[ENRICHMENT] No results found for lead ${leadId} after ${uniqueQueries.length} queries`)
       return {}
     }
 
@@ -113,15 +154,6 @@ export async function enrichLead(leadId: string): Promise<EnrichmentResult> {
         enrichedRating: enrichment.rating,
         enrichedReviews: enrichment.reviews,
         enrichedPhotos: enrichment.photos,
-      },
-    })
-
-    // Log cost
-    await prisma.apiCost.create({
-      data: {
-        service: 'serpapi',
-        operation: 'enrichment',
-        cost: 0.002, // ~$0.002 per request
       },
     })
 

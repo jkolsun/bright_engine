@@ -334,29 +334,29 @@ export default function SettingsPage() {
       const data = await res.json()
       const s: SettingsData = data.settings || {}
 
-      if (s.company_info) setCompanyInfo({ ...DEFAULT_COMPANY, ...s.company_info })
+      if (s.company_info && typeof s.company_info === 'object') setCompanyInfo({ ...DEFAULT_COMPANY, ...s.company_info })
       // pricing now comes from core product, not settings key
-      if (s.sequences) {
+      if (s.sequences && typeof s.sequences === 'object') {
         setSequences({
           urgencyDays: s.sequences.urgencyDays || DEFAULT_SEQUENCES.urgencyDays,
-          urgencyTemplates: { ...DEFAULT_SEQUENCES.urgencyTemplates, ...s.sequences.urgencyTemplates },
+          urgencyTemplates: { ...DEFAULT_SEQUENCES.urgencyTemplates, ...(s.sequences.urgencyTemplates || {}) },
           safetyBuffer: s.sequences.safetyBuffer ?? DEFAULT_SEQUENCES.safetyBuffer,
         })
       }
-      if (s.client_sequences) {
+      if (s.client_sequences && typeof s.client_sequences === 'object') {
         setClientSequences({
           touchpointDays: s.client_sequences.touchpointDays || DEFAULT_CLIENT_SEQUENCES.touchpointDays,
-          touchpointGuidance: { ...DEFAULT_CLIENT_SEQUENCES.touchpointGuidance, ...s.client_sequences.touchpointGuidance },
+          touchpointGuidance: { ...DEFAULT_CLIENT_SEQUENCES.touchpointGuidance, ...(s.client_sequences.touchpointGuidance || {}) },
           touchpointTemplates: { ...DEFAULT_CLIENT_SEQUENCES.touchpointTemplates, ...(s.client_sequences.touchpointTemplates || {}) },
           upsellProducts: s.client_sequences.upsellProducts || DEFAULT_CLIENT_SEQUENCES.upsellProducts,
           enabled: s.client_sequences.enabled ?? true,
         })
       }
-      if (s.channel_routing) setChannelRouting({ ...DEFAULT_CHANNEL_ROUTING, ...s.channel_routing })
-      if (s.personalization) setPersonalization({ ...DEFAULT_PERSONALIZATION, ...s.personalization })
-      if (s.targets) setTargets({ ...DEFAULT_TARGETS, ...s.targets })
-      if (s.instantly_campaigns) setCampaigns(s.instantly_campaigns)
-      if (s.rep_targets) setRepTargets(s.rep_targets)
+      if (s.channel_routing && typeof s.channel_routing === 'object') setChannelRouting({ ...DEFAULT_CHANNEL_ROUTING, ...s.channel_routing })
+      if (s.personalization && typeof s.personalization === 'object') setPersonalization({ ...DEFAULT_PERSONALIZATION, ...s.personalization })
+      if (s.targets && typeof s.targets === 'object') setTargets({ ...DEFAULT_TARGETS, ...s.targets })
+      if (s.instantly_campaigns && typeof s.instantly_campaigns === 'object') setCampaigns(s.instantly_campaigns)
+      if (s.rep_targets && typeof s.rep_targets === 'object') setRepTargets(s.rep_targets)
 
       setSettingsLoaded(true)
     } catch (e) {
