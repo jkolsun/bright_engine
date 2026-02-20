@@ -255,28 +255,31 @@ function InstantlyDashboard() {
     setAssigningToCampaign(false)
   }
 
-  const fetchStats = async (retries = 2) => {
+  const fetchStats = async (retries = 1) => {
     try {
       setLoading(true)
-      const res = await fetch('/api/instantly/preview-stats')
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 15000)
+      const res = await fetch('/api/instantly/preview-stats', { signal: controller.signal })
+      clearTimeout(timeout)
       if (!res.ok) {
-        // Auto-retry on server errors (cold start / DB connection pool warming)
+        // Only retry once on 500+ (not aggressively — server may be overwhelmed)
         if (res.status >= 500 && retries > 0) {
-          await new Promise((r) => setTimeout(r, 1000))
+          await new Promise((r) => setTimeout(r, 2000))
           return fetchStats(retries - 1)
         }
-        throw new Error(`Failed: ${res.statusText}`)
+        const data = await res.json().catch(() => ({ error: `Server error (${res.status})` }))
+        throw new Error(data.details || data.error || `Server error (${res.status})`)
       }
       const data = await res.json()
       setStats(data)
       setError(null)
     } catch (err) {
-      // Auto-retry on network errors (cold start)
-      if (retries > 0) {
-        await new Promise((r) => setTimeout(r, 1000))
-        return fetchStats(retries - 1)
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setError('Request timed out — the server may be starting up. Try again in a moment.')
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to load stats')
       }
-      setError(err instanceof Error ? err.message : 'Failed to load')
     } finally {
       setLoading(false)
     }
@@ -344,11 +347,16 @@ function InstantlyDashboard() {
   if (error) {
     return (
       <div className="p-8">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center max-w-lg mx-auto">
           <AlertTriangle className="mx-auto text-red-500 mb-2" size={32} />
-          <p className="text-red-700 font-medium">{error}</p>
-          <button onClick={() => fetchStats()} className="mt-3 px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm hover:bg-red-200">
-            Retry
+          <p className="text-red-700 font-medium mb-1">Failed to load campaign stats</p>
+          <p className="text-red-600 text-sm mb-4">{error}</p>
+          <button
+            onClick={() => fetchStats(1)}
+            disabled={loading}
+            className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Retrying...' : 'Retry'}
           </button>
         </div>
       </div>
