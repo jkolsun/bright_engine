@@ -73,10 +73,16 @@ RULES:
     const collected = ctx.collectedData || {}
     const asked = ctx.questionsAsked || []
 
+    // Build the form URL
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.brightautomations.com'
+    const formUrl = (lead as any).formUrl || `${baseUrl}/onboard/${lead.id}`
+    const onboardingStatus = (lead as any).onboardingStatus || 'NOT_STARTED'
+    const formCompleted = onboardingStatus === 'COMPLETED'
+
     // Check what high-value data is still missing
     const missing: string[] = []
-    if (!collected.aboutStory) missing.push('company story (Q2_ABOUT)')
-    if (!collected.differentiator) missing.push('what sets them apart (Q3_DIFFERENTIATOR)')
+    if (!collected.aboutStory) missing.push('company story')
+    if (!collected.differentiator) missing.push('what sets them apart')
     if (!lead.logo && !collected.logo) missing.push('logo')
     if (!collected.testimonial) missing.push('customer testimonial')
 
@@ -87,22 +93,43 @@ RULES:
       missing.push('project photos')
     }
 
-    // Industry-specific
-    const industryUpper = (lead.industry || '').toUpperCase()
-    if (!asked.includes('Q9_INDUSTRY')) {
-      if (industryUpper.includes('LAW') || industryUpper.includes('LEGAL')) missing.push('practice areas')
-      else if (industryUpper.includes('ROOFING') || industryUpper.includes('PLUMBING') || industryUpper.includes('HVAC') || industryUpper.includes('CONTRACTOR')) missing.push('certifications/licenses')
-      else missing.push('certifications or awards')
+    if (formCompleted) {
+      // Form already submitted — the data is in. Skip to building.
+      return `The client already filled out the onboarding form with their business info, logo, photos, and services. All critical data collected.
+RULES:
+- Set readyToBuild: true immediately.
+- Tell them: "We got all your info — building your site now! You'll get a preview link soon."
+- If they text anything, respond warmly.`
     }
 
-    return `Core questions done. Now collect remaining site content to make the site high quality.
-${missing.length > 0 ? `Still useful to ask about: ${missing.join(', ')}.` : 'All critical data collected.'}
+    // Check if we already sent the form link
+    const formLinkSent = asked.includes('FORM_LINK_SENT')
+
+    if (!formLinkSent) {
+      return `Core questions done! Instead of asking ${missing.length} more questions one by one, SEND THE FORM LINK.
+Form URL: ${formUrl}
+
+YOUR NEXT MESSAGE MUST include the form link. Something like:
+"Got it! Here's a quick form to fill out with your logo, photos, and the rest of your business info. Takes about 2 minutes: ${formUrl}"
+
 RULES:
-- Ask ONE question at a time. Keep it natural.
-- Maximum 4 more questions in this stage. Prioritize the items listed above.
+- Include the FULL form URL in your message. Don't shorten or modify it.
+- Set questionAsked to "FORM_LINK_SENT" so we know you sent it.
+- Don't set readyToBuild yet — wait for the form to be filled.
+- If the lead seems impatient, you can ALSO set readyToBuild: true (we'll build with what we have).
+- Keep it short and casual. One or two sentences max.`
+    }
+
+    // Form link already sent but not completed — nudge or collect via chat
+    return `You already sent the form link. The client hasn't filled it out yet.
+${missing.length > 0 ? `Still missing: ${missing.join(', ')}.` : 'All critical data collected.'}
+RULES:
+- If it's been a while (multiple messages without form completion), gently nudge: "Did you get a chance to fill out that form? Here's the link again: ${formUrl}"
+- If the lead texts info directly (services, story, etc.) instead of using the form, that's fine — collect it via conversation as normal.
+- If they send photos via MMS, acknowledge them.
 - When you have services + (about story OR differentiator) + at least 7 questions answered total, set readyToBuild: true.
-- Tell them: "Perfect, I've got everything I need. We're getting your site built now — you'll have a preview link soon!"
-- If the lead seems impatient or says "that's all" / "just build it", respect that — set readyToBuild: true immediately.`
+- If the lead says "that's all" / "just build it", set readyToBuild: true immediately.
+- Maximum 3 more follow-up questions. Don't be annoying.`
   },
 
   BUILDING: () =>

@@ -19,6 +19,8 @@ export async function middleware(request: NextRequest) {
     pathname === '/success' || 
     pathname === '/terms' ||
     pathname.startsWith('/preview/') ||
+    pathname.startsWith('/onboard/') ||
+    pathname.startsWith('/api/onboard/') ||
     pathname.startsWith('/api/preview/track') ||
     pathname.startsWith('/api/health') ||
     pathname.startsWith('/api/bootstrap/') ||

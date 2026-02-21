@@ -91,13 +91,15 @@ export async function triggerCloseEngine(options: {
       return { success: false, error: 'Lead has no phone number' }
     }
 
-    // 3. Update lead status
+    // 3. Update lead status + set form URL
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.brightautomations.com'
     await prisma.lead.update({
       where: { id: leadId },
       data: {
         status: lead.status === 'HOT_LEAD' ? 'HOT_LEAD' : 'QUALIFIED',
         priority: 'HOT',
         closeEntryPoint: entryPoint,
+        formUrl: lead.formUrl || `${baseUrl}/onboard/${leadId}`,
       },
     })
 

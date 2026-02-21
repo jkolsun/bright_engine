@@ -50,17 +50,44 @@ export async function PUT(
       await executeApprovedAction(updated)
     }
 
-    // If denied, revert lead to previous stage
+    // If denied, revert lead to previous stage and notify
     if (action === 'deny' && updated.leadId) {
       if (updated.gate === 'SEND_PREVIEW') {
+        // Denied preview → back to editing for Jared to fix
         await prisma.lead.update({
           where: { id: updated.leadId },
           data: { buildStep: 'EDITING' },
+        })
+        await prisma.notification.create({
+          data: {
+            type: 'CLOSE_ENGINE',
+            title: 'Preview Denied — Back to Editing',
+            message: `Preview for lead was denied. Lead returned to Build Queue for edits.`,
+            metadata: { leadId: updated.leadId, gate: updated.gate },
+          },
         })
       } else if (updated.gate === 'SITE_PUBLISH') {
         await prisma.lead.update({
           where: { id: updated.leadId },
           data: { buildStep: 'CLIENT_APPROVED' },
+        })
+        await prisma.notification.create({
+          data: {
+            type: 'CLOSE_ENGINE',
+            title: 'Site Publish Denied',
+            message: `Site publication denied. Lead status unchanged.`,
+            metadata: { leadId: updated.leadId, gate: updated.gate },
+          },
+        })
+      } else if (updated.gate === 'PAYMENT_LINK') {
+        // Denied payment link → lead stays in CLIENT_REVIEW, AI continues conversation
+        await prisma.notification.create({
+          data: {
+            type: 'CLOSE_ENGINE',
+            title: 'Payment Link Denied',
+            message: `Payment link denied. Lead stays in CLIENT_REVIEW — AI continues the conversation.`,
+            metadata: { leadId: updated.leadId, gate: updated.gate },
+          },
         })
       }
     }
@@ -80,7 +107,7 @@ async function executeApprovedAction(approval: any) {
   try {
     switch (approval.gate) {
       case 'PAYMENT_LINK': {
-        // Send the payment link SMS
+        // Send the payment link SMS and update lead status
         if (approval.draftContent && approval.metadata?.phone) {
           const { sendSMSViaProvider } = await import('@/lib/sms-provider')
           await sendSMSViaProvider({
@@ -92,7 +119,44 @@ async function executeApprovedAction(approval: any) {
             trigger: 'approved_payment_link',
             aiGenerated: true,
           })
+
+          // Log the message in the database
+          if (approval.leadId) {
+            await prisma.message.create({
+              data: {
+                content: approval.draftContent,
+                direction: 'OUTBOUND',
+                channel: 'SMS',
+                senderType: 'AI',
+                senderName: 'clawdbot',
+                recipient: approval.metadata.phone,
+                leadId: approval.leadId,
+                aiGenerated: true,
+                trigger: 'approved_payment_link',
+              },
+            })
+          }
         }
+
+        // Update lead buildStep — status stays APPROVED until they pay (→ PAID)
+        if (approval.leadId) {
+          await prisma.lead.update({
+            where: { id: approval.leadId },
+            data: { buildStep: 'PAYMENT_SENT', status: 'APPROVED' },
+          })
+        }
+
+        // Notify admin
+        await prisma.notification.create({
+          data: {
+            type: 'CLOSE_ENGINE',
+            title: 'Payment Link Approved & Sent',
+            message: `Payment link sent to client via SMS.`,
+            metadata: { leadId: approval.leadId, clientId: approval.clientId },
+          },
+        })
+
+        console.log(`[Approvals] Payment link sent for ${approval.leadId || approval.clientId}`)
         break
       }
       case 'SEND_MESSAGE': {
@@ -143,21 +207,63 @@ async function executeApprovedAction(approval: any) {
         break
       }
       case 'SEND_PREVIEW': {
-        // Andrew approved the site preview — move lead to CLIENT_REVIEW
+        // Andrew approved the site preview — move lead to CLIENT_REVIEW and send preview SMS
         if (approval.leadId) {
-          await prisma.lead.update({
+          const lead = await prisma.lead.update({
             where: { id: approval.leadId },
             data: {
               buildStep: 'CLIENT_REVIEW',
               status: 'CLIENT_REVIEW',
             },
+            select: { id: true, firstName: true, companyName: true, phone: true, email: true, previewUrl: true, previewId: true },
           })
+
+          const previewUrl = approval.metadata?.previewUrl || lead.previewUrl || (lead.previewId ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.brightautomations.com'}/preview/${lead.previewId}` : null)
+
+          // Send preview link to client via SMS immediately
+          if (lead.phone && previewUrl) {
+            try {
+              const { sendSMSViaProvider } = await import('@/lib/sms-provider')
+              const firstName = lead.firstName || 'there'
+              const company = lead.companyName || 'your business'
+              const message = `Hey ${firstName}! Your website for ${company} is ready for review. Take a look and let me know what you think: ${previewUrl}`
+
+              await sendSMSViaProvider({
+                to: lead.phone,
+                message,
+                leadId: lead.id,
+                sender: 'clawdbot',
+                trigger: 'approved_preview_send',
+                aiGenerated: true,
+              })
+
+              // Log the message in the database
+              await prisma.message.create({
+                data: {
+                  content: message,
+                  direction: 'OUTBOUND',
+                  channel: 'SMS',
+                  senderType: 'AI',
+                  senderName: 'clawdbot',
+                  recipient: lead.phone,
+                  leadId: lead.id,
+                  aiGenerated: true,
+                  trigger: 'approved_preview_send',
+                },
+              })
+
+              console.log(`[Approvals] Preview SMS sent to ${lead.phone} for ${lead.companyName}`)
+            } catch (smsErr) {
+              console.error('[Approvals] Failed to send preview SMS:', smsErr)
+            }
+          }
+
           await prisma.notification.create({
             data: {
               type: 'CLOSE_ENGINE',
-              title: 'Preview Approved — Sending to Client',
-              message: `Andrew approved the preview. AI will send the preview link to the client.`,
-              metadata: { leadId: approval.leadId, previewUrl: approval.metadata?.previewUrl },
+              title: 'Preview Approved & Sent to Client',
+              message: `Preview link sent to ${lead.firstName || 'client'} via SMS.`,
+              metadata: { leadId: approval.leadId, previewUrl },
             },
           })
         }

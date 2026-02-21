@@ -132,6 +132,12 @@ model Lead {
   personalization  String?      @db.Text // AI-generated first line
   siteHtml         String?      @db.Text @map("site_html")
 
+  // Onboarding form
+  formUrl          String?      @map("form_url")
+  onboardingData   Json?        @map("onboarding_data")
+  onboardingStep   Int          @default(0) @map("onboarding_step")
+  onboardingStatus String       @default("NOT_STARTED") @map("onboarding_status")
+
   // Enriched data from SerpAPI
   enrichedAddress  String?      @map("enriched_address")
   enrichedHours    Json?        @map("enriched_hours")

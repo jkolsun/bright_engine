@@ -151,14 +151,37 @@ export async function POST(request: NextRequest) {
 
     // ── Normal message flow (non-reaction) ──
 
-    // Log inbound message
+    // ── MMS: Download from Twilio → Upload to Cloudinary → Get public URLs ──
+    let publicMediaUrls = mediaUrls
+    const targetLeadForMedia = lead?.id || client?.leadId
+    if (targetLeadForMedia && mediaUrls && mediaUrls.length > 0) {
+      try {
+        const { processMediaFromTwilio } = await import('@/lib/media-processor')
+        const cloudinaryUrls: string[] = []
+        for (let i = 0; i < mediaUrls.length; i++) {
+          const contentType = mediaTypes?.[i] || 'image/jpeg'
+          const publicUrl = await processMediaFromTwilio(mediaUrls[i], contentType, targetLeadForMedia)
+          if (publicUrl) {
+            cloudinaryUrls.push(publicUrl)
+          }
+        }
+        if (cloudinaryUrls.length > 0) {
+          publicMediaUrls = cloudinaryUrls
+          console.log(`[Twilio] Processed ${cloudinaryUrls.length} MMS images via Cloudinary`)
+        }
+      } catch (err) {
+        console.error('[Twilio] Media processing failed, using original URLs:', err)
+      }
+    }
+
+    // Log inbound message (with Cloudinary URLs if processed)
     await logInboundSMSViaProvider({
       from,
       body,
       sid,
       leadId: lead?.id || client?.leadId || undefined,
       clientId: client?.id,
-      mediaUrls,
+      mediaUrls: publicMediaUrls,
       mediaTypes,
     })
 
@@ -186,12 +209,12 @@ export async function POST(request: NextRequest) {
     }
 
     // ── AI VISION: classify MMS images ──
-    if (lead && mediaUrls && mediaUrls.length > 0) {
+    if (lead && publicMediaUrls && publicMediaUrls.length > 0) {
       try {
         const { processInboundImages } = await import('@/lib/ai-vision')
         // Find the message we just logged to get its ID
         const recentMsg = sid ? await prisma.message.findUnique({ where: { twilioSid: sid }, select: { id: true } }) : null
-        await processInboundImages(lead.id, recentMsg?.id, mediaUrls)
+        await processInboundImages(lead.id, recentMsg?.id, publicMediaUrls)
       } catch (err) {
         console.error('[Twilio] AI Vision processing failed:', err)
       }
@@ -210,7 +233,7 @@ export async function POST(request: NextRequest) {
         // Route to existing Close Engine conversation
         console.log(`[Twilio] Routing inbound to Close Engine conversation ${activeConversation.id}`)
         try {
-          await processCloseEngineInbound(activeConversation.id, body, mediaUrls)
+          await processCloseEngineInbound(activeConversation.id, body, publicMediaUrls)
         } catch (err) {
           console.error('[Twilio] Close Engine processing failed:', err)
           // Don't fail the webhook
@@ -236,7 +259,7 @@ export async function POST(request: NextRequest) {
     if (client) {
       try {
         const { processPostClientInbound } = await import('@/lib/post-client-engine')
-        await processPostClientInbound(client.id, body, mediaUrls)
+        await processPostClientInbound(client.id, body, publicMediaUrls)
       } catch (err) {
         console.error('[Twilio] Post-client processing failed:', err)
       }
