@@ -37,25 +37,38 @@ export const ESCALATION_KEYWORDS = [
 // Stage-Specific Instructions
 // ============================================
 
-const STAGE_INSTRUCTIONS: Record<string, (ctx: ConversationContext) => string> = {
+const DEFAULT_QUALIFYING_FLOW: Record<string, string> = {
+  TEXT_1_OPENING: 'Hey {firstName}! Saw you checked out the preview we built for {companyName}. We can get this live for you in no time. Quick question, do you currently have a website or would this be your first one?',
+  TEXT_2_DECISION_MAKER: 'Are you the one who handles marketing decisions for {companyName}, or is there someone else I should loop in?',
+  TEXT_3_FORM_LINK: 'Perfect here\'s a quick form to fill out with your business info, logo, and photos. Takes about 5-10 minutes and we\'ll have your site built from it: {formUrl}',
+}
+
+const STAGE_INSTRUCTIONS: Record<string, (ctx: ConversationContext, qf?: Record<string, string>) => string> = {
   INITIATED: () =>
     `Send the opening message. Reference how they showed interest (see entry point). Ask if they currently have a website or if this would be their first one (Q1). Be warm and excited.`,
 
-  QUALIFYING: (ctx) => {
+  QUALIFYING: (ctx, qf) => {
     const asked = ctx.questionsAsked || []
     const collected = ctx.collectedData || {}
     const lead = ctx.lead
+    const flow = { ...DEFAULT_QUALIFYING_FLOW, ...qf }
+
+    // Resolve variables in Q2 template
+    const q2Text = flow.TEXT_2_DECISION_MAKER
+      .replace(/\{firstName\}/g, lead.firstName || '')
+      .replace(/\{companyName\}/g, lead.companyName || 'the business')
 
     // 2 qualifying questions — quick gate check, then send the form
-    // Q1: Website status (replacing vs first site — different pitch angle)
-    // Q2: Decision maker check (are we talking to the right person?)
     const queue: string[] = []
-    if (!asked.includes('Q1_WEBSITE') && !collected.hasWebsite) queue.push('Q1: "Do you currently have a website or would this be your first one?"')
-    if (!asked.includes('Q2_DECISION_MAKER') && !collected.isDecisionMaker) queue.push(`Q2: "Are you the one who handles marketing decisions for ${lead.companyName || 'the business'}, or is there someone else I should loop in?"`)
+    if (!asked.includes('Q1_WEBSITE') && !collected.hasWebsite) queue.push(`Q1: "${flow.TEXT_1_OPENING.split(/[.?!]\s/).pop()?.trim() || 'Do you currently have a website or would this be your first one?'}"`)
+    if (!asked.includes('Q2_DECISION_MAKER') && !collected.isDecisionMaker) queue.push(`Q2: "${q2Text}"`)
 
     return `You are doing a quick 2-question gate check before sending the onboarding form. The lead already saw their preview site and clicked the CTA — they're interested. Your job is NOT to re-pitch or collect business info. The form handles all of that. You're just confirming they're a real buyer.
 
 Questions still needed: ${queue.length > 0 ? queue.join(' | ') : 'Both questions answered — transition to COLLECTING_INFO now.'}
+
+EXACT TEXT for Q2 (adapt naturally but keep the meaning):
+"${q2Text}"
 
 RULES:
 - Ask ONE question at a time. Keep it casual.
@@ -67,16 +80,23 @@ RULES:
 - The goal is: get to the form as fast as possible. These questions are a gate check, not an interview.`
   },
 
-  COLLECTING_INFO: (ctx) => {
+  COLLECTING_INFO: (ctx, qf) => {
     const lead = ctx.lead
     const collected = ctx.collectedData || {}
     const asked = ctx.questionsAsked || []
+    const flow = { ...DEFAULT_QUALIFYING_FLOW, ...qf }
 
     // Always compute form URL from env (stored formUrl may have stale domain)
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'
     const formUrl = `${baseUrl}/onboard/${lead.id}`
     const onboardingStatus = (lead as any).onboardingStatus || 'NOT_STARTED'
     const formCompleted = onboardingStatus === 'COMPLETED'
+
+    // Resolve variables in form link template
+    const formLinkText = flow.TEXT_3_FORM_LINK
+      .replace(/\{firstName\}/g, lead.firstName || '')
+      .replace(/\{companyName\}/g, lead.companyName || '')
+      .replace(/\{formUrl\}/g, formUrl)
 
     // Check what high-value data is still missing
     const missing: string[] = []
@@ -105,11 +125,11 @@ RULES:
     const formLinkSent = asked.includes('FORM_LINK_SENT')
 
     if (!formLinkSent) {
-      return `Core questions done! Instead of asking ${missing.length} more questions one by one, SEND THE FORM LINK.
+      return `Core questions done! Now send the form link.
 Form URL: ${formUrl}
 
-YOUR NEXT MESSAGE MUST include the form link. Something like:
-"Got it! Here's a quick form to fill out with your logo, photos, and the rest of your business info. Takes about 2 minutes: ${formUrl}"
+YOUR NEXT MESSAGE should be close to this (adapt naturally):
+"${formLinkText}"
 
 RULES:
 - Include the FULL form URL in your message. Don't shorten or modify it.
@@ -233,7 +253,7 @@ export async function buildPreClientSystemPrompt(context: ConversationContext): 
   } else {
     const stageInstructionFn = STAGE_INSTRUCTIONS[stage]
     stageInstructions = stageInstructionFn
-      ? stageInstructionFn(context)
+      ? stageInstructionFn(context, templates?.qualifyingFlow)
       : `Unknown stage: ${stage}. Respond helpfully and set escalate: true.`
   }
 
@@ -336,7 +356,7 @@ You MUST respond with valid JSON only. No text before or after the JSON.
     "specialRequests": "anything special they mentioned"
   } or null,
   "nextStage": "STAGE_NAME" or null (only if stage should change),
-  "questionAsked": "Q1_SERVICES" | "Q2_ABOUT" | "Q3_DIFFERENTIATOR" | "Q4_SERVICE_AREA" | "Q5_YEARS" | "Q6_LOGO" | "Q7_PHOTOS" | "Q8_TESTIMONIAL" | "Q9_INDUSTRY" | "Q10_HOURS" | "DYNAMIC_1" etc. or null,
+  "questionAsked": "Q1_WEBSITE" | "Q2_DECISION_MAKER" | "FORM_LINK_SENT" | "DYNAMIC_1" etc. or null,
   "readyToBuild": true/false,
   "escalate": true/false,
   "escalateReason": "reason" or null
@@ -349,10 +369,10 @@ IMPORTANT: Extract ALL data from their messages. If they mention their years in 
 // ============================================
 
 const FIRST_MESSAGE_TEMPLATES: Record<string, string> = {
-  INSTANTLY_REPLY: `Hey {firstName}! Saw your reply about the website — excited to get {companyName} set up. Quick question: do you currently have a website or would this be your first one?`,
-  SMS_REPLY: `Hey {firstName}! Great to hear from you. Let's get {companyName}'s site built. Quick question to start: do you currently have a website or would this be your first one?`,
-  REP_CLOSE: `Hey {firstName}! Just spoke with the team — let's get your site live. Quick question: do you currently have a website or would this be your first one?`,
-  PREVIEW_CTA: `Hey {firstName}! Saw you're ready to get your site live — love it. Quick question before we build it out: do you currently have a website or would this be your first one?`,
+  INSTANTLY_REPLY: `Hey {firstName}! Saw your reply about the website — excited to get {companyName} set up. Quick question, do you currently have a website or would this be your first one?`,
+  SMS_REPLY: `Hey {firstName}! Great to hear from you. We can get {companyName}'s site live fast. Quick question, do you currently have a website or would this be your first one?`,
+  REP_CLOSE: `Hey {firstName}! Just spoke with the team — let's get your site live. Quick question, do you currently have a website for {companyName} or would this be your first one?`,
+  PREVIEW_CTA: `Hey {firstName}! Saw you checked out the preview we built for {companyName}. We can get this live for you in no time. Quick question, do you currently have a website or would this be your first one?`,
 }
 
 export async function getFirstMessageTemplate(
@@ -363,9 +383,16 @@ export async function getFirstMessageTemplate(
   const templates = await getScenarioTemplates()
   const customTemplate = templates?.firstMessages?.[entryPoint]
 
-  const template = (customTemplate?.trim())
-    ? customTemplate
-    : (FIRST_MESSAGE_TEMPLATES[entryPoint] || FIRST_MESSAGE_TEMPLATES.SMS_REPLY)
+  // Priority: custom first message > qualifying flow Text 1 (for CTA) > hardcoded defaults
+  let template: string
+  if (customTemplate?.trim()) {
+    template = customTemplate
+  } else if (templates?.qualifyingFlow?.TEXT_1_OPENING?.trim() && entryPoint === 'PREVIEW_CTA') {
+    // CTA clicks use the qualifying flow Text 1 directly since that's the canonical opener
+    template = templates.qualifyingFlow.TEXT_1_OPENING
+  } else {
+    template = FIRST_MESSAGE_TEMPLATES[entryPoint] || FIRST_MESSAGE_TEMPLATES.SMS_REPLY
+  }
 
   return template
     .replace(/\{firstName\}/g, lead.firstName)
@@ -457,7 +484,7 @@ You MUST respond with valid JSON only. No text before or after the JSON.
 let scenarioCache: { data: any; ts: number } | null = null
 const SCENARIO_CACHE_TTL = 60_000 // 1 minute
 
-async function getScenarioTemplates(): Promise<{ scenarios: Record<string, { instructions_override: string; enabled: boolean }>; firstMessages: Record<string, string> } | null> {
+async function getScenarioTemplates(): Promise<{ scenarios: Record<string, { instructions_override: string; enabled: boolean }>; firstMessages: Record<string, string>; qualifyingFlow?: Record<string, string> } | null> {
   // Simple in-memory cache to avoid hitting DB on every message
   if (scenarioCache && Date.now() - scenarioCache.ts < SCENARIO_CACHE_TTL) {
     return scenarioCache.data

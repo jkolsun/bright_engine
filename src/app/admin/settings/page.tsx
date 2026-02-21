@@ -254,6 +254,7 @@ export default function SettingsPage() {
   const [scenarioTemplates, setScenarioTemplates] = useState<Record<string, { instructions_override: string; enabled: boolean }>>({})
   const [editingScenario, setEditingScenario] = useState<string | null>(null)
   const [firstMessageTemplates, setFirstMessageTemplates] = useState<Record<string, string>>({})
+  const [qualifyingFlow, setQualifyingFlow] = useState<Record<string, string>>({})
 
   // SmartChat settings
   const [smartChat, setSmartChat] = useState({
@@ -374,6 +375,7 @@ export default function SettingsPage() {
       if (s.close_engine_scenarios && typeof s.close_engine_scenarios === 'object') {
         setScenarioTemplates(s.close_engine_scenarios.scenarios || {})
         setFirstMessageTemplates(s.close_engine_scenarios.firstMessages || {})
+        setQualifyingFlow(s.close_engine_scenarios.qualifyingFlow || {})
       }
       if (s.smart_chat && typeof s.smart_chat === 'object') {
         setSmartChat(prev => ({ ...prev, ...s.smart_chat }))
@@ -2596,18 +2598,131 @@ export default function SettingsPage() {
             </div>
           </Card>
 
+          {/* Qualifying Flow — the 3 texts before the form */}
+          <Card className="p-6">
+            <SectionHeader
+              title="Qualifying Flow"
+              description="The 3 texts the AI sends before the form link. This is the core sales sequence — the AI adapts the wording naturally but follows this structure."
+            />
+            <div className="space-y-1 mb-5">
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">1</div>
+                  <span>Opening + Q1</span>
+                </div>
+                <div className="w-6 h-px bg-gray-300" />
+                <div className="flex items-center gap-1.5">
+                  <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">2</div>
+                  <span>Decision Maker</span>
+                </div>
+                <div className="w-6 h-px bg-gray-300" />
+                <div className="flex items-center gap-1.5">
+                  <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">3</div>
+                  <span>Form Link</span>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-4">
+              {[
+                {
+                  key: 'TEXT_1_OPENING',
+                  step: 1,
+                  label: 'Opening + Website Question',
+                  desc: 'First text after lead clicks CTA. Greets them and asks Q1.',
+                  default: 'Hey {firstName}! Saw you checked out the preview we built for {companyName}. We can get this live for you in no time. Quick question, do you currently have a website or would this be your first one?',
+                  hint: 'This is the very first thing they see. Set the tone here.',
+                },
+                {
+                  key: 'TEXT_2_DECISION_MAKER',
+                  step: 2,
+                  label: 'Decision Maker Check',
+                  desc: 'After they answer Q1. Confirms we\'re talking to the right person.',
+                  default: 'Are you the one who handles marketing decisions for {companyName}, or is there someone else I should loop in?',
+                  hint: 'Filters out people who can\'t say yes.',
+                },
+                {
+                  key: 'TEXT_3_FORM_LINK',
+                  step: 3,
+                  label: 'Form Link',
+                  desc: 'After both questions answered. Sends the onboarding form.',
+                  default: 'Perfect here\'s a quick form to fill out with your business info, logo, and photos. Takes about 5-10 minutes and we\'ll have your site built from it: {formUrl}',
+                  hint: '{formUrl} is auto-replaced with the lead\'s unique form link.',
+                },
+              ].map(({ key, step, label, desc, default: defaultTemplate, hint }) => {
+                const customTemplate = qualifyingFlow[key] || ''
+
+                return (
+                  <div key={key} className="border rounded-lg overflow-hidden">
+                    <div className="p-4">
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${customTemplate ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                          {step}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-gray-900 text-sm">{label}</span>
+                            {customTemplate && <span className="text-[10px] bg-blue-50 text-blue-600 font-medium px-1.5 py-0.5 rounded">Custom</span>}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                        </div>
+                      </div>
+                      <textarea
+                        className="w-full p-3 border rounded-md text-sm resize-y min-h-[80px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                        value={customTemplate || defaultTemplate}
+                        onChange={(e) => setQualifyingFlow(prev => ({
+                          ...prev,
+                          [key]: e.target.value
+                        }))}
+                        placeholder={defaultTemplate}
+                      />
+                      <div className="flex items-center justify-between mt-1.5">
+                        <p className="text-xs text-gray-400">{hint}</p>
+                        {customTemplate && (
+                          <button
+                            onClick={() => setQualifyingFlow(prev => {
+                              const updated = { ...prev }
+                              delete updated[key]
+                              return updated
+                            })}
+                            className="text-xs text-red-500 hover:text-red-700"
+                          >
+                            Reset to default
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {step < 3 && (
+                      <div className="px-4 pb-3">
+                        <div className="flex items-center gap-2 text-[10px] text-gray-400 uppercase tracking-wider">
+                          <div className="h-px flex-1 bg-gray-200" />
+                          <span>lead responds</span>
+                          <div className="h-px flex-1 bg-gray-200" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-xs text-amber-800">
+                <strong>How it works:</strong> The AI sends these in order, one per message. If the lead answers both questions in one message, it skips ahead to the form. If they go off-script, the AI rolls with it. Variables <code className="bg-amber-100 px-1 rounded">{'{firstName}'}</code> <code className="bg-amber-100 px-1 rounded">{'{companyName}'}</code> <code className="bg-amber-100 px-1 rounded">{'{formUrl}'}</code> are auto-replaced.
+              </p>
+            </div>
+          </Card>
+
           {/* First Message Templates */}
           <Card className="p-6">
             <SectionHeader
               title="First Message Templates"
-              description="Set the tone and approach for each entry point. The AI uses these as guidelines and adapts the wording naturally to each lead."
+              description="Entry-point variants of Text 1. Each adapts the opener based on how the lead entered. The AI uses these as a starting point and adapts naturally."
             />
             <div className="space-y-4">
               {[
-                { key: 'INSTANTLY_REPLY', label: 'Email Reply', desc: 'Lead replied to an Instantly email', default: 'Hey {firstName}! Saw your reply about the website \u2014 excited to get {companyName} set up. Quick question: do you currently have a website or would this be your first one?' },
-                { key: 'SMS_REPLY', label: 'SMS Reply', desc: 'Lead replied to an SMS', default: 'Hey {firstName}! Great to hear from you. Quick question before we get {companyName}\'s site built: do you currently have a website or would this be your first one?' },
-                { key: 'REP_CLOSE', label: 'Rep Close', desc: 'Rep handed off a lead', default: 'Hey {firstName}! Just spoke with the team \u2014 let\'s get your site live. Quick question: do you currently have a website for {companyName} or would this be the first one?' },
-                { key: 'PREVIEW_CTA', label: 'Preview CTA', desc: 'Lead clicked the preview CTA', default: 'Hey {firstName}! Saw you\'re ready to get your site live \u2014 love it. Quick question: do you currently have a website or would this be your first one?' },
+                { key: 'INSTANTLY_REPLY', label: 'Email Reply', desc: 'Lead replied to an Instantly email', default: 'Hey {firstName}! Saw your reply about the website \u2014 excited to get {companyName} set up. Quick question, do you currently have a website or would this be your first one?' },
+                { key: 'SMS_REPLY', label: 'SMS Reply', desc: 'Lead replied to an SMS', default: 'Hey {firstName}! Great to hear from you. We can get {companyName}\'s site live fast. Quick question, do you currently have a website or would this be your first one?' },
+                { key: 'REP_CLOSE', label: 'Rep Close', desc: 'Rep handed off a lead', default: 'Hey {firstName}! Just spoke with the team \u2014 let\'s get your site live. Quick question, do you currently have a website for {companyName} or would this be your first one?' },
+                { key: 'PREVIEW_CTA', label: 'Preview CTA', desc: 'Lead clicked the preview CTA', default: 'Hey {firstName}! Saw you checked out the preview we built for {companyName}. We can get this live for you in no time. Quick question, do you currently have a website or would this be your first one?' },
               ].map(({ key, label, desc, default: defaultTemplate }) => {
                 const customTemplate = firstMessageTemplates[key] || ''
 
@@ -2654,6 +2769,7 @@ export default function SettingsPage() {
               onClick={() => saveSetting('close_engine_scenarios', {
                 scenarios: scenarioTemplates,
                 firstMessages: firstMessageTemplates,
+                qualifyingFlow,
               })}
               saving={savingKey === 'close_engine_scenarios'}
               saved={savedKey === 'close_engine_scenarios'}
