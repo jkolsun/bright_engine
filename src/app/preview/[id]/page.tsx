@@ -22,11 +22,13 @@ export default async function PreviewPage({ params }: { params: { id: string } }
     const bodyMatch = lead.siteHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
     const headContent = headMatch?.[1] || ''
     const bodyContent = bodyMatch?.[1] || lead.siteHtml
-    // Inject tracking script into the custom HTML
+    // Tracking script
     const trackScript = `<script>fetch('/api/preview/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({previewId:'${lead.previewId || params.id}',event:'page_view'})})</script>`
+    // Kill the DisclaimerBanner overlay — CSS hides it instantly, script removes it from DOM
+    const killOverlay = `<style>.fixed.inset-0[class*="z-[9999"]{display:none!important}</style><script>document.querySelectorAll('div').forEach(function(e){if(e.className&&e.className.indexOf('z-[9999]')!==-1)e.remove()})</script>`
     return (
       <html lang="en">
-        <head dangerouslySetInnerHTML={{ __html: headContent }} />
+        <head dangerouslySetInnerHTML={{ __html: headContent + killOverlay }} />
         <body dangerouslySetInnerHTML={{ __html: bodyContent + trackScript }} />
       </html>
     )

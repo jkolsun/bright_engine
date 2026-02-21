@@ -40,7 +40,13 @@ export async function POST(
 
     // Return cached if already exists
     if (lead.siteHtml) {
-      return NextResponse.json({ html: lead.siteHtml, cached: true })
+      // Strip DisclaimerBanner if it got baked in — it's stuck without JS click handlers
+      const disclaimerRe = /<div[^>]*z-\[9999\][^>]*>[\s\S]*?View My Preview[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/g
+      const cleanHtml = lead.siteHtml.replace(disclaimerRe, '')
+      if (cleanHtml !== lead.siteHtml) {
+        await prisma.lead.update({ where: { id }, data: { siteHtml: cleanHtml } })
+      }
+      return NextResponse.json({ html: cleanHtml, cached: true })
     }
 
     // Check if personalization exists — without it the preview will be bare
@@ -126,6 +132,12 @@ export async function POST(
     html = html.replace(/<script[^>]*id="__NEXT_DATA__"[^>]*>[\s\S]*?<\/script>/g, '')
     html = html.replace(/<script[^>]*>\s*self\.__next[\s\S]*?<\/script>/g, '')
     html = html.replace(/<link[^>]*href="\/_next\/[^"]*"[^>]*\/?>/g, '')
+
+    // Strip DisclaimerBanner overlay — becomes permanently stuck without JS click handlers
+    html = html.replace(/<div[^>]*z-\[9999\][^>]*>[\s\S]*?View My Preview[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/g, '')
+    // Failsafe: inject CSS + script to kill any z-[9999] overlay the regex missed
+    const killOverlay = '<style>.fixed.inset-0[class*="z-[9999"]{display:none!important}</style><script>document.querySelectorAll("div").forEach(function(e){if(e.className&&e.className.indexOf("z-[9999]")!==-1)e.remove()})</script>'
+    html = html.replace(/<\/head>/i, `${killOverlay}\n</head>`)
 
     // Strip the CTA banner — the approved/edited site shouldn't show "Get This Site Live"
     html = html.replace(/<div[^>]*class="[^"]*fixed bottom-0[^"]*bg-\[#0D7377\][^"]*"[^>]*>[\s\S]*?<\/div>\s*<\/div>/g, '')

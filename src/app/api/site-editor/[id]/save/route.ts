@@ -37,13 +37,24 @@ export async function GET(
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     }
 
+    // Strip DisclaimerBanner if it got baked into cached HTML (stuck without JS)
+    let cleanHtml = lead.siteHtml || null
+    if (cleanHtml) {
+      const disclaimerRe = /<div[^>]*z-\[9999\][^>]*>[\s\S]*?View My Preview[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/g
+      const stripped = cleanHtml.replace(disclaimerRe, '')
+      if (stripped !== cleanHtml) {
+        cleanHtml = stripped
+        await prisma.lead.update({ where: { id }, data: { siteHtml: cleanHtml } })
+      }
+    }
+
     return NextResponse.json({
       leadId: lead.id,
       companyName: lead.companyName,
       buildStep: lead.buildStep,
       previewId: lead.previewId,
-      hasHtml: !!lead.siteHtml,
-      html: lead.siteHtml || null,
+      hasHtml: !!cleanHtml,
+      html: cleanHtml,
     })
   } catch (error) {
     console.error('[Site Editor Load] Error:', error)
