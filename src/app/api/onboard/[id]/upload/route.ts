@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { uploadToCloudinary } from '@/lib/media-processor'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30 // Allow up to 30s for large file uploads to Cloudinary
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 

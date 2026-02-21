@@ -18,7 +18,7 @@ export async function POST(
   try {
     const { id } = await context.params
 
-    // Fetch the lead with current onboardingData and qualificationData
+    // Fetch the lead with current onboardingData, qualificationData, and existing photos
     const lead = await prisma.lead.findUnique({
       where: { id },
       select: {
@@ -28,6 +28,7 @@ export async function POST(
         state: true,
         onboardingData: true,
         qualificationData: true,
+        enrichedPhotos: true,
       },
     })
 
@@ -50,7 +51,15 @@ export async function POST(
     // Map logoUrl → logo, handle both field names
     if (formData.logoUrl !== undefined) directUpdates.logo = formData.logoUrl
     else if (formData.logo !== undefined) directUpdates.logo = formData.logo
-    if (formData.photos !== undefined) directUpdates.photos = formData.photos
+    // Sync photos to BOTH photos and enrichedPhotos — all templates read enrichedPhotos
+    if (formData.photos !== undefined) {
+      const formPhotos = Array.isArray(formData.photos) ? formData.photos : []
+      const existingEnriched = Array.isArray(lead.enrichedPhotos) ? (lead.enrichedPhotos as string[]) : []
+      // Merge: existing enriched photos + new form photos (deduplicated)
+      const allPhotos = [...new Set([...existingEnriched, ...formPhotos])]
+      directUpdates.photos = formPhotos
+      directUpdates.enrichedPhotos = allPhotos
+    }
     if (formData.hours !== undefined) directUpdates.hours = formData.hours
 
     // Merge qualification-related fields into existing qualificationData
