@@ -156,7 +156,7 @@ model Lead {
   qualificationData Json?    @map("qualification_data") // Structured data collected by Claude
 
   // Build pipeline tracking
-  buildStep          String?   @map("build_step") // ENRICHMENT, PREVIEW, PERSONALIZATION, SCRIPTS, DISTRIBUTION
+  buildStep          String?   @map("build_step") // Worker: ENRICHMENT, PREVIEW, PERSONALIZATION, SCRIPTS, DISTRIBUTION, COMPLETE | Site: QA_REVIEW, EDITING, QA_APPROVED, CLIENT_REVIEW, CLIENT_APPROVED, LAUNCHING, LIVE
   buildStartedAt     DateTime? @map("build_started_at")
   buildCompletedAt   DateTime? @map("build_completed_at")
   buildEnrichmentMs  Int?      @map("build_enrichment_ms")
@@ -165,6 +165,8 @@ model Lead {
   buildScriptsMs     Int?      @map("build_scripts_ms")
   buildDistributionMs Int?     @map("build_distribution_ms")
   buildError         String?   @map("build_error")
+  buildReadinessScore Int?     @map("build_readiness_score")
+  buildNotes         String?   @db.Text @map("build_notes")
 
   // Instantly integration fields
   instantlyStatus  String?      @map("instantly_status") // QUEUED, IN_SEQUENCE, COMPLETED, REPLIED, BOUNCED, UNSUBSCRIBED, PAUSED
@@ -190,6 +192,7 @@ model Lead {
   calls              Call[]
   closeConversation  CloseEngineConversation?
   pendingActions     PendingAction[]
+  conversationOutcomes ConversationOutcome[]
 
   @@index([status])
   @@index([assignedToId])
@@ -302,6 +305,10 @@ model Client {
 
   // Channel routing
   channelPreference    String?       @map("channel_preference") // SMS, EMAIL, or null (no preference)
+
+  // Domain & launch
+  customDomain         String?       @unique @map("custom_domain")
+  vercelDomainId       String?       @map("vercel_domain_id")
 
   // Lifecycle
   siteLiveDate         DateTime?     @map("site_live_date")
@@ -1365,4 +1372,35 @@ model Approval {
   @@index([leadId])
   @@index([clientId])
   @@map("approvals")
+}
+
+// ============================================
+// CONVERSATION OUTCOME MODEL (AI Learning)
+// ============================================
+model ConversationOutcome {
+  id                  String    @id @default(cuid())
+  leadId              String    @map("lead_id")
+  finalStage          String    @map("final_stage") // PAID, STALLED, LOST
+  totalMessages       Int       @map("total_messages")
+  messagesPerStage    Json?     @map("messages_per_stage") // {qualifying: 4, collecting_info: 6, ...}
+  timeToConvert       Int?      @map("time_to_convert") // minutes, null if didn't convert
+  stalledAtStage      String?   @map("stalled_at_stage")
+  stalledAfterMessage String?   @db.Text @map("stalled_after_message")
+  lastLeadMessage     String?   @db.Text @map("last_lead_message")
+  effectivePatterns   Json?     @map("effective_patterns") // [{stage, aiMessage, leadResponse, responseTimeSeconds}]
+  ineffectivePatterns Json?     @map("ineffective_patterns") // [{stage, aiMessage, silenceHours}]
+  industry            String
+  objectionType       String?   @map("objection_type") // price, timing, trust, partner, competition, none
+  objectionResolved   String?   @map("objection_resolved") // overcame, lost, deferred
+  reactivated         Boolean   @default(false)
+  reactivationTrigger String?   @map("reactivation_trigger")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([industry])
+  @@index([finalStage])
+  @@index([createdAt])
+  @@index([leadId])
+  @@map("conversation_outcomes")
 }

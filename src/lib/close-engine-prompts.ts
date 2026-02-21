@@ -72,15 +72,19 @@ Maximum 3 more questions. When you have enough to build a good site, set readyTo
     `The site is being built. Keep the lead engaged. Set expectations: "Building your site now — should have a preview ready within a few hours!"
 Don't ask any more questions. If they text, respond warmly and reassure them.`,
 
-  PREVIEW_SENT: () =>
-    `The preview has been sent. Wait for their feedback.
+  PREVIEW_SENT: (ctx) => {
+    const previewUrl = ctx.previewUrl || `Preview link pending`
+    return `The site preview is ready to share. Send the preview link to the lead and ask what they think.
+Preview URL: ${previewUrl}
 If they say it looks good/they love it/they approve → prepare to send payment link (set nextStage to PAYMENT_SENT).
-If they request changes → acknowledge and set nextStage to EDIT_LOOP.`,
+If they request changes → acknowledge, say "Got it, we'll update that and send you a new preview shortly", and set nextStage to EDIT_LOOP.
+Distinguish between change requests ("change the headline", "different photo") and questions ("how long to go live?"). Answer questions directly.`
+  },
 
   EDIT_LOOP: (ctx) => {
     const editRounds = ctx.conversation.editRounds || 0
-    return `The lead wants changes. Collect their specific feedback. Acknowledge each request. Let them know changes are being made.
-When they confirm updated version looks good → set nextStage to PAYMENT_SENT.
+    return `The lead wants changes. Collect their specific feedback. Acknowledge each request. Tell them you'll get it updated.
+When they confirm the updated version looks good → set nextStage to PAYMENT_SENT.
 Current edit round: ${editRounds}/3.`
   },
 
@@ -175,6 +179,14 @@ export async function buildPreClientSystemPrompt(context: ConversationContext): 
     .replace(/\{\{siteBuildFee\}\}/g, `$${pricingConfig.siteBuildFee}`)
     .replace(/\{\{monthlyHosting\}\}/g, `$${pricingConfig.monthlyHosting}`)
 
+  // Load AI learning context from conversation outcomes
+  let learningContext = ''
+  try {
+    const { getLearningContext } = await import('./conversation-outcomes')
+    const ctx = await getLearningContext(lead.industry || 'GENERAL', stage)
+    if (ctx) learningContext = `\n${ctx}\n`
+  } catch { /* learning system not critical */ }
+
   return `[IDENTITY]
 You are a sales team member for Bright Automations, a company that builds professional websites for local businesses. You are communicating via SMS text message. Your tone is enthusiastic, professional, and friendly — like a helpful business consultant, not a pushy salesperson.
 
@@ -237,7 +249,7 @@ ${formatCollectedData(collectedData)}
 
 Questions Already Asked:
 ${formatQuestionsAsked(questionsAsked)}
-
+${learningContext}
 [CONVERSATION HISTORY]
 ${formatMessages(messages)}
 

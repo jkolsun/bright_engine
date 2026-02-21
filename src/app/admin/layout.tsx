@@ -16,7 +16,7 @@ import {
   Mail,
   Radio,
   ShieldCheck,
-  Zap,
+  Hammer,
 } from 'lucide-react'
 import { BriefingModal } from '@/components/admin/BriefingModal'
 
@@ -30,20 +30,28 @@ export default function AdminLayout({
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [pendingApprovals, setPendingApprovals] = useState(0)
+  const [buildQueueBadge, setBuildQueueBadge] = useState(0)
 
-  // Poll for pending approvals count
+  // Poll for pending approvals and build queue counts
   useEffect(() => {
-    const fetchCount = async () => {
+    const fetchCounts = async () => {
       try {
-        const res = await fetch('/api/admin/approvals?status=PENDING&limit=1')
-        if (res.ok) {
-          const data = await res.json()
+        const [approvalsRes, buildRes] = await Promise.all([
+          fetch('/api/admin/approvals?status=PENDING&limit=1'),
+          fetch('/api/build-queue'),
+        ])
+        if (approvalsRes.ok) {
+          const data = await approvalsRes.json()
           setPendingApprovals(data.pendingCount || 0)
+        }
+        if (buildRes.ok) {
+          const data = await buildRes.json()
+          setBuildQueueBadge(data.badgeCount || 0)
         }
       } catch { /* silent */ }
     }
-    fetchCount()
-    const interval = setInterval(fetchCount, 10_000)
+    fetchCounts()
+    const interval = setInterval(fetchCounts, 10_000)
     return () => clearInterval(interval)
   }, [])
 
@@ -100,7 +108,7 @@ export default function AdminLayout({
           <NavLink href="/admin/approvals" icon={<ShieldCheck size={20} />} badge={pendingApprovals}>
             Approvals
           </NavLink>
-          <NavLink href="/admin/build-queue" icon={<Zap size={20} />}>
+          <NavLink href="/admin/build-queue" icon={<Hammer size={20} />} badge={buildQueueBadge}>
             Build Queue
           </NavLink>
           <NavLink href="/admin/outbound" icon={<Target size={20} />}>

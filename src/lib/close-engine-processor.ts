@@ -398,6 +398,10 @@ export async function processCloseEngineInbound(
       where: { id: lead.id },
       data: leadUpdate,
     })
+
+    // Re-check readiness score after new data is stored
+    const { checkAndTransitionToQA } = await import('./build-readiness')
+    await checkAndTransitionToQA(lead.id).catch(() => {})
   }
 
   // 4. Handle stage transition (skip PAYMENT_SENT — sendPaymentLink handles that)
@@ -405,21 +409,28 @@ export async function processCloseEngineInbound(
     await transitionStage(conversationId, claudeResponse.nextStage)
   }
 
-  // 5. Handle readyToBuild
+  // 5. Handle readyToBuild — run readiness scoring and auto-transition to QA if ready
   if (claudeResponse.readyToBuild) {
     await transitionStage(conversationId, CONVERSATION_STAGES.BUILDING)
-    await prisma.notification.create({
-      data: {
-        type: 'CLOSE_ENGINE',
-        title: 'Site Build Ready',
-        message: `${lead.companyName} qualification complete. Ready to build site.`,
-        metadata: { conversationId, leadId: lead.id } as Prisma.InputJsonValue,
-      },
-    })
     await prisma.lead.update({
       where: { id: lead.id },
       data: { status: 'BUILDING' },
     })
+
+    // Run readiness check — if score >= 70, auto-transitions to QA_REVIEW
+    const { checkAndTransitionToQA } = await import('./build-readiness')
+    const readiness = await checkAndTransitionToQA(lead.id)
+    if (!readiness || readiness.score < 70) {
+      // Score too low for auto-QA, still notify that build is ready
+      await prisma.notification.create({
+        data: {
+          type: 'CLOSE_ENGINE',
+          title: 'Site Build Ready',
+          message: `${lead.companyName} qualification complete. Readiness: ${readiness?.score || 0}/100.`,
+          metadata: { conversationId, leadId: lead.id, score: readiness?.score } as Prisma.InputJsonValue,
+        },
+      })
+    }
   }
 
   // 6. Handle escalation from Claude

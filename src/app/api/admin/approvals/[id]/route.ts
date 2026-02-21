@@ -50,6 +50,14 @@ export async function PUT(
       await executeApprovedAction(updated)
     }
 
+    // If denied and it's a SEND_PREVIEW, send lead back to editing
+    if (action === 'deny' && updated.gate === 'SEND_PREVIEW' && updated.leadId) {
+      await prisma.lead.update({
+        where: { id: updated.leadId },
+        data: { buildStep: 'EDITING' },
+      })
+    }
+
     return NextResponse.json({ approval: updated })
   } catch (error) {
     console.error('Error updating approval:', error)
@@ -116,6 +124,27 @@ async function executeApprovedAction(approval: any) {
           await prisma.client.update({
             where: { id: approval.clientId },
             data: { hostingStatus: 'CANCELLED', closedDate: new Date() },
+          })
+        }
+        break
+      }
+      case 'SEND_PREVIEW': {
+        // Andrew approved the site preview — move lead to CLIENT_REVIEW
+        if (approval.leadId) {
+          await prisma.lead.update({
+            where: { id: approval.leadId },
+            data: {
+              buildStep: 'CLIENT_REVIEW',
+              status: 'CLIENT_REVIEW',
+            },
+          })
+          await prisma.notification.create({
+            data: {
+              type: 'CLOSE_ENGINE',
+              title: 'Preview Approved — Sending to Client',
+              message: `Andrew approved the preview. AI will send the preview link to the client.`,
+              metadata: { leadId: approval.leadId, previewUrl: approval.metadata?.previewUrl },
+            },
           })
         }
         break
