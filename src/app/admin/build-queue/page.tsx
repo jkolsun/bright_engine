@@ -194,6 +194,7 @@ function LaunchPanel({ leadId, onDone }: { leadId: string; onDone: () => void })
 function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh: () => void; onOpenEditor: (lead: any) => void }) {
   const [expanded, setExpanded] = useState<'edit' | 'launch' | null>(null)
   const [approving, setApproving] = useState(false)
+  const [publishing, setPublishing] = useState(false)
 
   const step = lead.buildStep || 'QA_REVIEW'
   const config = SITE_STEP_CONFIG[step] || SITE_STEP_CONFIG.QA_REVIEW
@@ -215,10 +216,27 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
     }
   }
 
+  const handlePublish = async () => {
+    setPublishing(true)
+    try {
+      const res = await fetch(`/api/build-queue/${lead.id}/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      if (res.ok) onRefresh()
+    } catch (err) {
+      console.error('Publish failed:', err)
+    } finally {
+      setPublishing(false)
+    }
+  }
+
   const previewUrl = lead.previewUrl || (lead.previewId ? `/preview/${lead.previewId}` : null)
   const showApprove = ['QA_REVIEW', 'EDITING'].includes(step)
   const showEdit = ['QA_REVIEW', 'EDITING'].includes(step)
   const showLaunch = step === 'CLIENT_APPROVED'
+  const showPublish = step === 'CLIENT_APPROVED'
 
   return (
     <Card className="p-4">
@@ -306,6 +324,16 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
               <Rocket size={14} />
               Launch
               {expanded === 'launch' ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+          )}
+          {showPublish && (
+            <button
+              onClick={handlePublish}
+              disabled={publishing}
+              className="px-3 py-1.5 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {publishing ? <Loader2 size={14} className="animate-spin" /> : <Globe size={14} />}
+              Publish
             </button>
           )}
         </div>

@@ -50,12 +50,19 @@ export async function PUT(
       await executeApprovedAction(updated)
     }
 
-    // If denied and it's a SEND_PREVIEW, send lead back to editing
-    if (action === 'deny' && updated.gate === 'SEND_PREVIEW' && updated.leadId) {
-      await prisma.lead.update({
-        where: { id: updated.leadId },
-        data: { buildStep: 'EDITING' },
-      })
+    // If denied, revert lead to previous stage
+    if (action === 'deny' && updated.leadId) {
+      if (updated.gate === 'SEND_PREVIEW') {
+        await prisma.lead.update({
+          where: { id: updated.leadId },
+          data: { buildStep: 'EDITING' },
+        })
+      } else if (updated.gate === 'SITE_PUBLISH') {
+        await prisma.lead.update({
+          where: { id: updated.leadId },
+          data: { buildStep: 'CLIENT_APPROVED' },
+        })
+      }
     }
 
     return NextResponse.json({ approval: updated })
@@ -110,6 +117,13 @@ async function executeApprovedAction(approval: any) {
           await prisma.client.update({
             where: { id: approval.clientId },
             data: { hostingStatus: 'ACTIVE', siteLiveDate: new Date() },
+          })
+        }
+        // Move lead to LIVE
+        if (approval.leadId) {
+          await prisma.lead.update({
+            where: { id: approval.leadId },
+            data: { buildStep: 'LIVE' },
           })
         }
         break
