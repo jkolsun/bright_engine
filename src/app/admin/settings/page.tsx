@@ -24,7 +24,7 @@ type ServiceStatus = {
 
 type SettingsData = Record<string, any>
 
-type TabId = 'company' | 'sequences' | 'personalization' | 'targets' | 'team' | 'api' | 'diagnostics' | 'ai_templates' | 'smart_chat'
+type TabId = 'company' | 'messages_ai' | 'sequences' | 'personalization' | 'targets' | 'team' | 'api' | 'diagnostics'
 
 // ── Helper Components ──────────────────────────────────────────
 
@@ -171,6 +171,68 @@ const DEFAULT_TARGETS = {
   monthlyRevenueTarget: 50000,
 }
 
+// Messages & AI defaults
+const DEFAULT_SYSTEM_MSGS: Record<string, { text: string; enabled: boolean }> = {
+  form_thank_you: { text: "Got it, thank you {firstName}! Our team is reviewing everything now and we'll get started on your site. You'll get a text when it's ready for review.", enabled: true },
+  preview_sent: { text: "Hey {firstName}! Your website for {companyName} is ready for review. Take a look and let me know what you think: {previewUrl}", enabled: true },
+  payment_link: { text: "Here's your payment link to go live: {paymentLink}\n\n{firstMonthTotal} gets your site built and launched, plus monthly hosting at {monthlyHosting}/month. You can cancel anytime.\n\nOnce you pay, we'll have your site live within 48 hours!", enabled: true },
+  welcome_after_payment: { text: "Welcome aboard, {firstName}! Your site is going live. You'll get a text from us when it's up. Quick win: make sure your Google Business Profile is claimed — that alone can double your local visibility.", enabled: true },
+  site_live: { text: "Hey {firstName}! Your site for {companyName} is officially live at {siteUrl}. Check it out and let us know if you want any changes!", enabled: true },
+}
+const SYS_MSG_META = [
+  { key: 'form_thank_you', label: 'Form Thank You', desc: 'Sent immediately after lead completes the onboarding form.', vars: ['firstName'] },
+  { key: 'preview_sent', label: 'Preview Sent', desc: 'Sent when admin approves sending the site preview.', vars: ['firstName', 'companyName', 'previewUrl'] },
+  { key: 'payment_link', label: 'Payment Link Sent', desc: 'Sent with the Stripe checkout link when admin approves payment.', vars: ['firstName', 'companyName', 'paymentLink', 'firstMonthTotal', 'monthlyHosting'] },
+  { key: 'welcome_after_payment', label: 'Welcome After Payment', desc: 'Sent ~2.5 min after Stripe payment succeeds.', vars: ['firstName'] },
+  { key: 'site_live', label: 'Site Live Notification', desc: 'Sent after domain is set up and site goes live.', vars: ['firstName', 'companyName', 'siteUrl'] },
+]
+const DEFAULT_AUTO_MSGS: Record<string, { text: string; enabled: boolean; delayHours?: number }> = {
+  form_nudge: { text: "Hey {firstName}, just following up — did you get a chance to fill out the form? Here's the link again: {formUrl}", enabled: true, delayHours: 24 },
+  preview_followup: { text: "Hey {firstName}, wanted to check in — did you get a chance to look at the preview? Let me know what you think: {previewUrl}", enabled: true, delayHours: 24 },
+  payment_followup_4h: { text: "Hey {firstName}, just checking — any questions about getting your site live?", enabled: true, delayHours: 4 },
+  payment_followup_24h: { text: "Hey {firstName}, just wanted to make sure you got the payment link. Any questions about getting your site live?", enabled: true, delayHours: 24 },
+  payment_followup_48h: { text: "Hey {firstName}, your preview is looking great. Payment link is ready when you are!", enabled: true, delayHours: 48 },
+  payment_followup_72h: { text: "Last check-in — want me to hold your spot or should I free it up for someone else, {firstName}?", enabled: true, delayHours: 72 },
+  touchpoint_day_3: { text: "Hey {firstName}! Quick tip — make sure your Google Business Profile is claimed and up to date. That alone can double your local visibility for {companyName}.", enabled: true, delayHours: 72 },
+  touchpoint_day_7: { text: "Hey {firstName}! Your {companyName} site has been live for a week now. Everything looking good? Reply if you need anything.", enabled: true, delayHours: 168 },
+  touchpoint_day_14: { text: "Hey {firstName}, quick 2-week check-in on {companyName}'s site. How's it working for you so far? Any changes you'd like?", enabled: true, delayHours: 336 },
+  touchpoint_day_21: { text: "Hey {firstName}, just wanted to see how things are going with {companyName}'s site. Getting any leads from it?", enabled: true, delayHours: 504 },
+  touchpoint_day_28: { text: "Hey {firstName}! It's been a month since {companyName} went live. Love to hear how it's going — and I have some ideas that could help you get even more out of it.", enabled: true, delayHours: 672 },
+  winback_day_7: { text: 'Your hosting was cancelled. {companyName}\'s site goes offline in 7 days. Reply "keep it" to reactivate.', enabled: true, delayHours: 168 },
+  winback_day_14: { text: "Hey, just wanted to let you know {companyName}'s site will be taken down soon. If you change your mind, just reply and we'll keep it live.", enabled: true, delayHours: 336 },
+  winback_day_30: { text: "Last chance — {companyName}'s site data will be deleted in 48 hours. Reply to save it.", enabled: true, delayHours: 720 },
+}
+const AUTO_MSG_META = [
+  { key: 'form_nudge', label: 'Form Nudge', desc: "Sent if client hasn't filled out form.", vars: ['firstName', 'formUrl'], cat: 'pre_client' as const },
+  { key: 'preview_followup', label: 'Preview Follow-up', desc: "Sent if client hasn't responded after seeing preview.", vars: ['firstName', 'previewUrl'], cat: 'pre_client' as const },
+  { key: 'payment_followup_4h', label: 'Payment Follow-up (4h)', desc: '4 hours after payment link sent.', vars: ['firstName'], cat: 'pre_client' as const },
+  { key: 'payment_followup_24h', label: 'Payment Follow-up (24h)', desc: '24 hours after payment link sent.', vars: ['firstName'], cat: 'pre_client' as const },
+  { key: 'payment_followup_48h', label: 'Payment Follow-up (48h)', desc: '48 hours after payment link sent.', vars: ['firstName'], cat: 'pre_client' as const },
+  { key: 'payment_followup_72h', label: 'Payment Follow-up (72h)', desc: 'Final follow-up 72 hours after payment link sent.', vars: ['firstName'], cat: 'pre_client' as const },
+  { key: 'touchpoint_day_3', label: 'Day 3 — GBP Reminder', desc: 'Google Business Profile optimization tip.', vars: ['firstName', 'companyName'], cat: 'post_client' as const },
+  { key: 'touchpoint_day_7', label: 'Day 7 — First Week Stats', desc: 'First week check-in.', vars: ['firstName', 'companyName'], cat: 'post_client' as const },
+  { key: 'touchpoint_day_14', label: 'Day 14 — Two Week Check-in', desc: 'Two week check-in.', vars: ['firstName', 'companyName'], cat: 'post_client' as const },
+  { key: 'touchpoint_day_21', label: 'Day 21 — Lead Check', desc: "Check if they're getting leads.", vars: ['firstName', 'companyName'], cat: 'post_client' as const },
+  { key: 'touchpoint_day_28', label: 'Day 28 — Month Review', desc: 'Andrew takes over for upsell conversation.', vars: ['firstName', 'companyName'], cat: 'post_client' as const },
+  { key: 'winback_day_7', label: 'Win-Back Day 7', desc: '7 days after hosting cancellation.', vars: ['companyName'], cat: 'winback' as const },
+  { key: 'winback_day_14', label: 'Win-Back Day 14', desc: '14 days after hosting cancellation.', vars: ['companyName'], cat: 'winback' as const },
+  { key: 'winback_day_30', label: 'Win-Back Day 30', desc: 'Final notice 30 days after cancellation.', vars: ['companyName'], cat: 'winback' as const },
+]
+const DEFAULT_AI_CONTROLS = {
+  globalEnabled: true,
+  preClientEnabled: true,
+  postClientEnabled: true,
+  delayMin: 15,
+  delayMax: 45,
+  humanizingPrompt: '',
+}
+const DEFAULT_ONBOARDING_FLOW = {
+  welcome: "Welcome aboard! Let's get {companyName} live.",
+  domainQuestion: "Do you already have a domain you'd like to use, or would you like us to help pick one?",
+  gbpPrompt: "Do you have a Google Business Profile? If so, we can connect it to your site for better local visibility.",
+  stageTemplate: '',
+}
+
 const INDUSTRY_MAP: Record<string, string> = {
   RESTORATION: 'restoration', WATER_DAMAGE: 'water damage restoration',
   ROOFING: 'roofing', PLUMBING: 'plumbing', HVAC: 'HVAC',
@@ -264,6 +326,18 @@ export default function SettingsPage() {
     formBaseUrl: '',
   })
   const [smartChatLoaded, setSmartChatLoaded] = useState(false)
+
+  // Messages & AI sub-tab navigation
+  const [messagesAiTab, setMessagesAiTab] = useState<'ai_conversations' | 'automated_messages'>('ai_conversations')
+  const [preAqPostAq, setPreAqPostAq] = useState<'pre_aq' | 'post_aq'>('pre_aq')
+  // AI Controls
+  const [aiControls, setAiControls] = useState(DEFAULT_AI_CONTROLS)
+  // Onboarding flow (Post-AQ)
+  const [onboardingFlow, setOnboardingFlow] = useState(DEFAULT_ONBOARDING_FLOW)
+  // System messages (event-triggered)
+  const [systemMessages, setSystemMessages] = useState(DEFAULT_SYSTEM_MSGS)
+  // Automated messages (scheduled)
+  const [automatedMessages, setAutomatedMessages] = useState(DEFAULT_AUTO_MSGS)
 
   const [newProduct, setNewProduct] = useState({
     name: '', price: '', recurring: true, isCore: false,
@@ -381,6 +455,34 @@ export default function SettingsPage() {
       if (s.smart_chat && typeof s.smart_chat === 'object') {
         setSmartChat(prev => ({ ...prev, ...s.smart_chat }))
         setSmartChatLoaded(true)
+      }
+      if (s.system_messages && typeof s.system_messages === 'object') {
+        setSystemMessages(prev => {
+          const merged = { ...prev }
+          for (const key of Object.keys(prev)) {
+            if (s.system_messages[key] && typeof s.system_messages[key] === 'object') {
+              merged[key] = { ...prev[key], ...s.system_messages[key] }
+            }
+          }
+          return merged
+        })
+      }
+      if (s.automated_messages && typeof s.automated_messages === 'object') {
+        setAutomatedMessages(prev => {
+          const merged = { ...prev }
+          for (const key of Object.keys(prev)) {
+            if (s.automated_messages[key] && typeof s.automated_messages[key] === 'object') {
+              merged[key] = { ...prev[key], ...s.automated_messages[key] }
+            }
+          }
+          return merged
+        })
+      }
+      if (s.ai_controls && typeof s.ai_controls === 'object') {
+        setAiControls(prev => ({ ...prev, ...s.ai_controls }))
+      }
+      if (s.onboarding_flow && typeof s.onboarding_flow === 'object') {
+        setOnboardingFlow(prev => ({ ...prev, ...s.onboarding_flow }))
       }
 
       setSettingsLoaded(true)
@@ -817,14 +919,13 @@ export default function SettingsPage() {
   // ── Tab config ─────────────────────────────────────────────
   const tabs = [
     { id: 'company' as TabId, label: 'Company', icon: <Building size={16} /> },
+    { id: 'messages_ai' as TabId, label: 'Messages & AI', icon: <MessageSquare size={16} /> },
     { id: 'sequences' as TabId, label: 'Sequences', icon: <Zap size={16} /> },
     { id: 'personalization' as TabId, label: 'Personalization', icon: <Brain size={16} /> },
     { id: 'targets' as TabId, label: 'Targets', icon: <BarChart3 size={16} /> },
     { id: 'team' as TabId, label: 'Team', icon: <Users size={16} /> },
     { id: 'api' as TabId, label: 'API Keys', icon: <Key size={16} /> },
     { id: 'diagnostics' as TabId, label: 'Diagnostics', icon: <Activity size={16} /> },
-    { id: 'ai_templates' as TabId, label: 'AI Templates', icon: <Sparkles size={16} /> },
-    { id: 'smart_chat' as TabId, label: 'SmartChat', icon: <MessageSquare size={16} /> },
   ]
 
   const connectedCount = services?.filter(s => s.connected === true).length ?? 0
@@ -2432,368 +2533,613 @@ export default function SettingsPage() {
         <DiagnosticsPanel />
       )}
 
-      {activeTab === 'smart_chat' && (
+      {activeTab === 'messages_ai' && (
         <div className="space-y-6">
-          <Card className="p-6">
-            <SectionHeader
-              title="SmartChat Settings"
-              description="Control how the AI handles rapid messages, conversation endings, and qualifying questions."
-            />
-
-            <div className="space-y-6">
-              {/* Message Batch Window */}
-              <div>
-                <FieldLabel>Message Batch Window</FieldLabel>
-                <p className="text-xs text-gray-500 mb-2">
-                  When a client sends multiple texts quickly, the AI waits this long for more messages before responding. Set to 0 to disable batching.
-                </p>
-                <div className="flex items-center gap-3">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={30}
-                    step={1}
-                    className="h-9 w-24 text-sm"
-                    value={smartChat.batchWindowMs / 1000}
-                    onChange={(e) => setSmartChat(prev => ({ ...prev, batchWindowMs: Math.round(parseFloat(e.target.value || '0') * 1000) }))}
-                  />
-                  <span className="text-sm text-gray-500">seconds</span>
-                  <span className="text-xs text-gray-400 ml-2">
-                    {smartChat.batchWindowMs === 0 ? 'Disabled' : smartChat.batchWindowMs <= 5000 ? 'Fast' : smartChat.batchWindowMs <= 10000 ? 'Balanced' : 'Patient'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Conversation-Ender Detection */}
-              <div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <FieldLabel>Conversation-Ender Detection</FieldLabel>
-                    <p className="text-xs text-gray-500">
-                      When enabled, the AI won&apos;t respond to messages like &quot;ok&quot;, &quot;thanks&quot;, or emoji-only texts. Keeps conversations natural.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setSmartChat(prev => ({ ...prev, conversationEnderEnabled: !prev.conversationEnderEnabled }))}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${smartChat.conversationEnderEnabled ? 'bg-blue-600' : 'bg-gray-300'}`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${smartChat.conversationEnderEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </button>
-                </div>
-                {smartChat.conversationEnderEnabled && (
-                  <div className="mt-2 p-3 bg-gray-50 rounded-lg text-xs text-gray-600 space-y-1">
-                    <p><strong>Won&apos;t respond to:</strong> ok, thanks, cool, sounds good, got it, bye, emoji-only</p>
-                    <p><strong>Will still respond if:</strong> has a question mark, longer than 4 words, or contains a request</p>
-                    <p><strong>Example:</strong> &quot;ok&quot; = no response, but &quot;ok can you also add gutters&quot; = responds</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Form Base URL */}
-              <div>
-                <FieldLabel>Form Base URL</FieldLabel>
-                <p className="text-xs text-gray-500 mb-2">
-                  The base URL for the onboarding form the AI sends to leads. Leave blank to use the default ({process.env.NEXT_PUBLIC_APP_URL || 'preview.brightautomations.org'}). Change this for white-label domains.
-                </p>
-                <Input
-                  type="url"
-                  className="h-9 w-full max-w-md text-sm"
-                  placeholder={process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'}
-                  value={smartChat.formBaseUrl}
-                  onChange={(e) => setSmartChat(prev => ({ ...prev, formBaseUrl: e.target.value }))}
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  Full form links sent to leads will be: <code className="bg-gray-100 px-1 rounded">{smartChat.formBaseUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'}/onboard/[leadId]</code>
-                </p>
-              </div>
-
-              {/* Qualifying Questions Count */}
-              <div>
-                <FieldLabel>Qualifying Questions Before Form</FieldLabel>
-                <p className="text-xs text-gray-500 mb-2">
-                  How many gate-check questions the AI asks before sending the onboarding form. Default is 2 (website status + decision maker).
-                </p>
-                <div className="flex items-center gap-3">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={5}
-                    className="h-9 w-20 text-sm"
-                    value={smartChat.qualifyingQuestionCount}
-                    onChange={(e) => setSmartChat(prev => ({ ...prev, qualifyingQuestionCount: parseInt(e.target.value || '2') }))}
-                  />
-                  <span className="text-sm text-gray-500">questions</span>
-                </div>
-              </div>
+          {/* Sub-tab toggle */}
+          <Card className="p-1">
+            <div className="flex gap-1">
+              <button
+                onClick={() => setMessagesAiTab('ai_conversations')}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded text-sm font-medium transition-colors ${
+                  messagesAiTab === 'ai_conversations'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <Brain size={16} />
+                AI Conversations
+              </button>
+              <button
+                onClick={() => setMessagesAiTab('automated_messages')}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded text-sm font-medium transition-colors ${
+                  messagesAiTab === 'automated_messages'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <Zap size={16} />
+                Automated Messages
+              </button>
             </div>
           </Card>
 
-          {/* Save */}
-          <div className="flex justify-end">
-            <SaveButton
-              onClick={() => saveSetting('smart_chat', smartChat)}
-              saving={savingKey === 'smart_chat'}
-              saved={savedKey === 'smart_chat'}
-            />
-          </div>
-        </div>
-      )}
+          {/* ── SUB-TAB 1: AI CONVERSATIONS ────────────────────── */}
+          {messagesAiTab === 'ai_conversations' && (
+            <>
+              {/* Pre-AQ / Post-AQ toggle */}
+              <Card className="p-1">
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setPreAqPostAq('pre_aq')}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded text-sm font-medium transition-colors ${
+                      preAqPostAq === 'pre_aq'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Target size={16} />
+                    Pre-AQ (Before Payment)
+                  </button>
+                  <button
+                    onClick={() => setPreAqPostAq('post_aq')}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded text-sm font-medium transition-colors ${
+                      preAqPostAq === 'post_aq'
+                        ? 'bg-emerald-600 text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Users size={16} />
+                    Post-AQ (After Payment)
+                  </button>
+                </div>
+              </Card>
 
-      {activeTab === 'ai_templates' && (
-        <div className="space-y-6">
-          {/* Stage Instruction Overrides */}
-          <Card className="p-6">
-            <SectionHeader
-              title="Close Engine Stage Templates"
-              description="Customize AI instructions for each conversation stage. Leave blank to use the built-in defaults."
-            />
-            <div className="space-y-3">
-              {[
-                { stage: 'INITIATED', label: 'Initiated', desc: 'Opening message when a new lead enters the funnel' },
-                { stage: 'QUALIFYING', label: 'Qualifying', desc: 'Collecting core info (services, hours, photos)' },
-                { stage: 'COLLECTING_INFO', label: 'Collecting Info', desc: 'Follow-up questions after core questions answered' },
-                { stage: 'BUILDING', label: 'Building', desc: 'Site is being built, keep lead engaged' },
-                { stage: 'PREVIEW_SENT', label: 'Preview Sent', desc: 'Waiting for lead feedback on preview' },
-                { stage: 'EDIT_LOOP', label: 'Edit Loop', desc: 'Lead wants changes to their preview' },
-                { stage: 'PAYMENT_SENT', label: 'Payment Sent', desc: 'Payment link sent, handling pricing questions' },
-                { stage: 'STALLED', label: 'Stalled', desc: 'Lead went quiet, follow-up needed' },
-                { stage: 'CLOSED_LOST', label: 'Closed Lost', desc: 'Lead declined, handle re-engagement' },
-              ].map(({ stage, label, desc }) => {
-                const override = scenarioTemplates[stage]?.instructions_override || ''
-                const isEditing = editingScenario === stage
+              {/* ── PRE-AQ ── */}
+              {preAqPostAq === 'pre_aq' && (
+                <>
+                  {/* First Message Templates */}
+                  <Card className="p-6">
+                    <SectionHeader
+                      title="First Message Templates"
+                      description="Entry-point openers based on how the lead entered. The AI adapts naturally from these."
+                    />
+                    <div className="space-y-4">
+                      {[
+                        { key: 'INSTANTLY_REPLY', label: 'Email Reply', desc: 'Lead replied to an Instantly email', default: 'Hey {firstName}! Saw your reply about the website \u2014 excited to get {companyName} set up. Quick question, do you currently have a website or would this be your first one?' },
+                        { key: 'SMS_REPLY', label: 'SMS Reply', desc: 'Lead replied to an SMS', default: "Hey {firstName}! Great to hear from you. We can get {companyName}'s site live fast. Quick question, do you currently have a website or would this be your first one?" },
+                        { key: 'REP_CLOSE', label: 'Rep Close', desc: 'Rep handed off a lead', default: "Hey {firstName}! Just spoke with the team \u2014 let's get your site live. Quick question, do you currently have a website for {companyName} or would this be your first one?" },
+                        { key: 'PREVIEW_CTA', label: 'Preview CTA', desc: 'Lead clicked the preview CTA', default: "Hey {firstName}! Saw you checked out the preview we built for {companyName}. We can get this live for you in no time. Quick question, do you currently have a website or would this be your first one?" },
+                      ].map(({ key, label, desc, default: defaultTemplate }) => {
+                        const customTemplate = firstMessageTemplates[key] || ''
+                        return (
+                          <div key={key} className="border rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-medium text-gray-900 text-sm">{label}</span>
+                              <span className="text-xs text-gray-500">{desc}</span>
+                              {customTemplate && <span className="text-xs text-blue-600 font-medium ml-auto">Custom</span>}
+                            </div>
+                            <textarea
+                              className="w-full p-3 border rounded-md text-sm resize-y min-h-[80px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              value={customTemplate || defaultTemplate}
+                              onChange={(e) => setFirstMessageTemplates(prev => ({ ...prev, [key]: e.target.value }))}
+                              placeholder={defaultTemplate}
+                            />
+                            <div className="flex items-center justify-between mt-1">
+                              <p className="text-xs text-gray-400">Variables: {'{firstName}'} {'{companyName}'}</p>
+                              {customTemplate && (
+                                <button onClick={() => setFirstMessageTemplates(prev => { const u = { ...prev }; delete u[key]; return u })} className="text-xs text-red-500 hover:text-red-700">Reset to default</button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </Card>
 
-                return (
-                  <div key={stage} className="border rounded-lg overflow-hidden">
-                    <div
-                      className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => setEditingScenario(isEditing ? null : stage)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-2 h-2 rounded-full ${override ? 'bg-blue-500' : 'bg-gray-300'}`} />
-                        <div>
-                          <span className="font-medium text-gray-900">{label}</span>
-                          <span className="text-xs text-gray-500 ml-2">{desc}</span>
+                  {/* Qualifying Flow */}
+                  <Card className="p-6">
+                    <SectionHeader
+                      title="Qualifying Flow"
+                      description="The 3 texts the AI sends before the form link. The AI adapts the wording but follows this structure."
+                    />
+                    <div className="space-y-1 mb-5">
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">1</div>
+                          <span>Opening + Q1</span>
+                        </div>
+                        <div className="w-6 h-px bg-gray-300" />
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">2</div>
+                          <span>Decision Maker</span>
+                        </div>
+                        <div className="w-6 h-px bg-gray-300" />
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">3</div>
+                          <span>Form Link</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {override && <span className="text-xs text-blue-600 font-medium">Custom</span>}
-                        <ChevronDown size={16} className={`text-gray-400 transition-transform ${isEditing ? 'rotate-180' : ''}`} />
-                      </div>
                     </div>
+                    <div className="space-y-4">
+                      {[
+                        {
+                          key: 'TEXT_1_OPENING', step: 1, label: 'Opening + Website Question',
+                          desc: 'First text after lead clicks CTA. Greets them and asks Q1.',
+                          default: 'Hey {firstName}! Saw you checked out the preview we built for {companyName}. We can get this live for you in no time. Quick question, do you currently have a website or would this be your first one?',
+                          hint: 'This is the very first thing they see. Set the tone here.',
+                        },
+                        {
+                          key: 'TEXT_2_DECISION_MAKER', step: 2, label: 'Decision Maker Check',
+                          desc: 'After they answer Q1. Confirms we\'re talking to the right person.',
+                          default: 'Are you the one who handles marketing decisions for {companyName}, or is there someone else I should loop in?',
+                          hint: 'Filters out people who can\'t say yes.',
+                        },
+                        {
+                          key: 'TEXT_3_FORM_LINK', step: 3, label: 'Form Link',
+                          desc: 'After both questions answered. Sends the onboarding form.',
+                          default: 'Perfect here\'s a quick form to fill out with your business info, logo, and photos. Takes about 5-10 minutes and we\'ll have your site built from it: {formUrl}',
+                          hint: '{formUrl} is auto-replaced with the lead\'s unique form link.',
+                        },
+                      ].map(({ key, step, label, desc, default: defaultTemplate, hint }) => {
+                        const customTemplate = qualifyingFlow[key] || ''
+                        return (
+                          <div key={key} className="border rounded-lg overflow-hidden">
+                            <div className="p-4">
+                              <div className="flex items-start gap-3 mb-3">
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${customTemplate ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                                  {step}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-gray-900 text-sm">{label}</span>
+                                    {customTemplate && <span className="text-[10px] bg-blue-50 text-blue-600 font-medium px-1.5 py-0.5 rounded">Custom</span>}
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                                </div>
+                              </div>
+                              <textarea
+                                className="w-full p-3 border rounded-md text-sm resize-y min-h-[80px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                value={customTemplate || defaultTemplate}
+                                onChange={(e) => setQualifyingFlow(prev => ({ ...prev, [key]: e.target.value }))}
+                                placeholder={defaultTemplate}
+                              />
+                              <div className="flex items-center justify-between mt-1.5">
+                                <p className="text-xs text-gray-400">{hint}</p>
+                                {customTemplate && (
+                                  <button onClick={() => setQualifyingFlow(prev => { const u = { ...prev }; delete u[key]; return u })} className="text-xs text-red-500 hover:text-red-700">Reset to default</button>
+                                )}
+                              </div>
+                            </div>
+                            {step < 3 && (
+                              <div className="px-4 pb-3">
+                                <div className="flex items-center gap-2 text-[10px] text-gray-400 uppercase tracking-wider">
+                                  <div className="h-px flex-1 bg-gray-200" />
+                                  <span>lead responds</span>
+                                  <div className="h-px flex-1 bg-gray-200" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <p className="text-xs text-amber-800">
+                        <strong>How it works:</strong> The AI sends these in order, one per message. If the lead answers both questions in one message, it skips ahead to the form. Variables <code className="bg-amber-100 px-1 rounded">{'{firstName}'}</code> <code className="bg-amber-100 px-1 rounded">{'{companyName}'}</code> <code className="bg-amber-100 px-1 rounded">{'{formUrl}'}</code> are auto-replaced.
+                      </p>
+                    </div>
+                  </Card>
 
-                    {isEditing && (
-                      <div className="px-4 pb-4 border-t bg-gray-50/50">
-                        <textarea
-                          className="w-full mt-3 p-3 border rounded-md text-sm font-mono resize-y min-h-[120px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          value={override}
-                          onChange={(e) => setScenarioTemplates(prev => ({
-                            ...prev,
-                            [stage]: { instructions_override: e.target.value, enabled: true }
-                          }))}
-                          placeholder="Leave blank to use default instructions for this stage..."
-                        />
-                        <div className="flex items-center justify-between mt-2">
-                          <p className="text-xs text-gray-400">
-                            Variables: {'{{firstName}}'} {'{{companyName}}'} {'{{siteBuildFee}}'} {'{{monthlyHosting}}'}
-                          </p>
-                          {override && (
-                            <button
-                              onClick={() => setScenarioTemplates(prev => {
-                                const updated = { ...prev }
-                                delete updated[stage]
-                                return updated
-                              })}
-                              className="text-xs text-red-500 hover:text-red-700"
+                  {/* Stage Templates */}
+                  <Card className="p-6">
+                    <SectionHeader title="Stage Templates" description="Customize AI instructions for each conversation stage. Leave blank to use defaults." />
+                    <div className="space-y-3">
+                      {[
+                        { stage: 'INITIATED', label: 'Initiated', desc: 'Opening message when a new lead enters the funnel' },
+                        { stage: 'QUALIFYING', label: 'Qualifying', desc: 'Collecting core info (services, hours, photos)' },
+                        { stage: 'COLLECTING_INFO', label: 'Collecting Info', desc: 'Follow-up questions after core questions answered' },
+                        { stage: 'BUILDING', label: 'Building', desc: 'Site is being built, keep lead engaged' },
+                        { stage: 'PREVIEW_SENT', label: 'Preview Sent', desc: 'Waiting for lead feedback on preview' },
+                        { stage: 'EDIT_LOOP', label: 'Edit Loop', desc: 'Lead wants changes to their preview' },
+                        { stage: 'PAYMENT_SENT', label: 'Payment Sent', desc: 'Payment link sent, handling pricing questions' },
+                        { stage: 'STALLED', label: 'Stalled', desc: 'Lead went quiet, follow-up needed' },
+                        { stage: 'CLOSED_LOST', label: 'Closed Lost', desc: 'Lead declined, handle re-engagement' },
+                      ].map(({ stage, label, desc }) => {
+                        const override = scenarioTemplates[stage]?.instructions_override || ''
+                        const isEditing = editingScenario === stage
+                        return (
+                          <div key={stage} className="border rounded-lg overflow-hidden">
+                            <div
+                              className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                              onClick={() => setEditingScenario(isEditing ? null : stage)}
                             >
-                              Reset to default
-                            </button>
+                              <div className="flex items-center gap-3">
+                                <div className={`w-2 h-2 rounded-full ${override ? 'bg-blue-500' : 'bg-gray-300'}`} />
+                                <div>
+                                  <span className="font-medium text-gray-900">{label}</span>
+                                  <span className="text-xs text-gray-500 ml-2">{desc}</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {override && <span className="text-xs text-blue-600 font-medium">Custom</span>}
+                                <ChevronDown size={16} className={`text-gray-400 transition-transform ${isEditing ? 'rotate-180' : ''}`} />
+                              </div>
+                            </div>
+                            {isEditing && (
+                              <div className="px-4 pb-4 border-t bg-gray-50/50">
+                                <textarea
+                                  className="w-full mt-3 p-3 border rounded-md text-sm font-mono resize-y min-h-[120px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  value={override}
+                                  onChange={(e) => setScenarioTemplates(prev => ({
+                                    ...prev,
+                                    [stage]: { instructions_override: e.target.value, enabled: true }
+                                  }))}
+                                  placeholder="Leave blank to use default instructions for this stage..."
+                                />
+                                <div className="flex items-center justify-between mt-2">
+                                  <p className="text-xs text-gray-400">
+                                    Variables: {'{{firstName}}'} {'{{companyName}}'} {'{{siteBuildFee}}'} {'{{monthlyHosting}}'}
+                                  </p>
+                                  {override && (
+                                    <button
+                                      onClick={() => setScenarioTemplates(prev => { const u = { ...prev }; delete u[stage]; return u })}
+                                      className="text-xs text-red-500 hover:text-red-700"
+                                    >
+                                      Reset to default
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </Card>
+
+                  {/* Save Pre-AQ */}
+                  <div className="flex justify-end">
+                    <SaveButton
+                      onClick={() => saveSetting('close_engine_scenarios', {
+                        scenarios: scenarioTemplates,
+                        firstMessages: firstMessageTemplates,
+                        qualifyingFlow,
+                      })}
+                      saving={savingKey === 'close_engine_scenarios'}
+                      saved={savedKey === 'close_engine_scenarios'}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* ── POST-AQ ── */}
+              {preAqPostAq === 'post_aq' && (
+                <>
+                  <Card className="p-6">
+                    <SectionHeader title="Onboarding Flow" description="Templates for the post-payment onboarding conversation. The AI uses these as starting points." />
+                    <div className="space-y-4">
+                      {[
+                        { key: 'welcome' as const, label: 'Welcome Message', desc: 'First text after payment confirms.', hint: 'Variables: {companyName}' },
+                        { key: 'domainQuestion' as const, label: 'Domain Question', desc: 'Asking the client what domain they want.', hint: 'Variables: {firstName} {companyName}' },
+                        { key: 'gbpPrompt' as const, label: 'Google Business Profile Prompt', desc: 'Asking if they have a GBP and want help connecting it.', hint: 'Variables: {firstName} {companyName}' },
+                      ].map(({ key, label, desc, hint }) => (
+                        <div key={key}>
+                          <FieldLabel>{label}</FieldLabel>
+                          <p className="text-xs text-gray-500 mb-2">{desc}</p>
+                          <textarea
+                            className="w-full p-3 border rounded-md text-sm resize-y min-h-[80px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={onboardingFlow[key]}
+                            onChange={(e) => setOnboardingFlow(prev => ({ ...prev, [key]: e.target.value }))}
+                          />
+                          <p className="text-xs text-gray-400 mt-1">{hint}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+
+                  <Card className="p-6">
+                    <SectionHeader title="Onboarding Stage Template" description="Instructions for how the AI handles the full onboarding conversation. Tone, info to collect, how to handle questions." />
+                    <textarea
+                      className="w-full p-3 border rounded-md text-sm font-mono resize-y min-h-[160px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      value={onboardingFlow.stageTemplate}
+                      onChange={(e) => setOnboardingFlow(prev => ({ ...prev, stageTemplate: e.target.value }))}
+                      placeholder="Enter onboarding AI instructions..."
+                    />
+                  </Card>
+
+                  <div className="flex justify-end">
+                    <SaveButton
+                      onClick={() => saveSetting('onboarding_flow', onboardingFlow)}
+                      saving={savingKey === 'onboarding_flow'}
+                      saved={savedKey === 'onboarding_flow'}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* ── AI CONTROLS (always visible at bottom) ── */}
+              <Card className="p-6">
+                <SectionHeader title="AI Controls" description="Global settings for AI behavior across all conversations." />
+                <div className="space-y-6">
+                  {/* Toggle rows */}
+                  {[
+                    { key: 'globalEnabled' as const, label: 'Global AI', desc: 'Master switch for all AI responses.' },
+                    { key: 'preClientEnabled' as const, label: 'Pre-Client AI', desc: 'AI handles pre-payment conversations.' },
+                    { key: 'postClientEnabled' as const, label: 'Post-Client AI', desc: 'AI handles post-payment conversations.' },
+                  ].map(({ key, label, desc }) => (
+                    <div key={key} className="flex items-center justify-between">
+                      <div>
+                        <FieldLabel>{label}</FieldLabel>
+                        <p className="text-xs text-gray-500">{desc}</p>
+                      </div>
+                      <button
+                        onClick={() => setAiControls(prev => ({ ...prev, [key]: !prev[key] }))}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${(aiControls as any)[key] ? 'bg-blue-600' : 'bg-gray-300'}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${(aiControls as any)[key] ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Response Delay */}
+                  <div>
+                    <FieldLabel>Response Delay Range</FieldLabel>
+                    <p className="text-xs text-gray-500 mb-2">How long the AI waits before responding (makes it feel natural).</p>
+                    <div className="flex items-center gap-3">
+                      <Input type="number" min={0} max={120} className="h-9 w-20 text-sm" value={aiControls.delayMin} onChange={(e) => setAiControls(prev => ({ ...prev, delayMin: parseInt(e.target.value || '0') }))} />
+                      <span className="text-sm text-gray-500">to</span>
+                      <Input type="number" min={0} max={300} className="h-9 w-20 text-sm" value={aiControls.delayMax} onChange={(e) => setAiControls(prev => ({ ...prev, delayMax: parseInt(e.target.value || '0') }))} />
+                      <span className="text-sm text-gray-500">seconds</span>
+                    </div>
+                  </div>
+
+                  {/* Message Batch Window */}
+                  <div>
+                    <FieldLabel>Message Batch Window</FieldLabel>
+                    <p className="text-xs text-gray-500 mb-2">
+                      When a client sends multiple texts quickly, the AI waits this long for more messages before responding. Set to 0 to disable batching.
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={30}
+                        step={1}
+                        className="h-9 w-24 text-sm"
+                        value={smartChat.batchWindowMs / 1000}
+                        onChange={(e) => setSmartChat(prev => ({ ...prev, batchWindowMs: Math.round(parseFloat(e.target.value || '0') * 1000) }))}
+                      />
+                      <span className="text-sm text-gray-500">seconds</span>
+                      <span className="text-xs text-gray-400 ml-2">
+                        {smartChat.batchWindowMs === 0 ? 'Disabled' : smartChat.batchWindowMs <= 5000 ? 'Fast' : smartChat.batchWindowMs <= 10000 ? 'Balanced' : 'Patient'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Conversation-Ender Detection */}
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <FieldLabel>Conversation-Ender Detection</FieldLabel>
+                        <p className="text-xs text-gray-500">
+                          When enabled, the AI won&apos;t respond to messages like &quot;ok&quot;, &quot;thanks&quot;, or emoji-only texts.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setSmartChat(prev => ({ ...prev, conversationEnderEnabled: !prev.conversationEnderEnabled }))}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${smartChat.conversationEnderEnabled ? 'bg-blue-600' : 'bg-gray-300'}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${smartChat.conversationEnderEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Humanizing Prompt */}
+                  <div>
+                    <FieldLabel>Humanizing Prompt</FieldLabel>
+                    <p className="text-xs text-gray-500 mb-2">Personality instructions that shape how the AI writes. Injected into every AI response.</p>
+                    <textarea
+                      className="w-full p-3 border rounded-md text-sm resize-y min-h-[100px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      value={aiControls.humanizingPrompt}
+                      onChange={(e) => setAiControls(prev => ({ ...prev, humanizingPrompt: e.target.value }))}
+                      placeholder="e.g., Write casually, use contractions, keep it short and punchy..."
+                    />
+                  </div>
+
+                  {/* Form Base URL */}
+                  <div>
+                    <FieldLabel>Form Base URL</FieldLabel>
+                    <p className="text-xs text-gray-500 mb-2">
+                      Base URL for the onboarding form. Leave blank for default.
+                    </p>
+                    <Input
+                      type="url"
+                      className="h-9 w-full max-w-md text-sm"
+                      placeholder={process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'}
+                      value={smartChat.formBaseUrl}
+                      onChange={(e) => setSmartChat(prev => ({ ...prev, formBaseUrl: e.target.value }))}
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Full form links: <code className="bg-gray-100 px-1 rounded">{smartChat.formBaseUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'}/onboard/[leadId]</code>
+                    </p>
+                  </div>
+                </div>
+              </Card>
+
+              <div className="flex justify-end">
+                <SaveButton
+                  onClick={() => { saveSetting('ai_controls', aiControls); saveSetting('smart_chat', smartChat) }}
+                  saving={savingKey === 'ai_controls' || savingKey === 'smart_chat'}
+                  saved={savedKey === 'ai_controls' || savedKey === 'smart_chat'}
+                />
+              </div>
+            </>
+          )}
+
+          {/* ── SUB-TAB 2: AUTOMATED MESSAGES ────────────────── */}
+          {messagesAiTab === 'automated_messages' && (
+            <>
+              {/* Pre-Client Messages */}
+              <Card className="p-6">
+                <SectionHeader title="Pre-Client Messages" description="Scheduled follow-ups to leads before payment." />
+                <div className="space-y-4">
+                  {AUTO_MSG_META.filter(m => m.cat === 'pre_client').map(m => {
+                    const msg = automatedMessages[m.key]
+                    return (
+                      <div key={m.key} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <span className="font-medium text-sm text-gray-900">{m.label}</span>
+                            <span className="text-xs text-gray-500 ml-2">{m.desc}</span>
+                          </div>
+                          <button
+                            onClick={() => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], enabled: !prev[m.key].enabled } }))}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${msg?.enabled ? 'bg-blue-600' : 'bg-gray-300'}`}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${msg?.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                        </div>
+                        <textarea
+                          className="w-full p-3 border rounded-md text-sm resize-y min-h-[60px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          value={msg?.text || ''}
+                          onChange={(e) => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], text: e.target.value } }))}
+                        />
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-xs text-gray-400">Variables: {m.vars.map(v => `{${v}}`).join(' ')}</p>
+                          {msg?.delayHours !== undefined && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">Delay:</span>
+                              <Input type="number" min={1} className="w-16 h-7 text-xs" value={msg.delayHours} onChange={(e) => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], delayHours: parseInt(e.target.value || '0') } }))} />
+                              <span className="text-xs text-gray-500">hours</span>
+                            </div>
                           )}
                         </div>
                       </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </Card>
+                    )
+                  })}
+                </div>
+              </Card>
 
-          {/* Qualifying Flow — the 3 texts before the form */}
-          <Card className="p-6">
-            <SectionHeader
-              title="Qualifying Flow"
-              description="The 3 texts the AI sends before the form link. This is the core sales sequence — the AI adapts the wording naturally but follows this structure."
-            />
-            <div className="space-y-1 mb-5">
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">1</div>
-                  <span>Opening + Q1</span>
-                </div>
-                <div className="w-6 h-px bg-gray-300" />
-                <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">2</div>
-                  <span>Decision Maker</span>
-                </div>
-                <div className="w-6 h-px bg-gray-300" />
-                <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">3</div>
-                  <span>Form Link</span>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-4">
-              {[
-                {
-                  key: 'TEXT_1_OPENING',
-                  step: 1,
-                  label: 'Opening + Website Question',
-                  desc: 'First text after lead clicks CTA. Greets them and asks Q1.',
-                  default: 'Hey {firstName}! Saw you checked out the preview we built for {companyName}. We can get this live for you in no time. Quick question, do you currently have a website or would this be your first one?',
-                  hint: 'This is the very first thing they see. Set the tone here.',
-                },
-                {
-                  key: 'TEXT_2_DECISION_MAKER',
-                  step: 2,
-                  label: 'Decision Maker Check',
-                  desc: 'After they answer Q1. Confirms we\'re talking to the right person.',
-                  default: 'Are you the one who handles marketing decisions for {companyName}, or is there someone else I should loop in?',
-                  hint: 'Filters out people who can\'t say yes.',
-                },
-                {
-                  key: 'TEXT_3_FORM_LINK',
-                  step: 3,
-                  label: 'Form Link',
-                  desc: 'After both questions answered. Sends the onboarding form.',
-                  default: 'Perfect here\'s a quick form to fill out with your business info, logo, and photos. Takes about 5-10 minutes and we\'ll have your site built from it: {formUrl}',
-                  hint: '{formUrl} is auto-replaced with the lead\'s unique form link.',
-                },
-              ].map(({ key, step, label, desc, default: defaultTemplate, hint }) => {
-                const customTemplate = qualifyingFlow[key] || ''
-
-                return (
-                  <div key={key} className="border rounded-lg overflow-hidden">
-                    <div className="p-4">
-                      <div className="flex items-start gap-3 mb-3">
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${customTemplate ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                          {step}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-gray-900 text-sm">{label}</span>
-                            {customTemplate && <span className="text-[10px] bg-blue-50 text-blue-600 font-medium px-1.5 py-0.5 rounded">Custom</span>}
+              {/* Post-Client Messages */}
+              <Card className="p-6">
+                <SectionHeader title="Post-Client Messages" description="Scheduled touchpoints after payment and win-back sequences." />
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mt-2">Touchpoints</h4>
+                  {AUTO_MSG_META.filter(m => m.cat === 'post_client').map(m => {
+                    const msg = automatedMessages[m.key]
+                    return (
+                      <div key={m.key} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <span className="font-medium text-sm text-gray-900">{m.label}</span>
+                            <span className="text-xs text-gray-500 ml-2">{m.desc}</span>
                           </div>
-                          <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
-                        </div>
-                      </div>
-                      <textarea
-                        className="w-full p-3 border rounded-md text-sm resize-y min-h-[80px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                        value={customTemplate || defaultTemplate}
-                        onChange={(e) => setQualifyingFlow(prev => ({
-                          ...prev,
-                          [key]: e.target.value
-                        }))}
-                        placeholder={defaultTemplate}
-                      />
-                      <div className="flex items-center justify-between mt-1.5">
-                        <p className="text-xs text-gray-400">{hint}</p>
-                        {customTemplate && (
                           <button
-                            onClick={() => setQualifyingFlow(prev => {
-                              const updated = { ...prev }
-                              delete updated[key]
-                              return updated
-                            })}
-                            className="text-xs text-red-500 hover:text-red-700"
+                            onClick={() => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], enabled: !prev[m.key].enabled } }))}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${msg?.enabled ? 'bg-emerald-600' : 'bg-gray-300'}`}
                           >
-                            Reset to default
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${msg?.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
                           </button>
-                        )}
-                      </div>
-                    </div>
-                    {step < 3 && (
-                      <div className="px-4 pb-3">
-                        <div className="flex items-center gap-2 text-[10px] text-gray-400 uppercase tracking-wider">
-                          <div className="h-px flex-1 bg-gray-200" />
-                          <span>lead responds</span>
-                          <div className="h-px flex-1 bg-gray-200" />
+                        </div>
+                        <textarea
+                          className="w-full p-3 border rounded-md text-sm resize-y min-h-[60px] focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                          value={msg?.text || ''}
+                          onChange={(e) => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], text: e.target.value } }))}
+                        />
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-xs text-gray-400">Variables: {m.vars.map(v => `{${v}}`).join(' ')}</p>
+                          {msg?.delayHours !== undefined && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">Delay:</span>
+                              <Input type="number" min={1} className="w-16 h-7 text-xs" value={msg.delayHours} onChange={(e) => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], delayHours: parseInt(e.target.value || '0') } }))} />
+                              <span className="text-xs text-gray-500">hours</span>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-xs text-amber-800">
-                <strong>How it works:</strong> The AI sends these in order, one per message. If the lead answers both questions in one message, it skips ahead to the form. If they go off-script, the AI rolls with it. Variables <code className="bg-amber-100 px-1 rounded">{'{firstName}'}</code> <code className="bg-amber-100 px-1 rounded">{'{companyName}'}</code> <code className="bg-amber-100 px-1 rounded">{'{formUrl}'}</code> are auto-replaced.
-              </p>
-            </div>
-          </Card>
+                    )
+                  })}
 
-          {/* First Message Templates */}
-          <Card className="p-6">
-            <SectionHeader
-              title="First Message Templates"
-              description="Entry-point variants of Text 1. Each adapts the opener based on how the lead entered. The AI uses these as a starting point and adapts naturally."
-            />
-            <div className="space-y-4">
-              {[
-                { key: 'INSTANTLY_REPLY', label: 'Email Reply', desc: 'Lead replied to an Instantly email', default: 'Hey {firstName}! Saw your reply about the website \u2014 excited to get {companyName} set up. Quick question, do you currently have a website or would this be your first one?' },
-                { key: 'SMS_REPLY', label: 'SMS Reply', desc: 'Lead replied to an SMS', default: 'Hey {firstName}! Great to hear from you. We can get {companyName}\'s site live fast. Quick question, do you currently have a website or would this be your first one?' },
-                { key: 'REP_CLOSE', label: 'Rep Close', desc: 'Rep handed off a lead', default: 'Hey {firstName}! Just spoke with the team \u2014 let\'s get your site live. Quick question, do you currently have a website for {companyName} or would this be your first one?' },
-                { key: 'PREVIEW_CTA', label: 'Preview CTA', desc: 'Lead clicked the preview CTA', default: 'Hey {firstName}! Saw you checked out the preview we built for {companyName}. We can get this live for you in no time. Quick question, do you currently have a website or would this be your first one?' },
-              ].map(({ key, label, desc, default: defaultTemplate }) => {
-                const customTemplate = firstMessageTemplates[key] || ''
+                  <h4 className="text-sm font-semibold text-gray-700 mt-4">Win-Back Sequence</h4>
+                  {AUTO_MSG_META.filter(m => m.cat === 'winback').map(m => {
+                    const msg = automatedMessages[m.key]
+                    return (
+                      <div key={m.key} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <span className="font-medium text-sm text-gray-900">{m.label}</span>
+                            <span className="text-xs text-gray-500 ml-2">{m.desc}</span>
+                          </div>
+                          <button
+                            onClick={() => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], enabled: !prev[m.key].enabled } }))}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${msg?.enabled ? 'bg-amber-600' : 'bg-gray-300'}`}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${msg?.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                        </div>
+                        <textarea
+                          className="w-full p-3 border rounded-md text-sm resize-y min-h-[60px] focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                          value={msg?.text || ''}
+                          onChange={(e) => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], text: e.target.value } }))}
+                        />
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-xs text-gray-400">Variables: {m.vars.map(v => `{${v}}`).join(' ')}</p>
+                          {msg?.delayHours !== undefined && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">Delay:</span>
+                              <Input type="number" min={1} className="w-16 h-7 text-xs" value={msg.delayHours} onChange={(e) => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], delayHours: parseInt(e.target.value || '0') } }))} />
+                              <span className="text-xs text-gray-500">hours</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </Card>
 
-                return (
-                  <div key={key} className="border rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="font-medium text-gray-900 text-sm">{label}</span>
-                      <span className="text-xs text-gray-500">{desc}</span>
-                      {customTemplate && <span className="text-xs text-blue-600 font-medium ml-auto">Custom</span>}
-                    </div>
-                    <textarea
-                      className="w-full p-3 border rounded-md text-sm resize-y min-h-[80px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      value={customTemplate || defaultTemplate}
-                      onChange={(e) => setFirstMessageTemplates(prev => ({
-                        ...prev,
-                        [key]: e.target.value
-                      }))}
-                      placeholder={defaultTemplate}
-                    />
-                    <div className="flex items-center justify-between mt-1">
-                      <p className="text-xs text-gray-400">Variables: {'{firstName}'} {'{companyName}'}</p>
-                      {customTemplate && (
-                        <button
-                          onClick={() => setFirstMessageTemplates(prev => {
-                            const updated = { ...prev }
-                            delete updated[key]
-                            return updated
-                          })}
-                          className="text-xs text-red-500 hover:text-red-700"
-                        >
-                          Reset to default
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </Card>
+              {/* System Messages */}
+              <Card className="p-6">
+                <SectionHeader title="System Messages" description="One-time messages triggered by specific events. Not AI-generated." />
+                <div className="space-y-4">
+                  {SYS_MSG_META.map(m => {
+                    const msg = systemMessages[m.key]
+                    return (
+                      <div key={m.key} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <span className="font-medium text-sm text-gray-900">{m.label}</span>
+                            <span className="text-xs text-gray-500 ml-2">{m.desc}</span>
+                          </div>
+                          <button
+                            onClick={() => setSystemMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], enabled: !prev[m.key].enabled } }))}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${msg?.enabled ? 'bg-blue-600' : 'bg-gray-300'}`}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${msg?.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                        </div>
+                        <textarea
+                          className="w-full p-3 border rounded-md text-sm resize-y min-h-[80px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          value={msg?.text || ''}
+                          onChange={(e) => setSystemMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], text: e.target.value } }))}
+                        />
+                        <p className="text-xs text-gray-400 mt-1">Variables: {m.vars.map(v => `{${v}}`).join(' ')}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </Card>
 
-          {/* Save */}
-          <div className="flex justify-end">
-            <SaveButton
-              onClick={() => saveSetting('close_engine_scenarios', {
-                scenarios: scenarioTemplates,
-                firstMessages: firstMessageTemplates,
-                qualifyingFlow,
-              })}
-              saving={savingKey === 'close_engine_scenarios'}
-              saved={savedKey === 'close_engine_scenarios'}
-            />
-          </div>
+              {/* Save Automated Messages */}
+              <div className="flex justify-end">
+                <SaveButton
+                  onClick={() => { saveSetting('system_messages', systemMessages); saveSetting('automated_messages', automatedMessages) }}
+                  saving={savingKey === 'system_messages' || savingKey === 'automated_messages'}
+                  saved={savedKey === 'system_messages' || savedKey === 'automated_messages'}
+                />
+              </div>
+            </>
+          )}
         </div>
       )}
 

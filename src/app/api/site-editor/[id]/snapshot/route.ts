@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
+import { STATIC_PAGE_ROUTER_SCRIPT } from '@/components/preview/shared/staticPageRouter'
 
 export const dynamic = 'force-dynamic'
 
@@ -116,15 +117,17 @@ export async function POST(
 
     let html = await previewRes.text()
 
-    // Post-process: add Tailwind CDN + Google Fonts, strip Next.js scripts
+    // Post-process: add Tailwind CDN + Google Fonts + font config, strip Next.js scripts
     const tailwindCdn = '<script src="https://cdn.tailwindcss.com"></script>'
+    const tailwindConfig = `<script>tailwind.config={theme:{extend:{fontFamily:{display:['"Space Grotesk"','sans-serif']}}}}</script>`
     const googleFonts = '<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">'
+    const baseFontCss = `<style>body,.preview-template{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}h1,h2,h3,h4,.preview-template h1,.preview-template h2,.preview-template h3,.preview-template h4{font-family:'Space Grotesk','Inter',sans-serif}</style>`
     const metaCharset = '<meta charset="UTF-8">'
 
     // Inject into <head>
     html = html.replace(
       /<head[^>]*>/i,
-      `<head>\n  ${metaCharset}\n  ${tailwindCdn}\n  ${googleFonts}`
+      `<head>\n  ${metaCharset}\n  ${tailwindCdn}\n  ${tailwindConfig}\n  ${googleFonts}\n  ${baseFontCss}`
     )
 
     // Strip Next.js scripts (/_next/ references, __NEXT_DATA__, hydration scripts)
@@ -135,14 +138,21 @@ export async function POST(
 
     // Strip DisclaimerBanner overlay — becomes permanently stuck without JS click handlers
     html = html.replace(/<div[^>]*z-\[9999\][^>]*>[\s\S]*?View My Preview[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/g, '')
-    // Failsafe: inject CSS + script to kill any z-[9999] overlay the regex missed
-    const killOverlay = '<style>.fixed.inset-0[class*="z-[9999"]{display:none!important}</style><script>document.querySelectorAll("div").forEach(function(e){if(e.className&&e.className.indexOf("z-[9999]")!==-1)e.remove()})</script>'
-    html = html.replace(/<\/head>/i, `${killOverlay}\n</head>`)
+    // Failsafe: kill stuck overlays + force all ScrollReveal sections visible (they start at opacity:0)
+    const snapshotFixes = [
+      '<style>.fixed.inset-0[class*="z-[9999"]{display:none!important}</style>',
+      '<script>document.querySelectorAll("div").forEach(function(e){if(e.className&&e.className.indexOf("z-[9999]")!==-1)e.remove()})</script>',
+      '<style>[style*="opacity: 0"],[style*="opacity:0"]{opacity:1!important;transform:none!important}</style>',
+    ].join('\n')
+    html = html.replace(/<\/head>/i, `${snapshotFixes}\n</head>`)
 
     // Strip the CTA banner — the approved/edited site shouldn't show "Get This Site Live"
     html = html.replace(/<div[^>]*class="[^"]*fixed bottom-0[^"]*bg-\[#0D7377\][^"]*"[^>]*>[\s\S]*?<\/div>\s*<\/div>/g, '')
     // Also strip the bottom padding wrapper that accommodates the banner
     html = html.replace(/<div class="pb-16">([\s\S]*?)<\/div>\s*$/m, '$1')
+
+    // Inject multi-page hash router for static HTML — shows/hides [data-page] sections
+    html = html.replace(/<\/body>/i, `${STATIC_PAGE_ROUTER_SCRIPT}\n</body>`)
 
     // Store in database
     await prisma.lead.update({

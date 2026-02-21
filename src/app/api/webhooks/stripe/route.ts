@@ -177,27 +177,30 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           }
 
           // 3. Send welcome message via SMS (~2.5 min delay after payment)
-          const welcomeMessage = `Welcome aboard, ${lead.firstName}! 🎉 Your site is going live. You'll get a text from us when it's up. Quick win: make sure your Google Business Profile is claimed — that alone can double your local visibility.`
+          const { getSystemMessage } = await import('@/lib/system-messages')
+          const { text: welcomeMessage, enabled: welcomeEnabled } = await getSystemMessage('welcome_after_payment', { firstName: lead.firstName || 'there' })
 
-          const { sendSMSViaProvider } = await import('@/lib/sms-provider')
+          if (welcomeEnabled) {
+            const { sendSMSViaProvider } = await import('@/lib/sms-provider')
 
-          setTimeout(async () => {
-            try {
-              await sendSMSViaProvider({
-                to: lead.phone,
-                message: welcomeMessage,
-                leadId: lead.id,
-                clientId: clientId,
-                trigger: 'close_engine_welcome',
-                aiGenerated: true,
-                aiDelaySeconds: 150,
-                conversationType: 'post_client',
-                sender: 'clawdbot',
-              })
-            } catch (smsErr) {
-              console.error('[Stripe Webhook] Welcome SMS failed:', smsErr)
-            }
-          }, 150 * 1000)
+            setTimeout(async () => {
+              try {
+                await sendSMSViaProvider({
+                  to: lead.phone,
+                  message: welcomeMessage,
+                  leadId: lead.id,
+                  clientId: clientId,
+                  trigger: 'close_engine_welcome',
+                  aiGenerated: true,
+                  aiDelaySeconds: 150,
+                  conversationType: 'post_client',
+                  sender: 'clawdbot',
+                })
+              } catch (smsErr) {
+                console.error('[Stripe Webhook] Welcome SMS failed:', smsErr)
+              }
+            }, 150 * 1000)
+          }
 
           // 4. Enhanced notification
           await prisma.notification.create({

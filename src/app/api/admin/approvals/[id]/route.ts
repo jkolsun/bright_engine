@@ -125,7 +125,16 @@ async function executeApprovedAction(approval: any) {
         const paymentUrl = await generatePaymentLink(approval.leadId!)
         const pricingConfig = await getPricingConfig()
 
-        const paymentMessage = `Here's your payment link to go live: ${paymentUrl}\n\n$${pricingConfig.firstMonthTotal} gets your site built and launched, plus monthly hosting at $${pricingConfig.monthlyHosting}/month. You can cancel anytime.\n\nOnce you pay, we'll have your site live within 48 hours!`
+        const { getSystemMessage } = await import('@/lib/system-messages')
+        // Look up lead for firstName
+        const paymentLead = approval.leadId ? await prisma.lead.findUnique({ where: { id: approval.leadId }, select: { firstName: true, companyName: true } }) : null
+        const { text: paymentMessage } = await getSystemMessage('payment_link', {
+          firstName: paymentLead?.firstName || 'there',
+          companyName: paymentLead?.companyName || 'your business',
+          paymentLink: paymentUrl,
+          firstMonthTotal: `$${pricingConfig.firstMonthTotal}`,
+          monthlyHosting: `$${pricingConfig.monthlyHosting}`,
+        })
 
         // Send via SMS (with email fallback)
         const phone = approval.metadata?.phone as string | undefined
@@ -248,9 +257,11 @@ async function executeApprovedAction(approval: any) {
           if (lead.phone && previewUrl) {
             try {
               const { sendSMSViaProvider } = await import('@/lib/sms-provider')
+              const { getSystemMessage } = await import('@/lib/system-messages')
               const firstName = lead.firstName || 'there'
               const company = lead.companyName || 'your business'
-              const message = `Hey ${firstName}! Your website for ${company} is ready for review. Take a look and let me know what you think: ${previewUrl}`
+              const { text: message, enabled: previewMsgEnabled } = await getSystemMessage('preview_sent', { firstName, companyName: company, previewUrl })
+              if (!previewMsgEnabled) { console.log('[Approvals] preview_sent message disabled'); break }
 
               await sendSMSViaProvider({
                 to: lead.phone,

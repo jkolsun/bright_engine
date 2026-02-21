@@ -215,8 +215,10 @@ export async function POST(
     if (updated.phone) {
       try {
         const { sendSMSViaProvider } = await import('@/lib/sms-provider')
+        const { getSystemMessage } = await import('@/lib/system-messages')
         const firstName = updated.firstName || 'there'
-        const thankYouMsg = `Got it, thank you ${firstName}! Our team is reviewing everything now and we'll get started on your site. You'll get a text when it's ready for review.`
+        const { text: thankYouMsg, enabled } = await getSystemMessage('form_thank_you', { firstName })
+        if (!enabled) { console.log('[Onboard Submit] form_thank_you disabled, skipping SMS'); } else {
 
         await sendSMSViaProvider({
           to: updated.phone,
@@ -228,6 +230,7 @@ export async function POST(
         })
 
         console.log(`[Onboard Submit] Thank-you SMS sent to ${updated.phone}`)
+        }
       } catch (err) {
         console.error('[Onboard Submit] Thank-you SMS failed (non-fatal):', err)
       }

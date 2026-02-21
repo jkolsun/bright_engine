@@ -748,6 +748,8 @@ BANNED PATTERNS:
 - Placeholder-sounding phrases: "your trusted partner", "serving the community"
 - Ending with "Contact us today!" — too desperate
 
+OUTPUT FORMAT: PLAIN TEXT ONLY. Do NOT use markdown formatting — no **bold**, no *italic*, no # headers, no bullet lists. Just the label (e.g. HERO_HEADLINE:) followed by the plain text content. The text goes directly into a rendered website template.
+
 INSTEAD:
 - Start the about section mid-story: "Fifteen years ago, a single truck and a handshake..." or "Most contractors cut corners on prep work. We spend twice as long on it."
 - Value props with teeth: "4.9-Star Google Rating" (with the actual number) beats "Highly Rated"
@@ -811,7 +813,7 @@ function buildWebsiteCopyPrompt(lead: any, research: SerperResearchData | null, 
   }
 
   parts.push(`\nWrite landing page copy for ${lead.companyName} that makes them look like the #1 choice in ${location || 'their market'}. Use every data point above.\n`)
-  parts.push(`FORMAT (output EXACTLY these labels):`)
+  parts.push(`FORMAT — output EXACTLY these labels, one per line, with PLAIN TEXT (no markdown, no **bold**, no bullets):`)
   parts.push(`HERO_HEADLINE: [5-10 words. Billboard-worthy. Outcome-focused or confidence-driven. BAD: "Professional Roofing Services You Can Trust". GOOD: "The Last Roofer You'll Ever Call." or "Zero Callbacks. Zero Leaks. Guaranteed." Reference a real strength if powerful enough.]`)
   parts.push(`HERO_SUBHEADLINE: [12-22 words. Expand on the headline's promise. Ground it with a specific — their location, rating, specialty, or years. Make the visitor think "okay, these people are legit."]`)
   parts.push(`ABOUT_P1: [2-3 sentences. Start mid-story or with a strong specific — NOT "At Company, we..." Open with what makes them different: their origin, their approach, a defining moment. Weave in real numbers (years, reviews, team size) naturally, not as a list.]`)
@@ -846,12 +848,36 @@ function truncateWords(text: string, maxWords: number): string {
   return words.slice(0, maxWords).join(' ')
 }
 
+/** Strip markdown formatting artifacts from AI-generated text */
+function cleanMarkdown(text: string): string {
+  return text
+    .replace(/\*\*/g, '')                         // Strip bold markers
+    .replace(/(?<!\w)\*(?!\*)/g, '')              // Strip italic markers (not inside words)
+    .replace(/^#+\s*/gm, '')                       // Strip markdown headers
+    .replace(/^[-*•]\s+/gm, '')                    // Strip list markers at line start
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')       // Strip links, keep display text
+    .replace(/`/g, '')                             // Strip code markers
+    .replace(/---+/g, '')                          // Strip horizontal rules
+    .replace(/\n{3,}/g, '\n\n')                    // Collapse excessive newlines
+    .trim()
+}
+
 function parseWebsiteCopyResponse(raw: string, services: string[]): WebsiteCopy | null {
   try {
+    // Pre-process: normalize markdown-formatted labels so the parser can split on them
+    // Handles: **LABEL:** → LABEL:  |  **LABEL**: → LABEL:  |  ## LABEL: → LABEL:
+    let normalized = raw
+      .replace(/\*\*([A-Z][A-Z_0-9]+):\*\*/g, '$1:')   // **HERO_HEADLINE:** → HERO_HEADLINE:
+      .replace(/\*\*([A-Z][A-Z_0-9]+)\*\*\s*:/g, '$1:') // **HERO_HEADLINE**: → HERO_HEADLINE:
+      .replace(/^#+\s*([A-Z][A-Z_0-9]+):/gm, '$1:')     // ## HERO_HEADLINE: → HERO_HEADLINE:
+      .replace(/^\*\*\s*$/gm, '')                          // Stray ** on its own line
+
     const get = (label: string): string => {
       const regex = new RegExp(`${label}:\\s*(.+?)(?=\\n[A-Z_]+:|$)`, 's')
-      const match = raw.match(regex)
-      return match ? match[1].trim().replace(/^\[|\]$/g, '').replace(/^["']|["']$/g, '') : ''
+      const match = normalized.match(regex)
+      if (!match) return ''
+      // Clean markdown artifacts from the extracted value
+      return cleanMarkdown(match[1].trim().replace(/^\[|\]$/g, '').replace(/^["']|["']$/g, ''))
     }
 
     const heroHeadline = get('HERO_HEADLINE')
@@ -937,8 +963,22 @@ async function generateWebsiteCopy(
     })
 
     const responseText = response.content[0].type === 'text' ? response.content[0].text : ''
-    const cost = (response.usage.input_tokens + response.usage.output_tokens) * 0.0000008
-    const copy = parseWebsiteCopyResponse(responseText, services)
+    let cost = (response.usage.input_tokens + response.usage.output_tokens) * 0.0000008
+    let copy = parseWebsiteCopyResponse(responseText, services)
+
+    // Retry once if parsing failed (AI used markdown or unexpected format)
+    if (!copy) {
+      console.warn('[WEBSITE_COPY] Parse failed, retrying with explicit plain-text instruction...')
+      const retryResponse = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1200,
+        system: WEBSITE_COPY_SYSTEM,
+        messages: [{ role: 'user', content: prompt + '\n\nCRITICAL: Output PLAIN TEXT only. Each line must start with the LABEL: followed by plain text. NO markdown formatting — no **, no *, no #, no bullets. Just LABEL: text content.' }],
+      })
+      const retryText = retryResponse.content[0].type === 'text' ? retryResponse.content[0].text : ''
+      cost += (retryResponse.usage.input_tokens + retryResponse.usage.output_tokens) * 0.0000008
+      copy = parseWebsiteCopyResponse(retryText, services)
+    }
 
     if (copy) {
       // Quick quality check — reject if hero headline contains banned words
