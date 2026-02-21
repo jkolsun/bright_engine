@@ -39,15 +39,24 @@ export class TwilioProvider implements SMSProvider {
     const body = formData.get('Body') as string
     const sid = formData.get('MessageSid') as string
 
-    // Extract MMS media URLs if present
+    // Extract MMS media URLs and content types if present
     const numMedia = parseInt(formData.get('NumMedia') as string || '0', 10)
     const mediaUrls: string[] = []
+    const mediaTypes: string[] = []
     for (let i = 0; i < numMedia; i++) {
       const url = formData.get(`MediaUrl${i}`) as string
-      if (url) mediaUrls.push(url)
+      const contentType = formData.get(`MediaContentType${i}`) as string
+      if (url) {
+        mediaUrls.push(url)
+        mediaTypes.push(contentType || 'unknown')
+      }
     }
 
-    return { from, body, sid, mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined }
+    return {
+      from, body, sid,
+      mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
+      mediaTypes: mediaTypes.length > 0 ? mediaTypes : undefined,
+    }
   }
 
   async validateWebhookSignature(request: Request, url: string): Promise<boolean> {

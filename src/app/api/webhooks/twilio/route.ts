@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     // Parse inbound message via provider
     const formData = await request.formData()
-    const { from, body, sid, mediaUrls } = await provider.parseInboundWebhook(formData)
+    const { from, body, sid, mediaUrls, mediaTypes } = await provider.parseInboundWebhook(formData)
 
     // Normalize phone number for flexible matching
     const digits = from.replace(/\D/g, '')
@@ -102,6 +102,7 @@ export async function POST(request: NextRequest) {
         leadId: targetLeadId,
         clientId: targetClientId,
         mediaUrls,
+        mediaTypes,
       })
 
       // Update the logged message with reaction fields
@@ -158,6 +159,7 @@ export async function POST(request: NextRequest) {
       leadId: lead?.id || client?.leadId || undefined,
       clientId: client?.id,
       mediaUrls,
+      mediaTypes,
     })
 
     // Check for escalation triggers

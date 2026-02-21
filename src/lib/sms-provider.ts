@@ -35,7 +35,8 @@ export interface SMSInboundMessage {
   from: string
   body: string
   sid: string
-  mediaUrls?: string[]  // MMS photo URLs
+  mediaUrls?: string[]   // MMS photo URLs
+  mediaTypes?: string[]  // MIME content types (image/jpeg, etc.)
 }
 
 export interface SMSProvider {
@@ -142,7 +143,13 @@ export async function logInboundSMSViaProvider(options: {
   leadId?: string
   clientId?: string
   mediaUrls?: string[]
+  mediaTypes?: string[]
 }) {
+  // If no text but has media, show placeholder content
+  const content = options.body || (options.mediaUrls && options.mediaUrls.length > 0
+    ? `[${options.mediaUrls.length} image${options.mediaUrls.length > 1 ? 's' : ''} sent]`
+    : '')
+
   await prisma.message.create({
     data: {
       leadId: options.leadId || null,
@@ -151,10 +158,11 @@ export async function logInboundSMSViaProvider(options: {
       channel: 'SMS',
       senderType: options.clientId ? 'CLIENT' : 'LEAD',
       senderName: 'contact',
-      content: options.body,
+      content,
       twilioSid: options.sid,
       twilioStatus: 'received',
       mediaUrls: options.mediaUrls && options.mediaUrls.length > 0 ? options.mediaUrls : undefined,
+      mediaTypes: options.mediaTypes && options.mediaTypes.length > 0 ? options.mediaTypes : undefined,
     },
   })
 }

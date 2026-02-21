@@ -193,6 +193,7 @@ model Lead {
   closeConversation  CloseEngineConversation?
   pendingActions     PendingAction[]
   conversationOutcomes ConversationOutcome[]
+  buildStatus          BuildStatus?
 
   @@index([status])
   @@index([assignedToId])
@@ -410,7 +411,8 @@ model Message {
 
   // MMS / Media
   mediaUrls    Json?          @map("media_urls") // Array of image/media URLs from MMS
-  mediaType    String?        @map("media_type") // logo, team_photo, project_photo, document, unknown
+  mediaTypes   Json?          @map("media_types") // Array of MIME content types (image/jpeg, etc.)
+  mediaType    String?        @map("media_type") // AI classification: logo, team_photo, project_photo, document, unknown
 
   // iMessage Reactions
   reactionType    String?     @map("reaction_type") // like, love, laugh, emphasize, dislike, question
@@ -1372,6 +1374,39 @@ model Approval {
   @@index([leadId])
   @@index([clientId])
   @@map("approvals")
+}
+
+// ============================================
+// BUILD STATUS MODEL (Live site build progress tracking)
+// ============================================
+model BuildStatus {
+  id                    String    @id @default(cuid())
+  leadId                String    @unique @map("lead_id")
+
+  // Collected info flags
+  servicesCollected     Boolean   @default(false) @map("services_collected")
+  servicesData          Json?     @map("services_data")
+  hoursCollected        Boolean   @default(false) @map("hours_collected")
+  hoursData             String?   @map("hours_data")
+  logoCollected         Boolean   @default(false) @map("logo_collected")
+  logoUrl               String?   @map("logo_url")
+  photosCollected       Boolean   @default(false) @map("photos_collected")
+  photosData            Json?     @map("photos_data")
+  companyNameConfirmed  Boolean   @default(false) @map("company_name_confirmed")
+  companyNameOverride   String?   @map("company_name_override")
+  colorPrefsCollected   Boolean   @default(false) @map("color_prefs_collected")
+
+  // Build pipeline
+  status                String    @default("collecting") // collecting, ready_to_build, building, review, live
+  autoPush              Boolean   @default(false) @map("auto_push")
+  lastPushedAt          DateTime? @map("last_pushed_at")
+
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@map("build_status")
 }
 
 // ============================================

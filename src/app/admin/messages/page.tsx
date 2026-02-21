@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import {
   Dialog,
@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import {
   MessageSquare, AlertCircle, CheckCircle, Send, ArrowLeft,
-  Settings, AlertTriangle, RefreshCw, Search, Mail, Phone, Plus
+  Settings, AlertTriangle, RefreshCw, Search, Mail, Phone, Plus, Hammer
 } from 'lucide-react'
 
 type ViewMode = 'inbox' | 'conversation' | 'settings'
@@ -66,6 +66,25 @@ function timeSince(date: string): string {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
+function linkifyText(text: string): React.ReactNode {
+  if (!text) return text
+  const urlRegex = /(https?:\/\/[^\s]+)/g
+  const parts = text.split(urlRegex)
+  if (parts.length === 1) return text
+  return parts.map((part, i) => {
+    if (urlRegex.test(part)) {
+      // Reset lastIndex since we reuse the regex
+      urlRegex.lastIndex = 0
+      return (
+        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all">
+          {part}
+        </a>
+      )
+    }
+    return part
+  })
+}
+
 export default function MessagesPage() {
   return (
     <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading messages...</div>}>
@@ -105,6 +124,10 @@ function MessagesPageInner() {
   const [aiSettingsLoading, setAiSettingsLoading] = useState(false)
   const [savingSettings, setSavingSettings] = useState(false)
 
+  // Build Status
+  const [buildStatus, setBuildStatus] = useState<any>(null)
+  const [pushingBuild, setPushingBuild] = useState(false)
+
   // Search
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -112,6 +135,10 @@ function MessagesPageInner() {
   const [newChatOpen, setNewChatOpen] = useState(false)
   const [chatSearch, setChatSearch] = useState('')
   const [chatSearchResults, setChatSearchResults] = useState<any[]>([])
+
+  // Auto-scroll refs
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const prevMessageCountRef = useRef(0)
 
   // Auto-refresh
   const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -135,6 +162,16 @@ function MessagesPageInner() {
       if (refreshRef.current) clearInterval(refreshRef.current)
     }
   }, [viewMode, conversationDetail?.id])
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (viewMode !== 'conversation') return
+    const currentCount = messages.length + (conversationDetail?.messages?.length || 0)
+    if (currentCount > prevMessageCountRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+    prevMessageCountRef.current = currentCount
+  }, [messages, conversationDetail?.messages, viewMode])
 
   const checkTwilioStatus = async () => {
     try {
@@ -258,6 +295,64 @@ function MessagesPageInner() {
   useEffect(() => {
     if (viewMode === 'settings') loadAiSettings()
   }, [viewMode, loadAiSettings])
+
+  // Load build status when viewing a close-engine conversation
+  const loadBuildStatus = useCallback(async (leadId: string) => {
+    try {
+      const res = await fetch(`/api/build-status/${leadId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setBuildStatus(data)
+      } else {
+        setBuildStatus(null)
+      }
+    } catch { setBuildStatus(null) }
+  }, [])
+
+  useEffect(() => {
+    if (viewMode === 'conversation' && selectedCloseConv?.leadId) {
+      loadBuildStatus(selectedCloseConv.leadId)
+    } else {
+      setBuildStatus(null)
+    }
+  }, [viewMode, selectedCloseConv?.leadId, loadBuildStatus])
+
+  const handleManualPush = async () => {
+    if (!selectedCloseConv?.leadId) return
+    setPushingBuild(true)
+    try {
+      const res = await fetch(`/api/build-status/${selectedCloseConv.leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'push' }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setBuildStatus(data)
+      }
+    } catch (err) {
+      console.error('Push to build failed:', err)
+    } finally {
+      setPushingBuild(false)
+    }
+  }
+
+  const handleToggleAutoPush = async () => {
+    if (!selectedCloseConv?.leadId) return
+    try {
+      const res = await fetch(`/api/build-status/${selectedCloseConv.leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autoPush: !buildStatus?.autoPush }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setBuildStatus(data)
+      }
+    } catch (err) {
+      console.error('Toggle auto-push failed:', err)
+    }
+  }
 
   // New Chat search with debounce
   useEffect(() => {
@@ -506,8 +601,9 @@ function MessagesPageInner() {
           </Card>
         ))}
 
-        {/* Messages */}
-        <Card className="p-6">
+        {/* Messages + Build Status Sidebar */}
+        <div className="flex gap-4">
+        <Card className="p-6 flex-1 min-w-0">
           <div className="space-y-4 max-h-[60vh] overflow-y-auto">
             {detailMessages.length === 0 ? (
               <div className="text-center py-12 text-gray-500">No messages in this conversation yet.</div>
@@ -573,9 +669,9 @@ function MessagesPageInner() {
                       {msg.channel === 'EMAIL' && msg.emailSubject && (
                         <div className="text-xs font-semibold text-gray-500 mb-1">Re: {msg.emailSubject}</div>
                       )}
-                      {/* Message body — strip HTML for emails */}
+                      {/* Message body — strip HTML for emails, linkify URLs in SMS */}
                       <div className="text-sm text-gray-800 whitespace-pre-wrap">
-                        {msg.channel === 'EMAIL' ? msg.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ') : msg.content}
+                        {msg.channel === 'EMAIL' ? msg.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ') : linkifyText(msg.content)}
                       </div>
                       {/* MMS Images */}
                       {msg.mediaUrls && Array.isArray(msg.mediaUrls) && msg.mediaUrls.length > 0 && (
@@ -631,6 +727,7 @@ function MessagesPageInner() {
                 )
               })
             )}
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Message Input with Channel Selector */}
@@ -666,6 +763,86 @@ function MessagesPageInner() {
             </div>
           </div>
         </Card>
+
+        {/* Build Status Sidebar */}
+        <Card className="p-4 w-72 flex-shrink-0 self-start">
+          <h3 className="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2">
+            <Hammer size={16} className="text-blue-600" />
+            Build Status
+          </h3>
+
+          {buildStatus ? (
+            <div className="space-y-3">
+              {/* Status Badge */}
+              <div className="flex items-center justify-between">
+                <Badge variant={
+                  buildStatus.status === 'live' ? 'default' :
+                  buildStatus.status === 'building' ? 'secondary' :
+                  'outline'
+                }>
+                  {buildStatus.status.replace('_', ' ').toUpperCase()}
+                </Badge>
+                {buildStatus.lastPushedAt && (
+                  <span className="text-xs text-gray-400">
+                    Pushed {new Date(buildStatus.lastPushedAt).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+
+              {/* Checklist */}
+              <div className="space-y-2">
+                {[
+                  { label: 'Services', done: buildStatus.servicesCollected, data: buildStatus.servicesData },
+                  { label: 'Hours', done: buildStatus.hoursCollected, data: buildStatus.hoursData },
+                  { label: 'Logo', done: buildStatus.logoCollected, data: buildStatus.logoUrl ? 'Uploaded' : null },
+                  { label: 'Photos', done: buildStatus.photosCollected, data: buildStatus.photosData },
+                  { label: 'Company Name', done: buildStatus.companyNameConfirmed, data: buildStatus.companyNameOverride },
+                  { label: 'Colors', done: buildStatus.colorPrefsCollected, data: null },
+                ].map(item => (
+                  <div key={item.label} className="flex items-center gap-2">
+                    {item.done ? (
+                      <CheckCircle size={14} className="text-green-500 flex-shrink-0" />
+                    ) : (
+                      <div className="w-3.5 h-3.5 rounded-full border-2 border-gray-300 flex-shrink-0" />
+                    )}
+                    <span className={`text-xs ${item.done ? 'text-gray-800' : 'text-gray-400'}`}>
+                      {item.label}
+                    </span>
+                    {item.data && (
+                      <span className="text-xs text-gray-500 ml-auto truncate max-w-[100px]" title={String(item.data)}>
+                        {typeof item.data === 'string' ? item.data.slice(0, 20) : Array.isArray(item.data) ? `${item.data.length} items` : 'Set'}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-3 border-t space-y-2">
+                <Button
+                  size="sm"
+                  className="w-full"
+                  onClick={handleManualPush}
+                  disabled={pushingBuild || !buildStatus.servicesCollected}
+                >
+                  {pushingBuild ? 'Pushing...' : 'Push to Build'}
+                </Button>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">Auto-push when ready</span>
+                  <input
+                    type="checkbox"
+                    checked={buildStatus.autoPush || false}
+                    onChange={handleToggleAutoPush}
+                    className="w-4 h-4"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 italic">No build data collected yet</p>
+          )}
+        </Card>
+        </div>
       </div>
     )
   }
@@ -797,9 +974,9 @@ function MessagesPageInner() {
                       {msg.channel === 'EMAIL' && msg.emailSubject && (
                         <div className="text-xs font-semibold text-gray-500 mb-1">Re: {msg.emailSubject}</div>
                       )}
-                      {/* Message body — strip HTML for emails */}
+                      {/* Message body — strip HTML for emails, linkify URLs in SMS */}
                       <div className="text-sm text-gray-800 whitespace-pre-wrap">
-                        {msg.channel === 'EMAIL' ? msg.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ') : msg.content}
+                        {msg.channel === 'EMAIL' ? msg.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ') : linkifyText(msg.content)}
                       </div>
                       {/* MMS Images */}
                       {msg.mediaUrls && Array.isArray(msg.mediaUrls) && msg.mediaUrls.length > 0 && (
@@ -855,6 +1032,7 @@ function MessagesPageInner() {
                 )
               })
             )}
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Message Input with Channel Selector */}

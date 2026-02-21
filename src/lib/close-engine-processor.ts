@@ -402,6 +402,27 @@ export async function processCloseEngineInbound(
     // Re-check readiness score after new data is stored
     const { checkAndTransitionToQA } = await import('./build-readiness')
     await checkAndTransitionToQA(lead.id).catch(() => {})
+
+    // Auto-update BuildStatus from extracted data
+    try {
+      const bsUpdate: Record<string, unknown> = {}
+      if (extracted.services) { bsUpdate.servicesCollected = true; bsUpdate.servicesData = extracted.services }
+      if (extracted.hours) { bsUpdate.hoursCollected = true; bsUpdate.hoursData = typeof extracted.hours === 'string' ? extracted.hours : JSON.stringify(extracted.hours) }
+      if (extracted.logo) { bsUpdate.logoCollected = true; bsUpdate.logoUrl = extracted.logo }
+      if (extracted.photos) { bsUpdate.photosCollected = true; bsUpdate.photosData = extracted.photos }
+      if (extracted.companyName) { bsUpdate.companyNameConfirmed = true; bsUpdate.companyNameOverride = extracted.companyName as string }
+      if (extracted.colorPrefs || extracted.colors) { bsUpdate.colorPrefsCollected = true }
+
+      if (Object.keys(bsUpdate).length > 0) {
+        await prisma.buildStatus.upsert({
+          where: { leadId: lead.id },
+          create: { leadId: lead.id, ...bsUpdate },
+          update: bsUpdate,
+        })
+      }
+    } catch (err) {
+      console.error('[BuildStatus] Auto-update failed:', err)
+    }
   }
 
   // 4. Handle stage transition (skip PAYMENT_SENT — sendPaymentLink handles that)
