@@ -1,6 +1,12 @@
 'use client'
+/*
+ * BOLD TEMPLATE — "Dark & Orange"
+ * Design Direction: Dark, aggressive, high-contrast
+ * Brand Voice: Bold & Direct
+ * Multi-page with hash-based client-side routing
+ */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Phone, MapPin, Star, Shield, Zap, CheckCircle, ArrowRight, Mail,
   Flame, Wrench, Clock, Camera,
@@ -10,6 +16,10 @@ import {
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
 import ScrollReveal from '../shared/ScrollReveal'
+import usePageRouter from '../shared/usePageRouter'
+import type { PageName } from '../shared/usePageRouter'
+import PageShell from '../shared/PageShell'
+import PageHeader from '../shared/PageHeader'
 
 // Google "G" icon
 function GoogleIcon({ size = 15, className = '' }: { size?: number; className?: string }) {
@@ -138,7 +148,7 @@ function ChatbotWidget({ companyName, accentColor = '#f97316' }: { companyName: 
 }
 
 // ─── MOBILE NAV ───
-function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick, onCTAClick }: { isOpen: boolean; onClose: () => void; companyName: string; sections: { id: string; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void }) {
+function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
   if (!isOpen) return null
   return (
     <div className="fixed inset-0 z-[90] lg:hidden">
@@ -151,9 +161,9 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
           </div>
           <nav className="space-y-1 flex-1">
             {sections.map((s) => (
-              <a key={s.id} href={`#${s.id}`} onClick={onClose} className="flex items-center justify-between px-4 py-3.5 rounded-xl text-gray-300 hover:bg-gray-800/50 hover:text-white transition-all text-[15px] font-semibold">
+              <button key={s.page} data-nav-page={s.page} onClick={() => { onNavigate(s.page); onClose() }} className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-gray-300 hover:bg-gray-800/50 hover:text-white transition-all text-[15px] font-semibold">
                 {s.label}<ChevronRight size={16} className="text-gray-600" />
-              </a>
+              </button>
             ))}
           </nav>
           <div className="flex gap-3 mb-5">
@@ -190,13 +200,67 @@ function FAQItem({ question, answer, isOpen, onToggle }: { question: string; ans
   )
 }
 
+/* ═══════ CTA BAND (reused on multiple pages) ═══════ */
+function CTABand({ phone, onCallClick, onCTAClick }: { phone?: string; onCallClick: () => void; onCTAClick: () => Promise<void> }) {
+  return (
+    <section className="relative py-10 px-4 sm:px-6 md:px-8 bg-gradient-to-r from-orange-500 via-red-500 to-orange-500 overflow-hidden">
+      <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+      <ScrollReveal animation="fade-in">
+      <div className="relative max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
+        <div className="flex items-center gap-5">
+          <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+            <Zap size={26} className="text-white" />
+          </div>
+          <p className="text-xl sm:text-2xl font-black text-white">Need Help Fast?</p>
+        </div>
+        {phone ? (
+          <a href={`tel:${phone}`} onClick={onCallClick} className="inline-flex items-center gap-2.5 bg-white text-gray-900 px-8 py-4 rounded-xl font-black text-base sm:text-lg hover:bg-gray-100 transition-all shadow-xl flex-shrink-0">
+            <Phone size={20} />{phone}
+          </a>
+        ) : (
+          <button onClick={onCTAClick} className="inline-flex items-center gap-2.5 bg-white text-gray-900 px-8 py-4 rounded-xl font-black text-base sm:text-lg hover:bg-gray-100 transition-all shadow-xl flex-shrink-0">
+            Get Free Quote <ArrowRight size={18} />
+          </button>
+        )}
+      </div>
+      </ScrollReveal>
+    </section>
+  )
+}
+
 // ═══════════════════════════════════════════
 // MAIN TEMPLATE
 // ═══════════════════════════════════════════
 export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, websiteCopy }: TemplateProps) {
+  const { currentPage, navigateTo } = usePageRouter()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [openFAQ, setOpenFAQ] = useState<number | null>(null)
+  const [formData, setFormData] = useState({ name: '', phone: '', email: '', message: '' })
+  const [formSubmitted, setFormSubmitted] = useState(false)
+  const [formLoading, setFormLoading] = useState(false)
+
+  const handleFormSubmit = async () => {
+    if (formLoading || formSubmitted) return
+    if (!formData.name && !formData.phone && !formData.email) return
+    setFormLoading(true)
+    try {
+      await fetch('/api/preview/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          previewId: lead.previewId,
+          event: 'contact_form',
+          metadata: { ...formData },
+        }),
+      })
+      setFormSubmitted(true)
+    } catch {
+      // silently fail
+    } finally {
+      setFormLoading(false)
+    }
+  }
 
   const services = lead.enrichedServices || []
   const photos = lead.enrichedPhotos || []
@@ -205,13 +269,12 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
   const hasRating = lead.enrichedRating && lead.enrichedRating > 0
   const wc = websiteCopy
 
-  const navSections = [
-    { id: 'hero', label: 'Home' },
-    { id: 'services', label: 'Services' },
-    { id: 'work', label: 'Our Work' },
-    { id: 'about', label: 'About' },
-    { id: 'faq', label: 'FAQ' },
-    { id: 'contact', label: 'Contact' },
+  const navSections: { page: PageName; label: string }[] = [
+    { page: 'home', label: 'Home' },
+    { page: 'services', label: 'Services' },
+    { page: 'about', label: 'About' },
+    { page: 'portfolio', label: 'Our Work' },
+    { page: 'contact', label: 'Contact' },
   ]
 
   const faqs = [
@@ -221,6 +284,14 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
     { q: 'Are you licensed and insured?', a: 'Fully licensed, bonded, and insured on every job.' },
     { q: 'What if something goes wrong?', a: "Every job is backed by our satisfaction guarantee." },
   ]
+
+  const testimonials = wc?.testimonialQuote
+    ? [{ quote: wc.testimonialQuote, name: wc.testimonialAuthor || 'Verified Customer', loc: lead.city || 'Local' }]
+    : [
+        { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, name: 'Sarah M.', loc: lead.city || 'Local' },
+        { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, name: 'David R.', loc: lead.city || 'Local' },
+        { quote: `Honest quote, no pressure, and the work speaks for itself. Our ${industryLabel} project came out better than we expected.`, name: 'Jennifer K.', loc: lead.city || 'Local' },
+      ]
 
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 50)
@@ -238,14 +309,14 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       }`}>
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
           <div className="flex items-center justify-between h-[72px]">
-            <div className="flex items-center gap-3">
+            <button onClick={() => navigateTo('home')} className="flex items-center gap-3 cursor-pointer">
               {lead.logo && <img src={lead.logo} alt="" className="h-8 w-8 rounded-lg object-cover ring-2 ring-orange-500/20" />}
               <span className="font-display text-xl font-black text-white tracking-tight uppercase">{lead.companyName}</span>
-            </div>
+            </button>
 
             <div className="hidden lg:flex items-center gap-1.5">
               {navSections.map((s) => (
-                <a key={s.id} href={`#${s.id}`} className="px-3.5 py-2 rounded-lg text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-all">{s.label}</a>
+                <button key={s.page} data-nav-page={s.page} onClick={() => navigateTo(s.page)} className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition-all ${currentPage === s.page ? 'text-orange-400 bg-white/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>{s.label}</button>
               ))}
             </div>
 
@@ -268,234 +339,187 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         </div>
       </nav>
 
-      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} />
+      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} />
 
-      {/* ═══════ HERO — Left-Aligned Dramatic ═══════ */}
-      <section id="hero" className="relative min-h-[100svh] flex items-center overflow-hidden">
-        <div className={`absolute inset-0 bg-gradient-to-br ${config.gradient}`} />
-        <div className="absolute inset-0 bg-black/60" />
-        <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/20 to-transparent" />
+      {/* ═══════════════════════════════════════════
+          PAGE: HOME
+       ═══════════════════════════════════════════ */}
+      <PageShell page="home" currentPage={currentPage}>
+        {/* ═══════ HERO — Left-Aligned Dramatic ═══════ */}
+        <section className="relative min-h-[100svh] flex items-center overflow-hidden">
+          <div className={`absolute inset-0 bg-gradient-to-br ${config.gradient}`} />
+          <div className="absolute inset-0 bg-black/60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/20 to-transparent" />
 
-        {/* Ambient glow */}
-        <div className="absolute top-1/4 right-0 w-[600px] h-[600px] bg-orange-500/10 rounded-full translate-x-1/3 blur-3xl" />
-        <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-red-600/8 rounded-full translate-y-1/2 blur-3xl" />
+          {/* Ambient glow */}
+          <div className="absolute top-1/4 right-0 w-[600px] h-[600px] bg-orange-500/10 rounded-full translate-x-1/3 blur-3xl" />
+          <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-red-600/8 rounded-full translate-y-1/2 blur-3xl" />
 
-        <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-32">
-          {hasRating && (
-            <div className="inline-flex items-center gap-2.5 bg-white/8 backdrop-blur-md border border-white/10 rounded-full px-5 py-2.5 mb-8">
-              <div className="flex gap-0.5">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <Star key={i} size={14} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-amber-400 fill-current' : 'text-white/20'} />
-                ))}
+          <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-32">
+            {hasRating && (
+              <div className="inline-flex items-center gap-2.5 bg-white/8 backdrop-blur-md border border-white/10 rounded-full px-5 py-2.5 mb-8">
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Star key={i} size={14} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-amber-400 fill-current' : 'text-white/20'} />
+                  ))}
+                </div>
+                <span className="text-sm font-bold text-white">{lead.enrichedRating}-Star Rated</span>
+                {lead.enrichedReviews && <span className="text-sm text-white/40">• {lead.enrichedReviews}+ reviews</span>}
               </div>
-              <span className="text-sm font-bold text-white">{lead.enrichedRating}-Star Rated</span>
-              {lead.enrichedReviews && <span className="text-sm text-white/40">• {lead.enrichedReviews}+ reviews</span>}
-            </div>
-          )}
-
-          <h1 className="font-display text-[2.75rem] sm:text-6xl md:text-7xl lg:text-[6.5rem] font-black text-white mb-6 tracking-tight leading-[0.95] max-w-4xl">
-            {wc?.heroHeadline || lead.companyName}
-          </h1>
-          {wc?.heroSubheadline && (
-            <p className="text-lg sm:text-xl text-gray-200 max-w-2xl mb-8 leading-relaxed">{wc.heroSubheadline}</p>
-          )}
-
-          {location && (
-            <div className="inline-flex items-center gap-2 bg-white/8 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 mb-10">
-              <MapPin size={14} className="text-orange-400" />
-              <span className="text-sm text-white/60 font-medium">{location}</span>
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-4">
-            {lead.phone && (
-              <a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white px-10 py-5 rounded-xl font-black text-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-2xl shadow-orange-500/20">
-                <Phone size={22} />Call Now
-              </a>
             )}
-            <button onClick={onCTAClick} className="inline-flex items-center justify-center gap-2.5 bg-white/8 backdrop-blur-sm border border-white/15 text-white px-10 py-5 rounded-xl font-bold text-lg hover:bg-white hover:text-gray-900 transition-all duration-300 group">
-              {config.ctaText}<ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
-        </div>
 
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/20">
-          <span className="text-[10px] uppercase tracking-[0.25em] font-bold">Scroll</span>
-          <ChevronDown size={18} className="animate-bounce" />
-        </div>
-      </section>
+            <h1 className="font-display text-[2.75rem] sm:text-6xl md:text-7xl lg:text-[6.5rem] font-black text-white mb-6 tracking-tight leading-[0.95] max-w-4xl">
+              {wc?.heroHeadline || lead.companyName}
+            </h1>
+            {wc?.heroSubheadline && (
+              <p className="text-lg sm:text-xl text-gray-200 max-w-2xl mb-8 leading-relaxed">{wc.heroSubheadline}</p>
+            )}
 
-      {/* ═══════ OVERLAPPING STATS COUNTER ═══════ */}
-      <section className="relative z-10 px-4 sm:px-6 md:px-8 -mt-16">
-        <div className="max-w-5xl mx-auto">
-          <ScrollReveal animation="fade-in">
-          <div className="bg-gray-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 md:p-10 shadow-2xl shadow-black/40">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-              {hasRating && (
-                <div>
-                  <p className="font-display text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400 mb-1">{lead.enrichedRating}</p>
-                  <div className="flex justify-center mb-2 gap-0.5">
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <Star key={i} size={12} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-orange-400 fill-current' : 'text-gray-700'} />
-                    ))}
-                  </div>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Star Rating</p>
-                </div>
-              )}
-              {lead.enrichedReviews && (
-                <div>
-                  <p className="font-display text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400 mb-1">{lead.enrichedReviews}+</p>
-                  <div className="h-[12px] mb-2" />
-                  <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Happy Customers</p>
-                </div>
-              )}
-              <div>
-                <p className="font-display text-4xl md:text-5xl font-black text-white mb-1">100%</p>
-                <div className="flex justify-center mb-2"><Shield size={12} className="text-orange-400" /></div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Licensed & Insured</p>
+            {location && (
+              <div className="inline-flex items-center gap-2 bg-white/8 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 mb-10">
+                <MapPin size={14} className="text-orange-400" />
+                <span className="text-sm text-white/60 font-medium">{location}</span>
               </div>
-              <div>
-                <p className="font-display text-4xl md:text-5xl font-black text-white mb-1">24hr</p>
-                <div className="flex justify-center mb-2"><Clock size={12} className="text-orange-400" /></div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Response Time</p>
-              </div>
-              {wc?.yearsBadge && (
-                <div>
-                  <p className="font-display text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400 mb-1">{wc.yearsBadge}</p>
-                  <div className="h-[12px] mb-2" />
-                  <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Experience</p>
-                </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              {lead.phone && (
+                <a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white px-10 py-5 rounded-xl font-black text-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-2xl shadow-orange-500/20">
+                  <Phone size={22} />Call Now
+                </a>
               )}
-            </div>
-          </div>
-          </ScrollReveal>
-        </div>
-      </section>
-
-      {/* ═══════ SERVICES — Numbered Vertical List ═══════ */}
-      {services.length > 0 && (
-        <section id="services" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
-          <div className="max-w-5xl mx-auto">
-            <ScrollReveal animation="fade-up">
-            <div className="mb-14">
-              <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">
-                <Wrench size={12} />Services
-              </div>
-              <h2 className="font-display text-4xl md:text-5xl font-black text-white">What We Do</h2>
-            </div>
-            </ScrollReveal>
-
-            <div className="divide-y divide-gray-800/60">
-              {services.slice(0, 8).map((service, i) => (
-                <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
-                <div className="group flex items-center justify-between py-5 cursor-pointer hover:pl-3 transition-all duration-300" onClick={onCTAClick}>
-                  <div className="flex items-center gap-6">
-                    <span className="text-xs text-gray-600 font-mono tabular-nums w-6 font-bold">{String(i + 1).padStart(2, '0')}</span>
-                    <h3 className="text-base sm:text-lg font-bold text-gray-200 group-hover:text-white transition-colors">{service}</h3>
-                    {wc?.serviceDescriptions?.[service] && (
-                      <p className="text-sm text-gray-400 mt-1">{wc.serviceDescriptions[service]}</p>
-                    )}
-                  </div>
-                  <ArrowRight size={16} className="text-gray-700 group-hover:text-orange-400 group-hover:translate-x-1 transition-all flex-shrink-0" />
-                </div>
-                </ScrollReveal>
-              ))}
-            </div>
-
-            <ScrollReveal animation="fade-up">
-            <div className="mt-14 flex justify-center">
-              <button onClick={onCTAClick} className="flex items-center gap-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-xl font-bold text-base hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15 hover:shadow-orange-500/30">
-                Request a Quote<ArrowRight size={18} />
+              <button onClick={onCTAClick} className="inline-flex items-center justify-center gap-2.5 bg-white/8 backdrop-blur-sm border border-white/15 text-white px-10 py-5 rounded-xl font-bold text-lg hover:bg-white hover:text-gray-900 transition-all duration-300 group">
+                {config.ctaText}<ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </button>
+            </div>
+          </div>
+
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/20">
+            <span className="text-[10px] uppercase tracking-[0.25em] font-bold">Scroll</span>
+            <ChevronDown size={18} className="animate-bounce" />
+          </div>
+        </section>
+
+        {/* ═══════ OVERLAPPING STATS COUNTER ═══════ */}
+        <section className="relative z-10 px-4 sm:px-6 md:px-8 -mt-16">
+          <div className="max-w-5xl mx-auto">
+            <ScrollReveal animation="fade-in">
+            <div className="bg-gray-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 md:p-10 shadow-2xl shadow-black/40">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                {hasRating && (
+                  <div>
+                    <p className="font-display text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400 mb-1">{lead.enrichedRating}</p>
+                    <div className="flex justify-center mb-2 gap-0.5">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <Star key={i} size={12} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-orange-400 fill-current' : 'text-gray-700'} />
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Star Rating</p>
+                  </div>
+                )}
+                {lead.enrichedReviews && (
+                  <div>
+                    <p className="font-display text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400 mb-1">{lead.enrichedReviews}+</p>
+                    <div className="h-[12px] mb-2" />
+                    <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Happy Customers</p>
+                  </div>
+                )}
+                <div>
+                  <p className="font-display text-4xl md:text-5xl font-black text-white mb-1">100%</p>
+                  <div className="flex justify-center mb-2"><Shield size={12} className="text-orange-400" /></div>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Licensed & Insured</p>
+                </div>
+                <div>
+                  <p className="font-display text-4xl md:text-5xl font-black text-white mb-1">24hr</p>
+                  <div className="flex justify-center mb-2"><Clock size={12} className="text-orange-400" /></div>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Response Time</p>
+                </div>
+                {wc?.yearsBadge && (
+                  <div>
+                    <p className="font-display text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400 mb-1">{wc.yearsBadge}</p>
+                    <div className="h-[12px] mb-2" />
+                    <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Experience</p>
+                  </div>
+                )}
+              </div>
             </div>
             </ScrollReveal>
           </div>
         </section>
-      )}
 
-      {/* ═══════ URGENCY STRIP ═══════ */}
-      <section className="relative py-10 px-4 sm:px-6 md:px-8 bg-gradient-to-r from-orange-500 via-red-500 to-orange-500 overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
-        <ScrollReveal animation="fade-in">
-        <div className="relative max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
-          <div className="flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-              <Zap size={26} className="text-white" />
-            </div>
-            <p className="text-xl sm:text-2xl font-black text-white">Need Help Fast?</p>
-          </div>
-          {lead.phone && (
-            <a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center gap-2.5 bg-white text-gray-900 px-8 py-4 rounded-xl font-black text-base sm:text-lg hover:bg-gray-100 transition-all shadow-xl flex-shrink-0">
-              <Phone size={20} />{lead.phone}
-            </a>
-          )}
-        </div>
-        </ScrollReveal>
-      </section>
-
-      {/* ═══════ GALLERY — Asymmetric Masonry ═══════ */}
-      {photos.length > 0 && (
-        <section id="work" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
-          <div className="max-w-7xl mx-auto">
-            <ScrollReveal animation="fade-up">
-            <div className="text-center mb-10">
-              <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">
-                <Camera size={12} />Our Work
-              </div>
-              <h2 className="font-display text-4xl md:text-5xl font-black text-white">Results Speak Louder</h2>
-            </div>
-            </ScrollReveal>
-
-            {/* First photo hero-sized */}
-            {photos[0] && (
-              <ScrollReveal animation="zoom-in">
-              <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-orange-500/30 transition-all duration-500 mb-3 sm:mb-4">
-                <div className="aspect-[4/3] sm:aspect-[16/9]"><img src={photos[0]} alt="Project 1" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" /></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+        {/* ═══════ HOMEPAGE: SERVICES PREVIEW (6 cards) ═══════ */}
+        {services.length > 0 && (
+          <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
+            <div className="max-w-6xl mx-auto">
+              <ScrollReveal animation="fade-up">
+              <div className="flex items-end justify-between mb-14">
+                <div>
+                  <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">
+                    <Wrench size={12} />Services
+                  </div>
+                  <h2 className="font-display text-4xl md:text-5xl font-black text-white">What We Do</h2>
+                </div>
+                <button onClick={() => navigateTo('services')} className="hidden sm:inline-flex items-center gap-2 text-sm font-bold text-orange-400 hover:text-orange-300 transition-colors group">
+                  View All Services <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                </button>
               </div>
               </ScrollReveal>
-            )}
-            {/* Remaining photos in grid */}
-            {photos.length > 1 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-                {photos.slice(1, 7).map((photo, i) => (
-                  <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
-                  <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-orange-500/30 transition-all duration-500">
-                    <div className="aspect-[4/3]"><img src={photo} alt={`Project ${i + 2}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" /></div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
-                  </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                {services.slice(0, 6).map((service, i) => (
+                  <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
+                  <button onClick={() => navigateTo('services')} className="group w-full bg-gray-900/50 border border-gray-800/40 rounded-2xl p-6 text-left hover:border-orange-500/30 hover:bg-gray-900/80 transition-all duration-300">
+                    <div className="flex items-start gap-4">
+                      <span className="text-xs text-gray-600 font-mono tabular-nums w-6 font-bold mt-1">{String(i + 1).padStart(2, '0')}</span>
+                      <div>
+                        <h3 className="text-base font-bold text-gray-200 group-hover:text-white transition-colors mb-1">{service}</h3>
+                        {wc?.serviceDescriptions?.[service] && (
+                          <p className="text-sm text-gray-500 leading-relaxed line-clamp-2">{wc.serviceDescriptions[service]}</p>
+                        )}
+                      </div>
+                    </div>
+                  </button>
                   </ScrollReveal>
                 ))}
               </div>
-            )}
-          </div>
-        </section>
-      )}
+              <button onClick={() => navigateTo('services')} className="sm:hidden mt-8 inline-flex items-center gap-2 text-sm font-bold text-orange-400 hover:text-orange-300 transition-colors group">
+                View All Services <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </section>
+        )}
 
-      {/* ═══════ ABOUT — Editorial with Value Props ═══════ */}
-      <section id="about" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
-            <ScrollReveal animation="fade-left" className="lg:col-span-3">
-              <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">About Us</div>
-              <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-8 leading-[0.95]">
-                Built on Hard Work<br />& Results.
-              </h2>
-              <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
-                {wc?.aboutParagraph1 || `${lead.companyName} — dedicated ${industryLabel} professionals${location ? ` in ${location}` : ''}. We show up on time and get the job done right.`}
-              </p>
-              {wc?.aboutParagraph2 && (
-                <p className="text-gray-400 text-base leading-relaxed mt-4">{wc.aboutParagraph2}</p>
-              )}
-
-              {/* Value props folded in (replaces old "Why Choose Us" card section) */}
-              <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-6">
+        {/* ═══════ HOMEPAGE: ABOUT PREVIEW ═══════ */}
+        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+              <ScrollReveal animation="fade-left">
+              <div>
+                <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">About Us</div>
+                <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-8 leading-[0.95]">
+                  Built on Hard Work<br />& Results.
+                </h2>
+                <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
+                  {wc?.aboutParagraph1 || `${lead.companyName} — dedicated ${industryLabel} professionals${location ? ` in ${location}` : ''}. We show up on time and get the job done right.`}
+                </p>
+                <div className="flex flex-wrap gap-8 my-8">
+                  <div><p className="font-display text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400">{hasRating ? lead.enrichedRating : '5.0'}</p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Star Rating</p></div>
+                  {lead.enrichedReviews && (<div><p className="font-display text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400">{lead.enrichedReviews}+</p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Reviews</p></div>)}
+                  <div><p className="font-display text-3xl font-black text-white">100%</p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Satisfaction</p></div>
+                </div>
+                <button onClick={() => navigateTo('about')} className="inline-flex items-center gap-2 text-sm font-bold text-orange-400 hover:text-orange-300 transition-colors group">
+                  Learn More About Us <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
+              </ScrollReveal>
+              <ScrollReveal animation="fade-right" delay={200}>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
                   { icon: Flame, title: wc?.valueProps?.[0]?.title || 'Fast Response', desc: wc?.valueProps?.[0]?.description || 'Same-day response. We show up when we say we will.' },
                   { icon: Shield, title: wc?.valueProps?.[1]?.title || 'Quality Guaranteed', desc: wc?.valueProps?.[1]?.description || 'Premium materials. Expert work. Satisfaction guaranteed.' },
                   { icon: CheckCircle, title: wc?.valueProps?.[2]?.title || 'Fair & Transparent', desc: wc?.valueProps?.[2]?.description || 'Honest pricing upfront. No hidden fees. No surprises.' },
                 ].map((item, i) => (
-                  <div key={i} className="group">
+                  <div key={i} className="group bg-gray-900/50 border border-gray-800/40 rounded-2xl p-5">
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500/20 to-red-500/10 flex items-center justify-center mb-3 group-hover:from-orange-500/30 group-hover:to-red-500/20 transition-all">
                       <item.icon size={18} className="text-orange-400" />
                     </div>
@@ -504,163 +528,412 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                   </div>
                 ))}
               </div>
-            </ScrollReveal>
-
-            {/* Sidebar — Testimonial + Quick Contact */}
-            <ScrollReveal animation="fade-right" className="lg:col-span-2">
-            <div className="flex flex-col gap-5">
-              <div className="bg-gray-900/50 border border-orange-500/15 rounded-2xl p-7">
-                <div className="flex gap-0.5 mb-4">
-                  {Array.from({ length: 5 }, (_, i) => <Star key={i} size={14} className="text-amber-400 fill-current" />)}
-                </div>
-                <p className="text-white text-base italic leading-relaxed mb-4">
-                  "Fast, professional, and top-notch quality. Highly recommended."
-                </p>
-                <div className="w-8 h-0.5 bg-orange-500 rounded-full mb-2" />
-                <span className="text-gray-500 text-xs font-semibold">Satisfied Customer{location ? ` · ${location}` : ''}</span>
-              </div>
-
-              <div className="bg-gray-900/50 border border-gray-800/60 rounded-2xl p-7">
-                <h3 className="font-bold text-white text-base mb-1">Ready to get started?</h3>
-                <p className="text-gray-600 text-xs mb-5">Free estimate · Same-day response</p>
-                <div className="space-y-3.5">
-                  {lead.phone && (
-                    <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center flex-shrink-0"><Phone size={14} className="text-white" /></div>
-                      <div><p className="text-[11px] text-gray-600 uppercase tracking-wider font-bold">Phone</p><p className="text-sm font-bold text-white">{lead.phone}</p></div>
-                    </a>
-                  )}
-                  {lead.email && (
-                    <a href={`mailto:${lead.email}`} className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center flex-shrink-0"><Mail size={14} className="text-white" /></div>
-                      <div><p className="text-[11px] text-gray-600 uppercase tracking-wider font-bold">Email</p><p className="text-sm font-bold text-white">{lead.email}</p></div>
-                    </a>
-                  )}
-                  {lead.enrichedAddress && (
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center flex-shrink-0"><MapPin size={14} className="text-white" /></div>
-                      <div><p className="text-[11px] text-gray-600 uppercase tracking-wider font-bold">Location</p><p className="text-sm font-bold text-white">{lead.enrichedAddress}</p></div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              </ScrollReveal>
             </div>
+          </div>
+        </section>
+
+        {/* ═══════ HOMEPAGE: PORTFOLIO PREVIEW (3 photos) ═══════ */}
+        {photos.length > 0 && (
+          <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
+            <div className="max-w-7xl mx-auto">
+              <ScrollReveal animation="fade-up">
+              <div className="flex items-end justify-between mb-10">
+                <div>
+                  <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">
+                    <Camera size={12} />Our Work
+                  </div>
+                  <h2 className="font-display text-4xl md:text-5xl font-black text-white">Results Speak Louder</h2>
+                </div>
+                <button onClick={() => navigateTo('portfolio')} className="hidden sm:inline-flex items-center gap-2 text-sm font-bold text-orange-400 hover:text-orange-300 transition-colors group">
+                  View Our Work <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
+              </ScrollReveal>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                {photos.slice(0, 3).map((photo, i) => (
+                  <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
+                  <button onClick={() => navigateTo('portfolio')} className="relative overflow-hidden rounded-xl group border border-gray-800/40 hover:border-orange-500/30 transition-all duration-500 w-full">
+                    <div className="aspect-[4/3]"><img src={photo} alt={`Project ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" {...(i > 0 ? { loading: 'lazy' as const } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} /></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+                  </button>
+                  </ScrollReveal>
+                ))}
+              </div>
+              <button onClick={() => navigateTo('portfolio')} className="sm:hidden mt-8 inline-flex items-center gap-2 text-sm font-bold text-orange-400 hover:text-orange-300 transition-colors group">
+                View Our Work <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* ═══════ HOMEPAGE: TESTIMONIAL HIGHLIGHT (1 testimonial) ═══════ */}
+        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
+          <div className="max-w-3xl mx-auto text-center">
+            <ScrollReveal animation="fade-up">
+              <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">Reviews</div>
+              <div className="flex justify-center gap-0.5 mb-6">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={18} className="text-amber-400 fill-current" />)}</div>
+              <p className="text-xl sm:text-2xl text-gray-300 leading-relaxed italic font-light mb-6">"{testimonials[0].quote}"</p>
+              <div className="flex items-center justify-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center"><span className="text-white font-bold text-sm">{testimonials[0].name[0]}</span></div>
+                <div className="text-left"><span className="font-bold text-gray-300 text-sm">{testimonials[0].name}</span><span className="text-gray-600 text-sm"> — {testimonials[0].loc}</span></div>
+              </div>
             </ScrollReveal>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ═══════ TESTIMONIALS — Staggered Editorial ═══════ */}
-      <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
-        <div className="max-w-6xl mx-auto">
-          <ScrollReveal animation="fade-up">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">Reviews</div>
-            <h2 className="font-display text-4xl md:text-5xl font-black text-white">What People Say</h2>
-          </div>
-          </ScrollReveal>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {(() => {
-              const testimonials = [
-                ...(wc?.testimonialQuote ? [{
-                  quote: wc.testimonialQuote,
-                  name: wc.testimonialAuthor || 'Verified Customer',
-                  loc: lead.city || 'Local',
-                }] : []),
-                { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, name: 'Sarah M.', loc: lead.city || 'Local' },
-                { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, name: 'David R.', loc: lead.city || 'Local' },
-                { quote: `Honest quote, no pressure, and the work speaks for itself. Our ${industryLabel} project came out better than we expected.`, name: 'Jennifer K.', loc: lead.city || 'Local' },
-              ].slice(0, 3)
-              return testimonials.map((r, i) => (
-              <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
-              <div className={`bg-gray-950/60 border border-gray-800/40 rounded-2xl p-7 hover:border-orange-500/20 transition-all duration-300 ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
-                <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={14} className="text-amber-400 fill-current" />)}</div>
-                <p className="text-gray-300 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
-                <div className="flex items-center gap-3 text-xs">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center"><span className="text-white text-[11px] font-bold">{r.name[0]}</span></div>
-                  <div><span className="font-bold text-gray-300">{r.name}</span><span className="text-gray-600"> — {r.loc}</span></div>
+        {/* HOMEPAGE: CTA BAND */}
+        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} />
+      </PageShell>
+
+      {/* ═══════════════════════════════════════════
+          PAGE: SERVICES
+       ═══════════════════════════════════════════ */}
+      <PageShell page="services" currentPage={currentPage}>
+        <PageHeader
+          title="Our Services"
+          subtitle={`Expert ${industryLabel}${location ? ` serving ${location}` : ''} and surrounding areas.`}
+          bgClass="bg-gray-900"
+          titleClass="text-white font-black"
+          subtitleClass="text-gray-400"
+          accentClass="text-orange-400"
+          onBackClick={() => navigateTo('home')}
+        />
+
+        {services.length > 0 && (
+          <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
+            <div className="max-w-5xl mx-auto">
+              <div className="divide-y divide-gray-800/60">
+                {services.slice(0, 8).map((service, i) => (
+                  <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
+                  <div className="group flex items-center justify-between py-5 cursor-pointer hover:pl-3 transition-all duration-300" onClick={onCTAClick}>
+                    <div className="flex items-start gap-6">
+                      <span className="text-xs text-gray-600 font-mono tabular-nums w-6 font-bold mt-1">{String(i + 1).padStart(2, '0')}</span>
+                      <div className="flex flex-col min-w-0">
+                        <h3 className="text-base sm:text-lg font-bold text-gray-200 group-hover:text-white transition-colors">{service}</h3>
+                        {wc?.serviceDescriptions?.[service] && (
+                          <p className="text-sm text-gray-500 mt-1 leading-relaxed">{wc.serviceDescriptions[service]}</p>
+                        )}
+                      </div>
+                    </div>
+                    <ArrowRight size={16} className="text-gray-700 group-hover:text-orange-400 group-hover:translate-x-1 transition-all flex-shrink-0" />
+                  </div>
+                  </ScrollReveal>
+                ))}
+              </div>
+
+              <ScrollReveal animation="fade-up">
+              <div className="mt-14 flex justify-center">
+                <button onClick={onCTAClick} className="flex items-center gap-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-xl font-bold text-base hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15 hover:shadow-orange-500/30">
+                  Request a Quote<ArrowRight size={18} />
+                </button>
+              </div>
+              </ScrollReveal>
+            </div>
+          </section>
+        )}
+
+        {/* Service area info */}
+        {(wc?.serviceAreaText || location) && (
+          <section className="py-12 px-4 sm:px-6 md:px-8 bg-gray-900/50 border-t border-gray-800/40">
+            <div className="max-w-3xl mx-auto text-center">
+              <ScrollReveal animation="fade-up">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <MapPin size={16} className="text-orange-400" />
+                  <h3 className="text-lg font-bold text-white">Service Area</h3>
+                </div>
+                <p className="text-gray-500 text-sm leading-relaxed">{wc?.serviceAreaText || `Proudly serving ${location} and all surrounding communities. Contact us to confirm availability in your area.`}</p>
+              </ScrollReveal>
+            </div>
+          </section>
+        )}
+
+        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} />
+      </PageShell>
+
+      {/* ═══════════════════════════════════════════
+          PAGE: ABOUT
+       ═══════════════════════════════════════════ */}
+      <PageShell page="about" currentPage={currentPage}>
+        <PageHeader
+          title="About Us"
+          subtitle={`Get to know ${lead.companyName} — your trusted partner in ${industryLabel}.`}
+          bgClass="bg-gray-900"
+          titleClass="text-white font-black"
+          subtitleClass="text-gray-400"
+          accentClass="text-orange-400"
+          onBackClick={() => navigateTo('home')}
+        />
+
+        {/* Full About section */}
+        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
+              <ScrollReveal animation="fade-left" className="lg:col-span-3">
+                <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">About Us</div>
+                <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-8 leading-[0.95]">
+                  Built on Hard Work<br />& Results.
+                </h2>
+                <div className="space-y-4 text-gray-400 text-base leading-relaxed">
+                  <p>{wc?.aboutParagraph1 || `${lead.companyName} — dedicated ${industryLabel} professionals${location ? ` in ${location}` : ''}. We show up on time and get the job done right.`}</p>
+                  {wc?.aboutParagraph2 && <p>{wc.aboutParagraph2}</p>}
+                  {wc?.closingBody && <p>{wc.closingBody}</p>}
+                </div>
+
+                {/* Value props */}
+                <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  {[
+                    { icon: Flame, title: wc?.valueProps?.[0]?.title || 'Fast Response', desc: wc?.valueProps?.[0]?.description || 'Same-day response. We show up when we say we will.' },
+                    { icon: Shield, title: wc?.valueProps?.[1]?.title || 'Quality Guaranteed', desc: wc?.valueProps?.[1]?.description || 'Premium materials. Expert work. Satisfaction guaranteed.' },
+                    { icon: CheckCircle, title: wc?.valueProps?.[2]?.title || 'Fair & Transparent', desc: wc?.valueProps?.[2]?.description || 'Honest pricing upfront. No hidden fees. No surprises.' },
+                  ].map((item, i) => (
+                    <div key={i} className="group">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500/20 to-red-500/10 flex items-center justify-center mb-3 group-hover:from-orange-500/30 group-hover:to-red-500/20 transition-all">
+                        <item.icon size={18} className="text-orange-400" />
+                      </div>
+                      <h4 className="text-sm font-bold text-white mb-1">{item.title}</h4>
+                      <p className="text-xs text-gray-500 leading-relaxed">{item.desc}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-10 flex flex-wrap gap-12">
+                  <div><p className="font-display text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400">{hasRating ? lead.enrichedRating : '5.0'}</p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-2">Star Rating</p></div>
+                  {lead.enrichedReviews && (<div><p className="font-display text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400">{lead.enrichedReviews}+</p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-2">Reviews</p></div>)}
+                  <div><p className="font-display text-4xl font-black text-white">100%</p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-2">Satisfaction</p></div>
+                </div>
+              </ScrollReveal>
+
+              {/* Sidebar — Testimonial + Quick Contact */}
+              <ScrollReveal animation="fade-right" className="lg:col-span-2">
+              <div className="flex flex-col gap-5">
+                <div className="bg-gray-900/50 border border-orange-500/15 rounded-2xl p-7">
+                  <div className="flex gap-0.5 mb-4">
+                    {Array.from({ length: 5 }, (_, i) => <Star key={i} size={14} className="text-amber-400 fill-current" />)}
+                  </div>
+                  <p className="text-white text-base italic leading-relaxed mb-4">
+                    "Fast, professional, and top-notch quality. Highly recommended."
+                  </p>
+                  <div className="w-8 h-0.5 bg-orange-500 rounded-full mb-2" />
+                  <span className="text-gray-500 text-xs font-semibold">Satisfied Customer{location ? ` · ${location}` : ''}</span>
+                </div>
+
+                <div className="bg-gray-900/50 border border-gray-800/60 rounded-2xl p-7">
+                  <h3 className="font-bold text-white text-base mb-1">Ready to get started?</h3>
+                  <p className="text-gray-600 text-xs mb-5">Free estimate · Same-day response</p>
+                  <div className="space-y-3.5">
+                    {lead.phone && (
+                      <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center flex-shrink-0"><Phone size={14} className="text-white" /></div>
+                        <div><p className="text-[11px] text-gray-600 uppercase tracking-wider font-bold">Phone</p><p className="text-sm font-bold text-white">{lead.phone}</p></div>
+                      </a>
+                    )}
+                    {lead.email && (
+                      <a href={`mailto:${lead.email}`} className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center flex-shrink-0"><Mail size={14} className="text-white" /></div>
+                        <div><p className="text-[11px] text-gray-600 uppercase tracking-wider font-bold">Email</p><p className="text-sm font-bold text-white">{lead.email}</p></div>
+                      </a>
+                    )}
+                    {lead.enrichedAddress && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center flex-shrink-0"><MapPin size={14} className="text-white" /></div>
+                        <div><p className="text-[11px] text-gray-600 uppercase tracking-wider font-bold">Location</p><p className="text-sm font-bold text-white">{lead.enrichedAddress}</p></div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               </ScrollReveal>
-              ))
-            })()}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ═══════ FAQ ═══════ */}
-      <section id="faq" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
-        <div className="max-w-3xl mx-auto">
-          <ScrollReveal animation="fade-up">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">FAQ</div>
-            <h2 className="font-display text-3xl md:text-4xl font-black text-white">Questions? Answered.</h2>
+        {/* Full Testimonials */}
+        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
+          <div className="max-w-6xl mx-auto">
+            <ScrollReveal animation="fade-up">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">Reviews</div>
+              <h2 className="font-display text-4xl md:text-5xl font-black text-white">What People Say</h2>
+            </div>
+            </ScrollReveal>
+            <div className={testimonials.length === 1 ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 md:grid-cols-2 gap-6'}>
+              {testimonials.map((r, i) => (
+                <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
+                <div className={`bg-gray-950/60 border border-gray-800/40 rounded-2xl p-7 hover:border-orange-500/20 transition-all duration-300 ${testimonials.length === 3 && i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
+                  <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={14} className="text-amber-400 fill-current" />)}</div>
+                  <p className="text-gray-300 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
+                  <div className="flex items-center gap-3 text-xs">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center"><span className="text-white text-[11px] font-bold">{r.name[0]}</span></div>
+                    <div><span className="font-bold text-gray-300">{r.name}</span><span className="text-gray-600"> — {r.loc}</span></div>
+                  </div>
+                </div>
+                </ScrollReveal>
+              ))}
+            </div>
           </div>
-          </ScrollReveal>
-          <ScrollReveal animation="fade-up">
-          <div className="bg-gray-900/40 border border-gray-800/40 rounded-2xl px-6 sm:px-8">
-            {faqs.map((f, i) => <FAQItem key={i} question={f.q} answer={f.a} isOpen={openFAQ === i} onToggle={() => setOpenFAQ(openFAQ === i ? null : i)} />)}
-          </div>
-          </ScrollReveal>
-        </div>
-      </section>
+        </section>
 
-      {/* ═══════ CONTACT — Two Column with Form ═══════ */}
-      <section id="contact" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-            <ScrollReveal animation="fade-left">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">Contact</div>
-              <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-8 leading-[0.95]">Get Your Free Estimate.</h2>
-              <div className="space-y-5">
-                {lead.phone && (
-                  <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 group">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-orange-500/15 group-hover:shadow-orange-500/30 transition-shadow"><Phone size={20} className="text-white" /></div>
-                    <div><p className="text-sm font-bold text-white">{lead.phone}</p><p className="text-xs text-gray-500">Call or text anytime</p></div>
-                  </a>
+        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} />
+      </PageShell>
+
+      {/* ═══════════════════════════════════════════
+          PAGE: PORTFOLIO
+       ═══════════════════════════════════════════ */}
+      <PageShell page="portfolio" currentPage={currentPage}>
+        <PageHeader
+          title="Our Work"
+          subtitle="Browse our portfolio of completed projects."
+          bgClass="bg-gray-900"
+          titleClass="text-white font-black"
+          subtitleClass="text-gray-400"
+          accentClass="text-orange-400"
+          onBackClick={() => navigateTo('home')}
+        />
+
+        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
+          <div className="max-w-7xl mx-auto">
+            {photos.length > 0 ? (
+              <>
+                {/* First photo hero-sized */}
+                {photos[0] && (
+                  <ScrollReveal animation="zoom-in">
+                  <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-orange-500/30 transition-all duration-500 mb-3 sm:mb-4">
+                    <div className="aspect-[4/3] sm:aspect-[16/9]"><img src={photos[0]} alt="Project 1" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" /></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+                  </div>
+                  </ScrollReveal>
                 )}
-                {lead.email && (
-                  <a href={`mailto:${lead.email}`} className="flex items-center gap-4 group">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-red-500/15 group-hover:shadow-red-500/30 transition-shadow"><Mail size={20} className="text-white" /></div>
-                    <div><p className="text-sm font-bold text-white">{lead.email}</p><p className="text-xs text-gray-500">We reply fast</p></div>
-                  </a>
-                )}
-                {lead.enrichedAddress && (
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/15"><MapPin size={20} className="text-white" /></div>
-                    <div><p className="text-sm font-bold text-white">{lead.enrichedAddress}</p><p className="text-xs text-gray-500">{location}</p></div>
+                {/* Remaining photos in grid */}
+                {photos.length > 1 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                    {photos.slice(1, 7).map((photo, i) => (
+                      <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
+                      <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-orange-500/30 transition-all duration-500">
+                        <div className="aspect-[4/3]"><img src={photo} alt={`Project ${i + 2}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" {...{ loading: 'lazy' as const }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} /></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+                      </div>
+                      </ScrollReveal>
+                    ))}
                   </div>
                 )}
+              </>
+            ) : (
+              <div className="text-center py-16">
+                <div className="w-16 h-16 rounded-full bg-gray-900/80 border border-gray-800 flex items-center justify-center mx-auto mb-4">
+                  <Camera size={24} className="text-orange-400" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">Portfolio Coming Soon</h3>
+                <p className="text-sm text-gray-500 max-w-md mx-auto">We&apos;re putting together our best project photos. Contact us to see examples of our work.</p>
+                <button onClick={onCTAClick} className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-xl font-bold text-sm hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15">
+                  Request Examples <ArrowRight size={14} />
+                </button>
               </div>
-              <div className="flex gap-3 mt-10">
-                <a href="#" className="w-10 h-10 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-500 hover:text-orange-400 hover:border-orange-500/30 transition-all"><Facebook size={16} /></a>
-                <a href="#" className="w-10 h-10 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-500 hover:text-orange-400 hover:border-orange-500/30 transition-all"><Instagram size={16} /></a>
-                <a href="#" className="w-10 h-10 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-500 hover:text-orange-400 hover:border-orange-500/30 transition-all"><GoogleIcon size={16} /></a>
+            )}
+          </div>
+        </section>
+
+        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} />
+      </PageShell>
+
+      {/* ═══════════════════════════════════════════
+          PAGE: CONTACT
+       ═══════════════════════════════════════════ */}
+      <PageShell page="contact" currentPage={currentPage}>
+        <PageHeader
+          title="Get In Touch"
+          subtitle="We'd love to hear from you. Reach out for a free estimate."
+          bgClass="bg-gray-900"
+          titleClass="text-white font-black"
+          subtitleClass="text-gray-400"
+          accentClass="text-orange-400"
+          onBackClick={() => navigateTo('home')}
+        />
+
+        {/* Contact form + info */}
+        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+              <ScrollReveal animation="fade-left">
+              <div>
+                <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">Contact</div>
+                <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-8 leading-[0.95]">Get Your Free Estimate.</h2>
+                <div className="space-y-5">
+                  {lead.phone && (
+                    <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 group">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-orange-500/15 group-hover:shadow-orange-500/30 transition-shadow"><Phone size={20} className="text-white" /></div>
+                      <div><p className="text-sm font-bold text-white">{lead.phone}</p><p className="text-xs text-gray-500">Call or text anytime</p></div>
+                    </a>
+                  )}
+                  {lead.email && (
+                    <a href={`mailto:${lead.email}`} className="flex items-center gap-4 group">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-red-500/15 group-hover:shadow-red-500/30 transition-shadow"><Mail size={20} className="text-white" /></div>
+                      <div><p className="text-sm font-bold text-white">{lead.email}</p><p className="text-xs text-gray-500">We reply fast</p></div>
+                    </a>
+                  )}
+                  {lead.enrichedAddress && (
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/15"><MapPin size={20} className="text-white" /></div>
+                      <div><p className="text-sm font-bold text-white">{lead.enrichedAddress}</p><p className="text-xs text-gray-500">{location}</p></div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3 mt-10">
+                  <a href="#" className="w-10 h-10 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-500 hover:text-orange-400 hover:border-orange-500/30 transition-all"><Facebook size={16} /></a>
+                  <a href="#" className="w-10 h-10 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-500 hover:text-orange-400 hover:border-orange-500/30 transition-all"><Instagram size={16} /></a>
+                  <a href="#" className="w-10 h-10 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-500 hover:text-orange-400 hover:border-orange-500/30 transition-all"><GoogleIcon size={16} /></a>
+                </div>
               </div>
+              </ScrollReveal>
+
+              <ScrollReveal animation="fade-right">
+              <div className="bg-gray-900/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8">
+                <h3 className="text-lg font-bold text-white mb-1">Send us a message</h3>
+                <p className="text-xs text-gray-500 mb-6">We'll get back to you fast.</p>
+                {formSubmitted ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
+                      <CheckCircle size={32} className="text-green-500" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-2">Message Sent!</h3>
+                    <p className="text-sm text-gray-500">We&apos;ll get back to you shortly.</p>
+                  </div>
+                ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div><label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Name</label><input type="text" placeholder="Your name" value={formData.name} onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 placeholder:text-gray-600 transition-all" /></div>
+                    <div><label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Phone</label><input type="tel" placeholder="(555) 555-5555" value={formData.phone} onChange={(e) => setFormData(p => ({ ...p, phone: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 placeholder:text-gray-600 transition-all" /></div>
+                  </div>
+                  <div><label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Email</label><input type="email" placeholder="your@email.com" value={formData.email} onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 placeholder:text-gray-600 transition-all" /></div>
+                  <div><label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">How can we help?</label><textarea rows={4} placeholder="Tell us about your project..." value={formData.message} onChange={(e) => setFormData(p => ({ ...p, message: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 placeholder:text-gray-600 transition-all resize-none" /></div>
+                  <button onClick={handleFormSubmit} className="w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-sm hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15 hover:shadow-orange-500/30 hover:scale-[1.01] active:scale-[0.99]">{formLoading ? 'Sending...' : 'Send Message'}</button>
+                </div>
+                )}
+              </div>
+              </ScrollReveal>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
+          <div className="max-w-3xl mx-auto">
+            <ScrollReveal animation="fade-up">
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">FAQ</div>
+              <h2 className="font-display text-3xl md:text-4xl font-black text-white">Questions? Answered.</h2>
             </div>
             </ScrollReveal>
-
-            <ScrollReveal animation="fade-right">
-            <div className="bg-gray-900/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8">
-              <h3 className="text-lg font-bold text-white mb-1">Send us a message</h3>
-              <p className="text-xs text-gray-500 mb-6">We'll get back to you fast.</p>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div><label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Name</label><input type="text" placeholder="Your name" className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 placeholder:text-gray-600 transition-all" /></div>
-                  <div><label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Phone</label><input type="tel" placeholder="(555) 555-5555" className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 placeholder:text-gray-600 transition-all" /></div>
-                </div>
-                <div><label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Email</label><input type="email" placeholder="your@email.com" className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 placeholder:text-gray-600 transition-all" /></div>
-                <div><label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">How can we help?</label><textarea rows={4} placeholder="Tell us about your project..." className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 placeholder:text-gray-600 transition-all resize-none" /></div>
-                <button onClick={onCTAClick} className="w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-sm hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15 hover:shadow-orange-500/30 hover:scale-[1.01] active:scale-[0.99]">Send Message</button>
-              </div>
+            <ScrollReveal animation="fade-up">
+            <div className="bg-gray-900/40 border border-gray-800/40 rounded-2xl px-6 sm:px-8">
+              {faqs.map((f, i) => <FAQItem key={i} question={f.q} answer={f.a} isOpen={openFAQ === i} onToggle={() => setOpenFAQ(openFAQ === i ? null : i)} />)}
             </div>
             </ScrollReveal>
           </div>
-        </div>
-      </section>
+        </section>
+      </PageShell>
 
-      {/* ═══════ FOOTER ═══════ */}
+      {/* ═══════ FOOTER (always visible) ═══════ */}
       <footer className="bg-black py-16 px-4 sm:px-6 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
@@ -680,9 +953,11 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
               </div>
             </div>
             <div>
-              <h4 className="text-white font-bold mb-4 text-xs uppercase tracking-[0.15em]">Services</h4>
+              <h4 className="text-white font-bold mb-4 text-xs uppercase tracking-[0.15em]">Quick Links</h4>
               <ul className="space-y-2.5 text-sm text-gray-500">
-                {services.slice(0, 5).map((s, i) => <li key={i} className="flex items-center gap-2 hover:text-gray-300 transition-colors cursor-pointer"><CheckCircle size={11} className="text-orange-500 flex-shrink-0" />{s}</li>)}
+                {navSections.map((s) => (
+                  <li key={s.page}><button onClick={() => navigateTo(s.page)} data-nav-page={s.page} className="hover:text-white transition-colors">{s.label}</button></li>
+                ))}
               </ul>
             </div>
             <div>

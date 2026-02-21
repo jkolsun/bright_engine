@@ -1,18 +1,28 @@
 'use client'
+/*
+ * BOLD-B TEMPLATE — "Midnight"
+ * Design Direction: Dark, bold, high-contrast
+ * Brand Voice: Bold & Direct
+ * Multi-page with hash-based client-side routing
+ */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Phone, MapPin, Star, Shield, CheckCircle, ArrowRight, Mail,
-  Clock, Camera, Quote, Sparkles, Award, Wrench,
+  Clock, Camera, Quote, Sparkles, Wrench,
   MessageCircle, X, Send, ChevronDown, Menu, ChevronRight,
-  Minus, Plus, Facebook, Instagram, ExternalLink
+  Minus, Plus, Facebook, Instagram
 } from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
 import ScrollReveal from '../shared/ScrollReveal'
+import usePageRouter from '../shared/usePageRouter'
+import type { PageName } from '../shared/usePageRouter'
+import PageShell from '../shared/PageShell'
+import PageHeader from '../shared/PageHeader'
 
 // Google "G" icon (not in lucide)
-function GoogleIcon({ size = 15, className = '' }) {
+function GoogleIcon({ size = 15, className = '' }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="currentColor">
       <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
@@ -220,7 +230,7 @@ function ChatbotWidget({ companyName, accentColor = '#3b82f6' }: { companyName: 
 // ─────────────────────────────────────────────
 // MOBILE NAVIGATION DRAWER
 // ─────────────────────────────────────────────
-function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick, onCTAClick }: { isOpen: boolean; onClose: () => void; companyName: string; sections: { id: string; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void }) {
+function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
   if (!isOpen) return null
   return (
     <div className="fixed inset-0 z-[90] lg:hidden">
@@ -236,15 +246,15 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
 
           <nav className="space-y-1 flex-1">
             {sections.map((s) => (
-              <a
-                key={s.id}
-                href={`#${s.id}`}
-                onClick={onClose}
-                className="flex items-center justify-between px-4 py-3.5 rounded-xl text-gray-300 hover:bg-gray-800/50 hover:text-white transition-all text-[15px] font-semibold"
+              <button
+                key={s.page}
+                data-nav-page={s.page}
+                onClick={() => { onNavigate(s.page); onClose() }}
+                className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-gray-300 hover:bg-gray-800/50 hover:text-white transition-all text-[15px] font-semibold"
               >
                 {s.label}
                 <ChevronRight size={16} className="text-gray-600" />
-              </a>
+              </button>
             ))}
           </nav>
 
@@ -305,12 +315,46 @@ function FAQItem({ question, answer, isOpen, onToggle }: { question: string; ans
   )
 }
 
+/* ═══════ CTA BAND (reused on multiple pages) ═══════ */
+function CTABand({ closingHeadline, location, onCTAClick }: { closingHeadline?: string; location: string; onCTAClick: () => Promise<void> }) {
+  return (
+    <section className="relative py-16 sm:py-20 md:py-28 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500" />
+      <div
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage: 'radial-gradient(circle at 30% 40%, white 1px, transparent 1px)',
+          backgroundSize: '32px 32px',
+        }}
+      />
+      <ScrollReveal animation="fade-in" delay={0}>
+      <div className="relative max-w-4xl mx-auto px-5 sm:px-8 text-center">
+        <p className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-snug tracking-tight mb-8">
+          {closingHeadline || `"We don't do shortcuts. Every job gets our best — period."`}
+        </p>
+        <button
+          onClick={onCTAClick}
+          className="inline-flex items-center gap-2.5 bg-white text-gray-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all shadow-lg group"
+        >
+          Get Started <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+        </button>
+        {location && (
+          <p className="mt-6 text-white/50 text-sm font-bold uppercase tracking-[0.2em]">
+            Proudly serving {location}
+          </p>
+        )}
+      </div>
+      </ScrollReveal>
+    </section>
+  )
+}
+
 // ─────────────────────────────────────────────
 // MAIN TEMPLATE
 // ─────────────────────────────────────────────
 export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, websiteCopy }: TemplateProps) {
+  const { currentPage, navigateTo } = usePageRouter()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
   const [openFAQ, setOpenFAQ] = useState<number | null>(null)
   const [formData, setFormData] = useState({ name: '', phone: '', email: '', message: '' })
   const [formSubmitted, setFormSubmitted] = useState(false)
@@ -345,13 +389,12 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
   const hasRating = lead.enrichedRating && lead.enrichedRating > 0
   const wc = websiteCopy
 
-  const navSections = [
-    { id: 'hero', label: 'Home' },
-    { id: 'services', label: 'Services' },
-    { id: 'work', label: 'Our Work' },
-    { id: 'about', label: 'About' },
-    { id: 'faq', label: 'FAQ' },
-    { id: 'contact', label: 'Contact' },
+  const navSections: { page: PageName; label: string }[] = [
+    { page: 'home', label: 'Home' },
+    { page: 'services', label: 'Services' },
+    { page: 'about', label: 'About' },
+    { page: 'portfolio', label: 'Our Work' },
+    { page: 'contact', label: 'Contact' },
   ]
 
   const faqs = [
@@ -362,11 +405,12 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
     { q: 'What if I\'m not happy with the work?', a: 'Every job comes with our satisfaction guarantee — we make it right.' },
   ]
 
-  useEffect(() => {
-    const h = () => setScrolled(window.scrollY > 50)
-    window.addEventListener('scroll', h, { passive: true })
-    return () => window.removeEventListener('scroll', h)
-  }, [])
+  const testimonials = wc?.testimonialQuote
+    ? [{ quote: wc.testimonialQuote, name: wc.testimonialAuthor || 'Verified Customer', loc: lead.city || 'Local' }]
+    : [
+        { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, name: 'Sarah M.', loc: lead.city || 'Local' },
+        { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, name: 'David R.', loc: lead.city || 'Local' },
+      ]
 
   return (
     <div className="preview-template min-h-screen bg-gray-950 antialiased">
@@ -375,33 +419,34 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
       {/* ═══════════════════════════════════════════
           NAVIGATION — Dark glass with socials
           ═══════════════════════════════════════════ */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        scrolled
-          ? 'bg-gray-950/95 backdrop-blur-xl border-b border-white/5 shadow-xl shadow-black/20'
-          : 'bg-transparent'
-      }`}>
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-gray-950/95 backdrop-blur-xl border-b border-white/5 shadow-xl shadow-black/20">
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
           <div className="flex items-center justify-between h-[72px]">
             {/* Logo */}
-            <div className="flex items-center gap-3">
+            <button onClick={() => navigateTo('home')} className="flex items-center gap-3 cursor-pointer">
               {lead.logo && (
                 <img src={lead.logo} alt="" className="h-8 w-8 rounded-lg object-cover ring-2 ring-blue-500/20" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
               )}
               <span className="font-display text-xl font-black text-white tracking-tight uppercase">
                 {lead.companyName}
               </span>
-            </div>
+            </button>
 
             {/* Desktop Nav */}
             <div className="hidden lg:flex items-center gap-1.5">
               {navSections.map((s) => (
-                <a
-                  key={s.id}
-                  href={`#${s.id}`}
-                  className="px-3.5 py-2 rounded-lg text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+                <button
+                  key={s.page}
+                  data-nav-page={s.page}
+                  onClick={() => navigateTo(s.page)}
+                  className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition-all ${
+                    currentPage === s.page
+                      ? 'text-blue-400 bg-blue-500/10'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
                 >
                   {s.label}
-                </a>
+                </button>
               ))}
             </div>
 
@@ -462,316 +507,231 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         phone={lead.phone}
         onCallClick={onCallClick}
         onCTAClick={onCTAClick}
+        onNavigate={navigateTo}
       />
 
       {/* ═══════════════════════════════════════════
-          HERO — Centered with Watermark
-          ═══════════════════════════════════════════ */}
-      <section id="hero" className="relative min-h-[100svh] flex items-center justify-center overflow-hidden">
-        <div className={`absolute inset-0 bg-gradient-to-br ${config.gradient}`} />
-        <div className="absolute inset-0 bg-black/60" />
-        <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/20 to-transparent" />
+          PAGE: HOME
+       ═══════════════════════════════════════════ */}
+      <PageShell page="home" currentPage={currentPage}>
+        {/* HERO — Centered with Watermark */}
+        <section className="relative min-h-[100svh] flex items-center justify-center overflow-hidden">
+          <div className={`absolute inset-0 bg-gradient-to-br ${config.gradient}`} />
+          <div className="absolute inset-0 bg-black/60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/20 to-transparent" />
 
-        {/* Watermark */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full pointer-events-none select-none">
-          <p className="font-display text-[7rem] md:text-[11rem] lg:text-[14rem] font-black text-white/[0.025] text-center leading-none whitespace-nowrap truncate px-8">
-            {lead.companyName}
-          </p>
-        </div>
-
-        {/* Ambient glow */}
-        <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-blue-500/8 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-cyan-500/5 rounded-full blur-3xl" />
-
-        <div className="relative max-w-4xl mx-auto w-full px-4 sm:px-6 md:px-8 py-32 text-center">
-          {/* Rating Badge */}
-          {hasRating && (
-            <div className="inline-flex items-center gap-2.5 bg-white/8 backdrop-blur-md border border-white/10 rounded-full px-5 py-2.5 mb-8">
-              <div className="flex gap-0.5">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <Star key={i} size={14} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-blue-400 fill-current' : 'text-white/20'} />
-                ))}
-              </div>
-              <span className="text-sm font-bold text-white">{lead.enrichedRating}-Star Rated</span>
-              {lead.enrichedReviews && (
-                <span className="text-sm text-white/40">• {lead.enrichedReviews}+ reviews</span>
-              )}
-            </div>
-          )}
-
-          {/* Headline */}
-          <h1 className="font-display text-[2.75rem] sm:text-6xl md:text-7xl lg:text-[5.5rem] font-black text-white mb-6 tracking-tight leading-[0.95]">
-            {wc?.heroHeadline || lead.companyName}
-          </h1>
-          {wc?.heroSubheadline && (
-            <p className="text-lg sm:text-xl text-white/80 max-w-2xl mx-auto mb-8 leading-relaxed">{wc.heroSubheadline}</p>
-          )}
-
-          <p className="text-base sm:text-lg text-white/40 mb-12 max-w-xl mx-auto">
-            {config.tagline}
-          </p>
-
-          {/* CTA Row */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {lead.phone && (
-              <a
-                href={`tel:${lead.phone}`}
-                onClick={onCallClick}
-                className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-10 py-5 rounded-xl font-black text-lg hover:from-blue-600 hover:to-cyan-600 transition-all shadow-2xl shadow-blue-500/20"
-              >
-                <Phone size={22} />
-                Call Now — Free Estimate
-              </a>
-            )}
-            <button
-              onClick={onCTAClick}
-              className="inline-flex items-center justify-center gap-2.5 bg-white/8 backdrop-blur-sm border border-white/15 text-white px-10 py-5 rounded-xl font-bold text-lg hover:bg-white hover:text-gray-900 transition-all duration-300 group"
-            >
-              {config.ctaText}
-              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-            </button>
+          {/* Watermark */}
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full pointer-events-none select-none">
+            <p className="font-display text-[7rem] md:text-[11rem] lg:text-[14rem] font-black text-white/[0.025] text-center leading-none whitespace-nowrap truncate px-8">
+              {lead.companyName}
+            </p>
           </div>
-        </div>
 
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/20">
-          <span className="text-[10px] uppercase tracking-[0.25em] font-bold">Explore</span>
-          <ChevronDown size={18} className="animate-bounce" />
-        </div>
-      </section>
+          {/* Ambient glow */}
+          <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-blue-500/8 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-cyan-500/5 rounded-full blur-3xl" />
 
-      {/* ═══════════════════════════════════════════
-          PROOF WALL — Inline strip
-          ═══════════════════════════════════════════ */}
-      <section className="py-4 sm:py-5 px-4 sm:px-6 md:px-8 border-y border-white/5 bg-gray-900/40">
-        <ScrollReveal animation="fade-in">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
+          <div className="relative max-w-4xl mx-auto w-full px-4 sm:px-6 md:px-8 py-32 text-center">
+            {/* Rating Badge */}
             {hasRating && (
-              <span className="flex items-center gap-2 text-white font-bold">
-                <Star size={14} className="text-blue-400 fill-current" />
-                {lead.enrichedRating} Rating
-              </span>
-            )}
-            {lead.enrichedReviews && (
-              <>
-                <span className="text-gray-700 hidden sm:inline">•</span>
-                <span className="text-gray-300 font-medium">{lead.enrichedReviews}+ Customers</span>
-              </>
-            )}
-            <span className="text-gray-700 hidden sm:inline">•</span>
-            <span className="flex items-center gap-1.5 text-gray-300 font-medium">
-              <Shield size={13} className="text-blue-400" />
-              Licensed & Insured
-            </span>
-            {location && (
-              <>
-                <span className="text-gray-700 hidden sm:inline">•</span>
-                <span className="flex items-center gap-1.5 text-gray-300 font-medium">
-                  <MapPin size={13} className="text-blue-400" />
-                  {location}
-                </span>
-              </>
-            )}
-            <span className="text-gray-700 hidden sm:inline">•</span>
-            <span className="flex items-center gap-1.5 text-gray-300 font-medium">
-              <Clock size={13} className="text-blue-400" />
-              Same-Day Response
-            </span>
-            {wc?.yearsBadge && (
-              <><span className="text-gray-700 hidden sm:inline">•</span><span className="flex items-center gap-1.5 text-gray-300 font-medium">{wc.yearsBadge}</span></>
-            )}
-          </div>
-        </div>
-        </ScrollReveal>
-      </section>
-
-      {/* ═══════════════════════════════════════════
-          SERVICES — Numbered Vertical List (no cards)
-          ═══════════════════════════════════════════ */}
-      {services.length > 0 && (
-        <section id="services" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
-          <div className="max-w-5xl mx-auto">
-            {/* Section Header */}
-            <ScrollReveal animation="fade-up">
-            <div className="mb-12 sm:mb-16">
-              <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
-                <Wrench size={12} />
-                Services
-              </div>
-              <h2 className="font-display text-4xl md:text-5xl font-black text-white">
-                What We Do
-              </h2>
-            </div>
-            </ScrollReveal>
-
-            {/* Service List */}
-            <div className="divide-y divide-gray-800/60">
-              {services.slice(0, 8).map((service, i) => (
-                <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
-                <div
-                  className="group flex items-center justify-between py-5 sm:py-6 cursor-pointer hover:pl-3 transition-all duration-300"
-                  onClick={onCTAClick}
-                >
-                  <div className="flex items-start gap-6">
-                    <span className="text-xs text-gray-600 font-mono tabular-nums w-6 font-bold">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <div className="flex flex-col min-w-0">
-                      <h3 className="text-base sm:text-lg font-bold text-gray-200 group-hover:text-white transition-colors">
-                        {service}
-                      </h3>
-                      {wc?.serviceDescriptions?.[service] && (
-                        <p className="text-sm text-gray-500 mt-1 leading-relaxed">{wc.serviceDescriptions[service]}</p>
-                      )}
-                    </div>
-                  </div>
-                  <ArrowRight
-                    size={16}
-                    className="text-gray-700 group-hover:text-blue-400 group-hover:translate-x-1 transition-all flex-shrink-0"
-                  />
+              <div className="inline-flex items-center gap-2.5 bg-white/8 backdrop-blur-md border border-white/10 rounded-full px-5 py-2.5 mb-8">
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Star key={i} size={14} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-blue-400 fill-current' : 'text-white/20'} />
+                  ))}
                 </div>
-                </ScrollReveal>
-              ))}
-            </div>
+                <span className="text-sm font-bold text-white">{lead.enrichedRating}-Star Rated</span>
+                {lead.enrichedReviews && (
+                  <span className="text-sm text-white/40">• {lead.enrichedReviews}+ reviews</span>
+                )}
+              </div>
+            )}
 
-            <ScrollReveal animation="fade-up">
-            <div className="mt-12 sm:mt-14 flex justify-center">
+            {/* Headline */}
+            <h1 className="font-display text-[2.75rem] sm:text-6xl md:text-7xl lg:text-[5.5rem] font-black text-white mb-6 tracking-tight leading-[0.95]">
+              {wc?.heroHeadline || lead.companyName}
+            </h1>
+            {wc?.heroSubheadline && (
+              <p className="text-lg sm:text-xl text-white/80 max-w-2xl mx-auto mb-8 leading-relaxed">{wc.heroSubheadline}</p>
+            )}
+
+            <p className="text-base sm:text-lg text-white/40 mb-12 max-w-xl mx-auto">
+              {config.tagline}
+            </p>
+
+            {/* CTA Row */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              {lead.phone && (
+                <a
+                  href={`tel:${lead.phone}`}
+                  onClick={onCallClick}
+                  className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-10 py-5 rounded-xl font-black text-lg hover:from-blue-600 hover:to-cyan-600 transition-all shadow-2xl shadow-blue-500/20"
+                >
+                  <Phone size={22} />
+                  Call Now — Free Estimate
+                </a>
+              )}
               <button
                 onClick={onCTAClick}
-                className="flex items-center gap-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-8 py-3.5 sm:py-4 rounded-xl font-bold text-base hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/15 hover:shadow-blue-500/30"
+                className="inline-flex items-center justify-center gap-2.5 bg-white/8 backdrop-blur-sm border border-white/15 text-white px-10 py-5 rounded-xl font-bold text-lg hover:bg-white hover:text-gray-900 transition-all duration-300 group"
               >
-                Request a Quote
-                <ArrowRight size={18} />
+                {config.ctaText}
+                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
-            </ScrollReveal>
+          </div>
+
+          {/* Scroll indicator */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/20">
+            <span className="text-[10px] uppercase tracking-[0.25em] font-bold">Explore</span>
+            <ChevronDown size={18} className="animate-bounce" />
           </div>
         </section>
-      )}
 
-      {/* ═══════════════════════════════════════════
-          FULL-BLEED STATEMENT
-          ═══════════════════════════════════════════ */}
-      <section className="relative py-16 sm:py-20 md:py-28 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500" />
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: 'radial-gradient(circle at 30% 40%, white 1px, transparent 1px)',
-            backgroundSize: '32px 32px',
-          }}
-        />
-        <ScrollReveal animation="fade-in">
-        <div className="relative max-w-4xl mx-auto px-5 sm:px-8 text-center">
-          <p className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-snug tracking-tight">
-            {wc?.closingHeadline || `"We don't do shortcuts. Every job gets our best — period."`}
-          </p>
-          {location && (
-            <p className="mt-6 text-white/50 text-sm font-bold uppercase tracking-[0.2em]">
-              Proudly serving {location}
-            </p>
-          )}
-        </div>
-        </ScrollReveal>
-      </section>
-
-      {/* ═══════════════════════════════════════════
-          GALLERY — Asymmetric Masonry
-          ═══════════════════════════════════════════ */}
-      {photos.length > 0 && (
-        <section id="work" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
-          <div className="max-w-7xl mx-auto">
-            <ScrollReveal animation="fade-up">
-            <div className="text-center mb-10 sm:mb-16">
-              <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
-                <Camera size={12} />
-                Our Work
-              </div>
-              <h2 className="font-display text-4xl md:text-5xl font-black text-white">
-                See the Results
-              </h2>
+        {/* PROOF STRIP */}
+        <section className="py-4 sm:py-5 px-4 sm:px-6 md:px-8 border-y border-white/5 bg-gray-900/40">
+          <ScrollReveal animation="fade-in" delay={0}>
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
+              {hasRating && (
+                <span className="flex items-center gap-2 text-white font-bold">
+                  <Star size={14} className="text-blue-400 fill-current" />
+                  {lead.enrichedRating} Rating
+                </span>
+              )}
+              {lead.enrichedReviews && (
+                <>
+                  <span className="text-gray-700 hidden sm:inline">•</span>
+                  <span className="text-gray-300 font-medium">{lead.enrichedReviews}+ Customers</span>
+                </>
+              )}
+              <span className="text-gray-700 hidden sm:inline">•</span>
+              <span className="flex items-center gap-1.5 text-gray-300 font-medium">
+                <Shield size={13} className="text-blue-400" />
+                Licensed & Insured
+              </span>
+              {location && (
+                <>
+                  <span className="text-gray-700 hidden sm:inline">•</span>
+                  <span className="flex items-center gap-1.5 text-gray-300 font-medium">
+                    <MapPin size={13} className="text-blue-400" />
+                    {location}
+                  </span>
+                </>
+              )}
+              <span className="text-gray-700 hidden sm:inline">•</span>
+              <span className="flex items-center gap-1.5 text-gray-300 font-medium">
+                <Clock size={13} className="text-blue-400" />
+                Same-Day Response
+              </span>
+              {wc?.yearsBadge && (
+                <><span className="text-gray-700 hidden sm:inline">•</span><span className="flex items-center gap-1.5 text-gray-300 font-medium">{wc.yearsBadge}</span></>
+              )}
             </div>
-            </ScrollReveal>
+          </div>
+          </ScrollReveal>
+        </section>
 
-            {/* Hero photo full width */}
-            <ScrollReveal animation="zoom-in">
-            <div className="mb-3 sm:mb-4">
-              <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-blue-500/30 transition-all duration-500">
-                <div className="aspect-[16/9] sm:aspect-[2/1]">
-                  <img
-                    src={photos[0]}
-                    alt={`${lead.companyName} project 1`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                  />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
-              </div>
-            </div>
-            </ScrollReveal>
-
-            {/* Remaining photos grid */}
-            {photos.length > 1 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                {photos.slice(1, 5).map((photo, i) => (
-                  <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
-                  <div
-                    className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-blue-500/30 transition-all duration-500"
-                  >
-                    <div className="aspect-[4/3]">
-                      <img
-                        src={photo}
-                        alt={`${lead.companyName} project ${i + 2}`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                        loading="lazy"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                      />
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+        {/* HOMEPAGE: SERVICES PREVIEW (6 cards grid + "View All") */}
+        {services.length > 0 && (
+          <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
+            <div className="max-w-6xl mx-auto">
+              <ScrollReveal animation="fade-up" delay={0}>
+              <div className="flex items-end justify-between mb-12 sm:mb-16">
+                <div>
+                  <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
+                    <Wrench size={12} />
+                    Services
                   </div>
+                  <h2 className="font-display text-4xl md:text-5xl font-black text-white">
+                    What We Do
+                  </h2>
+                </div>
+                <button onClick={() => navigateTo('services')} className="hidden sm:inline-flex items-center gap-2 text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors group">
+                  View All <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
+              </ScrollReveal>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                {services.slice(0, 6).map((service, i) => (
+                  <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
+                  <button
+                    onClick={() => navigateTo('services')}
+                    className="group bg-gray-900/60 border border-gray-800/40 rounded-2xl p-6 text-left hover:border-blue-500/30 hover:bg-gray-900/80 transition-all duration-300 w-full"
+                  >
+                    <div className="flex items-start gap-4">
+                      <span className="text-xs text-gray-600 font-mono tabular-nums font-bold mt-1">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <div>
+                        <h3 className="text-base font-bold text-gray-200 group-hover:text-white transition-colors mb-1">
+                          {service}
+                        </h3>
+                        {wc?.serviceDescriptions?.[service] && (
+                          <p className="text-sm text-gray-500 leading-relaxed line-clamp-2">{wc.serviceDescriptions[service]}</p>
+                        )}
+                      </div>
+                    </div>
+                  </button>
                   </ScrollReveal>
                 ))}
               </div>
-            )}
-          </div>
-        </section>
-      )}
 
-      {/* ═══════════════════════════════════════════
-          ABOUT — Editorial with Pull-Quote
-          ═══════════════════════════════════════════ */}
-      <section id="about" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
-            {/* Content */}
-            <div className="lg:col-span-3">
-              <ScrollReveal animation="fade-left">
-              <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
-                About Us
-              </div>
-              <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-8 leading-[0.95]">
-                Built on Trust.<br />Proven by Work.
-              </h2>
-              <div className="text-gray-400 leading-relaxed text-base sm:text-lg">
-                <p>
+              <button onClick={() => navigateTo('services')} className="sm:hidden mt-8 inline-flex items-center gap-2 text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors group">
+                View All Services <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* HOMEPAGE: ABOUT PREVIEW */}
+        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+              <ScrollReveal animation="fade-left" delay={0}>
+              <div>
+                <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
+                  About Us
+                </div>
+                <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-6 leading-[0.95]">
+                  Built on Trust.<br />Proven by Work.
+                </h2>
+                <p className="text-gray-400 text-base sm:text-lg leading-relaxed mb-6">
                   {wc?.aboutParagraph1 ||
                     `${lead.companyName} is ${location ? `${location}'s` : 'your'} trusted ${industryLabel} team — dedicated to quality on every job.`}
                 </p>
-                {wc?.aboutParagraph2 && (
-                  <p className="text-gray-500 text-base leading-relaxed mt-4">{wc.aboutParagraph2}</p>
-                )}
+                <div className="flex flex-wrap gap-8 mb-8">
+                  <div>
+                    <p className="font-display text-3xl font-black text-blue-400">{hasRating ? lead.enrichedRating : '5.0'}</p>
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Star Rating</p>
+                  </div>
+                  {lead.enrichedReviews && (
+                    <div>
+                      <p className="font-display text-3xl font-black text-blue-400">{lead.enrichedReviews}+</p>
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Reviews</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-display text-3xl font-black text-blue-400">100%</p>
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Satisfaction</p>
+                  </div>
+                </div>
+                <button onClick={() => navigateTo('about')} className="inline-flex items-center gap-2 text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors group">
+                  Learn More <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                </button>
               </div>
+              </ScrollReveal>
 
-              {/* Why Choose Us — inline */}
-              <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <ScrollReveal animation="fade-right" delay={200}>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
                   { icon: Clock, title: wc?.valueProps?.[0]?.title || 'Same-Day Response', desc: wc?.valueProps?.[0]?.description || 'We pick up, show up, and get to work — fast.' },
                   { icon: Shield, title: wc?.valueProps?.[1]?.title || 'Quality Guaranteed', desc: wc?.valueProps?.[1]?.description || 'Premium materials. Expert craftsmanship. Every time.' },
                   { icon: CheckCircle, title: wc?.valueProps?.[2]?.title || 'Fair & Transparent', desc: wc?.valueProps?.[2]?.description || 'Honest pricing. No hidden fees. No surprises.' },
                 ].map((item, i) => (
-                  <div key={i} className="group">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/10 flex items-center justify-center mb-3 group-hover:from-blue-500/30 group-hover:to-cyan-500/20 transition-all">
+                  <div key={i} className="bg-gray-900/60 border border-gray-800/40 rounded-2xl p-5">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/10 flex items-center justify-center mb-3">
                       <item.icon size={18} className="text-blue-400" />
                     </div>
                     <h4 className="text-sm font-bold text-white mb-1">{item.title}</h4>
@@ -781,311 +741,611 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               </div>
               </ScrollReveal>
             </div>
+          </div>
+        </section>
 
-            {/* Sidebar — Quote + Contact Card */}
-            <div className="lg:col-span-2 flex flex-col gap-5">
-              <ScrollReveal animation="fade-right">
-              {/* Pull Quote */}
-              <div className="relative bg-gray-900/50 border border-blue-500/15 rounded-2xl p-7">
-                <Quote size={28} className="text-blue-500/20 mb-3" />
-                <p className="text-white text-base italic leading-relaxed mb-4">
-                  "Outstanding work — professional, on time, and top quality."
-                </p>
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-0.5">
-                    {Array.from({ length: 5 }, (_, i) => (
-                      <Star key={i} size={11} className="text-blue-400 fill-current" />
-                    ))}
+        {/* HOMEPAGE: PORTFOLIO PREVIEW (3 photos) */}
+        {photos.length > 0 && (
+          <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
+            <div className="max-w-6xl mx-auto">
+              <ScrollReveal animation="fade-up" delay={0}>
+              <div className="flex items-end justify-between mb-10 sm:mb-14">
+                <div>
+                  <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
+                    <Camera size={12} />
+                    Our Work
                   </div>
-                  <span className="text-gray-600 text-xs">— Satisfied Customer{location ? `, ${location}` : ''}</span>
+                  <h2 className="font-display text-4xl md:text-5xl font-black text-white">
+                    See the Results
+                  </h2>
                 </div>
+                <button onClick={() => navigateTo('portfolio')} className="hidden sm:inline-flex items-center gap-2 text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors group">
+                  View Our Work <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
+              </ScrollReveal>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                {photos.slice(0, 3).map((photo, i) => (
+                  <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
+                  <button onClick={() => navigateTo('portfolio')} className="relative overflow-hidden rounded-xl group border border-gray-800/40 hover:border-blue-500/30 transition-all duration-500 w-full">
+                    <img
+                      src={photo}
+                      alt={`${lead.companyName} project ${i + 1}`}
+                      className="w-full aspect-[4/3] object-cover group-hover:scale-105 transition-transform duration-700"
+                      {...(i > 0 ? { loading: 'lazy' as const } : {})}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+                  </button>
+                  </ScrollReveal>
+                ))}
               </div>
 
-              {/* Quick Contact */}
-              <div className="bg-gray-900/50 border border-gray-800/60 rounded-2xl p-7">
-                <h3 className="font-bold text-white text-base mb-4">Ready to get started?</h3>
-                <div className="space-y-3.5">
+              <button onClick={() => navigateTo('portfolio')} className="sm:hidden mt-8 inline-flex items-center gap-2 text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors group">
+                View Our Work <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* HOMEPAGE: TESTIMONIAL HIGHLIGHT (1 quote) */}
+        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
+          <div className="max-w-3xl mx-auto text-center">
+            <ScrollReveal animation="fade-up" delay={0}>
+              <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
+                <Sparkles size={12} />
+                Reviews
+              </div>
+              <div className="flex justify-center gap-0.5 mb-6">
+                {Array.from({ length: 5 }, (_, j) => <Star key={j} size={18} className="text-blue-400 fill-current" />)}
+              </div>
+              <p className="text-xl sm:text-2xl text-gray-300 leading-relaxed italic mb-6">
+                &ldquo;{testimonials[0].quote}&rdquo;
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">{testimonials[0].name[0]}</span>
+                </div>
+                <div className="text-left">
+                  <span className="font-bold text-gray-300 text-sm">{testimonials[0].name}</span>
+                  <span className="text-gray-600 text-sm"> — {testimonials[0].loc}</span>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+        </section>
+
+        {/* HOMEPAGE: CTA BAND */}
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+      </PageShell>
+
+      {/* ═══════════════════════════════════════════
+          PAGE: SERVICES
+       ═══════════════════════════════════════════ */}
+      <PageShell page="services" currentPage={currentPage}>
+        <PageHeader
+          title="Our Services"
+          subtitle={`Expert ${industryLabel}${location ? ` serving ${location}` : ''} and surrounding areas.`}
+          bgClass="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500"
+          subtitleClass="text-white/60"
+          accentClass="text-white/80"
+          onBackClick={() => navigateTo('home')}
+        />
+
+        {services.length > 0 && (
+          <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
+            <div className="max-w-5xl mx-auto">
+              <div className="divide-y divide-gray-800/60">
+                {services.slice(0, 8).map((service, i) => (
+                  <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
+                  <div
+                    className="group flex items-center justify-between py-5 sm:py-6 cursor-pointer hover:pl-3 transition-all duration-300"
+                    onClick={onCTAClick}
+                  >
+                    <div className="flex items-start gap-6">
+                      <span className="text-xs text-gray-600 font-mono tabular-nums w-6 font-bold">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <div className="flex flex-col min-w-0">
+                        <h3 className="text-base sm:text-lg font-bold text-gray-200 group-hover:text-white transition-colors">
+                          {service}
+                        </h3>
+                        {wc?.serviceDescriptions?.[service] && (
+                          <p className="text-sm text-gray-500 mt-1 leading-relaxed">{wc.serviceDescriptions[service]}</p>
+                        )}
+                      </div>
+                    </div>
+                    <ArrowRight
+                      size={16}
+                      className="text-gray-700 group-hover:text-blue-400 group-hover:translate-x-1 transition-all flex-shrink-0"
+                    />
+                  </div>
+                  </ScrollReveal>
+                ))}
+              </div>
+
+              <ScrollReveal animation="fade-up" delay={0}>
+              <div className="mt-12 sm:mt-14 flex justify-center">
+                <button
+                  onClick={onCTAClick}
+                  className="flex items-center gap-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-8 py-3.5 sm:py-4 rounded-xl font-bold text-base hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/15 hover:shadow-blue-500/30"
+                >
+                  Request a Quote
+                  <ArrowRight size={18} />
+                </button>
+              </div>
+              </ScrollReveal>
+            </div>
+          </section>
+        )}
+
+        {/* Service area info */}
+        {(wc?.serviceAreaText || location) && (
+          <section className="py-12 px-4 sm:px-6 md:px-8 border-t border-gray-800/60">
+            <div className="max-w-3xl mx-auto text-center">
+              <ScrollReveal animation="fade-up" delay={0}>
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <MapPin size={16} className="text-blue-400" />
+                  <h3 className="text-lg font-bold text-white">Service Area</h3>
+                </div>
+                <p className="text-gray-500 text-sm leading-relaxed">{wc?.serviceAreaText || `Proudly serving ${location} and all surrounding communities. Contact us to confirm availability in your area.`}</p>
+              </ScrollReveal>
+            </div>
+          </section>
+        )}
+
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+      </PageShell>
+
+      {/* ═══════════════════════════════════════════
+          PAGE: ABOUT
+       ═══════════════════════════════════════════ */}
+      <PageShell page="about" currentPage={currentPage}>
+        <PageHeader
+          title="About Us"
+          subtitle={`Get to know ${lead.companyName} — your trusted partner in ${industryLabel}.`}
+          bgClass="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500"
+          subtitleClass="text-white/60"
+          accentClass="text-white/80"
+          onBackClick={() => navigateTo('home')}
+        />
+
+        {/* Full About section */}
+        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
+              {/* Content */}
+              <ScrollReveal animation="fade-left" delay={0} className="lg:col-span-3">
+              <div>
+                <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-8 leading-[0.95]">
+                  Built on Trust.<br />Proven by Work.
+                </h2>
+                <div className="text-gray-400 leading-relaxed text-base sm:text-lg">
+                  <p>
+                    {wc?.aboutParagraph1 ||
+                      `${lead.companyName} is ${location ? `${location}'s` : 'your'} trusted ${industryLabel} team — dedicated to quality on every job.`}
+                  </p>
+                  {wc?.aboutParagraph2 && (
+                    <p className="text-gray-500 text-base leading-relaxed mt-4">{wc.aboutParagraph2}</p>
+                  )}
+                  {wc?.closingBody && (
+                    <p className="text-gray-500 text-base leading-relaxed mt-4">{wc.closingBody}</p>
+                  )}
+                </div>
+
+                {/* Why Choose Us — inline */}
+                <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  {[
+                    { icon: Clock, title: wc?.valueProps?.[0]?.title || 'Same-Day Response', desc: wc?.valueProps?.[0]?.description || 'We pick up, show up, and get to work — fast.' },
+                    { icon: Shield, title: wc?.valueProps?.[1]?.title || 'Quality Guaranteed', desc: wc?.valueProps?.[1]?.description || 'Premium materials. Expert craftsmanship. Every time.' },
+                    { icon: CheckCircle, title: wc?.valueProps?.[2]?.title || 'Fair & Transparent', desc: wc?.valueProps?.[2]?.description || 'Honest pricing. No hidden fees. No surprises.' },
+                  ].map((item, i) => (
+                    <div key={i} className="group">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-cyan-500/10 flex items-center justify-center mb-3 group-hover:from-blue-500/30 group-hover:to-cyan-500/20 transition-all">
+                        <item.icon size={18} className="text-blue-400" />
+                      </div>
+                      <h4 className="text-sm font-bold text-white mb-1">{item.title}</h4>
+                      <p className="text-xs text-gray-500 leading-relaxed">{item.desc}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-10 flex flex-wrap gap-12">
+                  <div>
+                    <p className="font-display text-4xl font-black text-blue-400">{hasRating ? lead.enrichedRating : '5.0'}</p>
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-2">Star Rating</p>
+                  </div>
+                  {lead.enrichedReviews && (
+                    <div>
+                      <p className="font-display text-4xl font-black text-blue-400">{lead.enrichedReviews}+</p>
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-2">Reviews</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-display text-4xl font-black text-blue-400">100%</p>
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-2">Satisfaction</p>
+                  </div>
+                </div>
+              </div>
+              </ScrollReveal>
+
+              {/* Sidebar — Quote + Contact Card */}
+              <ScrollReveal animation="fade-right" delay={200} className="lg:col-span-2">
+              <div className="flex flex-col gap-5">
+                {/* Pull Quote */}
+                <div className="relative bg-gray-900/50 border border-blue-500/15 rounded-2xl p-7">
+                  <Quote size={28} className="text-blue-500/20 mb-3" />
+                  <p className="text-white text-base italic leading-relaxed mb-4">
+                    "Outstanding work — professional, on time, and top quality."
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <Star key={i} size={11} className="text-blue-400 fill-current" />
+                      ))}
+                    </div>
+                    <span className="text-gray-600 text-xs">— Satisfied Customer{location ? `, ${location}` : ''}</span>
+                  </div>
+                </div>
+
+                {/* Quick Contact */}
+                <div className="bg-gray-900/50 border border-gray-800/60 rounded-2xl p-7">
+                  <h3 className="font-bold text-white text-base mb-4">Ready to get started?</h3>
+                  <div className="space-y-3.5">
+                    {lead.phone && (
+                      <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-3 group">
+                        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0">
+                          <Phone size={14} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] text-gray-600 uppercase tracking-wider font-bold">Phone</p>
+                          <p className="text-sm font-bold text-white">{lead.phone}</p>
+                        </div>
+                      </a>
+                    )}
+                    {lead.email && (
+                      <a href={`mailto:${lead.email}`} className="flex items-center gap-3 group">
+                        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                          <Mail size={14} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] text-gray-600 uppercase tracking-wider font-bold">Email</p>
+                          <p className="text-sm font-bold text-white">{lead.email}</p>
+                        </div>
+                      </a>
+                    )}
+                    {lead.enrichedAddress && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                          <MapPin size={14} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] text-gray-600 uppercase tracking-wider font-bold">Location</p>
+                          <p className="text-sm font-bold text-white">{lead.enrichedAddress}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              </ScrollReveal>
+            </div>
+          </div>
+        </section>
+
+        {/* Full Testimonials */}
+        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
+          <div className="max-w-6xl mx-auto">
+            <ScrollReveal animation="fade-up" delay={0}>
+            <div className="text-center mb-12 sm:mb-16">
+              <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
+                <Sparkles size={12} />
+                Reviews
+              </div>
+              <h2 className="font-display text-4xl md:text-5xl font-black text-white">
+                Trusted by Homeowners
+              </h2>
+            </div>
+            </ScrollReveal>
+
+            <div className={testimonials.length === 1 ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 md:grid-cols-2 gap-6'}>
+              {testimonials.map((review, i) => (
+                <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
+                <div
+                  className="bg-gray-950/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8 hover:border-blue-500/20 transition-all duration-300"
+                >
+                  <div className="flex gap-0.5 mb-4">
+                    {Array.from({ length: 5 }, (_, j) => (
+                      <Star key={j} size={14} className="text-blue-400 fill-current" />
+                    ))}
+                  </div>
+                  <p className="text-gray-300 text-base leading-relaxed mb-5 italic">
+                    "{review.quote}"
+                  </p>
+                  <div className="flex items-center gap-3 text-xs">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-[11px] font-bold">{review.name[0]}</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-gray-300">{review.name}</span>
+                      <span className="text-gray-600"> — {review.loc}</span>
+                    </div>
+                  </div>
+                </div>
+                </ScrollReveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+      </PageShell>
+
+      {/* ═══════════════════════════════════════════
+          PAGE: PORTFOLIO
+       ═══════════════════════════════════════════ */}
+      <PageShell page="portfolio" currentPage={currentPage}>
+        <PageHeader
+          title="Our Work"
+          subtitle="Browse our portfolio of completed projects."
+          bgClass="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500"
+          subtitleClass="text-white/60"
+          accentClass="text-white/80"
+          onBackClick={() => navigateTo('home')}
+        />
+
+        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
+          <div className="max-w-7xl mx-auto">
+            {photos.length > 0 ? (
+              <>
+                {/* Hero photo full width */}
+                <ScrollReveal animation="zoom-in" delay={0}>
+                <div className="mb-3 sm:mb-4">
+                  <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-blue-500/30 transition-all duration-500">
+                    <div className="aspect-[16/9] sm:aspect-[2/1]">
+                      <img
+                        src={photos[0]}
+                        alt={`${lead.companyName} project 1`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                      />
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+                  </div>
+                </div>
+                </ScrollReveal>
+
+                {/* Remaining photos grid */}
+                {photos.length > 1 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                    {photos.slice(1, 5).map((photo, i) => (
+                      <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
+                      <div
+                        className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-blue-500/30 transition-all duration-500"
+                      >
+                        <div className="aspect-[4/3]">
+                          <img
+                            src={photo}
+                            alt={`${lead.companyName} project ${i + 2}`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                            loading="lazy"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                          />
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+                      </div>
+                      </ScrollReveal>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-16">
+                <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-4 border border-blue-500/15">
+                  <Camera size={24} className="text-blue-400" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">Portfolio Coming Soon</h3>
+                <p className="text-sm text-gray-500 max-w-md mx-auto">We&apos;re putting together our best project photos. Contact us to see examples of our work.</p>
+                <button onClick={onCTAClick} className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-6 py-3 rounded-xl font-bold text-sm hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/15">
+                  Request Examples <ArrowRight size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+      </PageShell>
+
+      {/* ═══════════════════════════════════════════
+          PAGE: CONTACT
+       ═══════════════════════════════════════════ */}
+      <PageShell page="contact" currentPage={currentPage}>
+        <PageHeader
+          title="Get In Touch"
+          subtitle="Free estimates, fast response. Reach out today."
+          bgClass="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500"
+          subtitleClass="text-white/60"
+          accentClass="text-white/80"
+          onBackClick={() => navigateTo('home')}
+        />
+
+        {/* Contact form + info */}
+        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
+              {/* Info Side */}
+              <ScrollReveal animation="fade-left" delay={0}>
+              <div>
+                <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-6 leading-[0.95]">
+                  Let&apos;s Talk.
+                </h2>
+                <p className="text-gray-400 text-base leading-relaxed mb-10 max-w-md">
+                  {wc?.closingBody || `Free estimates, fast response. Reach out today.`}
+                </p>
+
+                <div className="space-y-5">
                   {lead.phone && (
-                    <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-3 group">
-                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0">
-                        <Phone size={14} className="text-white" />
+                    <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 group">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/15 group-hover:shadow-blue-500/30 transition-shadow">
+                        <Phone size={20} className="text-white" />
                       </div>
                       <div>
-                        <p className="text-[11px] text-gray-600 uppercase tracking-wider font-bold">Phone</p>
                         <p className="text-sm font-bold text-white">{lead.phone}</p>
+                        <p className="text-xs text-gray-500">Call or text anytime</p>
                       </div>
                     </a>
                   )}
                   {lead.email && (
-                    <a href={`mailto:${lead.email}`} className="flex items-center gap-3 group">
-                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-                        <Mail size={14} className="text-white" />
+                    <a href={`mailto:${lead.email}`} className="flex items-center gap-4 group">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/15 group-hover:shadow-indigo-500/30 transition-shadow">
+                        <Mail size={20} className="text-white" />
                       </div>
                       <div>
-                        <p className="text-[11px] text-gray-600 uppercase tracking-wider font-bold">Email</p>
                         <p className="text-sm font-bold text-white">{lead.email}</p>
+                        <p className="text-xs text-gray-500">We reply within hours</p>
                       </div>
                     </a>
                   )}
                   {lead.enrichedAddress && (
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-                        <MapPin size={14} className="text-white" />
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-cyan-500/15">
+                        <MapPin size={20} className="text-white" />
                       </div>
                       <div>
-                        <p className="text-[11px] text-gray-600 uppercase tracking-wider font-bold">Location</p>
                         <p className="text-sm font-bold text-white">{lead.enrichedAddress}</p>
+                        <p className="text-xs text-gray-500">{location}</p>
                       </div>
                     </div>
                   )}
                 </div>
-              </div>
-              </ScrollReveal>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* ═══════════════════════════════════════════
-          TESTIMONIALS — Editorial Pull-Quotes
-          ═══════════════════════════════════════════ */}
-      <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
-        <div className="max-w-6xl mx-auto">
-          <ScrollReveal animation="fade-up">
-          <div className="text-center mb-12 sm:mb-16">
-            <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
-              <Sparkles size={12} />
-              Reviews
-            </div>
-            <h2 className="font-display text-4xl md:text-5xl font-black text-white">
-              Trusted by Homeowners
-            </h2>
-          </div>
-          </ScrollReveal>
-
-          {(() => {
-              const testimonials = wc?.testimonialQuote
-                ? [{ quote: wc.testimonialQuote, name: wc.testimonialAuthor || 'Verified Customer', loc: lead.city || 'Local' }]
-                : [
-                  { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, name: 'Sarah M.', loc: lead.city || 'Local' },
-                  { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, name: 'David R.', loc: lead.city || 'Local' },
-                ]
-              return (
-                <div className={`grid grid-cols-1 ${testimonials.length === 1 ? 'max-w-2xl mx-auto' : 'md:grid-cols-2'} gap-6`}>
-                  {testimonials.map((review, i) => (
-                    <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
-                    <div
-                      className="bg-gray-950/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8 hover:border-blue-500/20 transition-all duration-300"
+                {/* Social Links */}
+                <div className="flex gap-3 mt-10">
+                  {[
+                    { icon: Facebook, label: 'Facebook', hoverColor: 'hover:text-blue-400 hover:border-blue-500/30' },
+                    { icon: Instagram, label: 'Instagram', hoverColor: 'hover:text-pink-400 hover:border-pink-500/30' },
+                    { icon: GoogleIcon, label: 'Google', hoverColor: 'hover:text-blue-400 hover:border-blue-500/30' },
+                  ].map(({ icon: Icon, label, hoverColor }) => (
+                    <a
+                      key={label}
+                      href="#"
+                      className={`w-10 h-10 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-500 transition-all ${hoverColor}`}
+                      aria-label={label}
                     >
-                      <div className="flex gap-0.5 mb-4">
-                        {Array.from({ length: 5 }, (_, j) => (
-                          <Star key={j} size={14} className="text-blue-400 fill-current" />
-                        ))}
-                      </div>
-                      <p className="text-gray-300 text-base leading-relaxed mb-5 italic">
-                        "{review.quote}"
-                      </p>
-                      <div className="flex items-center gap-3 text-xs">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0">
-                          <span className="text-white text-[11px] font-bold">{review.name[0]}</span>
-                        </div>
-                        <div>
-                          <span className="font-bold text-gray-300">{review.name}</span>
-                          <span className="text-gray-600"> — {review.loc}</span>
-                        </div>
-                      </div>
-                    </div>
-                    </ScrollReveal>
+                      <Icon size={16} />
+                    </a>
                   ))}
                 </div>
-              )
-            })()}
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════
-          FAQ — Accordion
-          ═══════════════════════════════════════════ */}
-      <section id="faq" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
-        <div className="max-w-3xl mx-auto">
-          <ScrollReveal animation="fade-up">
-          <div className="text-center mb-14">
-            <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
-              FAQ
-            </div>
-            <h2 className="font-display text-3xl md:text-4xl font-black text-white">
-              Questions? Answered.
-            </h2>
-          </div>
-          </ScrollReveal>
-
-          <div className="bg-gray-900/40 border border-gray-800/40 rounded-2xl px-6 sm:px-8">
-            {faqs.map((faq, i) => (
-              <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
-              <FAQItem
-                question={faq.q}
-                answer={faq.a}
-                isOpen={openFAQ === i}
-                onToggle={() => setOpenFAQ(openFAQ === i ? null : i)}
-              />
+              </div>
               </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* ═══════════════════════════════════════════
-          CONTACT — Two Column with Form
-          ═══════════════════════════════════════════ */}
-      <section id="contact" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
-            {/* Info Side */}
-            <div>
-              <ScrollReveal animation="fade-left">
+              {/* Form Side */}
+              <ScrollReveal animation="fade-right" delay={200}>
+              <div className="bg-gray-900/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8">
+                {formSubmitted ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
+                      <CheckCircle size={32} className="text-green-500" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-white mb-2">Message Sent!</h3>
+                    <p className="text-sm text-gray-500">We&apos;ll get back to you shortly.</p>
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="text-lg font-bold text-white mb-1">Send us a message</h3>
+                    <p className="text-xs text-gray-500 mb-6">We&apos;ll get back to you within a few hours.</p>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Name</label>
+                          <input
+                            type="text"
+                            placeholder="Your name"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Phone</label>
+                          <input
+                            type="tel"
+                            placeholder="(555) 555-5555"
+                            value={formData.phone}
+                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Email</label>
+                        <input
+                          type="email"
+                          placeholder="your@email.com"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">How can we help?</label>
+                        <textarea
+                          rows={4}
+                          placeholder="Tell us about your project..."
+                          value={formData.message}
+                          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                          className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all resize-none"
+                        />
+                      </div>
+                      <button
+                        onClick={handleFormSubmit}
+                        disabled={formLoading}
+                        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold text-sm hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/15 hover:shadow-blue-500/30 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+                      >
+                        {formLoading ? 'Sending...' : 'Send Message'}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+              </ScrollReveal>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
+          <div className="max-w-3xl mx-auto">
+            <ScrollReveal animation="fade-up" delay={0}>
+            <div className="text-center mb-14">
               <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
-                Contact
+                FAQ
               </div>
-              <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-6 leading-[0.95]">
-                Let's Talk.
+              <h2 className="font-display text-3xl md:text-4xl font-black text-white">
+                Questions? Answered.
               </h2>
-              <p className="text-gray-400 text-base leading-relaxed mb-10 max-w-md">
-                {wc?.closingBody || `Free estimates, fast response. Reach out today.`}
-              </p>
-
-              <div className="space-y-5">
-                {lead.phone && (
-                  <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 group">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/15 group-hover:shadow-blue-500/30 transition-shadow">
-                      <Phone size={20} className="text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">{lead.phone}</p>
-                      <p className="text-xs text-gray-500">Call or text anytime</p>
-                    </div>
-                  </a>
-                )}
-                {lead.email && (
-                  <a href={`mailto:${lead.email}`} className="flex items-center gap-4 group">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/15 group-hover:shadow-indigo-500/30 transition-shadow">
-                      <Mail size={20} className="text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">{lead.email}</p>
-                      <p className="text-xs text-gray-500">We reply within hours</p>
-                    </div>
-                  </a>
-                )}
-                {lead.enrichedAddress && (
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-cyan-500/15">
-                      <MapPin size={20} className="text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">{lead.enrichedAddress}</p>
-                      <p className="text-xs text-gray-500">{location}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Social Links */}
-              <div className="flex gap-3 mt-10">
-                {[
-                  { icon: Facebook, label: 'Facebook', hoverColor: 'hover:text-blue-400 hover:border-blue-500/30' },
-                  { icon: Instagram, label: 'Instagram', hoverColor: 'hover:text-pink-400 hover:border-pink-500/30' },
-                  { icon: GoogleIcon, label: 'Google', hoverColor: 'hover:text-blue-400 hover:border-blue-500/30' },
-                ].map(({ icon: Icon, label, hoverColor }) => (
-                  <a
-                    key={label}
-                    href="#"
-                    className={`w-10 h-10 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-500 transition-all ${hoverColor}`}
-                    aria-label={label}
-                  >
-                    <Icon size={16} />
-                  </a>
-                ))}
-              </div>
-              </ScrollReveal>
-            </div>
-
-            {/* Form Side */}
-            <ScrollReveal animation="fade-right">
-            <div className="bg-gray-900/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8">
-              {formSubmitted ? (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle size={32} className="text-green-500" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white mb-2">Message Sent!</h3>
-                  <p className="text-sm text-gray-500">We'll get back to you shortly.</p>
-                </div>
-              ) : (
-                <>
-                  <h3 className="text-lg font-bold text-white mb-1">Send us a message</h3>
-                  <p className="text-xs text-gray-500 mb-6">We'll get back to you within a few hours.</p>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Name</label>
-                        <input
-                          type="text"
-                          placeholder="Your name"
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Phone</label>
-                        <input
-                          type="tel"
-                          placeholder="(555) 555-5555"
-                          value={formData.phone}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Email</label>
-                      <input
-                        type="email"
-                        placeholder="your@email.com"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">How can we help?</label>
-                      <textarea
-                        rows={4}
-                        placeholder="Tell us about your project..."
-                        value={formData.message}
-                        onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all resize-none"
-                      />
-                    </div>
-                    <button
-                      onClick={handleFormSubmit}
-                      disabled={formLoading}
-                      className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold text-sm hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/15 hover:shadow-blue-500/30 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
-                    >
-                      {formLoading ? 'Sending...' : 'Send Message'}
-                    </button>
-                  </div>
-                </>
-              )}
             </div>
             </ScrollReveal>
-          </div>
-        </div>
-      </section>
 
-      {/* ═══════════════════════════════════════════
-          FOOTER
-          ═══════════════════════════════════════════ */}
+            <div className="bg-gray-900/40 border border-gray-800/40 rounded-2xl px-6 sm:px-8">
+              {faqs.map((faq, i) => (
+                <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
+                <FAQItem
+                  question={faq.q}
+                  answer={faq.a}
+                  isOpen={openFAQ === i}
+                  onToggle={() => setOpenFAQ(openFAQ === i ? null : i)}
+                />
+                </ScrollReveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      </PageShell>
+
+      {/* ═══════ FOOTER (always visible) ═══════ */}
       <footer className="bg-black py-14 sm:py-16 px-4 sm:px-6 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
@@ -1116,14 +1376,15 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               </div>
             </div>
 
-            {/* Services */}
+            {/* Quick Links */}
             <div>
-              <h4 className="text-white font-bold mb-4 text-xs uppercase tracking-[0.15em]">Services</h4>
+              <h4 className="text-white font-bold mb-4 text-xs uppercase tracking-[0.15em]">Quick Links</h4>
               <ul className="space-y-2.5 text-sm text-gray-500">
-                {services.slice(0, 5).map((s, i) => (
-                  <li key={i} className="flex items-center gap-2 hover:text-gray-300 transition-colors cursor-pointer">
-                    <CheckCircle size={11} className="text-blue-500 flex-shrink-0" />
-                    {s}
+                {navSections.map((s) => (
+                  <li key={s.page}>
+                    <button onClick={() => navigateTo(s.page)} data-nav-page={s.page} className="hover:text-gray-300 transition-colors">
+                      {s.label}
+                    </button>
                   </li>
                 ))}
               </ul>
