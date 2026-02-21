@@ -99,6 +99,7 @@ enum LeadSource {
   ORGANIC
   CSV_IMPORT
   MANUAL
+  FORM
 }
 
 enum LeadPriority {
