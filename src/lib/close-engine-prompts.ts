@@ -68,9 +68,9 @@ RULES:
     const collected = ctx.collectedData || {}
     const asked = ctx.questionsAsked || []
 
-    // Build the form URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.brightautomations.com'
-    const formUrl = (lead as any).formUrl || `${baseUrl}/onboard/${lead.id}`
+    // Always compute form URL from env (stored formUrl may have stale domain)
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://brightengine-production.up.railway.app'
+    const formUrl = `${baseUrl}/onboard/${lead.id}`
     const onboardingStatus = (lead as any).onboardingStatus || 'NOT_STARTED'
     const formCompleted = onboardingStatus === 'COMPLETED'
 
