@@ -24,7 +24,14 @@ export async function POST(
 
     const lead = await prisma.lead.findUnique({
       where: { id },
-      select: { id: true, previewId: true, siteHtml: true, companyName: true },
+      select: {
+        id: true,
+        previewId: true,
+        siteHtml: true,
+        companyName: true,
+        personalization: true,
+        buildReadinessScore: true,
+      },
     })
 
     if (!lead) {
@@ -36,18 +43,47 @@ export async function POST(
       return NextResponse.json({ html: lead.siteHtml, cached: true })
     }
 
+    // Check if personalization exists — without it the preview will be bare
+    let hasPersonalization = false
+    if (lead.personalization) {
+      try {
+        const parsed = typeof lead.personalization === 'string'
+          ? JSON.parse(lead.personalization)
+          : lead.personalization
+        hasPersonalization = !!parsed?.websiteCopy?.heroHeadline
+      } catch { /* not valid JSON */ }
+    }
+
+    if (!hasPersonalization) {
+      return NextResponse.json({
+        error: `Site not ready for editing yet. The AI hasn't generated the website copy. Score: ${lead.buildReadinessScore || 0}/100. Use "Rebuild" to trigger the pipeline.`,
+        needsRebuild: true,
+      }, { status: 422 })
+    }
+
     // Build internal URL to fetch the preview page
     const previewPath = `/preview/${lead.previewId || id}`
     const baseUrl = request.nextUrl.origin
     const previewUrl = `${baseUrl}${previewPath}`
 
-    const previewRes = await fetch(previewUrl, {
-      headers: { 'Cookie': request.headers.get('cookie') || '' },
-    })
+    let previewRes: Response
+    try {
+      previewRes = await fetch(previewUrl, {
+        headers: { 'Cookie': request.headers.get('cookie') || '' },
+      })
+    } catch (fetchError) {
+      console.error('[Snapshot] Fetch error:', fetchError)
+      return NextResponse.json(
+        { error: `Could not reach preview page at ${previewUrl}. The server may still be deploying.` },
+        { status: 502 }
+      )
+    }
 
     if (!previewRes.ok) {
+      const errorText = await previewRes.text().catch(() => 'Unknown error')
+      console.error(`[Snapshot] Preview returned ${previewRes.status}:`, errorText.slice(0, 500))
       return NextResponse.json(
-        { error: `Preview fetch failed: ${previewRes.status}` },
+        { error: `Preview page returned ${previewRes.status}. Try again after the build finishes deploying.` },
         { status: 500 }
       )
     }

@@ -116,10 +116,14 @@ export default function SiteEditorPanel({
     return () => window.removeEventListener('keydown', handleEsc)
   }, [onClose])
 
+  const [needsRebuild, setNeedsRebuild] = useState(false)
+  const [rebuilding, setRebuilding] = useState(false)
+
   // ─── Snapshot ─────────────────────────────────────────
   const generateSnapshot = async () => {
     setIsLoading(true)
     setSnapshotError(null)
+    setNeedsRebuild(false)
     try {
       const res = await fetch(`/api/site-editor/${leadId}/snapshot`, { method: 'POST' })
       const data = await res.json()
@@ -129,11 +133,31 @@ export default function SiteEditorPanel({
         setDebouncedHtml(data.html)
       } else {
         setSnapshotError(data.error || 'Failed to generate snapshot')
+        if (data.needsRebuild) setNeedsRebuild(true)
       }
     } catch {
       setSnapshotError('Network error generating snapshot')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // ─── Rebuild Pipeline ──────────────────────────────────
+  const triggerRebuild = async () => {
+    setRebuilding(true)
+    try {
+      const res = await fetch(`/api/build-queue/${leadId}/rebuild`, { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        setSnapshotError(`Rebuild started: ${data.message || 'Pipeline running...'}. Close and re-open the editor in ~30 seconds.`)
+        setNeedsRebuild(false)
+      } else {
+        setSnapshotError(data.error || 'Rebuild failed')
+      }
+    } catch {
+      setSnapshotError('Network error triggering rebuild')
+    } finally {
+      setRebuilding(false)
     }
   }
 
@@ -332,16 +356,27 @@ export default function SiteEditorPanel({
                 </div>
               </div>
             ) : snapshotError ? (
-              <div className="flex items-center justify-center h-full bg-[#1e1e1e] text-red-400">
-                <div className="text-center">
-                  <p className="text-lg mb-2">Snapshot Error</p>
-                  <p className="text-sm text-gray-500">{snapshotError}</p>
-                  <button
-                    onClick={generateSnapshot}
-                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
-                  >
-                    Retry
-                  </button>
+              <div className="flex items-center justify-center h-full bg-[#1e1e1e] text-amber-400">
+                <div className="text-center max-w-md">
+                  <p className="text-lg mb-2">{needsRebuild ? 'Site Not Ready' : 'Snapshot Error'}</p>
+                  <p className="text-sm text-gray-400 mb-4">{snapshotError}</p>
+                  <div className="flex items-center justify-center gap-3">
+                    {needsRebuild && (
+                      <button
+                        onClick={triggerRebuild}
+                        disabled={rebuilding}
+                        className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                      >
+                        {rebuilding ? 'Starting...' : 'Rebuild Site'}
+                      </button>
+                    )}
+                    <button
+                      onClick={generateSnapshot}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+                    >
+                      Retry
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (

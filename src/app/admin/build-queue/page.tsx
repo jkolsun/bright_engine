@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import {
   Hammer, Eye, Pencil, CheckCircle, Send, Rocket, Globe,
-  Loader2, XCircle, Clock, Zap, ExternalLink, ChevronDown, ChevronUp, Code,
+  Loader2, XCircle, Clock, Zap, ExternalLink, ChevronDown, ChevronUp, Code, RefreshCw,
 } from 'lucide-react'
 import SiteEditorPanel from '@/components/site-editor/SiteEditorPanel'
 
@@ -195,6 +195,7 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
   const [expanded, setExpanded] = useState<'edit' | 'launch' | null>(null)
   const [approving, setApproving] = useState(false)
   const [publishing, setPublishing] = useState(false)
+  const [rebuilding, setRebuilding] = useState(false)
 
   const step = lead.buildStep || 'QA_REVIEW'
   const config = SITE_STEP_CONFIG[step] || SITE_STEP_CONFIG.QA_REVIEW
@@ -232,11 +233,26 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
     }
   }
 
+  const handleRebuild = async () => {
+    setRebuilding(true)
+    try {
+      const res = await fetch(`/api/build-queue/${lead.id}/rebuild`, { method: 'POST' })
+      if (res.ok) {
+        setTimeout(onRefresh, 2000) // Refresh after 2s to show updated status
+      }
+    } catch (err) {
+      console.error('Rebuild failed:', err)
+    } finally {
+      setRebuilding(false)
+    }
+  }
+
   const previewUrl = lead.previewUrl || (lead.previewId ? `/preview/${lead.previewId}` : null)
   const showApprove = ['QA_REVIEW', 'EDITING'].includes(step)
   const showEdit = ['QA_REVIEW', 'EDITING'].includes(step)
   const showLaunch = step === 'CLIENT_APPROVED'
   const showPublish = step === 'CLIENT_APPROVED'
+  const showRebuild = ['QA_REVIEW', 'EDITING'].includes(step) && (lead.buildReadinessScore || 0) < 70
 
   return (
     <Card className="p-4">
@@ -286,6 +302,16 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
               <ExternalLink size={14} />
               Preview
             </a>
+          )}
+          {showRebuild && (
+            <button
+              onClick={handleRebuild}
+              disabled={rebuilding}
+              className="px-3 py-1.5 text-sm text-amber-600 border border-amber-300 rounded-lg hover:bg-amber-50 disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {rebuilding ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+              Rebuild
+            </button>
           )}
           {['QA_REVIEW', 'EDITING', 'QA_APPROVED'].includes(step) && (
             <button
