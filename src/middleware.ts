@@ -16,7 +16,8 @@ export async function middleware(request: NextRequest) {
   // Public routes — no auth needed
   if (
     pathname === '/login' ||
-    pathname === '/success' || 
+    pathname === '/start' ||
+    pathname === '/success' ||
     pathname === '/terms' ||
     pathname.startsWith('/preview/') ||
     pathname.startsWith('/onboard/') ||
@@ -25,6 +26,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/health') ||
     pathname.startsWith('/api/bootstrap/') ||
     pathname.startsWith('/api/auth/') ||
+    pathname.startsWith('/api/start') ||
     pathname.startsWith('/api/webhooks/') ||
     pathname.startsWith('/api/test/') ||
     pathname.startsWith('/api/worker-init') ||
