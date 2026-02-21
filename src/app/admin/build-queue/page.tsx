@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import {
   Hammer, Eye, Pencil, CheckCircle, Send, Rocket, Globe,
-  Loader2, XCircle, Clock, Zap, ExternalLink, ChevronDown, ChevronUp,
+  Loader2, XCircle, Clock, Zap, ExternalLink, ChevronDown, ChevronUp, Code,
 } from 'lucide-react'
 
 // ============================================
@@ -267,6 +267,15 @@ function SiteBuildCard({ lead, onRefresh }: { lead: any; onRefresh: () => void }
               <ExternalLink size={14} />
               Preview
             </a>
+          )}
+          {['QA_REVIEW', 'EDITING', 'QA_APPROVED'].includes(step) && (
+            <Link
+              href={`/site-editor/${lead.id}`}
+              className="px-3 py-1.5 text-sm text-purple-600 border border-purple-300 rounded-lg hover:bg-purple-50 flex items-center gap-1.5"
+            >
+              <Code size={14} />
+              Site Editor
+            </Link>
           )}
           {showEdit && (
             <button

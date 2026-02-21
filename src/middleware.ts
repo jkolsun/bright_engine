@@ -79,6 +79,14 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Site editor — admin only (full-screen, outside /admin layout)
+  if (pathname.startsWith('/site-editor')) {
+    if (userRole !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    return NextResponse.next()
+  }
+
   // Admin routes — only ADMIN role
   if (pathname.startsWith('/admin')) {
     if (userRole !== 'ADMIN') {

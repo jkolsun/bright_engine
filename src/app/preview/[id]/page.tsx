@@ -16,6 +16,22 @@ export default async function PreviewPage({ params }: { params: { id: string } }
 
   if (!lead) return notFound()
 
+  // Serve custom HTML if it exists (edited in Site Editor)
+  if (lead.siteHtml) {
+    const headMatch = lead.siteHtml.match(/<head[^>]*>([\s\S]*?)<\/head>/i)
+    const bodyMatch = lead.siteHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
+    const headContent = headMatch?.[1] || ''
+    const bodyContent = bodyMatch?.[1] || lead.siteHtml
+    // Inject tracking script into the custom HTML
+    const trackScript = `<script>fetch('/api/preview/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({previewId:'${lead.previewId || params.id}',event:'page_view'})})</script>`
+    return (
+      <html lang="en">
+        <head dangerouslySetInnerHTML={{ __html: headContent }} />
+        <body dangerouslySetInnerHTML={{ __html: bodyContent + trackScript }} />
+      </html>
+    )
+  }
+
   // Parse personalization if stored as JSON string
   let personalization: any = {}
   try {

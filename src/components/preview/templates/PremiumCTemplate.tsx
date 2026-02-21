@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
+import ScrollReveal from '../shared/ScrollReveal'
 
 /* ────────────────────── Google Icon (custom SVG) ────────────────────── */
 function GoogleIcon({ size = 15, className = '' }: { size?: number; className?: string }) {
@@ -443,6 +444,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
 
       {/* ═══════════════════════ PROOF STRIP ═══════════════════════ */}
       <section className="py-4 px-4 sm:px-6 md:px-8 bg-white border-b border-stone-200">
+        <ScrollReveal animation="fade-in">
         <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
           {hasRating && (
             <span className="flex items-center gap-2 text-stone-700 font-semibold">
@@ -476,20 +478,23 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
             <><span className="text-stone-200 hidden sm:inline">•</span><span className="flex items-center gap-1.5 text-stone-500">{wc.yearsBadge}</span></>
           )}
         </div>
+        </ScrollReveal>
       </section>
 
       {/* ═══════════════════════ SERVICES ═══════════════════════ */}
       {services.length > 0 && (
         <section id="services" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-stone-50">
           <div className="max-w-5xl mx-auto">
+            <ScrollReveal animation="fade-up">
             <div className="max-w-xl mb-12 sm:mb-16">
               <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">Our Expertise</p>
               <h2 className="text-3xl sm:text-4xl font-light text-stone-900 leading-tight">Services.</h2>
             </div>
+            </ScrollReveal>
             <div className="divide-y divide-stone-200/60">
               {services.slice(0, 8).map((service, i) => (
+                <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
                 <div
-                  key={i}
                   className="group flex items-center justify-between py-5 sm:py-6 cursor-pointer hover:pl-2 transition-all duration-300"
                   onClick={onCTAClick}
                 >
@@ -506,6 +511,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                   </div>
                   <ArrowRight size={16} className="text-stone-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </div>
+                </ScrollReveal>
               ))}
             </div>
           </div>
@@ -519,12 +525,14 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-300 rounded-full translate-y-1/2 -translate-x-1/3 blur-3xl" />
         </div>
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 md:px-8 text-center">
+          <ScrollReveal animation="fade-up">
           <p className="text-2xl sm:text-3xl md:text-4xl font-light text-white leading-snug tracking-tight">
             {wc?.closingHeadline || 'Excellence in every detail.'}
           </p>
           {location && (
             <p className="mt-4 text-emerald-200/40 text-sm font-medium tracking-wide">{location}</p>
           )}
+          </ScrollReveal>
         </div>
       </section>
 
@@ -533,6 +541,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
             {/* Left — content */}
+            <ScrollReveal animation="fade-left">
             <div className="lg:col-span-3">
               <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">About</p>
               <h2 className="text-3xl sm:text-4xl font-light text-stone-900 leading-tight mb-6">
@@ -582,8 +591,10 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                 </div>
               </div>
             </div>
+            </ScrollReveal>
 
             {/* Right — featured testimonial + quick contact */}
+            <ScrollReveal animation="fade-right">
             <div className="lg:col-span-2 flex flex-col gap-5">
               {/* Featured review */}
               <div className="bg-white border border-stone-200 rounded-2xl p-7">
@@ -642,6 +653,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                 </div>
               </div>
             </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>
@@ -650,14 +662,16 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
       {photos.length > 0 && (
         <section id="gallery" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
           <div className="max-w-7xl mx-auto">
+            <ScrollReveal animation="fade-up">
             <div className="text-center max-w-xl mx-auto mb-10 sm:mb-14">
               <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">Portfolio</p>
               <h2 className="text-3xl sm:text-4xl font-light text-stone-900">Our work.</h2>
             </div>
+            </ScrollReveal>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               {photos.slice(0, 6).map((photo, i) => (
+                <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
                 <div
-                  key={i}
                   className={`relative overflow-hidden rounded-2xl group border border-stone-200 hover:border-emerald-400/40 transition-all duration-500 hover:shadow-xl hover:shadow-emerald-900/5 ${
                     i === 0 ? 'col-span-1 sm:col-span-2 sm:row-span-2' : ''
                   }`}
@@ -671,6 +685,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>
+                </ScrollReveal>
               ))}
             </div>
           </div>
@@ -680,10 +695,12 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
       {/* ═══════════════════════ TESTIMONIALS ═══════════════════════ */}
       <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-stone-100/50">
         <div className="max-w-6xl mx-auto">
+          <ScrollReveal animation="fade-up">
           <div className="text-center mb-12 sm:mb-16">
             <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">Testimonials</p>
             <h2 className="text-3xl sm:text-4xl font-light text-stone-900">What clients say.</h2>
           </div>
+          </ScrollReveal>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {(() => {
               const testimonials = [
@@ -692,13 +709,13 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                   name: wc.testimonialAuthor || 'Verified Customer',
                   loc: lead.city || 'Local',
                 }] : []),
-                { quote: `Professional, thorough, and the results speak for themselves. Highly recommend ${lead.companyName}.`, name: 'Homeowner', loc: lead.city || 'Local' },
-                { quote: `On time, communicative, and delivered exactly as promised. Will use ${lead.companyName} again.`, name: 'Property Manager', loc: lead.city || 'Local' },
-                { quote: `Already recommended ${lead.companyName} to all our neighbors. Couldn't be happier.`, name: 'Repeat Client', loc: lead.city || 'Local' },
+                { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, name: 'Sarah M.', loc: lead.city || 'Local' },
+                { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, name: 'David R.', loc: lead.city || 'Local' },
+                { quote: `Honest quote, no pressure, and the work speaks for itself. Our ${industryLabel} project came out better than we expected.`, name: 'Jennifer K.', loc: lead.city || 'Local' },
               ].slice(0, 3)
               return testimonials.map((r, i) => (
+                <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
                 <div
-                  key={i}
                   className={`bg-white border border-stone-200 rounded-2xl p-8 hover:border-emerald-400/30 hover:shadow-lg hover:shadow-emerald-900/5 transition-all ${
                     i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''
                   }`}
@@ -719,6 +736,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                     </div>
                   </div>
                 </div>
+                </ScrollReveal>
               ))
             })()}
           </div>
@@ -728,10 +746,13 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
       {/* ═══════════════════════ FAQ ═══════════════════════ */}
       <section id="faq" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-stone-50">
         <div className="max-w-3xl mx-auto">
+          <ScrollReveal animation="fade-up">
           <div className="text-center mb-10 sm:mb-14">
             <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">FAQ</p>
             <h2 className="text-3xl sm:text-4xl font-light text-stone-900">Common questions.</h2>
           </div>
+          </ScrollReveal>
+          <ScrollReveal animation="fade-up">
           <div className="bg-white rounded-2xl border border-stone-200 px-6 sm:px-8 shadow-sm">
             {faqs.map((f, i) => (
               <FAQItem
@@ -743,6 +764,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
               />
             ))}
           </div>
+          </ScrollReveal>
         </div>
       </section>
 
@@ -751,6 +773,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
             {/* Left — info */}
+            <ScrollReveal animation="fade-left">
             <div>
               <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">Contact</p>
               <h2 className="text-3xl sm:text-4xl font-light text-stone-900 leading-tight mb-8">Get in touch.</h2>
@@ -797,8 +820,10 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                 <a href="#" className="w-10 h-10 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-center text-stone-400 hover:text-emerald-600 hover:border-emerald-200 transition-all" aria-label="Google"><GoogleIcon size={16} /></a>
               </div>
             </div>
+            </ScrollReveal>
 
             {/* Right — form */}
+            <ScrollReveal animation="fade-right">
             <div className="bg-stone-50 rounded-2xl border border-stone-200 p-7 sm:p-8">
               <h3 className="text-lg font-medium text-stone-800 mb-1">Send us a message</h3>
               <p className="text-xs text-stone-400 mb-6">We respond within 24 hours.</p>
@@ -826,6 +851,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                 </button>
               </div>
             </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>

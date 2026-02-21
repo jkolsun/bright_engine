@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
+import ScrollReveal from '../shared/ScrollReveal'
 
 // Google "G" icon (not in lucide)
 function GoogleIcon({ size = 15, className = '' }) {
@@ -507,6 +508,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           PROOF WALL — Inline strip
           ═══════════════════════════════════════════ */}
       <section className="py-4 sm:py-5 px-4 sm:px-6 md:px-8 border-y border-white/5 bg-gray-900/40">
+        <ScrollReveal animation="fade-in">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
             {hasRating && (
@@ -545,6 +547,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
             )}
           </div>
         </div>
+        </ScrollReveal>
       </section>
 
       {/* ═══════════════════════════════════════════
@@ -554,6 +557,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         <section id="services" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
           <div className="max-w-5xl mx-auto">
             {/* Section Header */}
+            <ScrollReveal animation="fade-up">
             <div className="mb-12 sm:mb-16">
               <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
                 <Wrench size={12} />
@@ -563,12 +567,13 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                 What We Do
               </h2>
             </div>
+            </ScrollReveal>
 
             {/* Service List */}
             <div className="divide-y divide-gray-800/60">
               {services.slice(0, 8).map((service, i) => (
+                <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
                 <div
-                  key={i}
                   className="group flex items-center justify-between py-5 sm:py-6 cursor-pointer hover:pl-3 transition-all duration-300"
                   onClick={onCTAClick}
                 >
@@ -588,9 +593,11 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                     className="text-gray-700 group-hover:text-blue-400 group-hover:translate-x-1 transition-all flex-shrink-0"
                   />
                 </div>
+                </ScrollReveal>
               ))}
             </div>
 
+            <ScrollReveal animation="fade-up">
             <div className="mt-12 sm:mt-14 flex justify-center">
               <button
                 onClick={onCTAClick}
@@ -600,6 +607,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                 <ArrowRight size={18} />
               </button>
             </div>
+            </ScrollReveal>
           </div>
         </section>
       )}
@@ -616,6 +624,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
             backgroundSize: '32px 32px',
           }}
         />
+        <ScrollReveal animation="fade-in">
         <div className="relative max-w-4xl mx-auto px-5 sm:px-8 text-center">
           <p className="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-snug tracking-tight">
             {wc?.closingHeadline || `"We don't do shortcuts. Every job gets our best — period."`}
@@ -626,6 +635,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
             </p>
           )}
         </div>
+        </ScrollReveal>
       </section>
 
       {/* ═══════════════════════════════════════════
@@ -634,6 +644,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
       {photos.length > 0 && (
         <section id="work" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
           <div className="max-w-7xl mx-auto">
+            <ScrollReveal animation="fade-up">
             <div className="text-center mb-10 sm:mb-16">
               <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
                 <Camera size={12} />
@@ -643,8 +654,10 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                 See the Results
               </h2>
             </div>
+            </ScrollReveal>
 
             {/* Hero photo full width */}
+            <ScrollReveal animation="zoom-in">
             <div className="mb-3 sm:mb-4">
               <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-blue-500/30 transition-all duration-500">
                 <div className="aspect-[16/9] sm:aspect-[2/1]">
@@ -657,13 +670,14 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
               </div>
             </div>
+            </ScrollReveal>
 
             {/* Remaining photos grid */}
             {photos.length > 1 && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 {photos.slice(1, 5).map((photo, i) => (
+                  <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
                   <div
-                    key={i}
                     className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-blue-500/30 transition-all duration-500"
                   >
                     <div className="aspect-[4/3]">
@@ -675,6 +689,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                     </div>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
                   </div>
+                  </ScrollReveal>
                 ))}
               </div>
             )}
@@ -690,6 +705,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
             {/* Content */}
             <div className="lg:col-span-3">
+              <ScrollReveal animation="fade-left">
               <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
                 About Us
               </div>
@@ -722,10 +738,12 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                   </div>
                 ))}
               </div>
+              </ScrollReveal>
             </div>
 
             {/* Sidebar — Quote + Contact Card */}
             <div className="lg:col-span-2 flex flex-col gap-5">
+              <ScrollReveal animation="fade-right">
               {/* Pull Quote */}
               <div className="relative bg-gray-900/50 border border-blue-500/15 rounded-2xl p-7">
                 <Quote size={28} className="text-blue-500/20 mb-3" />
@@ -781,6 +799,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                   )}
                 </div>
               </div>
+              </ScrollReveal>
             </div>
           </div>
         </div>
@@ -791,6 +810,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           ═══════════════════════════════════════════ */}
       <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
         <div className="max-w-6xl mx-auto">
+          <ScrollReveal animation="fade-up">
           <div className="text-center mb-12 sm:mb-16">
             <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
               <Sparkles size={12} />
@@ -800,6 +820,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               Trusted by Homeowners
             </h2>
           </div>
+          </ScrollReveal>
 
           {/* Staggered layout instead of even grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -810,13 +831,13 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                   name: wc.testimonialAuthor || 'Verified Customer',
                   loc: lead.city || 'Local',
                 }] : []),
-                { quote: `Professional, thorough, and the results speak for themselves. Highly recommend ${lead.companyName}.`, name: 'Homeowner', loc: lead.city || 'Local' },
-                { quote: `On time, communicative, and delivered exactly as promised. Will use ${lead.companyName} again.`, name: 'Property Manager', loc: lead.city || 'Local' },
-                { quote: `Already recommended ${lead.companyName} to all our neighbors. Couldn't be happier.`, name: 'Repeat Client', loc: lead.city || 'Local' },
+                { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, name: 'Sarah M.', loc: lead.city || 'Local' },
+                { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, name: 'David R.', loc: lead.city || 'Local' },
+                { quote: `Honest quote, no pressure, and the work speaks for itself. Our ${industryLabel} project came out better than we expected.`, name: 'Jennifer K.', loc: lead.city || 'Local' },
               ].slice(0, 3)
               return testimonials.map((review, i) => (
+                <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
                 <div
-                  key={i}
                   className={`bg-gray-950/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8 hover:border-blue-500/20 transition-all duration-300 ${
                     i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''
                   }`}
@@ -839,6 +860,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                     </div>
                   </div>
                 </div>
+                </ScrollReveal>
               ))
             })()}
           </div>
@@ -850,6 +872,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           ═══════════════════════════════════════════ */}
       <section id="faq" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
         <div className="max-w-3xl mx-auto">
+          <ScrollReveal animation="fade-up">
           <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
               FAQ
@@ -858,16 +881,18 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               Questions? Answered.
             </h2>
           </div>
+          </ScrollReveal>
 
           <div className="bg-gray-900/40 border border-gray-800/40 rounded-2xl px-6 sm:px-8">
             {faqs.map((faq, i) => (
+              <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
               <FAQItem
-                key={i}
                 question={faq.q}
                 answer={faq.a}
                 isOpen={openFAQ === i}
                 onToggle={() => setOpenFAQ(openFAQ === i ? null : i)}
               />
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -881,6 +906,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
             {/* Info Side */}
             <div>
+              <ScrollReveal animation="fade-left">
               <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
                 Contact
               </div>
@@ -944,9 +970,11 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                   </a>
                 ))}
               </div>
+              </ScrollReveal>
             </div>
 
             {/* Form Side */}
+            <ScrollReveal animation="fade-right">
             <div className="bg-gray-900/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8">
               <h3 className="text-lg font-bold text-white mb-1">Send us a message</h3>
               <p className="text-xs text-gray-500 mb-6">We'll get back to you within a few hours.</p>
@@ -993,6 +1021,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                 </button>
               </div>
             </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>

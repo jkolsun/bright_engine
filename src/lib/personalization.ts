@@ -724,18 +724,35 @@ export async function generatePersonalization(
 // WEBSITE COPY GENERATION
 // ============================================
 
-const WEBSITE_COPY_SYSTEM = `You are a senior conversion copywriter. You write landing page copy for local service businesses that sounds like it was RESEARCHED and WRITTEN specifically for that company — not pulled from a template.
+const WEBSITE_COPY_SYSTEM = `You are an elite conversion copywriter who writes landing pages that look like they cost $15,000. Your copy makes local service businesses sound like the dominant force in their market — confident, established, and worth every penny.
 
-Your copy speaks to the CUSTOMER visiting the page. Use "you/your" language.
+You write for the CUSTOMER visiting the page. Use "you/your" language. Every line should make the visitor feel: "These people clearly know what they're doing."
 
-RULES:
-- Use REAL data provided (ratings, review counts, years, services, location). Never invent numbers.
-- NEVER use: impressive, amazing, innovative, best, leading, incredible, outstanding, excellent, exceptional, cutting-edge, world-class, premier, top-notch, superb, remarkable, fantastic
-- NEVER use: "we believe", "we strive", "we are committed", "our mission is", "we take pride" — these are dead phrases
-- Vary sentence length and structure across sections. Mix short punchy lines with longer ones.
-- Be SPECIFIC. "127 five-star reviews" beats "many happy customers". "Serving Plano since 2008" beats "years of experience".
-- Sound confident and direct, not salesy or desperate.
-- Each value prop should reference ACTUAL company data, not generic claims.`
+TONE: Think Apple meets local contractor. Clean, confident, outcome-focused. The copy should feel like a premium brand wrote it — not a template engine.
+
+COPY PHILOSOPHY:
+- Lead with OUTCOMES, not features. "Your roof protects your family for the next 30 years" beats "We install quality roofing."
+- Paint a PICTURE of the result. Help the visitor imagine the finished project, the relief, the pride.
+- Use REAL data aggressively — specific numbers hit harder than adjectives. "4.9 stars across 127 reviews" or "Serving Dallas since 2008."
+- Short sentences punch. Long sentences flow. Mix them intentionally. One-word sentences work.
+- The hero headline should stop scrolling. Make it bold enough to put on a billboard.
+- Value props should answer "Why THIS company?" with proof, not claims.
+
+BANNED WORDS (these scream template):
+- impressive, amazing, innovative, best, leading, incredible, outstanding, excellent, exceptional, cutting-edge, world-class, premier, top-notch, superb, remarkable, fantastic, unparalleled, unmatched
+- "we believe", "we strive", "we are committed", "our mission is", "we take pride", "look no further", "one-stop shop", "second to none"
+
+BANNED PATTERNS:
+- Starting any section with "At [Company Name], we..." — this is the #1 template tell
+- Generic value props like "Quality Workmanship" or "Customer Satisfaction" without proof
+- Placeholder-sounding phrases: "your trusted partner", "serving the community"
+- Ending with "Contact us today!" — too desperate
+
+INSTEAD:
+- Start the about section mid-story: "Fifteen years ago, a single truck and a handshake..." or "Most contractors cut corners on prep work. We spend twice as long on it."
+- Value props with teeth: "4.9-Star Google Rating" (with the actual number) beats "Highly Rated"
+- CTAs that assume the sale: "Get your free estimate" beats "Contact us today"
+- Write like you actually visited their job site and talked to their customers.`
 
 function buildWebsiteCopyPrompt(lead: any, research: SerperResearchData | null, artifacts: Artifact[]): string {
   const parts: string[] = []
@@ -793,30 +810,30 @@ function buildWebsiteCopyPrompt(lead: any, research: SerperResearchData | null, 
     }
   }
 
-  parts.push(`\nGenerate landing page copy for ${lead.companyName}. Use the real data above. Be specific, not generic.\n`)
+  parts.push(`\nWrite landing page copy for ${lead.companyName} that makes them look like the #1 choice in ${location || 'their market'}. Use every data point above.\n`)
   parts.push(`FORMAT (output EXACTLY these labels):`)
-  parts.push(`HERO_HEADLINE: [6-12 words. Punchy, specific. Reference their actual strength — rating, years, specialty, location. NOT generic like "Professional Services You Can Trust"]`)
-  parts.push(`HERO_SUBHEADLINE: [12-22 words. Supports headline. Mention a specific detail — location, specialty, or differentiator.]`)
-  parts.push(`ABOUT_P1: [2-3 sentences. What makes THIS specific company stand out. Use real data — years in business, review count, service area, team size. Written as if you researched them.]`)
-  parts.push(`ABOUT_P2: [2-3 sentences. Their approach to work. Reference their actual services or specialties. End with something concrete, not a platitude.]`)
-  parts.push(`VP1_TITLE: [2-4 words — first trust/value item]`)
-  parts.push(`VP1_DESC: [8-15 words. Grounded in their actual data — real rating, real credentials, etc.]`)
-  parts.push(`VP2_TITLE: [2-4 words — second trust/value item]`)
-  parts.push(`VP2_DESC: [8-15 words. Specific to this company.]`)
-  parts.push(`VP3_TITLE: [2-4 words — third trust/value item]`)
-  parts.push(`VP3_DESC: [8-15 words. Specific to this company.]`)
-  parts.push(`CLOSING_HEADLINE: [5-10 words. Compelling, not "Ready to Get Started?"]`)
-  parts.push(`CLOSING_BODY: [15-25 words. Specific CTA referencing their services or location.]`)
-  parts.push(`TESTIMONIAL_QUOTE: [If a real customer quote was provided above, clean it up for display. If not, write a realistic one referencing their actual services and ${location || 'their area'}. 1-2 sentences.]`)
-  parts.push(`TESTIMONIAL_AUTHOR: [If real quote: "Verified Customer · ${location || 'Local'}". If generated: use a role like "Homeowner" or "Property Manager" · ${location || 'Local'}]`)
-  parts.push(`YEARS_BADGE: [If years in business known: "Serving ${location || 'the area'} for X+ years". If unknown: NONE]`)
+  parts.push(`HERO_HEADLINE: [5-10 words. Billboard-worthy. Outcome-focused or confidence-driven. BAD: "Professional Roofing Services You Can Trust". GOOD: "The Last Roofer You'll Ever Call." or "Zero Callbacks. Zero Leaks. Guaranteed." Reference a real strength if powerful enough.]`)
+  parts.push(`HERO_SUBHEADLINE: [12-22 words. Expand on the headline's promise. Ground it with a specific — their location, rating, specialty, or years. Make the visitor think "okay, these people are legit."]`)
+  parts.push(`ABOUT_P1: [2-3 sentences. Start mid-story or with a strong specific — NOT "At Company, we..." Open with what makes them different: their origin, their approach, a defining moment. Weave in real numbers (years, reviews, team size) naturally, not as a list.]`)
+  parts.push(`ABOUT_P2: [2-3 sentences. How they work or what the customer experience feels like. Paint the picture: same-day quotes, crews that show up on time, job sites left cleaner than they found them. End with something concrete and memorable.]`)
+  parts.push(`VP1_TITLE: [2-4 words — backed by real data. e.g. "4.9-Star Rated" not "Quality Work"]`)
+  parts.push(`VP1_DESC: [8-15 words. Cite the actual proof: "${rating ? `Rated ${rating} stars across ${reviews || 'dozens of'} Google reviews` : 'Proven track record with consistently high customer ratings'}"]`)
+  parts.push(`VP2_TITLE: [2-4 words — a real differentiator, not a generic claim]`)
+  parts.push(`VP2_DESC: [8-15 words. Make it specific to THIS company — their license, their response time, their guarantee.]`)
+  parts.push(`VP3_TITLE: [2-4 words — another concrete trust signal]`)
+  parts.push(`VP3_DESC: [8-15 words. Reference something verifiable: location served, certifications held, years active.]`)
+  parts.push(`CLOSING_HEADLINE: [5-10 words. Confident close. Think: "Your neighbors already know." or "The estimate is free. The peace of mind isn't." NOT "Ready to Get Started?"]`)
+  parts.push(`CLOSING_BODY: [15-25 words. Outcome-focused CTA. Reference their services or location. Make the next step feel easy and obvious.]`)
+  parts.push(`TESTIMONIAL_QUOTE: [If a real customer quote was provided, clean it up for display. If not, write a hyper-realistic one that: (1) mentions a specific service they offer, (2) references ${location || 'their area'}, (3) sounds like a real person — slightly informal, with a detail only a real customer would mention. 1-2 sentences. BAD: "Great company, highly recommend!" GOOD: "They replaced our entire deck in three days and the crew cleaned up every single nail. Our neighbors have already asked for their number."]`)
+  parts.push(`TESTIMONIAL_AUTHOR: [If real quote: "Verified Customer · ${location || 'Local'}". If generated: realistic name-like role — "Sarah M., Homeowner" or "Property Manager" · ${location || 'Local'}]`)
+  parts.push(`YEARS_BADGE: [If years in business known: "Serving ${location || 'the area'} since [year]" (calculate from current year). If unknown: NONE]`)
   parts.push(`SERVICE_AREA_TEXT: [If service area known: one sentence about where they serve. If unknown: NONE]`)
 
   // Service descriptions
   if (services.length > 0) {
-    parts.push(`\nFor each service below, write a one-line description (10-18 words) that sounds specific to this company, not a template. Reference the company's strengths or location where natural.`)
+    parts.push(`\nFor each service below, write a one-line description (10-18 words) that focuses on the OUTCOME or BENEFIT to the customer, not a definition of the service. BAD: "Professional installation of residential roofing systems." GOOD: "Complete tear-off and install — most jobs done in a single day with a 10-year warranty."`)
     for (const svc of services.slice(0, 6)) {
-      parts.push(`SVC_${svc.toUpperCase().replace(/[^A-Z0-9]/g, '_')}: [10-18 word description for "${svc}"]`)
+      parts.push(`SVC_${svc.toUpperCase().replace(/[^A-Z0-9]/g, '_')}: [10-18 word outcome-focused description for "${svc}"]`)
     }
   }
 

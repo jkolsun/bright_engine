@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
+import ScrollReveal from '../shared/ScrollReveal'
 
 // Google "G" icon
 function GoogleIcon({ size = 15, className = '' }: { size?: number; className?: string }) {
@@ -316,6 +317,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       {/* ═══════ OVERLAPPING STATS COUNTER ═══════ */}
       <section className="relative z-10 px-4 sm:px-6 md:px-8 -mt-16">
         <div className="max-w-5xl mx-auto">
+          <ScrollReveal animation="fade-in">
           <div className="bg-gray-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 md:p-10 shadow-2xl shadow-black/40">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
               {hasRating && (
@@ -355,6 +357,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
               )}
             </div>
           </div>
+          </ScrollReveal>
         </div>
       </section>
 
@@ -362,16 +365,19 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       {services.length > 0 && (
         <section id="services" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
           <div className="max-w-5xl mx-auto">
+            <ScrollReveal animation="fade-up">
             <div className="mb-14">
               <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">
                 <Wrench size={12} />Services
               </div>
               <h2 className="font-display text-4xl md:text-5xl font-black text-white">What We Do</h2>
             </div>
+            </ScrollReveal>
 
             <div className="divide-y divide-gray-800/60">
               {services.slice(0, 8).map((service, i) => (
-                <div key={i} className="group flex items-center justify-between py-5 cursor-pointer hover:pl-3 transition-all duration-300" onClick={onCTAClick}>
+                <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
+                <div className="group flex items-center justify-between py-5 cursor-pointer hover:pl-3 transition-all duration-300" onClick={onCTAClick}>
                   <div className="flex items-center gap-6">
                     <span className="text-xs text-gray-600 font-mono tabular-nums w-6 font-bold">{String(i + 1).padStart(2, '0')}</span>
                     <h3 className="text-base sm:text-lg font-bold text-gray-200 group-hover:text-white transition-colors">{service}</h3>
@@ -381,14 +387,17 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                   </div>
                   <ArrowRight size={16} className="text-gray-700 group-hover:text-orange-400 group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </div>
+                </ScrollReveal>
               ))}
             </div>
 
+            <ScrollReveal animation="fade-up">
             <div className="mt-14 flex justify-center">
               <button onClick={onCTAClick} className="flex items-center gap-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-xl font-bold text-base hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15 hover:shadow-orange-500/30">
                 Request a Quote<ArrowRight size={18} />
               </button>
             </div>
+            </ScrollReveal>
           </div>
         </section>
       )}
@@ -396,6 +405,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       {/* ═══════ URGENCY STRIP ═══════ */}
       <section className="relative py-10 px-4 sm:px-6 md:px-8 bg-gradient-to-r from-orange-500 via-red-500 to-orange-500 overflow-hidden">
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+        <ScrollReveal animation="fade-in">
         <div className="relative max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
           <div className="flex items-center gap-5">
             <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
@@ -409,34 +419,41 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
             </a>
           )}
         </div>
+        </ScrollReveal>
       </section>
 
       {/* ═══════ GALLERY — Asymmetric Masonry ═══════ */}
       {photos.length > 0 && (
         <section id="work" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
           <div className="max-w-7xl mx-auto">
+            <ScrollReveal animation="fade-up">
             <div className="text-center mb-10">
               <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">
                 <Camera size={12} />Our Work
               </div>
               <h2 className="font-display text-4xl md:text-5xl font-black text-white">Results Speak Louder</h2>
             </div>
+            </ScrollReveal>
 
             {/* First photo hero-sized */}
             {photos[0] && (
+              <ScrollReveal animation="zoom-in">
               <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-orange-500/30 transition-all duration-500 mb-3 sm:mb-4">
                 <div className="aspect-[4/3] sm:aspect-[16/9]"><img src={photos[0]} alt="Project 1" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" /></div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
               </div>
+              </ScrollReveal>
             )}
             {/* Remaining photos in grid */}
             {photos.length > 1 && (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                 {photos.slice(1, 7).map((photo, i) => (
-                  <div key={i} className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-orange-500/30 transition-all duration-500">
+                  <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
+                  <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-orange-500/30 transition-all duration-500">
                     <div className="aspect-[4/3]"><img src={photo} alt={`Project ${i + 2}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" /></div>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
                   </div>
+                  </ScrollReveal>
                 ))}
               </div>
             )}
@@ -448,6 +465,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       <section id="about" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
+            <ScrollReveal animation="fade-left">
             <div className="lg:col-span-3">
               <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">About Us</div>
               <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-8 leading-[0.95]">
@@ -477,8 +495,10 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                 ))}
               </div>
             </div>
+            </ScrollReveal>
 
             {/* Sidebar — Testimonial + Quick Contact */}
+            <ScrollReveal animation="fade-right">
             <div className="lg:col-span-2 flex flex-col gap-5">
               <div className="bg-gray-900/50 border border-orange-500/15 rounded-2xl p-7">
                 <div className="flex gap-0.5 mb-4">
@@ -516,6 +536,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                 </div>
               </div>
             </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>
@@ -523,10 +544,12 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       {/* ═══════ TESTIMONIALS — Staggered Editorial ═══════ */}
       <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
         <div className="max-w-6xl mx-auto">
+          <ScrollReveal animation="fade-up">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">Reviews</div>
             <h2 className="font-display text-4xl md:text-5xl font-black text-white">What People Say</h2>
           </div>
+          </ScrollReveal>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {(() => {
               const testimonials = [
@@ -535,12 +558,13 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                   name: wc.testimonialAuthor || 'Verified Customer',
                   loc: lead.city || 'Local',
                 }] : []),
-                { quote: `Professional, thorough, and the results speak for themselves. Highly recommend ${lead.companyName}.`, name: 'Homeowner', loc: lead.city || 'Local' },
-                { quote: `On time, communicative, and delivered exactly as promised. Will use ${lead.companyName} again.`, name: 'Property Manager', loc: lead.city || 'Local' },
-                { quote: `Already recommended ${lead.companyName} to all our neighbors. Couldn't be happier.`, name: 'Repeat Client', loc: lead.city || 'Local' },
+                { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, name: 'Sarah M.', loc: lead.city || 'Local' },
+                { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, name: 'David R.', loc: lead.city || 'Local' },
+                { quote: `Honest quote, no pressure, and the work speaks for itself. Our ${industryLabel} project came out better than we expected.`, name: 'Jennifer K.', loc: lead.city || 'Local' },
               ].slice(0, 3)
               return testimonials.map((r, i) => (
-              <div key={i} className={`bg-gray-950/60 border border-gray-800/40 rounded-2xl p-7 hover:border-orange-500/20 transition-all duration-300 ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
+              <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
+              <div className={`bg-gray-950/60 border border-gray-800/40 rounded-2xl p-7 hover:border-orange-500/20 transition-all duration-300 ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
                 <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={14} className="text-amber-400 fill-current" />)}</div>
                 <p className="text-gray-300 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
                 <div className="flex items-center gap-3 text-xs">
@@ -548,6 +572,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                   <div><span className="font-bold text-gray-300">{r.name}</span><span className="text-gray-600"> — {r.loc}</span></div>
                 </div>
               </div>
+              </ScrollReveal>
               ))
             })()}
           </div>
@@ -557,13 +582,17 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       {/* ═══════ FAQ ═══════ */}
       <section id="faq" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
         <div className="max-w-3xl mx-auto">
+          <ScrollReveal animation="fade-up">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">FAQ</div>
             <h2 className="font-display text-3xl md:text-4xl font-black text-white">Questions? Answered.</h2>
           </div>
+          </ScrollReveal>
+          <ScrollReveal animation="fade-up">
           <div className="bg-gray-900/40 border border-gray-800/40 rounded-2xl px-6 sm:px-8">
             {faqs.map((f, i) => <FAQItem key={i} question={f.q} answer={f.a} isOpen={openFAQ === i} onToggle={() => setOpenFAQ(openFAQ === i ? null : i)} />)}
           </div>
+          </ScrollReveal>
         </div>
       </section>
 
@@ -571,6 +600,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       <section id="contact" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+            <ScrollReveal animation="fade-left">
             <div>
               <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">Contact</div>
               <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-8 leading-[0.95]">Get Your Free Estimate.</h2>
@@ -600,7 +630,9 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                 <a href="#" className="w-10 h-10 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-500 hover:text-orange-400 hover:border-orange-500/30 transition-all"><GoogleIcon size={16} /></a>
               </div>
             </div>
+            </ScrollReveal>
 
+            <ScrollReveal animation="fade-right">
             <div className="bg-gray-900/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8">
               <h3 className="text-lg font-bold text-white mb-1">Send us a message</h3>
               <p className="text-xs text-gray-500 mb-6">We'll get back to you fast.</p>
@@ -614,6 +646,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                 <button onClick={onCTAClick} className="w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-sm hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15 hover:shadow-orange-500/30 hover:scale-[1.01] active:scale-[0.99]">Send Message</button>
               </div>
             </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>

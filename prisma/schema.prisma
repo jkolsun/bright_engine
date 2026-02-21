@@ -130,7 +130,8 @@ model Lead {
   previewUrl       String?      @map("preview_url")
   previewExpiresAt DateTime?    @map("preview_expires_at")
   personalization  String?      @db.Text // AI-generated first line
-  
+  siteHtml         String?      @db.Text @map("site_html")
+
   // Enriched data from SerpAPI
   enrichedAddress  String?      @map("enriched_address")
   enrichedHours    Json?        @map("enriched_hours")

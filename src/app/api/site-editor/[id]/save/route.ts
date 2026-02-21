@@ -1,0 +1,56 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
+
+export const dynamic = 'force-dynamic'
+
+/**
+ * PUT /api/site-editor/[id]/save
+ * Saves edited HTML to lead.siteHtml
+ */
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
+    const { id } = await context.params
+    const { html } = await request.json()
+
+    if (typeof html !== 'string') {
+      return NextResponse.json({ error: 'HTML content required' }, { status: 400 })
+    }
+
+    // Size guard (max 2MB)
+    if (html.length > 2_000_000) {
+      return NextResponse.json({ error: 'HTML too large (max 2MB)' }, { status: 400 })
+    }
+
+    const lead = await prisma.lead.findUnique({
+      where: { id },
+      select: { id: true, buildStep: true },
+    })
+
+    if (!lead) {
+      return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
+    }
+
+    await prisma.lead.update({
+      where: { id },
+      data: {
+        siteHtml: html,
+        buildStep: lead.buildStep === 'QA_REVIEW' ? 'EDITING' : lead.buildStep,
+      },
+    })
+
+    return NextResponse.json({ success: true, savedAt: new Date().toISOString() })
+  } catch (error) {
+    console.error('[Save] Error:', error)
+    return NextResponse.json({ error: 'Failed to save' }, { status: 500 })
+  }
+}
