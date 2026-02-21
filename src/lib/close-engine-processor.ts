@@ -313,7 +313,7 @@ export async function processCloseEngineInbound(
       select: { content: true },
     })
 
-    if (!shouldAIRespond(enrichedMessage, lastOutbound?.content || null)) {
+    if (!await shouldAIRespond(enrichedMessage, lastOutbound?.content || null)) {
       console.log(`[CloseEngine] Skipping response — conversation awareness: "${inboundMessage.substring(0, 40)}"`)
       return // Stay silent
     }
@@ -628,14 +628,21 @@ export async function processCloseEngineInbound(
  * - Longer than 4 words → RESPOND (probably not just an ack)
  * - Contains a request or new info → RESPOND
  *
+ * Respects the conversationEnderEnabled setting — if toggled OFF, always responds.
  * The AI can still send proactive/scheduled messages later.
  * This only skips the immediate response.
  */
-export function shouldAIRespond(
+export async function shouldAIRespond(
   inboundMessage: string,
   lastOutboundContent: string | null,
-): boolean {
-  const { isConversationEnder } = require('./message-batcher')
+): Promise<boolean> {
+  const { isConversationEnder, getSmartChatSettings } = require('./message-batcher')
+
+  // Check if conversation-ender detection is enabled in settings
+  const settings = await getSmartChatSettings()
+  if (!settings.conversationEnderEnabled) {
+    return true // Setting disabled — always respond
+  }
 
   // Use SmartChat conversation-ender detection
   if (isConversationEnder(inboundMessage)) {

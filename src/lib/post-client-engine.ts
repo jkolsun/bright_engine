@@ -54,7 +54,7 @@ export async function processPostClientInbound(
       orderBy: { createdAt: 'desc' },
       select: { content: true },
     })
-    if (!shouldAIRespond(message, lastOutbound?.content || null)) {
+    if (!await shouldAIRespond(message, lastOutbound?.content || null)) {
       console.log(`[PostClient] Skipping response — conversation awareness: "${message.substring(0, 40)}"`)
       return
     }
