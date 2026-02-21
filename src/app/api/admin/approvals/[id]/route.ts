@@ -218,7 +218,7 @@ async function executeApprovedAction(approval: any) {
             select: { id: true, firstName: true, companyName: true, phone: true, email: true, previewUrl: true, previewId: true },
           })
 
-          const previewUrl = approval.metadata?.previewUrl || lead.previewUrl || (lead.previewId ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://brightengine-production.up.railway.app'}/preview/${lead.previewId}` : null)
+          const previewUrl = approval.metadata?.previewUrl || lead.previewUrl || (lead.previewId ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'}/preview/${lead.previewId}` : null)
 
           // Send preview link to client via SMS immediately
           if (lead.phone && previewUrl) {

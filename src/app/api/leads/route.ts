@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
         source: (data.source || 'MANUAL') as any,
         sourceDetail: data.sourceDetail || undefined,
         previewId: previewId,
-        previewUrl: `${process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || 'https://brightengine-production.up.railway.app'}/preview/${previewId}`,
+        previewUrl: `${process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || 'https://preview.brightautomations.org'}/preview/${previewId}`,
         previewExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       }
     })

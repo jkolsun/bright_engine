@@ -10,7 +10,7 @@
  *   1. Add this file to the repo root: tests/workflow-test.ts
  *   2. Add to package.json scripts: "test:workflow": "npx tsx tests/workflow-test.ts"
  *   3. Set env vars (or it reads from .env):
- *      - BASE_URL (default: https://brightengine-production.up.railway.app)
+ *      - BASE_URL (default: https://preview.brightautomations.org)
  *      - TEST_TOKEN (default: e2e-test-live-pipeline-2026)
  *      - ADMIN_EMAIL (default: admin@brightautomations.net)
  *      - ADMIN_PASSWORD (default: test123)
@@ -37,7 +37,7 @@
  *   - UI layout and interactions
  */
 
-const BASE_URL = process.env.BASE_URL || 'https://brightengine-production.up.railway.app'
+const BASE_URL = process.env.BASE_URL || 'https://preview.brightautomations.org'
 const TEST_TOKEN = process.env.TEST_TOKEN || 'e2e-test-live-pipeline-2026'
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@brightautomations.net'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'test123'

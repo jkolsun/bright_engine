@@ -92,7 +92,7 @@ export async function triggerCloseEngine(options: {
     }
 
     // 3. Update lead status + set form URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://brightengine-production.up.railway.app'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'
     await prisma.lead.update({
       where: { id: leadId },
       data: {

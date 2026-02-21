@@ -67,7 +67,7 @@ export async function generatePreview(
   const previewId = `prv_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
 
   // Build preview URL (must be live and accessible)
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://brightengine-production.up.railway.app'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'
   const previewUrl = `${baseUrl}/preview/${previewId}`
 
   // Preview expires in 7 days (per Operating Manual + banner text)

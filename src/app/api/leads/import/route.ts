@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
       // Use transaction for all new lead creation to ensure consistency
       if (newRows.length > 0) {
         try {
-          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || 'https://brightengine-production.up.railway.app'
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || 'https://preview.brightautomations.org'
           const transactionResults = await prisma.$transaction(
             newRows.map((row) => {
               const previewId = generatePreviewId()
