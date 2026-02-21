@@ -60,7 +60,6 @@ async function getSiteBuildPipelineView() {
         buildStartedAt: true,
         previewId: true,
         previewUrl: true,
-        siteHtml: true,
         updatedAt: true,
         createdAt: true,
       },

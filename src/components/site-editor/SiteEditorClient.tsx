@@ -21,14 +21,12 @@ interface SiteEditorClientProps {
   companyName: string
   buildStep: string
   previewId: string
-  hasExistingHtml: boolean
-  initialHtml: string
 }
 
 export default function SiteEditorClient(props: SiteEditorClientProps) {
-  const [html, setHtml] = useState(props.initialHtml)
-  const [originalHtml, setOriginalHtml] = useState(props.initialHtml)
-  const [isLoading, setIsLoading] = useState(!props.hasExistingHtml)
+  const [html, setHtml] = useState('')
+  const [originalHtml, setOriginalHtml] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
   const [saveStatus, setSaveStatus] = useState<'saved' | 'unsaved' | 'saving' | 'error'>('saved')
   const [showPreview, setShowPreview] = useState(true)
   const [showChat, setShowChat] = useState(true)
@@ -36,11 +34,9 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
 
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
 
-  // Generate snapshot if no existing HTML
+  // Load HTML on mount (on-demand from API)
   useEffect(() => {
-    if (!props.hasExistingHtml) {
-      generateSnapshot()
-    }
+    loadEditorHtml()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -54,6 +50,31 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
   }, [saveStatus])
+
+  const loadEditorHtml = async () => {
+    setIsLoading(true)
+    setSnapshotError(null)
+
+    try {
+      // Step 1: Try to load existing siteHtml from DB
+      const loadRes = await fetch(`/api/site-editor/${props.leadId}/save`)
+      if (loadRes.ok) {
+        const loadData = await loadRes.json()
+        if (loadData.html) {
+          setHtml(loadData.html)
+          setOriginalHtml(loadData.html)
+          setIsLoading(false)
+          return
+        }
+      }
+
+      // Step 2: No existing HTML — generate snapshot
+      await generateSnapshot()
+    } catch {
+      setSnapshotError('Network error loading editor data')
+      setIsLoading(false)
+    }
+  }
 
   const generateSnapshot = async () => {
     setIsLoading(true)
@@ -131,7 +152,7 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
   }, [originalHtml])
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen site-editor-root">
       <EditorToolbar
         companyName={props.companyName}
         buildStep={props.buildStep}
@@ -146,23 +167,23 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Monaco Editor — always visible */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 h-full">
           {isLoading ? (
             <div className="flex items-center justify-center h-full bg-[#1e1e1e] text-gray-400">
               <div className="text-center">
                 <div className="animate-spin w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full mx-auto mb-3" />
-                <p>Generating HTML snapshot...</p>
-                <p className="text-sm text-gray-500 mt-1">Rendering template to editable HTML</p>
+                <p>Loading site editor...</p>
+                <p className="text-sm text-gray-500 mt-1">Fetching HTML for editing</p>
               </div>
             </div>
           ) : snapshotError ? (
             <div className="flex items-center justify-center h-full bg-[#1e1e1e] text-red-400">
-              <div className="text-center">
-                <p className="text-lg mb-2">Snapshot Error</p>
-                <p className="text-sm text-gray-500">{snapshotError}</p>
+              <div className="text-center max-w-md">
+                <p className="text-lg mb-2">Error Loading Editor</p>
+                <p className="text-sm text-gray-500 mb-4">{snapshotError}</p>
                 <button
                   onClick={generateSnapshot}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
+                  className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors"
                 >
                   Retry
                 </button>

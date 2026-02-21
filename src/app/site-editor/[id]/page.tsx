@@ -22,7 +22,6 @@ export default async function SiteEditorPage({ params }: { params: { id: string 
       companyName: true,
       buildStep: true,
       previewId: true,
-      siteHtml: true,
     },
   })
 
@@ -34,8 +33,6 @@ export default async function SiteEditorPage({ params }: { params: { id: string 
       companyName={lead.companyName || 'Untitled Site'}
       buildStep={lead.buildStep || 'QA_REVIEW'}
       previewId={lead.previewId || ''}
-      hasExistingHtml={!!lead.siteHtml}
-      initialHtml={lead.siteHtml || ''}
     />
   )
 }

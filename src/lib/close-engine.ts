@@ -91,8 +91,13 @@ export async function triggerCloseEngine(options: {
       return { success: false, error: 'Lead has no phone number' }
     }
 
-    // 3. Update lead status + set form URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'
+    // 3. Update lead status + set form URL (use settings-based base URL for white-label)
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'
+    try {
+      const { getSmartChatSettings } = require('./message-batcher')
+      const smartChatSettings = await getSmartChatSettings()
+      if (smartChatSettings.formBaseUrl) baseUrl = smartChatSettings.formBaseUrl
+    } catch { /* non-critical */ }
     await prisma.lead.update({
       where: { id: leadId },
       data: {

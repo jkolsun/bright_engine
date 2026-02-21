@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * PUT /api/admin/approvals/[id] - Approve or Deny an approval
- * Body: { action: 'approve' | 'deny' }
+ * Body: { action: 'approve' | 'deny', denialReason?: string }
  */
 export async function PUT(
   request: NextRequest,
@@ -20,7 +20,7 @@ export async function PUT(
     }
 
     const { id } = await context.params
-    const { action } = await request.json()
+    const { action, denialReason } = await request.json()
 
     if (!['approve', 'deny'].includes(action)) {
       return NextResponse.json({ error: 'action must be "approve" or "deny"' }, { status: 400 })
@@ -36,12 +36,18 @@ export async function PUT(
 
     const newStatus = action === 'approve' ? 'APPROVED' : 'DENIED'
 
+    // Store denial reason in metadata if provided
+    const updatedMetadata = action === 'deny' && denialReason
+      ? { ...(approval.metadata as Record<string, unknown> || {}), denialReason }
+      : approval.metadata
+
     const updated = await prisma.approval.update({
       where: { id },
       data: {
         status: newStatus,
         resolvedBy: session.name || session.email || 'admin',
         resolvedAt: new Date(),
+        metadata: updatedMetadata || undefined,
       },
     })
 
@@ -52,8 +58,10 @@ export async function PUT(
 
     // If denied, revert lead to previous stage and notify
     if (action === 'deny' && updated.leadId) {
+      const reasonText = denialReason ? ` Reason: ${denialReason}` : ''
+
       if (updated.gate === 'SEND_PREVIEW') {
-        // Denied preview → back to editing for Jared to fix
+        // Denied preview -> back to editing for Jared to fix
         await prisma.lead.update({
           where: { id: updated.leadId },
           data: { buildStep: 'EDITING' },
@@ -62,31 +70,31 @@ export async function PUT(
           data: {
             type: 'CLOSE_ENGINE',
             title: 'Preview Denied — Back to Editing',
-            message: `Preview for lead was denied. Lead returned to Build Queue for edits.`,
-            metadata: { leadId: updated.leadId, gate: updated.gate },
+            message: `Preview for lead was denied. Lead returned to Build Queue for edits.${reasonText}`,
+            metadata: { leadId: updated.leadId, gate: updated.gate, denialReason: denialReason || null },
           },
         })
       } else if (updated.gate === 'SITE_PUBLISH') {
         await prisma.lead.update({
           where: { id: updated.leadId },
-          data: { buildStep: 'CLIENT_APPROVED' },
+          data: { buildStep: 'EDITING' },
         })
         await prisma.notification.create({
           data: {
             type: 'CLOSE_ENGINE',
-            title: 'Site Publish Denied',
-            message: `Site publication denied. Lead status unchanged.`,
-            metadata: { leadId: updated.leadId, gate: updated.gate },
+            title: 'Site Publish Denied — Back to Editing',
+            message: `Site publication denied. Lead returned to Build Queue for edits.${reasonText}`,
+            metadata: { leadId: updated.leadId, gate: updated.gate, denialReason: denialReason || null },
           },
         })
       } else if (updated.gate === 'PAYMENT_LINK') {
-        // Denied payment link → lead stays in CLIENT_REVIEW, AI continues conversation
+        // Denied payment link -> lead stays in CLIENT_REVIEW, AI continues conversation
         await prisma.notification.create({
           data: {
             type: 'CLOSE_ENGINE',
             title: 'Payment Link Denied',
-            message: `Payment link denied. Lead stays in CLIENT_REVIEW — AI continues the conversation.`,
-            metadata: { leadId: updated.leadId, gate: updated.gate },
+            message: `Payment link denied. Lead stays in CLIENT_REVIEW — AI continues the conversation.${reasonText}`,
+            metadata: { leadId: updated.leadId, gate: updated.gate, denialReason: denialReason || null },
           },
         })
       }
@@ -102,6 +110,10 @@ export async function PUT(
 /**
  * Execute the action that was gated behind approval.
  * Each gate type maps to a specific system action.
+ *
+ * NOTE: sendSMSViaProvider() already creates a Message record in the database.
+ * Do NOT create additional message records here or messages will appear twice
+ * in the Control Center.
  */
 async function executeApprovedAction(approval: any) {
   try {
@@ -119,26 +131,10 @@ async function executeApprovedAction(approval: any) {
             trigger: 'approved_payment_link',
             aiGenerated: true,
           })
-
-          // Log the message in the database
-          if (approval.leadId) {
-            await prisma.message.create({
-              data: {
-                content: approval.draftContent,
-                direction: 'OUTBOUND',
-                channel: 'SMS',
-                senderType: 'AI',
-                senderName: 'clawdbot',
-                recipient: approval.metadata.phone,
-                leadId: approval.leadId,
-                aiGenerated: true,
-                trigger: 'approved_payment_link',
-              },
-            })
-          }
+          // sendSMSViaProvider already logs the message — no manual message.create needed
         }
 
-        // Update lead buildStep — status stays APPROVED until they pay (→ PAID)
+        // Update lead buildStep and status
         if (approval.leadId) {
           await prisma.lead.update({
             where: { id: approval.leadId },
@@ -236,21 +232,7 @@ async function executeApprovedAction(approval: any) {
                 trigger: 'approved_preview_send',
                 aiGenerated: true,
               })
-
-              // Log the message in the database
-              await prisma.message.create({
-                data: {
-                  content: message,
-                  direction: 'OUTBOUND',
-                  channel: 'SMS',
-                  senderType: 'AI',
-                  senderName: 'clawdbot',
-                  recipient: lead.phone,
-                  leadId: lead.id,
-                  aiGenerated: true,
-                  trigger: 'approved_preview_send',
-                },
-              })
+              // sendSMSViaProvider already logs the message — no manual message.create needed
 
               console.log(`[Approvals] Preview SMS sent to ${lead.phone} for ${lead.companyName}`)
             } catch (smsErr) {

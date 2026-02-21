@@ -840,6 +840,12 @@ function buildWebsiteCopyPrompt(lead: any, research: SerperResearchData | null, 
   return parts.join('\n')
 }
 
+function truncateWords(text: string, maxWords: number): string {
+  const words = text.split(/\s+/)
+  if (words.length <= maxWords) return text
+  return words.slice(0, maxWords).join(' ')
+}
+
 function parseWebsiteCopyResponse(raw: string, services: string[]): WebsiteCopy | null {
   try {
     const get = (label: string): string => {
@@ -883,23 +889,29 @@ function parseWebsiteCopyResponse(raw: string, services: string[]): WebsiteCopy 
       }
     }
 
+    // Enforce word limits to prevent layout blowout
+    const trimmedServiceDescriptions: Record<string, string> = {}
+    for (const [key, val] of Object.entries(serviceDescriptions)) {
+      trimmedServiceDescriptions[key] = truncateWords(val, 20)
+    }
+
     return {
-      heroHeadline,
-      heroSubheadline,
-      aboutParagraph1,
-      aboutParagraph2: aboutParagraph2 || aboutParagraph1,
-      testimonialQuote: testimonialQuote || undefined,
+      heroHeadline: truncateWords(heroHeadline, 12),
+      heroSubheadline: truncateWords(heroSubheadline, 25),
+      aboutParagraph1: truncateWords(aboutParagraph1, 60),
+      aboutParagraph2: truncateWords(aboutParagraph2 || aboutParagraph1, 60),
+      testimonialQuote: testimonialQuote ? truncateWords(testimonialQuote, 50) : undefined,
       testimonialAuthor: testimonialAuthor || undefined,
       yearsBadge,
       serviceAreaText,
       valueProps: [
-        { title: vp1Title || 'Verified & Trusted', description: vp1Desc || '' },
-        { title: vp2Title || 'Proven Results', description: vp2Desc || '' },
-        { title: vp3Title || 'Local Expertise', description: vp3Desc || '' },
+        { title: truncateWords(vp1Title || 'Verified & Trusted', 5), description: truncateWords(vp1Desc || '', 18) },
+        { title: truncateWords(vp2Title || 'Proven Results', 5), description: truncateWords(vp2Desc || '', 18) },
+        { title: truncateWords(vp3Title || 'Local Expertise', 5), description: truncateWords(vp3Desc || '', 18) },
       ],
-      closingHeadline: closingHeadline || 'Let\'s Talk About Your Project',
-      closingBody: closingBody || '',
-      serviceDescriptions,
+      closingHeadline: truncateWords(closingHeadline || 'Let\'s Talk About Your Project', 12),
+      closingBody: truncateWords(closingBody || '', 30),
+      serviceDescriptions: trimmedServiceDescriptions,
     }
   } catch (error) {
     console.error('[WEBSITE_COPY] Parse error:', error)
@@ -919,7 +931,7 @@ async function generateWebsiteCopy(
 
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 800,
+      max_tokens: 1200,
       system: WEBSITE_COPY_SYSTEM,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -937,7 +949,7 @@ async function generateWebsiteCopy(
         // One retry
         const retryResponse = await anthropic.messages.create({
           model: 'claude-haiku-4-5-20251001',
-          max_tokens: 800,
+          max_tokens: 1200,
           system: WEBSITE_COPY_SYSTEM,
           messages: [{ role: 'user', content: prompt + '\n\nIMPORTANT: Do NOT use hype adjectives. Be specific and factual.' }],
         })

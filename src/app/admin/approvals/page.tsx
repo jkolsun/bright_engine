@@ -8,21 +8,21 @@ import Link from 'next/link'
 import {
   ShieldCheck, ShieldX, Clock, AlertTriangle, CheckCircle, XCircle,
   DollarSign, Globe, MessageSquare, Eye, Trash2, Users, Bot, CreditCard,
-  ArrowLeft, RefreshCw
+  ArrowLeft, RefreshCw, ExternalLink, Filter
 } from 'lucide-react'
 
-const GATE_CONFIG: Record<string, { label: string; icon: any; color: string }> = {
-  PAYMENT_LINK: { label: 'Payment Link', icon: DollarSign, color: 'bg-green-100 text-green-700' },
-  SITE_PUBLISH: { label: 'Site Publish', icon: Globe, color: 'bg-blue-100 text-blue-700' },
-  REFUND: { label: 'Refund', icon: CreditCard, color: 'bg-red-100 text-red-700' },
-  SEND_MESSAGE: { label: 'Send Message', icon: MessageSquare, color: 'bg-purple-100 text-purple-700' },
-  SEND_PREVIEW: { label: 'Send Preview', icon: Eye, color: 'bg-amber-100 text-amber-700' },
-  STATUS_CHANGE: { label: 'Status Change', icon: RefreshCw, color: 'bg-teal-100 text-teal-700' },
-  DELETE_LEAD: { label: 'Delete Lead', icon: Trash2, color: 'bg-red-100 text-red-700' },
-  BULK_ACTION: { label: 'Bulk Action', icon: Users, color: 'bg-orange-100 text-orange-700' },
-  AI_RESPONSE: { label: 'AI Response', icon: Bot, color: 'bg-indigo-100 text-indigo-700' },
-  SUBSCRIPTION_CANCEL: { label: 'Cancel Sub', icon: XCircle, color: 'bg-red-100 text-red-700' },
-  HIGH_VALUE_SEND: { label: 'High Value', icon: AlertTriangle, color: 'bg-yellow-100 text-yellow-700' },
+const GATE_CONFIG: Record<string, { label: string; icon: any; color: string; badgeColor: string }> = {
+  PAYMENT_LINK: { label: 'Payment Link', icon: DollarSign, color: 'bg-green-100 text-green-700', badgeColor: 'bg-green-500 text-white' },
+  SITE_PUBLISH: { label: 'Site Publish', icon: Globe, color: 'bg-blue-100 text-blue-700', badgeColor: 'bg-blue-500 text-white' },
+  REFUND: { label: 'Refund', icon: CreditCard, color: 'bg-red-100 text-red-700', badgeColor: 'bg-red-500 text-white' },
+  SEND_MESSAGE: { label: 'Send Message', icon: MessageSquare, color: 'bg-purple-100 text-purple-700', badgeColor: 'bg-purple-500 text-white' },
+  SEND_PREVIEW: { label: 'Site Approval', icon: Eye, color: 'bg-blue-100 text-blue-700', badgeColor: 'bg-blue-500 text-white' },
+  STATUS_CHANGE: { label: 'Status Change', icon: RefreshCw, color: 'bg-teal-100 text-teal-700', badgeColor: 'bg-teal-500 text-white' },
+  DELETE_LEAD: { label: 'Delete Lead', icon: Trash2, color: 'bg-red-100 text-red-700', badgeColor: 'bg-red-500 text-white' },
+  BULK_ACTION: { label: 'Bulk Action', icon: Users, color: 'bg-orange-100 text-orange-700', badgeColor: 'bg-orange-500 text-white' },
+  AI_RESPONSE: { label: 'AI Response', icon: Bot, color: 'bg-indigo-100 text-indigo-700', badgeColor: 'bg-indigo-500 text-white' },
+  SUBSCRIPTION_CANCEL: { label: 'Cancel Sub', icon: XCircle, color: 'bg-red-100 text-red-700', badgeColor: 'bg-red-500 text-white' },
+  HIGH_VALUE_SEND: { label: 'High Value', icon: AlertTriangle, color: 'bg-yellow-100 text-yellow-700', badgeColor: 'bg-yellow-500 text-white' },
 }
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string }> = {
@@ -38,12 +38,16 @@ export default function ApprovalsPage() {
   const [approvals, setApprovals] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<FilterStatus>('PENDING')
+  const [gateFilter, setGateFilter] = useState<string>('all')
   const [pendingCount, setPendingCount] = useState(0)
   const [processingId, setProcessingId] = useState<string | null>(null)
+  const [denyingId, setDenyingId] = useState<string | null>(null)
+  const [denialReason, setDenialReason] = useState('')
 
   const loadApprovals = async () => {
     try {
-      const res = await fetch(`/api/admin/approvals?status=${filter}&limit=100`)
+      const gateParam = gateFilter !== 'all' ? `&gate=${gateFilter}` : ''
+      const res = await fetch(`/api/admin/approvals?status=${filter}&limit=100${gateParam}`)
       if (res.ok) {
         const data = await res.json()
         setApprovals(data.approvals || [])
@@ -58,30 +62,57 @@ export default function ApprovalsPage() {
 
   useEffect(() => {
     loadApprovals()
-  }, [filter])
+  }, [filter, gateFilter])
 
   // Poll every 5 seconds for new items
   useEffect(() => {
     const interval = setInterval(loadApprovals, 5000)
     return () => clearInterval(interval)
-  }, [filter])
+  }, [filter, gateFilter])
 
-  const handleAction = async (id: string, action: 'approve' | 'deny') => {
+  const handleApprove = async (id: string) => {
     setProcessingId(id)
     try {
       const res = await fetch(`/api/admin/approvals/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action: 'approve' }),
       })
       if (res.ok) {
         setApprovals(prev => prev.filter(a => a.id !== id))
         setPendingCount(prev => Math.max(0, prev - 1))
       }
     } catch (err) {
-      console.error('Failed to process approval:', err)
+      console.error('Failed to approve:', err)
     } finally {
       setProcessingId(null)
+    }
+  }
+
+  const handleDenyClick = (id: string) => {
+    setDenyingId(id)
+    setDenialReason('')
+  }
+
+  const handleDenyConfirm = async () => {
+    if (!denyingId) return
+    setProcessingId(denyingId)
+    try {
+      const res = await fetch(`/api/admin/approvals/${denyingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'deny', denialReason: denialReason.trim() || undefined }),
+      })
+      if (res.ok) {
+        setApprovals(prev => prev.filter(a => a.id !== denyingId))
+        setPendingCount(prev => Math.max(0, prev - 1))
+      }
+    } catch (err) {
+      console.error('Failed to deny:', err)
+    } finally {
+      setProcessingId(null)
+      setDenyingId(null)
+      setDenialReason('')
     }
   }
 
@@ -91,6 +122,12 @@ export default function ApprovalsPage() {
     const hrs = Math.floor(mins / 60)
     if (hrs < 24) return `${hrs}h ago`
     return `${Math.floor(hrs / 24)}d ago`
+  }
+
+  const getPreviewUrl = (approval: any) => {
+    return approval.metadata?.previewUrl
+      || approval.lead?.previewUrl
+      || (approval.lead?.previewId ? `/preview/${approval.lead.previewId}` : null)
   }
 
   return (
@@ -117,23 +154,42 @@ export default function ApprovalsPage() {
           </div>
 
           {/* Filter tabs */}
-          <div className="flex gap-2 mt-4">
-            {(['PENDING', 'APPROVED', 'DENIED', 'all'] as FilterStatus[]).map(s => (
-              <button
-                key={s}
-                onClick={() => setFilter(s)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filter === s
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+          <div className="flex items-center gap-4 mt-4">
+            <div className="flex gap-2">
+              {(['PENDING', 'APPROVED', 'DENIED', 'all'] as FilterStatus[]).map(s => (
+                <button
+                  key={s}
+                  onClick={() => setFilter(s)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    filter === s
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {s === 'all' ? 'All' : s.charAt(0) + s.slice(1).toLowerCase()}
+                  {s === 'PENDING' && pendingCount > 0 && (
+                    <span className="ml-2 bg-white/20 text-white px-1.5 py-0.5 rounded text-xs">{pendingCount}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Type filter */}
+            <div className="flex items-center gap-2 ml-4 border-l border-gray-200 pl-4">
+              <Filter size={14} className="text-gray-400" />
+              <select
+                value={gateFilter}
+                onChange={e => setGateFilter(e.target.value)}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700"
               >
-                {s === 'all' ? 'All' : s.charAt(0) + s.slice(1).toLowerCase()}
-                {s === 'PENDING' && pendingCount > 0 && (
-                  <span className="ml-2 bg-white/20 text-white px-1.5 py-0.5 rounded text-xs">{pendingCount}</span>
-                )}
-              </button>
-            ))}
+                <option value="all">All Types</option>
+                <option value="SEND_PREVIEW">Site Approvals</option>
+                <option value="PAYMENT_LINK">Payment Links</option>
+                <option value="SEND_MESSAGE">Messages</option>
+                <option value="SITE_PUBLISH">Site Publish</option>
+                <option value="REFUND">Refunds</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -153,11 +209,49 @@ export default function ApprovalsPage() {
           </Card>
         )}
 
+        {/* Denial reason modal */}
+        {denyingId && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Deny Approval</h3>
+              <p className="text-sm text-gray-600 mb-4">Provide a reason for denial so the team knows what to fix.</p>
+              <textarea
+                value={denialReason}
+                onChange={e => setDenialReason(e.target.value)}
+                placeholder="Reason for denial (optional but recommended)..."
+                className="w-full border border-gray-300 rounded-lg p-3 text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                autoFocus
+              />
+              <div className="flex justify-end gap-3 mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setDenyingId(null); setDenialReason('') }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleDenyConfirm}
+                  disabled={processingId === denyingId}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <ShieldX size={16} className="mr-1" />
+                  Deny
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {approvals.map(approval => {
-          const gateConf = GATE_CONFIG[approval.gate] || { label: approval.gate, icon: ShieldCheck, color: 'bg-gray-100 text-gray-700' }
+          const gateConf = GATE_CONFIG[approval.gate] || { label: approval.gate, icon: ShieldCheck, color: 'bg-gray-100 text-gray-700', badgeColor: 'bg-gray-500 text-white' }
           const prioConf = PRIORITY_CONFIG[approval.priority] || PRIORITY_CONFIG.NORMAL
           const GateIcon = gateConf.icon
           const isPending = approval.status === 'PENDING'
+          const previewUrl = getPreviewUrl(approval)
+          const paymentUrl = approval.metadata?.paymentUrl
+          const meta = approval.metadata as Record<string, unknown> | null
 
           return (
             <Card key={approval.id} className={`p-6 ${isPending && approval.priority === 'URGENT' ? 'border-red-300 border-2' : ''}`}>
@@ -169,9 +263,9 @@ export default function ApprovalsPage() {
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
+                  {/* Type badge + title */}
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-gray-900">{approval.title}</h3>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${gateConf.color}`}>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${gateConf.badgeColor}`}>
                       {gateConf.label}
                     </span>
                     {approval.priority !== 'NORMAL' && (
@@ -179,15 +273,82 @@ export default function ApprovalsPage() {
                         {prioConf.label}
                       </span>
                     )}
+                    <h3 className="font-semibold text-gray-900">{approval.title}</h3>
                   </div>
 
+                  {/* Lead/company info */}
+                  {approval.lead && (
+                    <div className="mt-1 text-sm text-gray-700">
+                      <span className="font-medium">{approval.lead.firstName} {approval.lead.lastName || ''}</span>
+                      {approval.lead.companyName && (
+                        <span className="text-gray-500"> — {approval.lead.companyName}</span>
+                      )}
+                    </div>
+                  )}
+
                   <p className="text-sm text-gray-600 mt-1">{approval.description}</p>
+
+                  {/* Preview button for site approvals */}
+                  {(approval.gate === 'SEND_PREVIEW' || approval.gate === 'SITE_PUBLISH') && previewUrl && (
+                    <a
+                      href={previewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
+                    >
+                      <Eye size={14} />
+                      Preview Site
+                      <ExternalLink size={12} />
+                    </a>
+                  )}
+
+                  {/* Stripe link visible for payment approvals */}
+                  {approval.gate === 'PAYMENT_LINK' && paymentUrl && (
+                    <div className="mt-2 p-2 bg-green-50 rounded-lg border border-green-200">
+                      <p className="text-xs font-medium text-green-700 mb-1">Stripe Payment Link:</p>
+                      <a
+                        href={paymentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-green-800 underline break-all hover:text-green-900"
+                      >
+                        {paymentUrl}
+                      </a>
+                    </div>
+                  )}
 
                   {/* Draft content preview */}
                   {approval.draftContent && (
                     <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <p className="text-xs font-medium text-gray-500 mb-1">Draft Content:</p>
+                      <p className="text-xs font-medium text-gray-500 mb-1">Message to send:</p>
                       <p className="text-sm text-gray-800 whitespace-pre-wrap">{approval.draftContent}</p>
+                    </div>
+                  )}
+
+                  {/* Conversation context — last 3-5 messages */}
+                  {approval.recentMessages && approval.recentMessages.length > 0 && (
+                    <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                      <p className="text-xs font-medium text-slate-500 mb-2">Recent conversation:</p>
+                      <div className="space-y-1.5">
+                        {approval.recentMessages.map((msg: any) => (
+                          <div key={msg.id} className="flex gap-2 text-sm">
+                            <span className={`font-medium flex-shrink-0 ${
+                              msg.direction === 'INBOUND' ? 'text-blue-600' : 'text-gray-600'
+                            }`}>
+                              {msg.direction === 'INBOUND' ? 'Client:' : 'Team:'}
+                            </span>
+                            <span className="text-gray-700 truncate">{msg.content}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Denial reason (if denied) */}
+                  {approval.status === 'DENIED' && meta?.denialReason && (
+                    <div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                      <p className="text-xs font-medium text-red-600 mb-1">Denial reason:</p>
+                      <p className="text-sm text-red-800">{meta.denialReason as string}</p>
                     </div>
                   )}
 
@@ -208,7 +369,7 @@ export default function ApprovalsPage() {
                 {isPending && (
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Button
-                      onClick={() => handleAction(approval.id, 'deny')}
+                      onClick={() => handleDenyClick(approval.id)}
                       variant="outline"
                       size="sm"
                       disabled={processingId === approval.id}
@@ -218,7 +379,7 @@ export default function ApprovalsPage() {
                       Deny
                     </Button>
                     <Button
-                      onClick={() => handleAction(approval.id, 'approve')}
+                      onClick={() => handleApprove(approval.id)}
                       size="sm"
                       disabled={processingId === approval.id}
                       className="bg-green-600 hover:bg-green-700 text-white"

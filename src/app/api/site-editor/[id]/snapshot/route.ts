@@ -61,22 +61,42 @@ export async function POST(
       }, { status: 422 })
     }
 
-    // Build internal URL to fetch the preview page
+    // Build URL to fetch the preview page
+    // Use NEXT_PUBLIC_APP_URL (reliable on Railway) → fall back to request origin
     const previewPath = `/preview/${lead.previewId || id}`
-    const baseUrl = request.nextUrl.origin
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
     const previewUrl = `${baseUrl}${previewPath}`
 
     let previewRes: Response
     try {
       previewRes = await fetch(previewUrl, {
         headers: { 'Cookie': request.headers.get('cookie') || '' },
+        signal: AbortSignal.timeout(15000),
       })
     } catch (fetchError) {
       console.error('[Snapshot] Fetch error:', fetchError)
-      return NextResponse.json(
-        { error: `Could not reach preview page at ${previewUrl}. The server may still be deploying.` },
-        { status: 502 }
-      )
+      // Retry once with request origin if env URL failed
+      const fallbackUrl = `${request.nextUrl.origin}${previewPath}`
+      if (fallbackUrl !== previewUrl) {
+        try {
+          console.log('[Snapshot] Retrying with request origin...')
+          previewRes = await fetch(fallbackUrl, {
+            headers: { 'Cookie': request.headers.get('cookie') || '' },
+            signal: AbortSignal.timeout(15000),
+          })
+        } catch (retryError) {
+          console.error('[Snapshot] Retry also failed:', retryError)
+          return NextResponse.json(
+            { error: `Could not reach preview page. Tried: ${previewUrl} and ${fallbackUrl}` },
+            { status: 502 }
+          )
+        }
+      } else {
+        return NextResponse.json(
+          { error: `Could not reach preview page at ${previewUrl}. The server may still be deploying.` },
+          { status: 502 }
+        )
+      }
     }
 
     if (!previewRes.ok) {

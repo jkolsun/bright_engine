@@ -5,6 +5,53 @@ import { verifySession } from '@/lib/session'
 export const dynamic = 'force-dynamic'
 
 /**
+ * GET /api/site-editor/[id]/save
+ * Loads lead data + siteHtml for the editor (on-demand, avoids bloating list APIs)
+ */
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
+    const { id } = await context.params
+
+    const lead = await prisma.lead.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        companyName: true,
+        buildStep: true,
+        previewId: true,
+        siteHtml: true,
+        buildReadinessScore: true,
+      },
+    })
+
+    if (!lead) {
+      return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({
+      leadId: lead.id,
+      companyName: lead.companyName,
+      buildStep: lead.buildStep,
+      previewId: lead.previewId,
+      hasHtml: !!lead.siteHtml,
+      html: lead.siteHtml || null,
+    })
+  } catch (error) {
+    console.error('[Site Editor Load] Error:', error)
+    return NextResponse.json({ error: 'Failed to load editor data' }, { status: 500 })
+  }
+}
+
+/**
  * PUT /api/site-editor/[id]/save
  * Saves edited HTML to lead.siteHtml
  */

@@ -658,7 +658,6 @@ export default function BuildQueuePage() {
           companyName={editorLead.companyName}
           buildStep={editorLead.buildStep || 'QA_REVIEW'}
           previewId={editorLead.previewId || null}
-          siteHtml={editorLead.siteHtml || null}
           onClose={() => setEditorLead(null)}
           onRefresh={loadData}
         />

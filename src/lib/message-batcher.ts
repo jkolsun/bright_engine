@@ -29,12 +29,14 @@ interface SmartChatSettings {
   batchWindowMs: number
   conversationEnderEnabled: boolean
   qualifyingQuestionCount: number
+  formBaseUrl: string
 }
 
 const DEFAULT_SMART_CHAT: SmartChatSettings = {
   batchWindowMs: 8000,
   conversationEnderEnabled: true,
   qualifyingQuestionCount: 2,
+  formBaseUrl: '',
 }
 
 let cachedSettings: SmartChatSettings | null = null
@@ -57,6 +59,7 @@ export async function getSmartChatSettings(): Promise<SmartChatSettings> {
         batchWindowMs: typeof val.batchWindowMs === 'number' ? val.batchWindowMs : DEFAULT_SMART_CHAT.batchWindowMs,
         conversationEnderEnabled: typeof val.conversationEnderEnabled === 'boolean' ? val.conversationEnderEnabled : DEFAULT_SMART_CHAT.conversationEnderEnabled,
         qualifyingQuestionCount: typeof val.qualifyingQuestionCount === 'number' ? val.qualifyingQuestionCount : DEFAULT_SMART_CHAT.qualifyingQuestionCount,
+        formBaseUrl: typeof val.formBaseUrl === 'string' ? val.formBaseUrl : DEFAULT_SMART_CHAT.formBaseUrl,
       }
     } else {
       cachedSettings = { ...DEFAULT_SMART_CHAT }

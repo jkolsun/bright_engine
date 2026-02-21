@@ -5,8 +5,11 @@ import { verifySession } from '@/lib/session'
 export const dynamic = 'force-dynamic'
 
 /**
- * GET /api/admin/approvals - List approvals with optional status filter
- * Query params: status (PENDING | APPROVED | DENIED | all), limit, offset
+ * GET /api/admin/approvals - List approvals with optional status and gate filter
+ * Query params: status (PENDING | APPROVED | DENIED | all), gate (PAYMENT_LINK | SEND_PREVIEW | etc.), limit, offset
+ *
+ * Returns enriched approvals with lead data and recent conversation messages
+ * so the admin has full context when reviewing.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -18,10 +21,13 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status') || 'PENDING'
+    const gateFilter = searchParams.get('gate') || null
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
 
-    const where = status === 'all' ? {} : { status }
+    const where: Record<string, unknown> = {}
+    if (status !== 'all') where.status = status
+    if (gateFilter) where.gate = gateFilter
 
     const [approvals, total, pendingCount] = await Promise.all([
       prisma.approval.findMany({
@@ -37,7 +43,56 @@ export async function GET(request: NextRequest) {
       prisma.approval.count({ where: { status: 'PENDING' } }),
     ])
 
-    return NextResponse.json({ approvals, total, pendingCount })
+    // Enrich approvals with lead data and recent messages for context
+    const enriched = await Promise.all(
+      approvals.map(async (approval: any) => {
+        let lead: any = null
+        let recentMessages: any[] = []
+
+        if (approval.leadId) {
+          // Fetch lead info
+          lead = await prisma.lead.findUnique({
+            where: { id: approval.leadId },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              companyName: true,
+              phone: true,
+              email: true,
+              status: true,
+              buildStep: true,
+              previewUrl: true,
+              previewId: true,
+            },
+          })
+
+          // Fetch last 5 messages for conversation context
+          recentMessages = await prisma.message.findMany({
+            where: { leadId: approval.leadId },
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+            select: {
+              id: true,
+              content: true,
+              direction: true,
+              senderType: true,
+              createdAt: true,
+            },
+          })
+          // Reverse so they're chronological (oldest first)
+          recentMessages.reverse()
+        }
+
+        return {
+          ...approval,
+          lead,
+          recentMessages,
+        }
+      })
+    )
+
+    return NextResponse.json({ approvals: enriched, total, pendingCount })
   } catch (error) {
     console.error('Error fetching approvals:', error)
     return NextResponse.json({ error: 'Failed to fetch approvals' }, { status: 500 })

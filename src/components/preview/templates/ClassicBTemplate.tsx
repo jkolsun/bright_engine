@@ -76,7 +76,7 @@ function ChatbotWidget({ companyName, accentColor = '#15803d' }: { companyName: 
 
   return (
     <>
-      <button onClick={() => setIsOpen(!isOpen)} className="fixed bottom-6 right-5 z-[100] group sm:bottom-6 bottom-[100px]" aria-label="Chat with us">
+      <button onClick={() => setIsOpen(!isOpen)} className="fixed bottom-6 right-5 z-[100] group sm:bottom-6 bottom-20" aria-label="Chat with us">
         <div className="w-[58px] h-[58px] rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-105" style={{ background: `linear-gradient(135deg, ${accentColor}, #059669)` }}>
           {isOpen ? <X size={22} className="text-white" /> : <MessageCircle size={22} className="text-white" />}
         </div>
@@ -84,7 +84,7 @@ function ChatbotWidget({ companyName, accentColor = '#15803d' }: { companyName: 
         {!isOpen && (<div className="absolute bottom-full right-0 mb-3 whitespace-nowrap bg-white text-gray-800 text-sm font-semibold px-4 py-2 rounded-xl shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">Chat with us!<div className="absolute top-full right-6 w-2 h-2 bg-white transform rotate-45 -translate-y-1" /></div>)}
       </button>
       {isOpen && (
-        <div className="fixed sm:bottom-[104px] bottom-[168px] right-5 z-[100] w-[370px] max-w-[calc(100vw-2.5rem)] bg-white rounded-2xl shadow-2xl border border-green-100 overflow-hidden">
+        <div className="fixed sm:bottom-24 bottom-28 right-5 z-[100] w-[370px] max-w-[calc(100vw-2.5rem)] bg-white rounded-2xl shadow-2xl border border-green-100 overflow-hidden">
           <div className="px-5 py-4 text-white" style={{ background: `linear-gradient(135deg, ${accentColor}, #059669)` }}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center"><MessageCircle size={18} className="text-white" /></div>
@@ -164,6 +164,31 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [openFAQ, setOpenFAQ] = useState<number | null>(null)
+  const [formData, setFormData] = useState({ name: '', phone: '', email: '', message: '' })
+  const [formSubmitted, setFormSubmitted] = useState(false)
+  const [formLoading, setFormLoading] = useState(false)
+
+  const handleFormSubmit = async () => {
+    if (formLoading || formSubmitted) return
+    if (!formData.name && !formData.phone && !formData.email) return
+    setFormLoading(true)
+    try {
+      await fetch('/api/preview/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          previewId: lead.previewId,
+          event: 'contact_form',
+          metadata: { ...formData },
+        }),
+      })
+      setFormSubmitted(true)
+    } catch {
+      // silently fail
+    } finally {
+      setFormLoading(false)
+    }
+  }
 
   const services = lead.enrichedServices || []
   const photos = lead.enrichedPhotos || []
@@ -232,7 +257,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               {location && (<div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-8 border border-white/10"><MapPin size={14} className="text-emerald-300" /><span className="text-sm font-medium text-emerald-200">{location}</span></div>)}
               <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight leading-[1.08]">{wc?.heroHeadline || lead.companyName}</h1>
               {wc?.heroSubheadline && (
-                <p className="text-lg sm:text-xl text-gray-200 max-w-2xl mx-auto mb-8 leading-relaxed">{wc.heroSubheadline}</p>
+                <p className="text-lg sm:text-xl text-gray-200 max-w-2xl mb-8 leading-relaxed">{wc.heroSubheadline}</p>
               )}
               <p className="text-base sm:text-lg text-white/55 mb-10 max-w-lg">{config.tagline}</p>
               <div className="flex flex-col sm:flex-row gap-4">
@@ -274,12 +299,14 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               {services.slice(0, 8).map((service, i) => (
                 <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
                 <div className="group flex items-center justify-between py-5 sm:py-6 cursor-pointer hover:pl-2 transition-all duration-300" onClick={onCTAClick}>
-                  <div className="flex items-center gap-5">
+                  <div className="flex items-start gap-5">
                     <span className="text-xs text-green-300 font-mono tabular-nums w-6 font-bold">{String(i + 1).padStart(2, '0')}</span>
-                    <h3 className="text-base sm:text-lg font-semibold text-green-900 group-hover:text-green-700 transition-colors">{service}</h3>
-                    {wc?.serviceDescriptions?.[service] && (
-                      <p className="text-sm text-gray-400 mt-1">{wc.serviceDescriptions[service]}</p>
-                    )}
+                    <div className="flex flex-col min-w-0">
+                      <h3 className="text-base sm:text-lg font-semibold text-green-900 group-hover:text-green-700 transition-colors">{service}</h3>
+                      {wc?.serviceDescriptions?.[service] && (
+                        <p className="text-sm text-gray-500 mt-1 leading-relaxed">{wc.serviceDescriptions[service]}</p>
+                      )}
+                    </div>
                   </div>
                   <ArrowRight size={16} className="text-green-300 group-hover:text-green-600 group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </div>
@@ -310,7 +337,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-center">
             <ScrollReveal animation="fade-left" delay={0} className="lg:col-span-5">
-              {photos.length > 0 ? (<img src={photos[0]} alt="Our team" className="w-full aspect-[4/5] object-cover rounded-2xl" />) : (<div className="w-full aspect-[4/5] rounded-2xl bg-green-50 flex items-center justify-center border border-green-100"><Camera size={48} className="text-green-200" /></div>)}
+              {photos.length > 0 ? (<img src={photos[0]} alt="Our team" className="w-full aspect-[4/5] object-cover rounded-2xl" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />) : (<div className="w-full aspect-[4/5] rounded-2xl bg-green-50 flex items-center justify-center border border-green-100"><Camera size={48} className="text-green-200" /></div>)}
             </ScrollReveal>
             <ScrollReveal animation="fade-right" delay={200} className="lg:col-span-7">
             <div>
@@ -352,7 +379,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
             <ScrollReveal animation="zoom-in" delay={100}>
             <div className="mb-3 sm:mb-4">
               <div className="relative overflow-hidden rounded-xl group cursor-pointer border border-green-100/50 hover:border-green-300/50 transition-all">
-                <img src={photos[0]} alt="Project 1" className="w-full object-cover aspect-[16/9] sm:aspect-[2/1] transition-transform duration-700 group-hover:scale-105" />
+                <img src={photos[0]} alt="Project 1" className="w-full object-cover aspect-[16/9] sm:aspect-[2/1] transition-transform duration-700 group-hover:scale-105" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
             </div>
@@ -364,7 +391,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
                 {photos.slice(1, 5).map((photo, i) => (
                   <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
                   <div className="relative overflow-hidden rounded-xl group cursor-pointer border border-green-100/50 hover:border-green-300/50 transition-all">
-                    <img src={photo} alt={`Project ${i + 2}`} className="w-full object-cover aspect-[4/3] transition-transform duration-700 group-hover:scale-105" />
+                    <img src={photo} alt={`Project ${i + 2}`} className="w-full object-cover aspect-[4/3] transition-transform duration-700 group-hover:scale-105" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>
                   </ScrollReveal>
@@ -384,32 +411,30 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
             <h2 className="text-3xl sm:text-4xl font-bold text-green-950">What our customers say.</h2>
           </div>
           </ScrollReveal>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {(() => {
-              const testimonials = [
-                ...(wc?.testimonialQuote ? [{
-                  quote: wc.testimonialQuote,
-                  name: wc.testimonialAuthor || 'Verified Customer',
-                  loc: lead.city || 'Local',
-                }] : []),
-                { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, name: 'Sarah M.', loc: lead.city || 'Local' },
-                { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, name: 'David R.', loc: lead.city || 'Local' },
-                { quote: `Honest quote, no pressure, and the work speaks for itself. Our ${industryLabel} project came out better than we expected.`, name: 'Jennifer K.', loc: lead.city || 'Local' },
-              ].slice(0, 3)
-              return testimonials.map((r, i) => (
-                <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
-                <div className={`bg-green-50/50 border border-green-100 rounded-2xl p-7 sm:p-8 hover:border-green-200 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
-                  <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
-                  <p className="text-green-800/65 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
-                  <div className="flex items-center gap-3 text-sm pt-4 border-t border-green-100">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-200 to-emerald-200 flex items-center justify-center"><span className="text-green-700 font-bold text-xs">{r.name[0]}</span></div>
-                    <div><span className="font-semibold text-green-900">{r.name}</span><span className="text-green-600/40"> — {r.loc}</span></div>
-                  </div>
+          {(() => {
+              const testimonials = wc?.testimonialQuote
+                ? [{ quote: wc.testimonialQuote, name: wc.testimonialAuthor || 'Verified Customer', loc: lead.city || 'Local' }]
+                : [
+                  { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, name: 'Sarah M.', loc: lead.city || 'Local' },
+                  { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, name: 'David R.', loc: lead.city || 'Local' },
+                ]
+              return (
+                <div className={`grid grid-cols-1 ${testimonials.length === 1 ? 'max-w-2xl mx-auto' : 'md:grid-cols-2'} gap-6`}>
+                  {testimonials.map((r, i) => (
+                    <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
+                    <div className="bg-green-50/50 border border-green-100 rounded-2xl p-7 sm:p-8 hover:border-green-200 transition-all">
+                      <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
+                      <p className="text-green-800/65 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
+                      <div className="flex items-center gap-3 text-sm pt-4 border-t border-green-100">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-200 to-emerald-200 flex items-center justify-center"><span className="text-green-700 font-bold text-xs">{r.name[0]}</span></div>
+                        <div><span className="font-semibold text-green-900">{r.name}</span><span className="text-green-600/40"> — {r.loc}</span></div>
+                      </div>
+                    </div>
+                    </ScrollReveal>
+                  ))}
                 </div>
-                </ScrollReveal>
-              ))
+              )
             })()}
-          </div>
         </div>
       </section>
 
@@ -453,17 +478,29 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
             </ScrollReveal>
             <ScrollReveal animation="fade-right" delay={200}>
             <div className="bg-green-50/50 rounded-2xl border border-green-100 p-7 sm:p-8">
-              <h3 className="text-lg font-bold text-green-900 mb-1">Send us a message</h3>
-              <p className="text-xs text-green-600/40 mb-6">We'll get back to you within 24 hours.</p>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div><label className="block text-[11px] font-bold text-green-700/50 mb-1.5 uppercase tracking-wider">Name</label><input type="text" placeholder="Your name" className="w-full px-4 py-3 rounded-xl bg-white border border-green-200 text-sm text-green-900 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400 placeholder:text-green-400/40 transition-all" /></div>
-                  <div><label className="block text-[11px] font-bold text-green-700/50 mb-1.5 uppercase tracking-wider">Phone</label><input type="tel" placeholder="(555) 555-5555" className="w-full px-4 py-3 rounded-xl bg-white border border-green-200 text-sm text-green-900 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400 placeholder:text-green-400/40 transition-all" /></div>
+              {formSubmitted ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle size={32} className="text-green-500" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-green-900 mb-2">Message Sent!</h3>
+                  <p className="text-sm text-green-700">We'll get back to you shortly.</p>
                 </div>
-                <div><label className="block text-[11px] font-bold text-green-700/50 mb-1.5 uppercase tracking-wider">Email</label><input type="email" placeholder="your@email.com" className="w-full px-4 py-3 rounded-xl bg-white border border-green-200 text-sm text-green-900 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400 placeholder:text-green-400/40 transition-all" /></div>
-                <div><label className="block text-[11px] font-bold text-green-700/50 mb-1.5 uppercase tracking-wider">How can we help?</label><textarea rows={4} placeholder="Tell us about your project..." className="w-full px-4 py-3 rounded-xl bg-white border border-green-200 text-sm text-green-900 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400 placeholder:text-green-400/40 transition-all resize-none" /></div>
-                <button onClick={onCTAClick} className="w-full py-3.5 rounded-xl bg-gradient-to-r from-green-700 to-emerald-600 text-white font-semibold text-sm hover:opacity-90 transition-all shadow-md hover:shadow-lg">Send Message</button>
-              </div>
+              ) : (
+                <>
+                  <h3 className="text-lg font-bold text-green-900 mb-1">Send us a message</h3>
+                  <p className="text-xs text-green-600/40 mb-6">We'll get back to you within 24 hours.</p>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div><label className="block text-[11px] font-bold text-green-700/50 mb-1.5 uppercase tracking-wider">Name</label><input type="text" placeholder="Your name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-white border border-green-200 text-sm text-green-900 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400 placeholder:text-green-400/40 transition-all" /></div>
+                      <div><label className="block text-[11px] font-bold text-green-700/50 mb-1.5 uppercase tracking-wider">Phone</label><input type="tel" placeholder="(555) 555-5555" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-white border border-green-200 text-sm text-green-900 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400 placeholder:text-green-400/40 transition-all" /></div>
+                    </div>
+                    <div><label className="block text-[11px] font-bold text-green-700/50 mb-1.5 uppercase tracking-wider">Email</label><input type="email" placeholder="your@email.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-white border border-green-200 text-sm text-green-900 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400 placeholder:text-green-400/40 transition-all" /></div>
+                    <div><label className="block text-[11px] font-bold text-green-700/50 mb-1.5 uppercase tracking-wider">How can we help?</label><textarea rows={4} placeholder="Tell us about your project..." value={formData.message} onChange={(e) => setFormData({ ...formData, message: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-white border border-green-200 text-sm text-green-900 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400 placeholder:text-green-400/40 transition-all resize-none" /></div>
+                    <button onClick={handleFormSubmit} disabled={formLoading} className="w-full py-3.5 rounded-xl bg-gradient-to-r from-green-700 to-emerald-600 text-white font-semibold text-sm hover:opacity-90 transition-all shadow-md hover:shadow-lg disabled:opacity-50">{formLoading ? 'Sending...' : 'Send Message'}</button>
+                  </div>
+                </>
+              )}
             </div>
             </ScrollReveal>
           </div>
@@ -504,18 +541,10 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
         </div>
       </footer>
 
-      {/* ═══════ STICKY MOBILE CTA ═══════ */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 sm:hidden bg-white/95 backdrop-blur-xl border-t border-green-100 px-4 py-3">
-        <div className="flex gap-3">
-          {lead.phone && <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-50 text-green-900 font-semibold text-sm border border-green-200"><Phone size={16} />Call</a>}
-          <button onClick={onCTAClick} className="flex-[2] flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-green-700 to-emerald-600 text-white font-semibold text-sm">Free Estimate</button>
-        </div>
-      </div>
-
       {/* ═══════ CHATBOT ═══════ */}
       <ChatbotWidget companyName={lead.companyName} accentColor="#15803d" />
 
-      <div className="h-20 sm:h-0" />
+      <div className="h-16 sm:h-0" />
     </div>
   )
 }

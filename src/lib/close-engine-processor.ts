@@ -510,13 +510,7 @@ export async function processCloseEngineInbound(
     })
   }
 
-  // 7. Check autonomy before sending
-  const actionType = claudeResponse.nextStage === CONVERSATION_STAGES.PAYMENT_SENT
-    ? 'SEND_PAYMENT_LINK' as const
-    : 'SEND_MESSAGE' as const
-  const autonomy = await checkAutonomy(conversationId, actionType)
-
-  // Count recent messages for smart delay (active chat = faster responses)
+  // 7. Count recent messages for smart delay (active chat = faster responses)
   const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000)
   const recentCount = await prisma.message.count({
     where: { leadId: lead.id, createdAt: { gte: fiveMinAgo } },
@@ -527,32 +521,6 @@ export async function processCloseEngineInbound(
     claudeResponse.readyToBuild ? 'detailed' : 'standard',
     recentCount
   )
-
-  if (autonomy.requiresApproval) {
-    // Create approval for review
-    await prisma.approval.create({
-      data: {
-        gate: actionType === 'SEND_PAYMENT_LINK' ? 'PAYMENT_LINK' : 'SEND_MESSAGE',
-        title: `AI Response — ${lead.companyName}`,
-        description: `AI drafted a response for ${lead.companyName}. Approve to send.`,
-        draftContent: claudeResponse.replyText,
-        leadId: lead.id,
-        requestedBy: 'system',
-        status: 'PENDING',
-        priority: actionType === 'SEND_PAYMENT_LINK' ? 'HIGH' : 'NORMAL',
-        metadata: { conversationId, phone: lead.phone },
-      },
-    })
-    await prisma.notification.create({
-      data: {
-        type: 'CLOSE_ENGINE',
-        title: 'Approval Required',
-        message: `AI drafted response for ${lead.companyName} — review in Approvals`,
-        metadata: { conversationId, leadId: lead.id },
-      },
-    })
-    return
-  }
 
   // 8. Build decision log
   const aiDecisionLog = {
@@ -568,50 +536,119 @@ export async function processCloseEngineInbound(
     promptSnippet: systemPrompt.slice(0, 200) + '...',
   }
 
-  // 9. Send reply (or payment link) with email fallback
-  if (actionType === 'SEND_PAYMENT_LINK') {
-    // Send Claude's conversational reply first, then trigger payment link flow
-    setTimeout(async () => {
-      try {
-        await sendCloseEngineMessage({
-          to: lead.phone,
-          toEmail: lead.email || undefined,
-          message: claudeResponse.replyText,
+  // 9. Handle payment link flow separately from normal messages
+  if (claudeResponse.nextStage === CONVERSATION_STAGES.PAYMENT_SENT) {
+    // PAYMENT LINK FLOW — two separate actions:
+    // Action 1: Send the AI's conversational reply (e.g. "Awesome, getting the payment link ready")
+    const replyAutonomy = await checkAutonomy(conversationId, 'SEND_MESSAGE')
+
+    if (replyAutonomy.requiresApproval) {
+      // MANUAL mode — approval needed even for the reply
+      await prisma.approval.create({
+        data: {
+          gate: 'SEND_MESSAGE',
+          title: `AI Response — ${lead.companyName}`,
+          description: `AI response before payment link for ${lead.companyName}. Approve to send.`,
+          draftContent: claudeResponse.replyText,
           leadId: lead.id,
-          trigger: `close_engine_${context.conversation.stage.toLowerCase()}`,
-          aiDelaySeconds: delay,
-          conversationType: 'pre_client',
-          emailSubject: `${lead.companyName} — next steps`,
-          aiDecisionLog,
-        })
-        // Generate Stripe checkout link and send it
-        const { sendPaymentLink } = await import('./close-engine-payment')
-        await sendPaymentLink(conversationId)
-      } catch (err) {
-        console.error('[CloseEngine] Failed to send payment link:', err)
-      }
-    }, delay * 1000)
-  } else {
-    setTimeout(async () => {
-      try {
-        await sendCloseEngineMessage({
-          to: lead.phone,
-          toEmail: lead.email || undefined,
-          message: claudeResponse.replyText,
-          leadId: lead.id,
-          trigger: `close_engine_${context.conversation.stage.toLowerCase()}`,
-          aiDelaySeconds: delay,
-          conversationType: 'pre_client',
-          emailSubject: `${lead.companyName} — your new website`,
-          aiDecisionLog,
-        })
-      } catch (err) {
-        console.error('[CloseEngine] Failed to send reply:', err)
-      }
-    }, delay * 1000)
+          requestedBy: 'system',
+          status: 'PENDING',
+          priority: 'NORMAL',
+          metadata: { conversationId, phone: lead.phone },
+        },
+      })
+    } else {
+      // FULL_AUTO or SEMI_AUTO — send the conversational reply immediately
+      setTimeout(async () => {
+        try {
+          await sendCloseEngineMessage({
+            to: lead.phone,
+            toEmail: lead.email || undefined,
+            message: claudeResponse.replyText,
+            leadId: lead.id,
+            trigger: `close_engine_${context.conversation.stage.toLowerCase()}`,
+            aiDelaySeconds: delay,
+            conversationType: 'pre_client',
+            emailSubject: `${lead.companyName} — next steps`,
+            aiDecisionLog,
+          })
+        } catch (err) {
+          console.error('[CloseEngine] Failed to send pre-payment reply:', err)
+        }
+      }, delay * 1000)
+    }
+
+    // Action 2: Generate Stripe link and route through payment approval
+    // sendPaymentLink() handles its own autonomy check — generates the Stripe URL,
+    // and either sends directly (FULL_AUTO) or creates a PAYMENT_LINK approval
+    // with the actual Stripe URL in metadata.
+    try {
+      const { sendPaymentLink } = await import('./close-engine-payment')
+      await sendPaymentLink(conversationId)
+    } catch (err) {
+      console.error('[CloseEngine] Failed to process payment link:', err)
+    }
+
+    // Track question if applicable, then return
+    if (claudeResponse.questionAsked) {
+      const asked = (context.conversation.questionsAsked as string[]) || []
+      asked.push(claudeResponse.questionAsked)
+      await prisma.closeEngineConversation.update({
+        where: { id: conversationId },
+        data: { questionsAsked: asked },
+      })
+    }
+    return
   }
 
-  // 9. Track question asked
+  // NORMAL MESSAGE FLOW
+  const autonomy = await checkAutonomy(conversationId, 'SEND_MESSAGE')
+
+  if (autonomy.requiresApproval) {
+    await prisma.approval.create({
+      data: {
+        gate: 'SEND_MESSAGE',
+        title: `AI Response — ${lead.companyName}`,
+        description: `AI drafted a response for ${lead.companyName}. Approve to send.`,
+        draftContent: claudeResponse.replyText,
+        leadId: lead.id,
+        requestedBy: 'system',
+        status: 'PENDING',
+        priority: 'NORMAL',
+        metadata: { conversationId, phone: lead.phone },
+      },
+    })
+    await prisma.notification.create({
+      data: {
+        type: 'CLOSE_ENGINE',
+        title: 'Approval Required',
+        message: `AI drafted response for ${lead.companyName} — review in Approvals`,
+        metadata: { conversationId, leadId: lead.id },
+      },
+    })
+    return
+  }
+
+  // 10. Send reply with email fallback
+  setTimeout(async () => {
+    try {
+      await sendCloseEngineMessage({
+        to: lead.phone,
+        toEmail: lead.email || undefined,
+        message: claudeResponse.replyText,
+        leadId: lead.id,
+        trigger: `close_engine_${context.conversation.stage.toLowerCase()}`,
+        aiDelaySeconds: delay,
+        conversationType: 'pre_client',
+        emailSubject: `${lead.companyName} — your new website`,
+        aiDecisionLog,
+      })
+    } catch (err) {
+      console.error('[CloseEngine] Failed to send reply:', err)
+    }
+  }, delay * 1000)
+
+  // Track question asked
   if (claudeResponse.questionAsked) {
     const asked = (context.conversation.questionsAsked as string[]) || []
     asked.push(claudeResponse.questionAsked)

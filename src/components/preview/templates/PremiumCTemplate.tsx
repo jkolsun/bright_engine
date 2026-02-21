@@ -100,7 +100,7 @@ function ChatbotWidget({ companyName }: { companyName: string }) {
       {/* Floating trigger */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-5 z-[100] group sm:bottom-6 bottom-[100px]"
+        className="fixed bottom-6 right-5 z-[100] group sm:bottom-6 bottom-20"
         aria-label="Open chat"
       >
         <div className="w-[58px] h-[58px] rounded-full bg-emerald-700 flex items-center justify-center shadow-2xl hover:scale-105 transition-all border border-emerald-600">
@@ -117,7 +117,7 @@ function ChatbotWidget({ companyName }: { companyName: string }) {
 
       {/* Chat window */}
       {isOpen && (
-        <div className="fixed sm:bottom-[104px] bottom-[168px] right-5 z-[100] w-[370px] max-w-[calc(100vw-2.5rem)] bg-white rounded-2xl shadow-2xl border border-stone-200 overflow-hidden">
+        <div className="fixed sm:bottom-24 bottom-28 right-5 z-[100] w-[370px] max-w-[calc(100vw-2.5rem)] bg-white rounded-2xl shadow-2xl border border-stone-200 overflow-hidden">
           {/* Header */}
           <div className="px-5 py-4 bg-emerald-800 text-white">
             <div className="flex items-center gap-3">
@@ -296,6 +296,31 @@ function FAQItem({ question, answer, isOpen, onToggle }: {
 export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick, websiteCopy }: TemplateProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [openFAQ, setOpenFAQ] = useState<number | null>(null)
+  const [formData, setFormData] = useState({ name: '', phone: '', email: '', message: '' })
+  const [formSubmitted, setFormSubmitted] = useState(false)
+  const [formLoading, setFormLoading] = useState(false)
+
+  const handleFormSubmit = async () => {
+    if (formLoading || formSubmitted) return
+    if (!formData.name && !formData.phone && !formData.email) return
+    setFormLoading(true)
+    try {
+      await fetch('/api/preview/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          previewId: lead.previewId,
+          event: 'contact_form',
+          metadata: { ...formData },
+        }),
+      })
+      setFormSubmitted(true)
+    } catch {
+      // silently fail
+    } finally {
+      setFormLoading(false)
+    }
+  }
 
   const services = lead.enrichedServices || []
   const photos = lead.enrichedPhotos || []
@@ -509,16 +534,18 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                   className="group flex items-center justify-between py-5 sm:py-6 cursor-pointer hover:pl-2 transition-all duration-300"
                   onClick={onCTAClick}
                 >
-                  <div className="flex items-center gap-5">
+                  <div className="flex items-start gap-5">
                     <span className="text-xs text-emerald-500/40 font-mono tabular-nums w-6 font-medium">
                       {String(i + 1).padStart(2, '0')}
                     </span>
-                    <h3 className="text-base sm:text-lg font-medium text-stone-800 group-hover:text-emerald-700 transition-colors">
-                      {service}
-                    </h3>
-                    {wc?.serviceDescriptions?.[service] && (
-                      <p className="text-sm text-gray-400 mt-1">{wc.serviceDescriptions[service]}</p>
-                    )}
+                    <div className="flex flex-col min-w-0">
+                      <h3 className="text-base sm:text-lg font-medium text-stone-800 group-hover:text-emerald-700 transition-colors">
+                        {service}
+                      </h3>
+                      {wc?.serviceDescriptions?.[service] && (
+                        <p className="text-sm text-gray-600 mt-1 leading-relaxed">{wc.serviceDescriptions[service]}</p>
+                      )}
+                    </div>
                   </div>
                   <ArrowRight size={16} className="text-stone-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </div>
@@ -691,6 +718,8 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                     className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${
                       i === 0 ? 'aspect-[4/3]' : 'aspect-[4/3] sm:aspect-square'
                     }`}
+                    {...(i > 0 ? { loading: 'lazy' as const } : {})}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>
@@ -710,25 +739,25 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
             <h2 className="text-3xl sm:text-4xl font-light text-stone-900">What clients say.</h2>
           </div>
           </ScrollReveal>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className={(() => {
+              const testimonials = wc?.testimonialQuote
+                ? [{ quote: wc.testimonialQuote, name: wc.testimonialAuthor || 'Verified Customer', loc: lead.city || 'Local' }]
+                : [
+                  { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, name: 'Sarah M.', loc: lead.city || 'Local' },
+                  { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, name: 'David R.', loc: lead.city || 'Local' },
+                ]
+              return testimonials.length === 1 ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 md:grid-cols-2 gap-6'
+            })()}>
             {(() => {
-              const testimonials = [
-                ...(wc?.testimonialQuote ? [{
-                  quote: wc.testimonialQuote,
-                  name: wc.testimonialAuthor || 'Verified Customer',
-                  loc: lead.city || 'Local',
-                }] : []),
-                { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, name: 'Sarah M.', loc: lead.city || 'Local' },
-                { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, name: 'David R.', loc: lead.city || 'Local' },
-                { quote: `Honest quote, no pressure, and the work speaks for itself. Our ${industryLabel} project came out better than we expected.`, name: 'Jennifer K.', loc: lead.city || 'Local' },
-              ].slice(0, 3)
+              const testimonials = wc?.testimonialQuote
+                ? [{ quote: wc.testimonialQuote, name: wc.testimonialAuthor || 'Verified Customer', loc: lead.city || 'Local' }]
+                : [
+                  { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, name: 'Sarah M.', loc: lead.city || 'Local' },
+                  { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, name: 'David R.', loc: lead.city || 'Local' },
+                ]
               return testimonials.map((r, i) => (
-                <ScrollReveal key={i} animation="fade-up" delay={i * 100} className={i === 2 ? 'md:col-span-2' : ''}>
-                <div
-                  className={`bg-white border border-stone-200 rounded-2xl p-8 hover:border-emerald-400/30 hover:shadow-lg hover:shadow-emerald-900/5 transition-all ${
-                    i === 2 ? 'md:max-w-lg md:mx-auto' : ''
-                  }`}
-                >
+                <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
+                <div className="bg-white border border-stone-200 rounded-2xl p-8 hover:border-emerald-400/30 hover:shadow-lg hover:shadow-emerald-900/5 transition-all">
                   <div className="flex gap-0.5 mb-4">
                     {Array.from({ length: 5 }, (_, j) => (
                       <Star key={j} size={15} className="text-emerald-500 fill-current" />
@@ -836,29 +865,39 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
             <div className="bg-stone-50 rounded-2xl border border-stone-200 p-7 sm:p-8">
               <h3 className="text-lg font-medium text-stone-800 mb-1">Send us a message</h3>
               <p className="text-xs text-stone-400 mb-6">We respond within 24 hours.</p>
+              {formSubmitted ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle size={32} className="text-green-500" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-stone-800 mb-2">Message Sent!</h3>
+                  <p className="text-sm text-stone-500">We'll get back to you shortly.</p>
+                </div>
+              ) : (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[11px] font-medium text-stone-400 mb-1.5 uppercase tracking-wider">Name</label>
-                    <input type="text" placeholder="Your name" className="w-full px-4 py-3 rounded-xl bg-white border border-stone-200 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 placeholder:text-stone-300 transition-all" />
+                    <input type="text" placeholder="Your name" value={formData.name} onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-stone-200 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 placeholder:text-stone-300 transition-all" />
                   </div>
                   <div>
                     <label className="block text-[11px] font-medium text-stone-400 mb-1.5 uppercase tracking-wider">Phone</label>
-                    <input type="tel" placeholder="(555) 555-5555" className="w-full px-4 py-3 rounded-xl bg-white border border-stone-200 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 placeholder:text-stone-300 transition-all" />
+                    <input type="tel" placeholder="(555) 555-5555" value={formData.phone} onChange={(e) => setFormData(p => ({ ...p, phone: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-stone-200 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 placeholder:text-stone-300 transition-all" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-[11px] font-medium text-stone-400 mb-1.5 uppercase tracking-wider">Email</label>
-                  <input type="email" placeholder="your@email.com" className="w-full px-4 py-3 rounded-xl bg-white border border-stone-200 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 placeholder:text-stone-300 transition-all" />
+                  <input type="email" placeholder="your@email.com" value={formData.email} onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-stone-200 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 placeholder:text-stone-300 transition-all" />
                 </div>
                 <div>
                   <label className="block text-[11px] font-medium text-stone-400 mb-1.5 uppercase tracking-wider">Project details</label>
-                  <textarea rows={4} placeholder="Tell us about your project..." className="w-full px-4 py-3 rounded-xl bg-white border border-stone-200 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 placeholder:text-stone-300 transition-all resize-none" />
+                  <textarea rows={4} placeholder="Tell us about your project..." value={formData.message} onChange={(e) => setFormData(p => ({ ...p, message: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-stone-200 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 placeholder:text-stone-300 transition-all resize-none" />
                 </div>
-                <button onClick={onCTAClick} className="w-full py-3.5 rounded-xl bg-emerald-700 text-white font-semibold text-sm hover:bg-emerald-600 transition-all shadow-md">
-                  Send Message
+                <button onClick={handleFormSubmit} className="w-full py-3.5 rounded-xl bg-emerald-700 text-white font-semibold text-sm hover:bg-emerald-600 transition-all shadow-md">
+                  {formLoading ? 'Sending...' : 'Send Message'}
                 </button>
               </div>
+              )}
             </div>
             </ScrollReveal>
           </div>
@@ -938,26 +977,11 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
         </div>
       </footer>
 
-      {/* ═══════════════════════ STICKY MOBILE CTA ═══════════════════════ */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 sm:hidden bg-white/95 backdrop-blur-xl border-t border-stone-200 px-4 py-3">
-        <div className="flex gap-3">
-          {lead.phone && (
-            <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-stone-100 text-stone-800 font-semibold text-sm border border-stone-200">
-              <Phone size={16} />
-              Call
-            </a>
-          )}
-          <button onClick={onCTAClick} className="flex-[2] flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-700 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors">
-            Free Consultation
-          </button>
-        </div>
-      </div>
-
       {/* ═══════════════════════ CHATBOT ═══════════════════════ */}
       <ChatbotWidget companyName={lead.companyName} />
 
       {/* Mobile bottom spacer */}
-      <div className="h-20 sm:h-0" />
+      <div className="h-16 sm:h-0" />
     </div>
   )
 }

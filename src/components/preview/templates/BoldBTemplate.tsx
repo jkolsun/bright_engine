@@ -96,7 +96,7 @@ function ChatbotWidget({ companyName, accentColor = '#3b82f6' }: { companyName: 
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-5 z-[100] group sm:bottom-6 bottom-[100px]"
+        className="fixed bottom-6 right-5 z-[100] group sm:bottom-6 bottom-20"
         aria-label="Chat with us"
       >
         <div
@@ -121,7 +121,7 @@ function ChatbotWidget({ companyName, accentColor = '#3b82f6' }: { companyName: 
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed sm:bottom-[104px] bottom-[168px] right-5 z-[100] w-[370px] max-w-[calc(100vw-2.5rem)] bg-gray-950 rounded-2xl shadow-2xl border border-gray-800 overflow-hidden">
+        <div className="fixed sm:bottom-24 bottom-28 right-5 z-[100] w-[370px] max-w-[calc(100vw-2.5rem)] bg-gray-950 rounded-2xl shadow-2xl border border-gray-800 overflow-hidden">
           {/* Header */}
           <div
             className="px-5 py-4"
@@ -312,6 +312,31 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [openFAQ, setOpenFAQ] = useState<number | null>(null)
+  const [formData, setFormData] = useState({ name: '', phone: '', email: '', message: '' })
+  const [formSubmitted, setFormSubmitted] = useState(false)
+  const [formLoading, setFormLoading] = useState(false)
+
+  const handleFormSubmit = async () => {
+    if (formLoading || formSubmitted) return
+    if (!formData.name && !formData.phone && !formData.email) return
+    setFormLoading(true)
+    try {
+      await fetch('/api/preview/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          previewId: lead.previewId,
+          event: 'contact_form',
+          metadata: { ...formData },
+        }),
+      })
+      setFormSubmitted(true)
+    } catch {
+      // silently fail
+    } finally {
+      setFormLoading(false)
+    }
+  }
 
   const services = lead.enrichedServices || []
   const photos = lead.enrichedPhotos || []
@@ -360,7 +385,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
             {/* Logo */}
             <div className="flex items-center gap-3">
               {lead.logo && (
-                <img src={lead.logo} alt="" className="h-8 w-8 rounded-lg object-cover ring-2 ring-blue-500/20" />
+                <img src={lead.logo} alt="" className="h-8 w-8 rounded-lg object-cover ring-2 ring-blue-500/20" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
               )}
               <span className="font-display text-xl font-black text-white tracking-tight uppercase">
                 {lead.companyName}
@@ -588,16 +613,18 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                   className="group flex items-center justify-between py-5 sm:py-6 cursor-pointer hover:pl-3 transition-all duration-300"
                   onClick={onCTAClick}
                 >
-                  <div className="flex items-center gap-6">
+                  <div className="flex items-start gap-6">
                     <span className="text-xs text-gray-600 font-mono tabular-nums w-6 font-bold">
                       {String(i + 1).padStart(2, '0')}
                     </span>
-                    <h3 className="text-base sm:text-lg font-bold text-gray-200 group-hover:text-white transition-colors">
-                      {service}
-                    </h3>
-                    {wc?.serviceDescriptions?.[service] && (
-                      <p className="text-sm text-gray-400 mt-1">{wc.serviceDescriptions[service]}</p>
-                    )}
+                    <div className="flex flex-col min-w-0">
+                      <h3 className="text-base sm:text-lg font-bold text-gray-200 group-hover:text-white transition-colors">
+                        {service}
+                      </h3>
+                      {wc?.serviceDescriptions?.[service] && (
+                        <p className="text-sm text-gray-500 mt-1 leading-relaxed">{wc.serviceDescriptions[service]}</p>
+                      )}
+                    </div>
                   </div>
                   <ArrowRight
                     size={16}
@@ -676,6 +703,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                     src={photos[0]}
                     alt={`${lead.companyName} project 1`}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                   />
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
@@ -696,6 +724,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                         src={photo}
                         alt={`${lead.companyName} project ${i + 2}`}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                        loading="lazy"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                       />
                     </div>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
@@ -833,48 +863,43 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           </div>
           </ScrollReveal>
 
-          {/* Staggered layout instead of even grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {(() => {
-              const testimonials = [
-                ...(wc?.testimonialQuote ? [{
-                  quote: wc.testimonialQuote,
-                  name: wc.testimonialAuthor || 'Verified Customer',
-                  loc: lead.city || 'Local',
-                }] : []),
-                { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, name: 'Sarah M.', loc: lead.city || 'Local' },
-                { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, name: 'David R.', loc: lead.city || 'Local' },
-                { quote: `Honest quote, no pressure, and the work speaks for itself. Our ${industryLabel} project came out better than we expected.`, name: 'Jennifer K.', loc: lead.city || 'Local' },
-              ].slice(0, 3)
-              return testimonials.map((review, i) => (
-                <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
-                <div
-                  className={`bg-gray-950/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8 hover:border-blue-500/20 transition-all duration-300 ${
-                    i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''
-                  }`}
-                >
-                  <div className="flex gap-0.5 mb-4">
-                    {Array.from({ length: 5 }, (_, j) => (
-                      <Star key={j} size={14} className="text-blue-400 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-gray-300 text-base leading-relaxed mb-5 italic">
-                    "{review.quote}"
-                  </p>
-                  <div className="flex items-center gap-3 text-xs">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-[11px] font-bold">{review.name[0]}</span>
+          {(() => {
+              const testimonials = wc?.testimonialQuote
+                ? [{ quote: wc.testimonialQuote, name: wc.testimonialAuthor || 'Verified Customer', loc: lead.city || 'Local' }]
+                : [
+                  { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, name: 'Sarah M.', loc: lead.city || 'Local' },
+                  { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, name: 'David R.', loc: lead.city || 'Local' },
+                ]
+              return (
+                <div className={`grid grid-cols-1 ${testimonials.length === 1 ? 'max-w-2xl mx-auto' : 'md:grid-cols-2'} gap-6`}>
+                  {testimonials.map((review, i) => (
+                    <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
+                    <div
+                      className="bg-gray-950/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8 hover:border-blue-500/20 transition-all duration-300"
+                    >
+                      <div className="flex gap-0.5 mb-4">
+                        {Array.from({ length: 5 }, (_, j) => (
+                          <Star key={j} size={14} className="text-blue-400 fill-current" />
+                        ))}
+                      </div>
+                      <p className="text-gray-300 text-base leading-relaxed mb-5 italic">
+                        "{review.quote}"
+                      </p>
+                      <div className="flex items-center gap-3 text-xs">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0">
+                          <span className="text-white text-[11px] font-bold">{review.name[0]}</span>
+                        </div>
+                        <div>
+                          <span className="font-bold text-gray-300">{review.name}</span>
+                          <span className="text-gray-600"> — {review.loc}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <span className="font-bold text-gray-300">{review.name}</span>
-                      <span className="text-gray-600"> — {review.loc}</span>
-                    </div>
-                  </div>
+                    </ScrollReveal>
+                  ))}
                 </div>
-                </ScrollReveal>
-              ))
+              )
             })()}
-          </div>
         </div>
       </section>
 
@@ -987,50 +1012,71 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
             {/* Form Side */}
             <ScrollReveal animation="fade-right">
             <div className="bg-gray-900/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8">
-              <h3 className="text-lg font-bold text-white mb-1">Send us a message</h3>
-              <p className="text-xs text-gray-500 mb-6">We'll get back to you within a few hours.</p>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Name</label>
-                    <input
-                      type="text"
-                      placeholder="Your name"
-                      className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all"
-                    />
+              {formSubmitted ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle size={32} className="text-green-500" />
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Phone</label>
-                    <input
-                      type="tel"
-                      placeholder="(555) 555-5555"
-                      className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all"
-                    />
+                  <h3 className="text-lg font-semibold text-white mb-2">Message Sent!</h3>
+                  <p className="text-sm text-gray-500">We'll get back to you shortly.</p>
+                </div>
+              ) : (
+                <>
+                  <h3 className="text-lg font-bold text-white mb-1">Send us a message</h3>
+                  <p className="text-xs text-gray-500 mb-6">We'll get back to you within a few hours.</p>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Name</label>
+                        <input
+                          type="text"
+                          placeholder="Your name"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Phone</label>
+                        <input
+                          type="tel"
+                          placeholder="(555) 555-5555"
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Email</label>
+                      <input
+                        type="email"
+                        placeholder="your@email.com"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">How can we help?</label>
+                      <textarea
+                        rows={4}
+                        placeholder="Tell us about your project..."
+                        value={formData.message}
+                        onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all resize-none"
+                      />
+                    </div>
+                    <button
+                      onClick={handleFormSubmit}
+                      disabled={formLoading}
+                      className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold text-sm hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/15 hover:shadow-blue-500/30 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+                    >
+                      {formLoading ? 'Sending...' : 'Send Message'}
+                    </button>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Email</label>
-                  <input
-                    type="email"
-                    placeholder="your@email.com"
-                    className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">How can we help?</label>
-                  <textarea
-                    rows={4}
-                    placeholder="Tell us about your project..."
-                    className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all resize-none"
-                  />
-                </div>
-                <button
-                  onClick={onCTAClick}
-                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold text-sm hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/15 hover:shadow-blue-500/30 hover:scale-[1.01] active:scale-[0.99]"
-                >
-                  Send Message
-                </button>
-              </div>
+                </>
+              )}
             </div>
             </ScrollReveal>
           </div>
@@ -1120,36 +1166,12 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
       </footer>
 
       {/* ═══════════════════════════════════════════
-          STICKY MOBILE CTA BAR
-          ═══════════════════════════════════════════ */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 sm:hidden bg-gray-950/95 backdrop-blur-xl border-t border-gray-800 px-4 py-3">
-        <div className="flex gap-3">
-          {lead.phone && (
-            <a
-              href={`tel:${lead.phone}`}
-              onClick={onCallClick}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gray-800 text-white font-bold text-sm border border-gray-700"
-            >
-              <Phone size={16} />
-              Call
-            </a>
-          )}
-          <button
-            onClick={onCTAClick}
-            className="flex-[2] flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold text-sm"
-          >
-            Get Free Quote
-          </button>
-        </div>
-      </div>
-
-      {/* ═══════════════════════════════════════════
           CHATBOT
           ═══════════════════════════════════════════ */}
       <ChatbotWidget companyName={lead.companyName} accentColor="#3b82f6" />
 
-      {/* Bottom padding for mobile sticky bar */}
-      <div className="h-20 sm:h-0" />
+      {/* Bottom padding */}
+      <div className="h-16 sm:h-0" />
     </div>
   )
 }

@@ -261,6 +261,7 @@ export default function SettingsPage() {
     batchWindowMs: 8000,
     conversationEnderEnabled: true,
     qualifyingQuestionCount: 2,
+    formBaseUrl: '',
   })
   const [smartChatLoaded, setSmartChatLoaded] = useState(false)
 
@@ -2486,6 +2487,24 @@ export default function SettingsPage() {
                     <p><strong>Example:</strong> &quot;ok&quot; = no response, but &quot;ok can you also add gutters&quot; = responds</p>
                   </div>
                 )}
+              </div>
+
+              {/* Form Base URL */}
+              <div>
+                <FieldLabel>Form Base URL</FieldLabel>
+                <p className="text-xs text-gray-500 mb-2">
+                  The base URL for the onboarding form the AI sends to leads. Leave blank to use the default ({process.env.NEXT_PUBLIC_APP_URL || 'preview.brightautomations.org'}). Change this for white-label domains.
+                </p>
+                <Input
+                  type="url"
+                  className="h-9 w-full max-w-md text-sm"
+                  placeholder={process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'}
+                  value={smartChat.formBaseUrl}
+                  onChange={(e) => setSmartChat(prev => ({ ...prev, formBaseUrl: e.target.value }))}
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Full form links sent to leads will be: <code className="bg-gray-100 px-1 rounded">{smartChat.formBaseUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'}/onboard/[leadId]</code>
+                </p>
               </div>
 
               {/* Qualifying Questions Count */}

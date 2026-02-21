@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
       'time_on_page': 'PREVIEW_VIEWED',
       'cta_click': 'PREVIEW_CTA_CLICKED',
       'call_click': 'PREVIEW_CALL_CLICKED',
+      'contact_form': 'PREVIEW_CTA_CLICKED',
       'return_visit': 'PREVIEW_RETURN_VISIT',
       'scroll_depth': 'PREVIEW_VIEWED',
     }
@@ -70,8 +71,8 @@ export async function POST(request: NextRequest) {
     })
 
     // If high engagement, mark as HOT and dispatch webhook
-    if (duration && duration > 60 || event === 'cta_click' || event === 'call_click') {
-      const urgencyScore = event === 'call_click' ? 90 : event === 'cta_click' ? 80 : duration > 120 ? 75 : 65
+    if (duration && duration > 60 || event === 'cta_click' || event === 'call_click' || event === 'contact_form') {
+      const urgencyScore = event === 'call_click' ? 90 : event === 'contact_form' ? 85 : event === 'cta_click' ? 80 : duration > 120 ? 75 : 65
 
       if (lead.priority !== 'HOT') {
         await prisma.lead.update({

@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
       batchWindowMs: typeof data.batchWindowMs === 'number' ? Math.max(0, Math.min(30000, data.batchWindowMs)) : DEFAULT_SMART_CHAT.batchWindowMs,
       conversationEnderEnabled: typeof data.conversationEnderEnabled === 'boolean' ? data.conversationEnderEnabled : DEFAULT_SMART_CHAT.conversationEnderEnabled,
       qualifyingQuestionCount: typeof data.qualifyingQuestionCount === 'number' ? Math.max(1, Math.min(5, data.qualifyingQuestionCount)) : DEFAULT_SMART_CHAT.qualifyingQuestionCount,
+      formBaseUrl: typeof data.formBaseUrl === 'string' ? data.formBaseUrl.trim() : '',
     }
 
     const result = await prisma.settings.upsert({

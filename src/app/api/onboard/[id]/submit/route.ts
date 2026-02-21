@@ -109,7 +109,9 @@ export async function POST(
       },
       select: {
         id: true,
+        firstName: true,
         companyName: true,
+        phone: true,
         city: true,
         state: true,
         onboardingStatus: true,
@@ -207,6 +209,28 @@ export async function POST(
       })
     } catch (err) {
       console.error('[Onboard Submit] Notification failed (non-fatal):', err)
+    }
+
+    // ── 9. Auto thank-you SMS to the client ──
+    if (updated.phone) {
+      try {
+        const { sendSMSViaProvider } = await import('@/lib/sms-provider')
+        const firstName = updated.firstName || 'there'
+        const thankYouMsg = `Got it, thank you ${firstName}! Our team is reviewing everything now and we'll get started on your site. You'll get a text when it's ready for review.`
+
+        await sendSMSViaProvider({
+          to: updated.phone,
+          message: thankYouMsg,
+          leadId: id,
+          sender: 'clawdbot',
+          trigger: 'form_submission_thank_you',
+          aiGenerated: false,
+        })
+
+        console.log(`[Onboard Submit] Thank-you SMS sent to ${updated.phone}`)
+      } catch (err) {
+        console.error('[Onboard Submit] Thank-you SMS failed (non-fatal):', err)
+      }
     }
 
     return NextResponse.json({

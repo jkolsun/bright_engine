@@ -24,7 +24,6 @@ interface SiteEditorPanelProps {
   companyName: string
   buildStep: string
   previewId: string | null
-  siteHtml: string | null
   onClose: () => void
   onRefresh: () => void
 }
@@ -54,12 +53,12 @@ const SUGGESTED_EDITS = [
 
 // ─── Component ──────────────────────────────────────────
 export default function SiteEditorPanel({
-  leadId, companyName, buildStep, previewId, siteHtml, onClose, onRefresh,
+  leadId, companyName, buildStep, previewId, onClose, onRefresh,
 }: SiteEditorPanelProps) {
   // HTML state
-  const [html, setHtml] = useState(siteHtml || '')
-  const [originalHtml, setOriginalHtml] = useState(siteHtml || '')
-  const [isLoading, setIsLoading] = useState(!siteHtml)
+  const [html, setHtml] = useState('')
+  const [originalHtml, setOriginalHtml] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
   const [snapshotError, setSnapshotError] = useState<string | null>(null)
 
   // Save state
@@ -74,7 +73,7 @@ export default function SiteEditorPanel({
   // Preview state
   const [deviceMode, setDeviceMode] = useState<DeviceMode>('desktop')
   const [refreshKey, setRefreshKey] = useState(0)
-  const [debouncedHtml, setDebouncedHtml] = useState(siteHtml || '')
+  const [debouncedHtml, setDebouncedHtml] = useState('')
 
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -82,11 +81,12 @@ export default function SiteEditorPanel({
   const [isProcessing, setIsProcessing] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
-  // Generate snapshot on first open if no siteHtml
+  const [needsRebuild, setNeedsRebuild] = useState(false)
+  const [rebuilding, setRebuilding] = useState(false)
+
+  // ─── Load HTML on mount (on-demand from API) ──────────
   useEffect(() => {
-    if (!siteHtml) {
-      generateSnapshot()
-    }
+    loadEditorHtml()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -116,8 +116,34 @@ export default function SiteEditorPanel({
     return () => window.removeEventListener('keydown', handleEsc)
   }, [onClose])
 
-  const [needsRebuild, setNeedsRebuild] = useState(false)
-  const [rebuilding, setRebuilding] = useState(false)
+  // ─── Load HTML (fresh from DB, then snapshot if needed) ─
+  const loadEditorHtml = async () => {
+    setIsLoading(true)
+    setSnapshotError(null)
+    setNeedsRebuild(false)
+
+    try {
+      // Step 1: Try to load existing siteHtml from DB
+      const loadRes = await fetch(`/api/site-editor/${leadId}/save`)
+      if (loadRes.ok) {
+        const loadData = await loadRes.json()
+        if (loadData.html) {
+          // Already have HTML — load it directly
+          setHtml(loadData.html)
+          setOriginalHtml(loadData.html)
+          setDebouncedHtml(loadData.html)
+          setIsLoading(false)
+          return
+        }
+      }
+
+      // Step 2: No existing HTML — generate snapshot
+      await generateSnapshot()
+    } catch {
+      setSnapshotError('Network error loading editor data')
+      setIsLoading(false)
+    }
+  }
 
   // ─── Snapshot ─────────────────────────────────────────
   const generateSnapshot = async () => {
@@ -241,7 +267,7 @@ export default function SiteEditorPanel({
 
   // ─── Render ───────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-50 bg-[#1e1e1e] flex flex-col">
+    <div className="fixed inset-0 z-50 bg-[#1e1e1e] flex flex-col site-editor-root">
       {/* ── Toolbar ────────────────────────────────────── */}
       <div className="flex items-center justify-between px-4 py-2 bg-[#333333] border-b border-gray-700 flex-shrink-0">
         {/* Left: Close + Company */}
@@ -346,13 +372,13 @@ export default function SiteEditorPanel({
       <div className="flex-1 flex overflow-hidden">
         {/* ── Monaco Editor ──────────────────────────── */}
         {showEditor && (
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 h-full">
             {isLoading ? (
               <div className="flex items-center justify-center h-full bg-[#1e1e1e] text-gray-400">
                 <div className="text-center">
                   <div className="animate-spin w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full mx-auto mb-3" />
-                  <p>Generating HTML snapshot...</p>
-                  <p className="text-sm text-gray-500 mt-1">Rendering template to editable HTML</p>
+                  <p>Loading site editor...</p>
+                  <p className="text-sm text-gray-500 mt-1">Fetching HTML for editing</p>
                 </div>
               </div>
             ) : snapshotError ? (
