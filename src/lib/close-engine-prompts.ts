@@ -53,29 +53,48 @@ const STAGE_INSTRUCTIONS: Record<string, (ctx: ConversationContext, qf?: Record<
     const lead = ctx.lead
     const flow = { ...DEFAULT_QUALIFYING_FLOW, ...qf }
 
+    // Compute form URL using settings-based base URL (white-label support)
+    const baseUrl = flow._formBaseUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'
+    const formUrl = `${baseUrl}/onboard/${lead.id}`
+
     // Resolve variables in Q2 template
     const q2Text = flow.TEXT_2_DECISION_MAKER
       .replace(/\{firstName\}/g, lead.firstName || '')
       .replace(/\{companyName\}/g, lead.companyName || 'the business')
+
+    // Resolve variables in form link template
+    const formLinkText = flow.TEXT_3_FORM_LINK
+      .replace(/\{firstName\}/g, lead.firstName || '')
+      .replace(/\{companyName\}/g, lead.companyName || '')
+      .replace(/\{formUrl\}/g, formUrl)
 
     // 2 qualifying questions — quick gate check, then send the form
     const queue: string[] = []
     if (!asked.includes('Q1_WEBSITE') && !collected.hasWebsite) queue.push(`Q1: "${flow.TEXT_1_OPENING.split(/[.?!]\s/).pop()?.trim() || 'Do you currently have a website or would this be your first one?'}"`)
     if (!asked.includes('Q2_DECISION_MAKER') && !collected.isDecisionMaker) queue.push(`Q2: "${q2Text}"`)
 
+    const bothAnswered = queue.length === 0
+
     return `You are doing a quick 2-question gate check before sending the onboarding form. The lead already saw their preview site and clicked the CTA — they're interested. Your job is NOT to re-pitch or collect business info. The form handles all of that. You're just confirming they're a real buyer.
 
-Questions still needed: ${queue.length > 0 ? queue.join(' | ') : 'Both questions answered — transition to COLLECTING_INFO now.'}
+Questions still needed: ${queue.length > 0 ? queue.join(' | ') : 'NONE — Both questions are answered!'}
 
 EXACT TEXT for Q2 (adapt naturally but keep the meaning):
 "${q2Text}"
-
+${bothAnswered ? `
+BOTH QUESTIONS ARE ANSWERED. Send the form link NOW in your response. Do NOT wait for another message.
+The ACTUAL form URL is: ${formUrl}
+Send something close to this: "${formLinkText}"
+CRITICAL: Include the FULL URL exactly as shown above in your replyText. Do NOT write "{formUrl}" or any placeholder — write the actual URL: ${formUrl}
+Set nextStage to COLLECTING_INFO and set questionAsked to "FORM_LINK_SENT".
+` : ''}
 RULES:
 - Ask ONE question at a time. Keep it casual.
-- If they answer both questions in one message (like "yeah I don't have a site and I'm the owner"), recognize it, extract both answers, and skip straight to the form. Set nextStage to COLLECTING_INFO.
+- If they answer both questions in one message (like "yeah I don't have a site and I'm the owner"), recognize it, extract both answers, and SEND THE FORM LINK IMMEDIATELY in the same response. Include the full URL: ${formUrl} (copy this exact URL, do NOT use a placeholder). Set nextStage to COLLECTING_INFO and questionAsked to "FORM_LINK_SENT".
 - Quick acknowledgment before the next question ("Got it!" "Perfect!").
-- If the client goes off-script and starts talking about their business or services unprompted, roll with it. Don't force the qualifying questions — if they're clearly interested and engaged, just send the form.
-- When both questions are answered, set nextStage to COLLECTING_INFO immediately. Don't ask anything else — the form collects services, about text, differentiator, photos, logo, hours, everything.
+- If the client goes off-script and starts talking about their business or services unprompted, roll with it. Don't force the qualifying questions — if they're clearly interested and engaged, just send the form: ${formUrl}
+- NEVER write "{formUrl}" in your response — always use the actual URL: ${formUrl}
+- When both questions are answered, include the form link in your response. Don't make them wait for another turn.
 - Extract data: set hasWebsite to their answer (true/false/"replacing"), set isDecisionMaker to true/false.
 - The goal is: get to the form as fast as possible. These questions are a gate check, not an interview.`
   },
@@ -86,8 +105,8 @@ RULES:
     const asked = ctx.questionsAsked || []
     const flow = { ...DEFAULT_QUALIFYING_FLOW, ...qf }
 
-    // Always compute form URL from env (stored formUrl may have stale domain)
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'
+    // Compute form URL using settings-based base URL (white-label support)
+    const baseUrl = flow._formBaseUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'
     const formUrl = `${baseUrl}/onboard/${lead.id}`
     const onboardingStatus = (lead as any).onboardingStatus || 'NOT_STARTED'
     const formCompleted = onboardingStatus === 'COMPLETED'
@@ -126,13 +145,14 @@ RULES:
 
     if (!formLinkSent) {
       return `Core questions done! Now send the form link.
-Form URL: ${formUrl}
+The ACTUAL form URL is: ${formUrl}
 
 YOUR NEXT MESSAGE should be close to this (adapt naturally):
 "${formLinkText}"
 
 RULES:
-- Include the FULL form URL in your message. Don't shorten or modify it.
+- Include the FULL form URL in your message. Copy it exactly: ${formUrl}
+- NEVER write "{formUrl}" — always use the actual URL shown above.
 - Set questionAsked to "FORM_LINK_SENT" so we know you sent it.
 - Don't set readyToBuild yet — wait for the form to be filled.
 - If the lead seems impatient, you can ALSO set readyToBuild: true (we'll build with what we have).
@@ -246,6 +266,20 @@ export async function buildPreClientSystemPrompt(context: ConversationContext): 
   const customOverride = templates?.scenarios?.[stage]
   const hasOverride = customOverride?.enabled && customOverride?.instructions_override?.trim()
 
+  // Load SmartChat settings for form base URL (white-label support)
+  let formBaseUrl = ''
+  try {
+    const { getSmartChatSettings } = require('./message-batcher')
+    const smartChatSettings = await getSmartChatSettings()
+    formBaseUrl = smartChatSettings.formBaseUrl || ''
+  } catch { /* non-critical */ }
+
+  // Merge qualifying flow templates + formBaseUrl for stage instructions
+  const qualifyingFlow = {
+    ...(templates?.qualifyingFlow || {}),
+    _formBaseUrl: formBaseUrl,
+  }
+
   // Get stage-specific instructions (custom override takes priority)
   let stageInstructions: string
   if (hasOverride) {
@@ -253,7 +287,7 @@ export async function buildPreClientSystemPrompt(context: ConversationContext): 
   } else {
     const stageInstructionFn = STAGE_INSTRUCTIONS[stage]
     stageInstructions = stageInstructionFn
-      ? stageInstructionFn(context, templates?.qualifyingFlow)
+      ? stageInstructionFn(context, qualifyingFlow)
       : `Unknown stage: ${stage}. Respond helpfully and set escalate: true.`
   }
 

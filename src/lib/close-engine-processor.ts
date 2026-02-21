@@ -362,6 +362,13 @@ export async function processCloseEngineInbound(
 
     claudeResponse = parseClaudeResponse(rawText)
 
+    // Post-process: replace any literal {formUrl} the AI may have output
+    if (claudeResponse.replyText && claudeResponse.replyText.includes('{formUrl}')) {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'
+      const actualFormUrl = `${baseUrl}/onboard/${lead.id}`
+      claudeResponse.replyText = claudeResponse.replyText.replace(/\{formUrl\}/g, actualFormUrl)
+    }
+
     // Log API cost
     await prisma.apiCost.create({
       data: {
