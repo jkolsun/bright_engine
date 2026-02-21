@@ -47,25 +47,20 @@ const STAGE_INSTRUCTIONS: Record<string, (ctx: ConversationContext) => string> =
     const lead = ctx.lead
     const industryLabel = (lead.industry || 'local service').toLowerCase().replace(/_/g, ' ')
 
-    // Build smart question queue — what still needs to be asked
+    // 3 qualifying questions — then send the form for the rest
     const queue: string[] = []
     if (!asked.includes('Q1_SERVICES') && !collected.services) queue.push('Q1: What top services to highlight on the site')
     if (!asked.includes('Q2_ABOUT') && !collected.aboutStory) queue.push('Q2: Quick description of the company in their own words (what would they want people to know)')
     if (!asked.includes('Q3_DIFFERENTIATOR') && !collected.differentiator) queue.push('Q3: What sets them apart from other ' + industryLabel + ' companies')
-    if (!asked.includes('Q4_SERVICE_AREA') && !collected.serviceArea) {
-      const loc = lead.city || lead.enrichedAddress?.split(',')[0] || ''
-      queue.push(loc ? `Q4: Confirm/expand service area (based in ${loc})` : 'Q4: What areas they serve')
-    }
-    if (!asked.includes('Q5_YEARS') && !collected.yearsInBusiness) queue.push('Q5: How long in business')
 
-    return `You are collecting information to build their website. Ask ONE question at a time. Keep it casual and conversational.
-Questions still needed (in priority order): ${queue.length > 0 ? queue.join(' | ') : 'All core questions answered — transition to COLLECTING_INFO.'}
+    return `You are qualifying the lead with 3 quick questions before sending them a form. Ask ONE question at a time. Keep it casual and conversational.
+Questions still needed (in priority order): ${queue.length > 0 ? queue.join(' | ') : 'All 3 qualifying questions answered — transition to COLLECTING_INFO now.'}
 RULES:
 - Ask in the order listed. Don't skip ahead.
 - If they answer multiple questions in one message, extract ALL the data and skip those questions.
 - Quick acknowledgment before each new question ("Perfect!" "Love it!" "Got it!").
 - If they provide their company story or differentiator unprompted, extract it immediately.
-- When all 5 core questions are answered, set nextStage to COLLECTING_INFO (NOT readyToBuild yet — there are still follow-up questions).`
+- When all 3 questions are answered, set nextStage to COLLECTING_INFO immediately. The form will collect everything else (service area, years, logo, photos, etc.).`
   },
 
   COLLECTING_INFO: (ctx) => {
