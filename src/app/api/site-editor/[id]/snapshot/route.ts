@@ -127,6 +127,11 @@ export async function POST(
     html = html.replace(/<script[^>]*>\s*self\.__next[\s\S]*?<\/script>/g, '')
     html = html.replace(/<link[^>]*href="\/_next\/[^"]*"[^>]*\/?>/g, '')
 
+    // Strip the CTA banner — the approved/edited site shouldn't show "Get This Site Live"
+    html = html.replace(/<div[^>]*class="[^"]*fixed bottom-0[^"]*bg-\[#0D7377\][^"]*"[^>]*>[\s\S]*?<\/div>\s*<\/div>/g, '')
+    // Also strip the bottom padding wrapper that accommodates the banner
+    html = html.replace(/<div class="pb-16">([\s\S]*?)<\/div>\s*$/m, '$1')
+
     // Store in database
     await prisma.lead.update({
       where: { id },
