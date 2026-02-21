@@ -177,17 +177,26 @@ Don't ask any more questions. If they text, respond warmly and reassure them.`,
 
   PREVIEW_SENT: (ctx) => {
     const previewUrl = ctx.previewUrl || `Preview link pending`
-    return `The site preview is ready to share. Send the preview link to the lead and ask what they think.
+    return `The client has received their site preview and is reviewing it.
 Preview URL: ${previewUrl}
-If they say it looks good/they love it/they approve → prepare to send payment link (set nextStage to PAYMENT_SENT).
+
+CRITICAL RULE — APPROVAL DETECTION:
+If the client says ANYTHING positive about the site ("looks good", "love it", "perfect", "let's do it", "I'll take it", "ready to go", "how do I pay", "let's move forward", "approved", "go live"), you MUST set nextStage to "PAYMENT_SENT" in your JSON response. This triggers the payment link flow. Do NOT just say "our team will be in touch" — that skips the payment step entirely.
+
 If they request changes → acknowledge, say "Got it, we'll update that and send you a new preview shortly", and set nextStage to EDIT_LOOP.
-Distinguish between change requests ("change the headline", "different photo") and questions ("how long to go live?"). Answer questions directly.`
+If they ask questions ("how long to go live?", "how much?") → answer directly. Don't change stage for questions.
+
+NEVER send a Stripe URL or payment link directly in your message. The system handles payment links separately.
+NEVER say "our team will reach out" or "we'll be in touch" when they approve — set nextStage to PAYMENT_SENT so the system creates the payment link.`
   },
 
   EDIT_LOOP: (ctx) => {
     const editRounds = ctx.conversation.editRounds || 0
-    return `The lead wants changes. Collect their specific feedback. Acknowledge each request. Tell them you'll get it updated.
-When they confirm the updated version looks good → set nextStage to PAYMENT_SENT.
+    return `The lead requested changes. Collect their specific feedback. Acknowledge each request. Tell them you'll get it updated.
+
+CRITICAL: When they confirm the updated version looks good or say anything positive ("looks good now", "perfect", "love it", "approved") → you MUST set nextStage to "PAYMENT_SENT". Do NOT just say "our team will be in touch."
+NEVER send a Stripe URL or payment link directly. The system handles that.
+
 Current edit round: ${editRounds}/3.`
   },
 

@@ -9,12 +9,10 @@ import { getStripe } from './stripe'
 import { prisma } from './db'
 import { getPricingConfig } from './pricing-config'
 import {
-  checkAutonomy,
   transitionStage,
   getConversationContext,
   CONVERSATION_STAGES,
 } from './close-engine'
-import { calculateDelay, sendCloseEngineMessage } from './close-engine-processor'
 
 // ============================================
 // generatePaymentLink()
@@ -79,67 +77,44 @@ export async function generatePaymentLink(leadId: string): Promise<string> {
 export async function sendPaymentLink(conversationId: string): Promise<{ success: boolean }> {
   const context = await getConversationContext(conversationId)
   const lead = context.lead
-
-  // Check autonomy
-  const autonomy = await checkAutonomy(conversationId, 'SEND_PAYMENT_LINK')
-
-  // Generate the link
-  const paymentUrl = await generatePaymentLink(lead.id)
   const config = await getPricingConfig()
 
-  const message = `Looks great! Here's your payment link to go live: ${paymentUrl}\n\n$${config.firstMonthTotal} gets your site built and launched, plus monthly hosting at $${config.monthlyHosting}/month. You can cancel anytime.\n\nOnce you pay, we'll have your site live within 48 hours!`
-
-  if (autonomy.requiresApproval) {
-    await prisma.approval.create({
-      data: {
-        gate: 'PAYMENT_LINK',
-        title: `Payment Link — ${lead.companyName}`,
-        description: `Payment link ready for ${lead.companyName}. Approve to send via SMS.`,
-        draftContent: message,
-        leadId: lead.id,
-        requestedBy: 'system',
-        status: 'PENDING',
-        priority: 'HIGH',
-        metadata: { conversationId, phone: lead.phone, paymentUrl },
-      },
-    })
-    await prisma.notification.create({
-      data: {
-        type: 'CLOSE_ENGINE',
-        title: 'Payment Link Ready — Approve?',
-        message: `Payment link ready for ${lead.companyName}. Approve to send.`,
-        metadata: { conversationId, leadId: lead.id, paymentUrl },
-      },
-    })
-    return { success: true }
-  }
-
-  const delay = calculateDelay(message.length, 'payment_link')
-
-  setTimeout(async () => {
-    try {
-      await sendCloseEngineMessage({
-        to: lead.phone,
-        toEmail: lead.email || undefined,
-        message,
-        leadId: lead.id,
-        trigger: 'close_engine_payment_link',
-        aiDelaySeconds: delay,
-        conversationType: 'pre_client',
-        emailSubject: `${lead.companyName} — payment link to go live`,
-        aiDecisionLog: {
-          trigger: 'payment_link',
-          delaySeconds: delay,
-          leadStatus: lead.status,
-          pricingUsed: { firstMonthTotal: config.firstMonthTotal, monthlyHosting: config.monthlyHosting },
+  // Always create a PAYMENT_LINK approval — Stripe link is generated when Andrew approves.
+  // This ensures the approval is ALWAYS created even if Stripe is down.
+  await prisma.approval.create({
+    data: {
+      gate: 'PAYMENT_LINK',
+      title: `Payment Link — ${lead.companyName}`,
+      description: `${lead.firstName} at ${lead.companyName} is ready to buy. Approve to generate Stripe link and send via SMS.`,
+      draftContent: `Here's your payment link to go live: [generated on approval]\n\n$${config.firstMonthTotal} gets your site built and launched, plus monthly hosting at $${config.monthlyHosting}/month. You can cancel anytime.\n\nOnce you pay, we'll have your site live within 48 hours!`,
+      leadId: lead.id,
+      requestedBy: 'system',
+      status: 'PENDING',
+      priority: 'HIGH',
+      metadata: {
+        conversationId,
+        phone: lead.phone,
+        email: lead.email || null,
+        pricing: {
+          firstMonthTotal: config.firstMonthTotal,
+          monthlyHosting: config.monthlyHosting,
         },
-      })
-      await transitionStage(conversationId, CONVERSATION_STAGES.PAYMENT_SENT)
-    } catch (err) {
-      console.error('[CloseEngine] Payment link send failed:', err)
-    }
-  }, delay * 1000)
+      },
+    },
+  })
+  await prisma.notification.create({
+    data: {
+      type: 'CLOSE_ENGINE',
+      title: 'Payment Link — Approve to Send',
+      message: `${lead.firstName} at ${lead.companyName} wants to go live. Approve to generate Stripe link and send.`,
+      metadata: { conversationId, leadId: lead.id },
+    },
+  })
 
+  // Transition conversation to PENDING_APPROVAL while waiting for Andrew
+  await transitionStage(conversationId, CONVERSATION_STAGES.PENDING_APPROVAL)
+
+  console.log(`[CloseEngine] PAYMENT_LINK approval created for ${lead.companyName} (${lead.id})`)
   return { success: true }
 }
 

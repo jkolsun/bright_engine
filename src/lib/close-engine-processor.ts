@@ -450,6 +450,16 @@ export async function processCloseEngineInbound(
     }
   }
 
+  // 3.5 Safety net: detect client acceptance in PREVIEW_SENT/EDIT_LOOP when Claude didn't trigger payment
+  if (
+    !claudeResponse.nextStage &&
+    ['PREVIEW_SENT', 'EDIT_LOOP'].includes(context.conversation.stage) &&
+    isClientAcceptance(inboundMessage)
+  ) {
+    console.log(`[CloseEngine] Client acceptance detected for ${lead.companyName} — forcing PAYMENT_SENT`)
+    claudeResponse.nextStage = CONVERSATION_STAGES.PAYMENT_SENT
+  }
+
   // 4. Handle stage transition (skip PAYMENT_SENT — sendPaymentLink handles that)
   if (claudeResponse.nextStage && claudeResponse.nextStage !== CONVERSATION_STAGES.PAYMENT_SENT) {
     await transitionStage(conversationId, claudeResponse.nextStage)
@@ -779,6 +789,28 @@ export function parseClaudeResponse(raw: string): ClaudeCloseResponse {
       escalateReason: null,
     }
   }
+}
+
+// ============================================
+// Client Acceptance Detection
+// ============================================
+
+const ACCEPTANCE_PHRASES = [
+  'looks good', 'looks great', 'looks perfect', 'looks amazing', 'looks awesome',
+  'love it', 'i love it', 'looks beautiful',
+  'let\'s do it', 'lets do it', 'let\'s go', 'lets go',
+  'i\'ll take it', 'ill take it', 'i want it',
+  'sign me up', 'ready to go', 'let\'s move forward', 'lets move forward',
+  'send the link', 'send me the link', 'send payment', 'how do i pay',
+  'ready to pay', 'take my money', 'shut up and take my money',
+  'i\'m in', 'im in', 'i\'m ready', 'im ready',
+  'perfect', 'go ahead', 'approved', 'approve it',
+  'make it live', 'go live', 'launch it', 'publish it',
+]
+
+function isClientAcceptance(message: string): boolean {
+  const lower = message.toLowerCase().trim()
+  return ACCEPTANCE_PHRASES.some(phrase => lower.includes(phrase))
 }
 
 // ============================================

@@ -119,19 +119,27 @@ async function executeApprovedAction(approval: any) {
   try {
     switch (approval.gate) {
       case 'PAYMENT_LINK': {
-        // Send the payment link SMS and update lead status
-        if (approval.draftContent && approval.metadata?.phone) {
-          const { sendSMSViaProvider } = await import('@/lib/sms-provider')
-          await sendSMSViaProvider({
-            to: approval.metadata.phone,
-            message: approval.draftContent,
-            leadId: approval.leadId || undefined,
-            clientId: approval.clientId || undefined,
-            sender: 'clawdbot',
+        // Generate Stripe checkout link NOW (at approval time, not upfront)
+        const { generatePaymentLink } = await import('@/lib/close-engine-payment')
+        const { getPricingConfig } = await import('@/lib/pricing-config')
+        const paymentUrl = await generatePaymentLink(approval.leadId!)
+        const pricingConfig = await getPricingConfig()
+
+        const paymentMessage = `Here's your payment link to go live: ${paymentUrl}\n\n$${pricingConfig.firstMonthTotal} gets your site built and launched, plus monthly hosting at $${pricingConfig.monthlyHosting}/month. You can cancel anytime.\n\nOnce you pay, we'll have your site live within 48 hours!`
+
+        // Send via SMS (with email fallback)
+        const phone = approval.metadata?.phone as string | undefined
+        if (phone) {
+          const { sendCloseEngineMessage } = await import('@/lib/close-engine-processor')
+          await sendCloseEngineMessage({
+            to: phone,
+            toEmail: (approval.metadata?.email as string) || undefined,
+            message: paymentMessage,
+            leadId: approval.leadId || '',
             trigger: 'approved_payment_link',
-            aiGenerated: true,
+            conversationType: 'pre_client',
+            emailSubject: `Your payment link to go live`,
           })
-          // sendSMSViaProvider already logs the message — no manual message.create needed
         }
 
         // Update lead buildStep and status
@@ -142,17 +150,37 @@ async function executeApprovedAction(approval: any) {
           })
         }
 
-        // Notify admin
+        // Transition conversation to PAYMENT_SENT
+        if (approval.leadId) {
+          try {
+            const conversation = await prisma.closeEngineConversation.findUnique({
+              where: { leadId: approval.leadId },
+            })
+            if (conversation) {
+              const { transitionStage, CONVERSATION_STAGES } = await import('@/lib/close-engine')
+              await transitionStage(conversation.id, CONVERSATION_STAGES.PAYMENT_SENT)
+            }
+          } catch (stageErr) {
+            console.error('[Approvals] Failed to transition to PAYMENT_SENT:', stageErr)
+          }
+        }
+
+        // Save payment URL to approval metadata for reference
+        await prisma.approval.update({
+          where: { id: approval.id },
+          data: { metadata: { ...(approval.metadata as any || {}), paymentUrl } },
+        })
+
         await prisma.notification.create({
           data: {
             type: 'CLOSE_ENGINE',
             title: 'Payment Link Approved & Sent',
-            message: `Payment link sent to client via SMS.`,
-            metadata: { leadId: approval.leadId, clientId: approval.clientId },
+            message: `Payment link generated and sent to client via SMS.`,
+            metadata: { leadId: approval.leadId, clientId: approval.clientId, paymentUrl },
           },
         })
 
-        console.log(`[Approvals] Payment link sent for ${approval.leadId || approval.clientId}`)
+        console.log(`[Approvals] Payment link generated & sent for ${approval.leadId || approval.clientId}`)
         break
       }
       case 'SEND_MESSAGE': {
@@ -248,6 +276,19 @@ async function executeApprovedAction(approval: any) {
               metadata: { leadId: approval.leadId, previewUrl },
             },
           })
+
+          // Transition CloseEngineConversation to PREVIEW_SENT so AI knows client is reviewing
+          try {
+            const conversation = await prisma.closeEngineConversation.findUnique({
+              where: { leadId: approval.leadId! },
+            })
+            if (conversation) {
+              const { transitionStage, CONVERSATION_STAGES } = await import('@/lib/close-engine')
+              await transitionStage(conversation.id, CONVERSATION_STAGES.PREVIEW_SENT)
+            }
+          } catch (stageErr) {
+            console.error('[Approvals] Failed to transition conversation to PREVIEW_SENT:', stageErr)
+          }
         }
         break
       }
