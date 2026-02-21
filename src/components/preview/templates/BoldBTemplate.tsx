@@ -466,6 +466,9 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           <h1 className="font-display text-[2.75rem] sm:text-6xl md:text-7xl lg:text-[5.5rem] font-black text-white mb-6 tracking-tight leading-[0.95]">
             {wc?.heroHeadline || lead.companyName}
           </h1>
+          {wc?.heroSubheadline && (
+            <p className="text-lg sm:text-xl text-white/80 max-w-2xl mx-auto mb-8 leading-relaxed">{wc.heroSubheadline}</p>
+          )}
 
           <p className="text-base sm:text-lg text-white/40 mb-12 max-w-xl mx-auto">
             {config.tagline}
@@ -537,6 +540,9 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               <Clock size={13} className="text-blue-400" />
               Same-Day Response
             </span>
+            {wc?.yearsBadge && (
+              <><span className="text-gray-700 hidden sm:inline">•</span><span className="flex items-center gap-1.5 text-gray-300 font-medium">{wc.yearsBadge}</span></>
+            )}
           </div>
         </div>
       </section>
@@ -573,6 +579,9 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                     <h3 className="text-base sm:text-lg font-bold text-gray-200 group-hover:text-white transition-colors">
                       {service}
                     </h3>
+                    {wc?.serviceDescriptions?.[service] && (
+                      <p className="text-sm text-gray-400 mt-1">{wc.serviceDescriptions[service]}</p>
+                    )}
                   </div>
                   <ArrowRight
                     size={16}
@@ -692,6 +701,9 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                   {wc?.aboutParagraph1 ||
                     `${lead.companyName} is ${location ? `${location}'s` : 'your'} trusted ${industryLabel} team — dedicated to quality on every job.`}
                 </p>
+                {wc?.aboutParagraph2 && (
+                  <p className="text-gray-500 text-base leading-relaxed mt-4">{wc.aboutParagraph2}</p>
+                )}
               </div>
 
               {/* Why Choose Us — inline */}
@@ -791,36 +803,44 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
 
           {/* Staggered layout instead of even grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              { quote: `Professional, clean, and affordable. Will absolutely call again.`, name: 'Homeowner', loc: location || 'Local' },
-              { quote: `Fast response and excellent work — completed ahead of schedule.`, name: 'Property Manager', loc: location || 'Local' },
-              { quote: `Fair pricing, quality workmanship, genuinely great people.`, name: 'Repeat Customer', loc: location || 'Local' },
-            ].map((review, i) => (
-              <div
-                key={i}
-                className={`bg-gray-950/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8 hover:border-blue-500/20 transition-all duration-300 ${
-                  i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''
-                }`}
-              >
-                <div className="flex gap-0.5 mb-4">
-                  {Array.from({ length: 5 }, (_, j) => (
-                    <Star key={j} size={14} className="text-blue-400 fill-current" />
-                  ))}
-                </div>
-                <p className="text-gray-300 text-base leading-relaxed mb-5 italic">
-                  "{review.quote}"
-                </p>
-                <div className="flex items-center gap-3 text-xs">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-[11px] font-bold">{review.name[0]}</span>
+            {(() => {
+              const testimonials = [
+                ...(wc?.testimonialQuote ? [{
+                  quote: wc.testimonialQuote,
+                  name: wc.testimonialAuthor || 'Verified Customer',
+                  loc: lead.city || 'Local',
+                }] : []),
+                { quote: `Professional, thorough, and the results speak for themselves. Highly recommend ${lead.companyName}.`, name: 'Homeowner', loc: lead.city || 'Local' },
+                { quote: `On time, communicative, and delivered exactly as promised. Will use ${lead.companyName} again.`, name: 'Property Manager', loc: lead.city || 'Local' },
+                { quote: `Already recommended ${lead.companyName} to all our neighbors. Couldn't be happier.`, name: 'Repeat Client', loc: lead.city || 'Local' },
+              ].slice(0, 3)
+              return testimonials.map((review, i) => (
+                <div
+                  key={i}
+                  className={`bg-gray-950/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8 hover:border-blue-500/20 transition-all duration-300 ${
+                    i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''
+                  }`}
+                >
+                  <div className="flex gap-0.5 mb-4">
+                    {Array.from({ length: 5 }, (_, j) => (
+                      <Star key={j} size={14} className="text-blue-400 fill-current" />
+                    ))}
                   </div>
-                  <div>
-                    <span className="font-bold text-gray-300">{review.name}</span>
-                    <span className="text-gray-600"> — {review.loc}</span>
+                  <p className="text-gray-300 text-base leading-relaxed mb-5 italic">
+                    "{review.quote}"
+                  </p>
+                  <div className="flex items-center gap-3 text-xs">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-[11px] font-bold">{review.name[0]}</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-gray-300">{review.name}</span>
+                      <span className="text-gray-600"> — {review.loc}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            })()}
           </div>
         </div>
       </section>

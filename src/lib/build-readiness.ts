@@ -33,51 +33,52 @@ export function calculateReadinessScore(lead: {
   const breakdown: Record<string, number> = {}
   const missing: string[] = []
 
-  // Logo: 20 points
+  // Parse qualificationData once for conversation-collected fields
+  const qd = (lead.qualificationData && typeof lead.qualificationData === 'object')
+    ? lead.qualificationData as Record<string, unknown>
+    : null
+
+  // Logo: 15 points
   if (lead.logo) {
-    breakdown.logo = 20
+    breakdown.logo = 15
   } else {
     missing.push('logo')
   }
 
-  // Photos (client-uploaded or enriched): 15 points
+  // Photos (client-uploaded or enriched): 10 points
   const clientPhotos = Array.isArray(lead.photos) ? lead.photos : []
   const enrichedPhotos = Array.isArray(lead.enrichedPhotos) ? lead.enrichedPhotos : []
   if (clientPhotos.length > 0 || enrichedPhotos.length > 0) {
-    breakdown.photos = 15
+    breakdown.photos = 10
   } else {
     missing.push('photos')
   }
 
-  // Services (at least 2): 20 points
+  // Services (at least 2): 15 points
   const clientServices = Array.isArray(lead.services) ? lead.services : []
   const enrichedServices = Array.isArray(lead.enrichedServices) ? lead.enrichedServices : []
-  // Also check qualificationData.services
   let qualServices: string[] = []
-  if (lead.qualificationData && typeof lead.qualificationData === 'object') {
-    const qd = lead.qualificationData as Record<string, unknown>
-    if (Array.isArray(qd.services)) qualServices = qd.services as string[]
-  }
+  if (qd && Array.isArray(qd.services)) qualServices = qd.services as string[]
   const allServices = [...new Set([...clientServices, ...enrichedServices, ...qualServices])]
   if (allServices.length >= 2) {
-    breakdown.services = 20
+    breakdown.services = 15
   } else if (allServices.length === 1) {
-    breakdown.services = 10
+    breakdown.services = 8
     missing.push('more services (only 1 listed)')
   } else {
     missing.push('services')
   }
 
-  // Company name: 15 points
+  // Company name: 10 points
   if (lead.companyName?.trim()) {
-    breakdown.companyName = 15
+    breakdown.companyName = 10
   } else {
     missing.push('company name')
   }
 
-  // Phone: 10 points
+  // Phone: 8 points
   if (lead.phone?.trim()) {
-    breakdown.phone = 10
+    breakdown.phone = 8
   } else {
     missing.push('phone number')
   }
@@ -89,7 +90,7 @@ export function calculateReadinessScore(lead: {
     missing.push('city/location')
   }
 
-  // Website copy (AI-generated in personalization): 15 points
+  // Website copy (AI-generated in personalization): 12 points
   let hasWebsiteCopy = false
   if (lead.personalization) {
     try {
@@ -102,9 +103,37 @@ export function calculateReadinessScore(lead: {
     } catch { /* not valid JSON yet */ }
   }
   if (hasWebsiteCopy) {
-    breakdown.websiteCopy = 15
+    breakdown.websiteCopy = 12
   } else {
     missing.push('website copy')
+  }
+
+  // About Story (from conversation): 10 points
+  if (qd?.aboutStory) {
+    breakdown.aboutStory = 10
+  } else {
+    missing.push('company story')
+  }
+
+  // Differentiator (from conversation): 8 points
+  if (qd?.differentiator) {
+    breakdown.differentiator = 8
+  } else {
+    missing.push('differentiator')
+  }
+
+  // Years in Business (from conversation): 3 points
+  if (qd?.yearsInBusiness) {
+    breakdown.yearsInBusiness = 3
+  } else {
+    missing.push('years in business')
+  }
+
+  // Testimonial (from conversation): 4 points
+  if (qd?.testimonial) {
+    breakdown.testimonial = 4
+  } else {
+    missing.push('customer testimonial')
   }
 
   const score = Object.values(breakdown).reduce((sum, v) => sum + v, 0)

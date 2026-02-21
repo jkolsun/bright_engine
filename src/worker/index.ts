@@ -175,21 +175,59 @@ async function startWorkers() {
     })
 
     personalizationWorker.on('completed', async (job) => {
-      if (job?.data?.leadId) await addScriptGenerationJob({ leadId: job.data.leadId })
+      if (!job?.data?.leadId) return
+      const leadId = job.data.leadId
+
+      // Check if this is a close-engine lead (has active conversation)
+      // Close-engine leads skip scripts/distribution — they go straight to QA
+      const closeConvo = await prisma.closeEngineConversation.findUnique({
+        where: { leadId },
+        select: { id: true },
+      }).catch(() => null)
+
+      if (closeConvo) {
+        // Close-engine lead: skip scripts/distribution, mark complete, auto-transition to QA
+        console.log(`[WORKER] Close-engine lead ${leadId} — skipping scripts/distribution, transitioning to QA`)
+        await prisma.lead.update({
+          where: { id: leadId },
+          data: { buildStep: 'COMPLETE', buildCompletedAt: new Date() },
+        }).catch(() => {})
+
+        // Run readiness check — with enrichment + personalization done, score should be 70+
+        try {
+          const { checkAndTransitionToQA } = await import('../lib/build-readiness')
+          const readiness = await checkAndTransitionToQA(leadId)
+          console.log(`[WORKER] Close-engine lead ${leadId} readiness: ${readiness?.score}/100`)
+        } catch (e) {
+          console.warn(`[WORKER] Readiness check failed for ${leadId}:`, e)
+        }
+      } else {
+        // Import lead: continue to scripts as normal
+        await addScriptGenerationJob({ leadId })
+      }
     })
 
     scriptWorker.on('completed', async (job) => {
       if (job?.data?.leadId) await addDistributionJob({ leadId: job.data.leadId, channel: 'BOTH' })
     })
 
-    // After distribution completes, mark build done + calculate engagement score
+    // After distribution completes, mark build done + calculate engagement score + readiness check
     distributionWorker.on('completed', async (job) => {
       if (job?.data?.leadId) {
+        const leadId = job.data.leadId
         await prisma.lead.update({
-          where: { id: job.data.leadId },
+          where: { id: leadId },
           data: { buildStep: 'COMPLETE', buildCompletedAt: new Date() },
         }).catch(() => {})
-        try { await calculateEngagementScore(job.data.leadId) } catch (e) { console.warn('Engagement calc failed:', e) }
+        try { await calculateEngagementScore(leadId) } catch (e) { console.warn('Engagement calc failed:', e) }
+
+        // Run readiness check for import leads too — auto-transition to QA if ready
+        try {
+          const { checkAndTransitionToQA } = await import('../lib/build-readiness')
+          await checkAndTransitionToQA(leadId)
+        } catch (e) {
+          console.warn(`[WORKER] Readiness check failed for ${leadId}:`, e)
+        }
       }
     })
 

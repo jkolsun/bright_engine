@@ -105,7 +105,7 @@ export async function processInboundImages(
     // Store on lead based on type
     const lead = await prisma.lead.findUnique({
       where: { id: leadId },
-      select: { logo: true, photos: true },
+      select: { logo: true, photos: true, enrichedPhotos: true },
     })
 
     if (lead) {
@@ -116,9 +116,13 @@ export async function processInboundImages(
         })
       } else if (['team_photo', 'project_photo'].includes(classification.type)) {
         const existingPhotos = (lead.photos as string[] || [])
+        const existingEnrichedPhotos = (lead.enrichedPhotos as string[] || [])
         await prisma.lead.update({
           where: { id: leadId },
-          data: { photos: [...existingPhotos, url] },
+          data: {
+            photos: [...existingPhotos, url],
+            enrichedPhotos: [...existingEnrichedPhotos, url], // Also save to enrichedPhotos so preview page picks it up
+          },
         })
       }
     }

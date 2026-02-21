@@ -9,6 +9,10 @@ export interface WebsiteCopy {
   closingHeadline: string
   closingBody: string
   serviceDescriptions: Record<string, string>
+  testimonialQuote?: string
+  testimonialAuthor?: string
+  yearsBadge?: string
+  serviceAreaText?: string
 }
 
 export interface PreviewLead {

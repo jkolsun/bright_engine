@@ -180,6 +180,9 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
             {hasRating ? `${lead.enrichedRating}-Star Rated` : 'Top Rated'}{location ? ` · ${location}` : ''}
           </div>
           <h1 className="font-display text-[2.75rem] sm:text-6xl md:text-7xl lg:text-8xl font-bold text-gray-900 mb-6 tracking-tight leading-[1.02]">{wc?.heroHeadline || lead.companyName}</h1>
+          {wc?.heroSubheadline && (
+            <p className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto mb-8 leading-relaxed">{wc.heroSubheadline}</p>
+          )}
           <div className="w-24 h-1 bg-gradient-to-r from-teal-400 via-cyan-400 to-emerald-400 mx-auto mb-8 rounded-full" />
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white px-10 py-4 rounded-full font-semibold text-lg hover:from-teal-600 hover:to-cyan-600 transition-all shadow-lg hover:-translate-y-0.5"><Phone size={20} />Call Now</a>)}
@@ -199,6 +202,9 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
           {location && (<><span className="text-gray-200 hidden sm:inline">•</span><span className="flex items-center gap-1.5 text-gray-500"><MapPin size={13} />{location}</span></>)}
           <span className="text-gray-200 hidden sm:inline">•</span>
           <span className="flex items-center gap-1.5 text-gray-500"><Clock size={13} />Same-Day Response</span>
+          {wc?.yearsBadge && (
+            <><span className="text-gray-200 hidden sm:inline">•</span><span className="flex items-center gap-1.5 text-gray-500">{wc.yearsBadge}</span></>
+          )}
         </div>
       </section>
 
@@ -216,6 +222,9 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
                   <div className="flex items-center gap-5">
                     <span className="text-xs text-teal-300 font-mono tabular-nums w-6 font-bold">{String(i + 1).padStart(2, '0')}</span>
                     <h3 className="text-base sm:text-lg font-semibold text-gray-800 group-hover:text-teal-600 transition-colors">{service}</h3>
+                    {wc?.serviceDescriptions?.[service] && (
+                      <p className="text-sm text-gray-400 mt-1">{wc.serviceDescriptions[service]}</p>
+                    )}
                   </div>
                   <ArrowRight size={16} className="text-gray-300 group-hover:text-teal-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </div>
@@ -247,6 +256,9 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
               <p className="text-gray-500 text-base leading-relaxed">
                 {wc?.aboutParagraph1 || `${lead.companyName} delivers top-quality ${industryLabel}${location ? ` in ${location}` : ''}. Licensed, insured, and committed to your satisfaction.`}
               </p>
+              {wc?.aboutParagraph2 && (
+                <p className="text-gray-500 text-base leading-relaxed mt-4">{wc.aboutParagraph2}</p>
+              )}
               <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {(wc?.valueProps || [
                   { title: 'Licensed & Insured', description: 'Full protection on every job' },
@@ -316,11 +328,18 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">What customers say.</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              { quote: 'Professional, thorough, and the results speak for themselves.', name: 'Homeowner', loc: lead.city || 'Local' },
-              { quote: 'On time, communicative, and delivered exactly as promised.', name: 'Property Manager', loc: lead.city || 'Local' },
-              { quote: `Already recommended ${lead.companyName} to all our neighbors.`, name: 'Repeat Client', loc: lead.city || 'Local' },
-            ].map((r, i) => (
+            {(() => {
+              const testimonials = [
+                ...(wc?.testimonialQuote ? [{
+                  quote: wc.testimonialQuote,
+                  name: wc.testimonialAuthor || 'Verified Customer',
+                  loc: lead.city || 'Local',
+                }] : []),
+                { quote: `Professional, thorough, and the results speak for themselves. Highly recommend ${lead.companyName}.`, name: 'Homeowner', loc: lead.city || 'Local' },
+                { quote: `On time, communicative, and delivered exactly as promised. Will use ${lead.companyName} again.`, name: 'Property Manager', loc: lead.city || 'Local' },
+                { quote: `Already recommended ${lead.companyName} to all our neighbors. Couldn't be happier.`, name: 'Repeat Client', loc: lead.city || 'Local' },
+              ].slice(0, 3)
+              return testimonials.map((r, i) => (
               <div key={i} className={`bg-gray-50/50 border border-gray-100 rounded-2xl p-7 hover:border-teal-200 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
                 <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
                 <p className="text-gray-600 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
@@ -329,7 +348,8 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
                   <div><span className="font-semibold text-gray-800">{r.name}</span><span className="text-gray-400"> — {r.loc}</span></div>
                 </div>
               </div>
-            ))}
+              ))
+            })()}
           </div>
         </div>
       </section>

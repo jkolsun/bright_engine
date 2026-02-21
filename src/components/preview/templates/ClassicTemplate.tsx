@@ -189,6 +189,9 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
             </div>
           )}
           <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-4 tracking-tight leading-[1.05]">{wc?.heroHeadline || lead.companyName}</h1>
+          {wc?.heroSubheadline && (
+            <p className="text-lg sm:text-xl text-gray-200 max-w-2xl mx-auto mb-8 leading-relaxed">{wc.heroSubheadline}</p>
+          )}
           <div className="w-16 h-0.5 bg-white/25 mx-auto my-6 rounded-full" />
           <p className="text-base sm:text-lg text-white/60 mb-10 max-w-xl mx-auto">{config.tagline}</p>
           {hasRating && (
@@ -216,6 +219,9 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
           {location && (<><span className="text-stone-200 hidden sm:inline">•</span><span className="flex items-center gap-1.5 text-stone-500"><MapPin size={13} />{location}</span></>)}
           <span className="text-stone-200 hidden sm:inline">•</span>
           <span className="flex items-center gap-1.5 text-stone-500"><Clock size={13} />Same-Day Response</span>
+          {wc?.yearsBadge && (
+            <><span className="text-stone-200 hidden sm:inline">•</span><span className="flex items-center gap-1.5 text-stone-500">{wc.yearsBadge}</span></>
+          )}
         </div>
       </section>
 
@@ -233,6 +239,9 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
                   <div className="flex items-center gap-5">
                     <span className="text-xs text-stone-300 font-mono tabular-nums w-6 font-bold">{String(i + 1).padStart(2, '0')}</span>
                     <h3 className="text-base sm:text-lg font-semibold text-stone-800 group-hover:text-stone-600 transition-colors">{service}</h3>
+                    {wc?.serviceDescriptions?.[service] && (
+                      <p className="text-sm text-gray-400 mt-1">{wc.serviceDescriptions[service]}</p>
+                    )}
                   </div>
                   <ArrowRight size={16} className="text-stone-300 group-hover:text-stone-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </div>
@@ -265,6 +274,9 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
               <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 leading-tight mb-6">A name you can trust.</h2>
               <div className="text-stone-600 text-base leading-relaxed">
                 <p>{wc?.aboutParagraph1 || `${lead.companyName} delivers reliable ${industryLabel}${location ? ` across ${location}` : ''} — on time, honest, and guaranteed.`}</p>
+                {wc?.aboutParagraph2 && (
+                  <p className="text-gray-500 text-base leading-relaxed mt-4">{wc.aboutParagraph2}</p>
+                )}
               </div>
               <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {(wc?.valueProps || [
@@ -336,20 +348,28 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
             <h2 className="text-3xl sm:text-4xl font-bold text-stone-900">Trusted by the community.</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              { quote: `Professional, high quality, and highly recommended.`, name: 'Sarah M.', loc: lead.city || 'Local' },
-              { quote: `Honest, reliable, and skilled — showed up on time every time.`, name: 'James R.', loc: lead.city || 'Local' },
-              { quote: 'Fair pricing and great results from start to finish.', name: 'Linda K.', loc: lead.city || 'Local' },
-            ].map((r, i) => (
-              <div key={i} className={`bg-white border border-stone-200/60 rounded-2xl p-7 sm:p-8 hover:border-stone-300/60 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
-                <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
-                <p className="text-stone-600 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
-                <div className="flex items-center gap-3 text-sm pt-4 border-t border-stone-100">
-                  <div className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center"><span className="text-stone-600 font-bold text-xs">{r.name[0]}</span></div>
-                  <div><span className="font-semibold text-stone-800">{r.name}</span><span className="text-stone-400"> — {r.loc}</span></div>
+            {(() => {
+              const testimonials = [
+                ...(wc?.testimonialQuote ? [{
+                  quote: wc.testimonialQuote,
+                  name: wc.testimonialAuthor || 'Verified Customer',
+                  loc: lead.city || 'Local',
+                }] : []),
+                { quote: `Professional, thorough, and the results speak for themselves. Highly recommend ${lead.companyName}.`, name: 'Homeowner', loc: lead.city || 'Local' },
+                { quote: `On time, communicative, and delivered exactly as promised. Will use ${lead.companyName} again.`, name: 'Property Manager', loc: lead.city || 'Local' },
+                { quote: `Already recommended ${lead.companyName} to all our neighbors. Couldn't be happier.`, name: 'Repeat Client', loc: lead.city || 'Local' },
+              ].slice(0, 3)
+              return testimonials.map((r, i) => (
+                <div key={i} className={`bg-white border border-stone-200/60 rounded-2xl p-7 sm:p-8 hover:border-stone-300/60 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
+                  <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
+                  <p className="text-stone-600 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
+                  <div className="flex items-center gap-3 text-sm pt-4 border-t border-stone-100">
+                    <div className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center"><span className="text-stone-600 font-bold text-xs">{r.name[0]}</span></div>
+                    <div><span className="font-semibold text-stone-800">{r.name}</span><span className="text-stone-400"> — {r.loc}</span></div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            })()}
           </div>
         </div>
       </section>

@@ -393,6 +393,9 @@ export async function processCloseEngineInbound(
     const extracted = claudeResponse.extractedData as Record<string, unknown>
     if (extracted.services) leadUpdate.enrichedServices = extracted.services
     if (extracted.hours) leadUpdate.enrichedHours = extracted.hours
+    // Note: aboutStory, differentiator, yearsInBusiness, serviceArea, testimonial,
+    // certifications all live in qualificationData (already merged above).
+    // The personalization pipeline reads lead.qualificationData directly.
 
     await prisma.lead.update({
       where: { id: lead.id },
@@ -430,28 +433,58 @@ export async function processCloseEngineInbound(
     await transitionStage(conversationId, claudeResponse.nextStage)
   }
 
-  // 5. Handle readyToBuild — run readiness scoring and auto-transition to QA if ready
+  // 5. Handle readyToBuild — kick off the build pipeline immediately
   if (claudeResponse.readyToBuild) {
     await transitionStage(conversationId, CONVERSATION_STAGES.BUILDING)
+
+    // Set buildStep to ENRICHMENT so the lead appears in the build queue instantly
     await prisma.lead.update({
       where: { id: lead.id },
-      data: { status: 'BUILDING' },
+      data: {
+        status: 'BUILDING',
+        buildStep: 'ENRICHMENT',
+        buildStartedAt: new Date(),
+        buildError: null,
+        buildCompletedAt: null,
+      },
     })
 
-    // Run readiness check — if score >= 70, auto-transitions to QA_REVIEW
-    const { checkAndTransitionToQA } = await import('./build-readiness')
-    const readiness = await checkAndTransitionToQA(lead.id)
-    if (!readiness || readiness.score < 70) {
-      // Score too low for auto-QA, still notify that build is ready
+    // Queue the enrichment job to start the worker pipeline
+    // Pipeline: enrichment → preview → personalization → (close-engine leads skip scripts/distribution) → QA_REVIEW
+    try {
+      const { addEnrichmentJob } = await import('@/worker/queue')
+      await addEnrichmentJob({
+        leadId: lead.id,
+        companyName: lead.companyName || '',
+        city: lead.city || undefined,
+        state: lead.state || undefined,
+      })
+      console.log(`[CloseEngine] Build pipeline started for ${lead.companyName} (${lead.id})`)
+    } catch (err) {
+      console.error(`[CloseEngine] Failed to queue enrichment job for ${lead.id}:`, err)
+      // Fallback: still notify admin so they can manually trigger
       await prisma.notification.create({
         data: {
           type: 'CLOSE_ENGINE',
-          title: 'Site Build Ready',
-          message: `${lead.companyName} qualification complete. Readiness: ${readiness?.score || 0}/100.`,
-          metadata: { conversationId, leadId: lead.id, score: readiness?.score } as Prisma.InputJsonValue,
+          title: 'Build Queue Failed',
+          message: `Failed to start build for ${lead.companyName}. Manual intervention needed.`,
+          metadata: { conversationId, leadId: lead.id, error: String(err) } as Prisma.InputJsonValue,
         },
       })
     }
+
+    // Run readiness check to record the current score
+    const { checkAndTransitionToQA } = await import('./build-readiness')
+    const readiness = await checkAndTransitionToQA(lead.id)
+
+    await prisma.notification.create({
+      data: {
+        type: 'CLOSE_ENGINE',
+        title: 'Build Started',
+        message: `Build pipeline started for ${lead.companyName}. Readiness: ${readiness?.score || 0}/100. Worker pipeline running.`,
+        metadata: { conversationId, leadId: lead.id, score: readiness?.score } as Prisma.InputJsonValue,
+      },
+    })
   }
 
   // 6. Handle escalation from Claude

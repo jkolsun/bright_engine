@@ -177,6 +177,9 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
         <div className="relative max-w-4xl mx-auto w-full px-4 sm:px-6 md:px-8 py-32 text-center">
           {location && <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-6 font-medium"><MapPin size={12} className="text-emerald-500/40" />{location}</p>}
           <h1 className="font-display text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-light text-stone-900 mb-6 tracking-tight leading-[1.02]">{lead.companyName}</h1>
+          {wc?.heroSubheadline && (
+            <p className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto mb-8 leading-relaxed">{wc.heroSubheadline}</p>
+          )}
           <div className="w-20 h-0.5 bg-gradient-to-r from-emerald-600 to-emerald-400 mx-auto mb-6 rounded-full" />
           <p className="text-lg sm:text-xl text-stone-500 leading-relaxed max-w-2xl mx-auto mb-8">{wc?.heroHeadline || config.tagline}</p>
           {hasRating && (
@@ -205,6 +208,9 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
           <span className="text-stone-200 hidden sm:inline">•</span>
           <span className="flex items-center gap-1.5 text-stone-500"><Clock size={13} className="text-emerald-600/50" />Same-Day Response</span>
           {location && (<><span className="text-stone-200 hidden sm:inline">•</span><span className="flex items-center gap-1.5 text-stone-500"><MapPin size={13} className="text-emerald-600/50" />{location}</span></>)}
+          {wc?.yearsBadge && (
+            <><span className="text-stone-200 hidden sm:inline">•</span><span className="flex items-center gap-1.5 text-stone-500">{wc.yearsBadge}</span></>
+          )}
         </div>
       </section>
 
@@ -222,6 +228,9 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
                   <div className="flex items-center gap-5">
                     <span className="text-xs text-emerald-500/40 font-mono tabular-nums w-6 font-medium">{String(i + 1).padStart(2, '0')}</span>
                     <h3 className="text-base sm:text-lg font-medium text-stone-800 group-hover:text-emerald-700 transition-colors">{service}</h3>
+                    {wc?.serviceDescriptions?.[service] && (
+                      <p className="text-sm text-gray-400 mt-1">{wc.serviceDescriptions[service]}</p>
+                    )}
                   </div>
                   <ArrowRight size={16} className="text-stone-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </div>
@@ -315,20 +324,28 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
             <h2 className="text-3xl sm:text-4xl font-light text-stone-900">What clients say.</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              { quote: `${lead.companyName} delivered exceptional results — truly top-notch.`, name: 'Client', loc: lead.city || 'Local' },
-              { quote: 'Thorough, transparent, and meticulous from start to finish.', name: 'Homeowner', loc: lead.city || 'Local' },
-              { quote: 'Outstanding quality and a team that genuinely cares.', name: 'Property Owner', loc: lead.city || 'Local' },
-            ].map((r, i) => (
-              <div key={i} className={`bg-white border border-stone-200 rounded-2xl p-8 hover:border-emerald-400/30 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
-                <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={15} className="text-emerald-500 fill-current" />)}</div>
-                <p className="text-stone-600 text-base leading-relaxed mb-5 italic font-light">"{r.quote}"</p>
-                <div className="flex items-center gap-3 text-sm pt-4 border-t border-stone-100">
-                  <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100"><span className="text-emerald-700 font-semibold text-xs">{r.name[0]}</span></div>
-                  <div><span className="font-medium text-stone-800">{r.name}</span><span className="text-stone-400"> — {r.loc}</span></div>
+            {(() => {
+              const testimonials = [
+                ...(wc?.testimonialQuote ? [{
+                  quote: wc.testimonialQuote,
+                  name: wc.testimonialAuthor || 'Verified Customer',
+                  loc: lead.city || 'Local',
+                }] : []),
+                { quote: `Professional, thorough, and the results speak for themselves. Highly recommend ${lead.companyName}.`, name: 'Homeowner', loc: lead.city || 'Local' },
+                { quote: `On time, communicative, and delivered exactly as promised. Will use ${lead.companyName} again.`, name: 'Property Manager', loc: lead.city || 'Local' },
+                { quote: `Already recommended ${lead.companyName} to all our neighbors. Couldn't be happier.`, name: 'Repeat Client', loc: lead.city || 'Local' },
+              ].slice(0, 3)
+              return testimonials.map((r, i) => (
+                <div key={i} className={`bg-white border border-stone-200 rounded-2xl p-8 hover:border-emerald-400/30 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
+                  <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={15} className="text-emerald-500 fill-current" />)}</div>
+                  <p className="text-stone-600 text-base leading-relaxed mb-5 italic font-light">"{r.quote}"</p>
+                  <div className="flex items-center gap-3 text-sm pt-4 border-t border-stone-100">
+                    <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100"><span className="text-emerald-700 font-semibold text-xs">{r.name[0]}</span></div>
+                    <div><span className="font-medium text-stone-800">{r.name}</span><span className="text-stone-400"> — {r.loc}</span></div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            })()}
           </div>
         </div>
       </section>

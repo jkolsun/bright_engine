@@ -18,6 +18,7 @@ export type EscalationGateType =
   | 'TIMELINE_OVERRIDE' // Rush/expedited timeline
   | 'EXTERNAL_DATA_IMPORT' // Import data from external source
   | 'SYSTEM_RULE_CHANGE' // Modify approval gates or system rules
+  | 'PAYMENT_LINK' // Payment link before sending to lead
 
 export interface EscalationRequest {
   id?: string
@@ -25,9 +26,13 @@ export interface EscalationRequest {
   title: string
   description: string
   context?: Record<string, any>
-  relatedId?: string // leadId, clientId, etc.
+  relatedId?: string // legacy — prefer leadId/clientId
+  leadId?: string
+  clientId?: string
+  draftContent?: string // message/content to review before sending
   createdBy?: string // repId or userId who triggered
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  priority?: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT'
   approvedBy?: string // Andrew's userId
   approvalNote?: string
   createdAt?: Date
@@ -57,29 +62,39 @@ export async function createEscalation(
   error?: string
 }> {
   try {
-    // Store in notes/metadata temporarily (could use dedicated table)
-    const escalation = {
-      id: `esc-${Date.now()}`,
-      ...request,
-      status: 'PENDING' as const,
-      createdAt: new Date(),
-    }
+    // Persist to Approval table so it shows in the Approvals UI
+    const approval = await prisma.approval.create({
+      data: {
+        gate: request.gateType,
+        title: request.title,
+        description: request.description,
+        draftContent: request.draftContent || null,
+        leadId: request.leadId || null,
+        clientId: request.clientId || null,
+        requestedBy: request.createdBy || 'system',
+        status: 'PENDING',
+        priority: request.priority || 'NORMAL',
+        metadata: {
+          ...(request.context || {}),
+          ...(request.relatedId ? { relatedId: request.relatedId } : {}),
+        },
+      },
+    })
 
     // Log as critical activity
     await logActivity(
       'ESCALATION',
       `🚨 ESCALATION: ${request.gateType} - ${request.title}`,
       {
-        metadata: escalation,
+        metadata: { approvalId: approval.id, gate: request.gateType },
       }
     )
 
-    // In production: store in database, send alert to Andrew
-    console.log(`[ESCALATION] ${request.gateType}: ${request.title}`)
+    console.log(`[ESCALATION] ${request.gateType}: ${request.title} → Approval ${approval.id}`)
 
     return {
       success: true,
-      escalationId: escalation.id,
+      escalationId: approval.id,
     }
   } catch (error) {
     console.error('Escalation creation error:', error)
@@ -108,7 +123,7 @@ export async function checkSitePublication(clientId: string): Promise<boolean> {
       gateType: 'SITE_PUBLICATION',
       title: `Site publication for ${client.companyName}`,
       description: `Client ${client.companyName} site is being published for the first time`,
-      relatedId: clientId,
+      clientId,
       status: 'PENDING',
     })
     return false
@@ -127,7 +142,7 @@ export async function checkClientRefund(
     gateType: 'CLIENT_REFUND',
     title: `Refund request: $${amount}`,
     description: `Refund of $${amount} requested for client. Reason: ${reason}`,
-    relatedId: clientId,
+    clientId,
     status: 'PENDING',
     context: { amount, reason },
   })
@@ -150,7 +165,7 @@ export async function checkPricingChange(
       gateType: 'PRICING_CHANGE',
       title: `Pricing change: ${percentChange.toFixed(1)}%`,
       description: `Custom pricing request. Original: $${originalPrice}, New: $${newPrice}. Reason: ${reason}`,
-      relatedId: clientId,
+      clientId,
       status: 'PENDING',
       context: { originalPrice, newPrice, percentChange },
     })
@@ -172,7 +187,7 @@ export async function checkAngryClient(
       gateType: 'ANGRY_CLIENT',
       title: `HIGH churn risk: ${complaint.substring(0, 50)}...`,
       description: complaint,
-      relatedId: clientId,
+      clientId,
       status: 'PENDING',
       context: { riskLevel },
     })
@@ -198,7 +213,7 @@ export async function checkLeadDeletion(
     gateType: 'LEAD_DELETION',
     title: `Delete lead: ${lead.companyName}`,
     description: `Request to delete lead. Reason: ${reason}`,
-    relatedId: leadId,
+    leadId,
     status: 'PENDING',
     context: { reason },
   })
@@ -216,7 +231,7 @@ export async function checkStripeRefund(
     gateType: 'STRIPE_REFUND',
     title: `Stripe refund: $${amount}`,
     description: `Refund in Stripe. Reason: ${reason}`,
-    relatedId: paymentId,
+    relatedId: paymentId, // paymentId — not a lead or client
     status: 'PENDING',
     context: { amount, reason },
   })
@@ -254,7 +269,7 @@ export async function checkTimelineOverride(
       gateType: 'TIMELINE_OVERRIDE',
       title: `Expedited timeline: ${requestedDays} days`,
       description: `Client requesting site in ${requestedDays} days (normal: 14 days)`,
-      relatedId: clientId,
+      clientId,
       status: 'PENDING',
       context: { requestedDays },
     })
@@ -293,6 +308,27 @@ export async function checkSystemRuleChange(
     description: `Rule change detected. Type: ${ruleType}. Old: ${JSON.stringify(oldValue)}, New: ${JSON.stringify(newValue)}`,
     status: 'PENDING',
     context: { ruleType, oldValue, newValue },
+  })
+
+  return false // Block until approved
+}
+
+// Gate 11: Payment Link
+export async function checkPaymentLink(
+  leadId: string,
+  phone: string,
+  message: string,
+  paymentUrl: string
+): Promise<boolean> {
+  await createEscalation({
+    gateType: 'PAYMENT_LINK',
+    title: 'Payment link ready to send',
+    description: 'Payment link generated. Approve to deliver via SMS.',
+    leadId,
+    draftContent: message,
+    status: 'PENDING',
+    priority: 'HIGH',
+    context: { phone, paymentUrl },
   })
 
   return false // Block until approved

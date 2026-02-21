@@ -751,6 +751,32 @@ function buildWebsiteCopyPrompt(lead: any, research: SerperResearchData | null, 
   if (rating) parts.push(`RATING: ${rating} stars${reviews ? ` (${reviews} reviews)` : ''}`)
   if (services.length > 0) parts.push(`SERVICES: ${services.slice(0, 8).join(', ')}`)
 
+  // Inject conversation-collected data (highest priority for site copy quality)
+  const qd = lead.qualificationData as Record<string, unknown> | null
+  if (qd && typeof qd === 'object') {
+    const ownerData: string[] = []
+    if (qd.aboutStory) ownerData.push(`OWNER'S OWN WORDS (about their business): "${qd.aboutStory}"`)
+    if (qd.differentiator) ownerData.push(`WHAT MAKES THEM DIFFERENT (owner said): "${qd.differentiator}"`)
+    if (qd.yearsInBusiness) ownerData.push(`YEARS IN BUSINESS: ${qd.yearsInBusiness}`)
+    if (qd.serviceArea) {
+      const area = Array.isArray(qd.serviceArea) ? (qd.serviceArea as string[]).join(', ') : qd.serviceArea
+      ownerData.push(`SERVICE AREA: ${area}`)
+    }
+    if (qd.testimonial) ownerData.push(`REAL CUSTOMER QUOTE (feature this on the site): "${qd.testimonial}"`)
+    if (qd.certifications) {
+      const certs = Array.isArray(qd.certifications) ? (qd.certifications as string[]).join(', ') : qd.certifications
+      ownerData.push(`CERTIFICATIONS/AWARDS: ${certs}`)
+    }
+
+    if (ownerData.length > 0) {
+      parts.push(`\n=== OWNER-PROVIDED DATA (HIGHEST PRIORITY — use over web scraping) ===`)
+      for (const d of ownerData) {
+        parts.push(`  >>> ${d}`)
+      }
+      parts.push(`CRITICAL: The owner's words above are MORE ACCURATE and AUTHENTIC than web research. Use them as the primary source for About sections, value props, and hero copy. Weave their actual language in naturally.`)
+    }
+  }
+
   // Add research artifacts for context
   const usableArtifacts = artifacts.filter(a => a.type !== 'FALLBACK' && a.text.length > 3)
   if (usableArtifacts.length > 0) {
@@ -781,6 +807,10 @@ function buildWebsiteCopyPrompt(lead: any, research: SerperResearchData | null, 
   parts.push(`VP3_DESC: [8-15 words. Specific to this company.]`)
   parts.push(`CLOSING_HEADLINE: [5-10 words. Compelling, not "Ready to Get Started?"]`)
   parts.push(`CLOSING_BODY: [15-25 words. Specific CTA referencing their services or location.]`)
+  parts.push(`TESTIMONIAL_QUOTE: [If a real customer quote was provided above, clean it up for display. If not, write a realistic one referencing their actual services and ${location || 'their area'}. 1-2 sentences.]`)
+  parts.push(`TESTIMONIAL_AUTHOR: [If real quote: "Verified Customer · ${location || 'Local'}". If generated: use a role like "Homeowner" or "Property Manager" · ${location || 'Local'}]`)
+  parts.push(`YEARS_BADGE: [If years in business known: "Serving ${location || 'the area'} for X+ years". If unknown: NONE]`)
+  parts.push(`SERVICE_AREA_TEXT: [If service area known: one sentence about where they serve. If unknown: NONE]`)
 
   // Service descriptions
   if (services.length > 0) {
@@ -813,6 +843,12 @@ function parseWebsiteCopyResponse(raw: string, services: string[]): WebsiteCopy 
     const vp3Desc = get('VP3_DESC')
     const closingHeadline = get('CLOSING_HEADLINE')
     const closingBody = get('CLOSING_BODY')
+    const testimonialQuote = get('TESTIMONIAL_QUOTE')
+    const testimonialAuthor = get('TESTIMONIAL_AUTHOR')
+    const yearsBadgeRaw = get('YEARS_BADGE')
+    const serviceAreaTextRaw = get('SERVICE_AREA_TEXT')
+    const yearsBadge = yearsBadgeRaw && yearsBadgeRaw.toUpperCase() !== 'NONE' ? yearsBadgeRaw : undefined
+    const serviceAreaText = serviceAreaTextRaw && serviceAreaTextRaw.toUpperCase() !== 'NONE' ? serviceAreaTextRaw : undefined
 
     // Validate we got the critical fields
     if (!heroHeadline || !heroSubheadline || !aboutParagraph1) {
@@ -835,6 +871,10 @@ function parseWebsiteCopyResponse(raw: string, services: string[]): WebsiteCopy 
       heroSubheadline,
       aboutParagraph1,
       aboutParagraph2: aboutParagraph2 || aboutParagraph1,
+      testimonialQuote: testimonialQuote || undefined,
+      testimonialAuthor: testimonialAuthor || undefined,
+      yearsBadge,
+      serviceAreaText,
       valueProps: [
         { title: vp1Title || 'Verified & Trusted', description: vp1Desc || '' },
         { title: vp2Title || 'Proven Results', description: vp2Desc || '' },

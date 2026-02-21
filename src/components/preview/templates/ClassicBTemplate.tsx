@@ -219,6 +219,9 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
             <div>
               {location && (<div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-8 border border-white/10"><MapPin size={14} className="text-emerald-300" /><span className="text-sm font-medium text-emerald-200">{location}</span></div>)}
               <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight leading-[1.08]">{wc?.heroHeadline || lead.companyName}</h1>
+              {wc?.heroSubheadline && (
+                <p className="text-lg sm:text-xl text-gray-200 max-w-2xl mx-auto mb-8 leading-relaxed">{wc.heroSubheadline}</p>
+              )}
               <p className="text-base sm:text-lg text-white/55 mb-10 max-w-lg">{config.tagline}</p>
               <div className="flex flex-col sm:flex-row gap-4">
                 {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 bg-white text-green-900 px-8 py-4 rounded-xl font-bold text-base hover:bg-green-50 transition-all shadow-xl"><Phone size={18} />Call Now — Free Estimate</a>)}
@@ -227,6 +230,9 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               <div className="mt-10 flex flex-wrap gap-x-6 gap-y-2 text-white/35 text-sm">
                 <span className="flex items-center gap-1.5"><Shield size={14} />Licensed & Insured</span>
                 {location && <span className="flex items-center gap-1.5"><MapPin size={14} />{location}</span>}
+                {wc?.yearsBadge && (
+                  <span className="flex items-center gap-1.5">{wc.yearsBadge}</span>
+                )}
               </div>
             </div>
             <div className="flex justify-center lg:justify-end">
@@ -256,6 +262,9 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
                   <div className="flex items-center gap-5">
                     <span className="text-xs text-green-300 font-mono tabular-nums w-6 font-bold">{String(i + 1).padStart(2, '0')}</span>
                     <h3 className="text-base sm:text-lg font-semibold text-green-900 group-hover:text-green-700 transition-colors">{service}</h3>
+                    {wc?.serviceDescriptions?.[service] && (
+                      <p className="text-sm text-gray-400 mt-1">{wc.serviceDescriptions[service]}</p>
+                    )}
                   </div>
                   <ArrowRight size={16} className="text-green-300 group-hover:text-green-600 group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </div>
@@ -290,6 +299,9 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               <h2 className="text-3xl sm:text-4xl font-bold text-green-950 leading-tight mb-6">Built on trust. Driven by community.</h2>
               <div className="text-green-800/55 text-base leading-relaxed">
                 <p>{wc?.aboutParagraph1 || `${lead.companyName} delivers trusted ${industryLabel}${location ? ` across ${location}` : ''} — honest work, every time.`}</p>
+                {wc?.aboutParagraph2 && (
+                  <p className="text-gray-500 text-base leading-relaxed mt-4">{wc.aboutParagraph2}</p>
+                )}
               </div>
               <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {(wc?.valueProps || [
@@ -345,20 +357,28 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
             <h2 className="text-3xl sm:text-4xl font-bold text-green-950">What our customers say.</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              { quote: `Outstanding work — professional and exceeded expectations.`, name: 'Sarah M.', loc: lead.city || 'Local' },
-              { quote: `Honest, reliable, and truly skilled. Highly recommend.`, name: 'James R.', loc: lead.city || 'Local' },
-              { quote: 'Great professionalism and care from start to finish.', name: 'Linda K.', loc: lead.city || 'Local' },
-            ].map((r, i) => (
-              <div key={i} className={`bg-green-50/50 border border-green-100 rounded-2xl p-7 sm:p-8 hover:border-green-200 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
-                <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
-                <p className="text-green-800/65 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
-                <div className="flex items-center gap-3 text-sm pt-4 border-t border-green-100">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-200 to-emerald-200 flex items-center justify-center"><span className="text-green-700 font-bold text-xs">{r.name[0]}</span></div>
-                  <div><span className="font-semibold text-green-900">{r.name}</span><span className="text-green-600/40"> — {r.loc}</span></div>
+            {(() => {
+              const testimonials = [
+                ...(wc?.testimonialQuote ? [{
+                  quote: wc.testimonialQuote,
+                  name: wc.testimonialAuthor || 'Verified Customer',
+                  loc: lead.city || 'Local',
+                }] : []),
+                { quote: `Professional, thorough, and the results speak for themselves. Highly recommend ${lead.companyName}.`, name: 'Homeowner', loc: lead.city || 'Local' },
+                { quote: `On time, communicative, and delivered exactly as promised. Will use ${lead.companyName} again.`, name: 'Property Manager', loc: lead.city || 'Local' },
+                { quote: `Already recommended ${lead.companyName} to all our neighbors. Couldn't be happier.`, name: 'Repeat Client', loc: lead.city || 'Local' },
+              ].slice(0, 3)
+              return testimonials.map((r, i) => (
+                <div key={i} className={`bg-green-50/50 border border-green-100 rounded-2xl p-7 sm:p-8 hover:border-green-200 transition-all ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
+                  <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
+                  <p className="text-green-800/65 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
+                  <div className="flex items-center gap-3 text-sm pt-4 border-t border-green-100">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-200 to-emerald-200 flex items-center justify-center"><span className="text-green-700 font-bold text-xs">{r.name[0]}</span></div>
+                    <div><span className="font-semibold text-green-900">{r.name}</span><span className="text-green-600/40"> — {r.loc}</span></div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            })()}
           </div>
         </div>
       </section>

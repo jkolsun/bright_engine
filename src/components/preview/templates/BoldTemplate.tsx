@@ -284,6 +284,9 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           <h1 className="font-display text-[2.75rem] sm:text-6xl md:text-7xl lg:text-[6.5rem] font-black text-white mb-6 tracking-tight leading-[0.95] max-w-4xl">
             {wc?.heroHeadline || lead.companyName}
           </h1>
+          {wc?.heroSubheadline && (
+            <p className="text-lg sm:text-xl text-gray-200 max-w-2xl mb-8 leading-relaxed">{wc.heroSubheadline}</p>
+          )}
 
           {location && (
             <div className="inline-flex items-center gap-2 bg-white/8 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 mb-10">
@@ -343,6 +346,13 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                 <div className="flex justify-center mb-2"><Clock size={12} className="text-orange-400" /></div>
                 <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Response Time</p>
               </div>
+              {wc?.yearsBadge && (
+                <div>
+                  <p className="font-display text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400 mb-1">{wc.yearsBadge}</p>
+                  <div className="h-[12px] mb-2" />
+                  <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Experience</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -365,6 +375,9 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                   <div className="flex items-center gap-6">
                     <span className="text-xs text-gray-600 font-mono tabular-nums w-6 font-bold">{String(i + 1).padStart(2, '0')}</span>
                     <h3 className="text-base sm:text-lg font-bold text-gray-200 group-hover:text-white transition-colors">{service}</h3>
+                    {wc?.serviceDescriptions?.[service] && (
+                      <p className="text-sm text-gray-400 mt-1">{wc.serviceDescriptions[service]}</p>
+                    )}
                   </div>
                   <ArrowRight size={16} className="text-gray-700 group-hover:text-orange-400 group-hover:translate-x-1 transition-all flex-shrink-0" />
                 </div>
@@ -443,6 +456,9 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
               <p className="text-gray-400 leading-relaxed text-base sm:text-lg">
                 {wc?.aboutParagraph1 || `${lead.companyName} — dedicated ${industryLabel} professionals${location ? ` in ${location}` : ''}. We show up on time and get the job done right.`}
               </p>
+              {wc?.aboutParagraph2 && (
+                <p className="text-gray-400 text-base leading-relaxed mt-4">{wc.aboutParagraph2}</p>
+              )}
 
               {/* Value props folded in (replaces old "Why Choose Us" card section) */}
               <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -512,11 +528,18 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
             <h2 className="font-display text-4xl md:text-5xl font-black text-white">What People Say</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              { quote: 'Professional, clean, and affordable. Will absolutely call again.', name: 'Homeowner', loc: location || 'Local' },
-              { quote: 'Fast response, excellent work, and finished ahead of schedule.', name: 'Property Manager', loc: location || 'Local' },
-              { quote: 'Fair pricing and genuinely quality workmanship.', name: 'Repeat Customer', loc: location || 'Local' },
-            ].map((r, i) => (
+            {(() => {
+              const testimonials = [
+                ...(wc?.testimonialQuote ? [{
+                  quote: wc.testimonialQuote,
+                  name: wc.testimonialAuthor || 'Verified Customer',
+                  loc: lead.city || 'Local',
+                }] : []),
+                { quote: `Professional, thorough, and the results speak for themselves. Highly recommend ${lead.companyName}.`, name: 'Homeowner', loc: lead.city || 'Local' },
+                { quote: `On time, communicative, and delivered exactly as promised. Will use ${lead.companyName} again.`, name: 'Property Manager', loc: lead.city || 'Local' },
+                { quote: `Already recommended ${lead.companyName} to all our neighbors. Couldn't be happier.`, name: 'Repeat Client', loc: lead.city || 'Local' },
+              ].slice(0, 3)
+              return testimonials.map((r, i) => (
               <div key={i} className={`bg-gray-950/60 border border-gray-800/40 rounded-2xl p-7 hover:border-orange-500/20 transition-all duration-300 ${i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
                 <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={14} className="text-amber-400 fill-current" />)}</div>
                 <p className="text-gray-300 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
@@ -525,7 +548,8 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                   <div><span className="font-bold text-gray-300">{r.name}</span><span className="text-gray-600"> — {r.loc}</span></div>
                 </div>
               </div>
-            ))}
+              ))
+            })()}
           </div>
         </div>
       </section>

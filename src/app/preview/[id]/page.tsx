@@ -54,6 +54,7 @@ export default async function PreviewPage({ params }: { params: { id: string } }
             enrichedAddress: lead.enrichedAddress || undefined,
             enrichedServices: services,
             enrichedPhotos: photos,
+            logo: lead.logo || undefined,
           }}
           websiteCopy={personalization?.websiteCopy || undefined}
         />

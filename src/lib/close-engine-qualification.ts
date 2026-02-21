@@ -15,20 +15,32 @@ import { prisma } from './db'
 export const CORE_QUESTIONS = [
   {
     id: 'Q1_SERVICES',
-    question: 'What are the top 3 services {companyName} offers that you want highlighted on your site?',
+    question: 'What are the top services {companyName} offers that you want highlighted on your site?',
     dataField: 'services',
     required: true,
   },
   {
-    id: 'Q2_HOURS',
-    question: 'What are your business hours? {hoursContext}',
-    dataField: 'hours',
-    required: false, // Enriched data may have this
+    id: 'Q2_ABOUT',
+    question: 'In a sentence or two, what would you want people to know about {companyName}?',
+    dataField: 'aboutStory',
+    required: true,
   },
   {
-    id: 'Q3_PHOTOS',
-    question: "Do you have a logo and any photos you'd like on the site? You can text them right to this number.",
-    dataField: 'photos',
+    id: 'Q3_DIFFERENTIATOR',
+    question: 'What sets you apart from other {industryLabel} companies in the area?',
+    dataField: 'differentiator',
+    required: true,
+  },
+  {
+    id: 'Q4_SERVICE_AREA',
+    question: 'What areas do you serve? {areaContext}',
+    dataField: 'serviceArea',
+    required: false,
+  },
+  {
+    id: 'Q5_YEARS',
+    question: 'How long has {companyName} been in business?',
+    dataField: 'yearsInBusiness',
     required: false,
   },
 ]
@@ -43,39 +55,73 @@ export function getDynamicFollowUps(
 ): Array<{ id: string; question: string }> {
   const followUps: Array<{ id: string; question: string }> = []
 
-  // No photos from any source
-  if (!lead.enrichedPhotos?.length && !collectedData?.photos?.length && !lead.photos?.length) {
+  // Logo (separated from photos for clarity)
+  if (!lead.logo && !collectedData?.logo) {
     followUps.push({
-      id: 'DYNAMIC_PHOTOS',
-      question: 'Do you have any project photos or team pictures? Sites with real photos convert 2x better than stock images.',
+      id: 'Q6_LOGO',
+      question: 'Do you have a logo you can text us? It goes right on the site header.',
     })
   }
 
-  // Legal industry
-  if (
-    lead.industry?.toUpperCase().includes('LAW') ||
-    lead.industry?.toUpperCase().includes('LEGAL') ||
-    lead.industry?.toUpperCase().includes('ATTORNEY')
-  ) {
+  // Photos — skip if enrichment already has 3+
+  const enrichedPhotos = Array.isArray(lead.enrichedPhotos) ? lead.enrichedPhotos : []
+  const clientPhotos = Array.isArray(lead.photos) ? lead.photos : []
+  const collectedPhotos = Array.isArray(collectedData?.photos) ? collectedData.photos : []
+  if (enrichedPhotos.length < 3 && clientPhotos.length < 1 && collectedPhotos.length < 1) {
     followUps.push({
-      id: 'DYNAMIC_PRACTICE_AREAS',
+      id: 'Q7_PHOTOS',
+      question: 'Any project photos or team pics you can text us? Sites with real photos convert way better.',
+    })
+  }
+
+  // Testimonial
+  if (!collectedData?.testimonial) {
+    followUps.push({
+      id: 'Q8_TESTIMONIAL',
+      question: 'Got a favorite customer review or quote we can put on the site? Even just one.',
+    })
+  }
+
+  // Industry-specific questions
+  const industryUpper = (lead.industry || '').toUpperCase()
+  if (industryUpper.includes('LAW') || industryUpper.includes('LEGAL') || industryUpper.includes('ATTORNEY')) {
+    followUps.push({
+      id: 'Q9_INDUSTRY',
       question: 'What practice areas should we highlight? (e.g., personal injury, family law, criminal defense)',
     })
-  }
-
-  // Restoration industry
-  if (
-    lead.industry?.toUpperCase().includes('RESTORATION') ||
-    lead.industry?.toUpperCase().includes('WATER_DAMAGE')
-  ) {
+  } else if (industryUpper.includes('RESTORATION') || industryUpper.includes('WATER_DAMAGE') || industryUpper.includes('EMERGENCY')) {
     followUps.push({
-      id: 'DYNAMIC_SERVICE_AREA',
-      question: "What's your primary service area? And do you offer 24/7 emergency service we should highlight?",
+      id: 'Q9_INDUSTRY',
+      question: 'Do you offer 24/7 emergency service? That\'s a huge selling point we\'d want on the site.',
+    })
+  } else if (industryUpper.includes('ROOFING') || industryUpper.includes('PLUMBING') || industryUpper.includes('HVAC') || industryUpper.includes('ELECTRIC') || industryUpper.includes('CONTRACTOR')) {
+    followUps.push({
+      id: 'Q9_INDUSTRY',
+      question: 'Any certifications or licenses we should showcase? (BBB, bonded & insured, manufacturer certified, etc.)',
+    })
+  } else if (industryUpper.includes('HEALTH') || industryUpper.includes('DENTAL') || industryUpper.includes('MEDICAL') || industryUpper.includes('CHIRO')) {
+    followUps.push({
+      id: 'Q9_INDUSTRY',
+      question: 'What insurance plans do you accept? Patients always look for that.',
+    })
+  } else {
+    // Generic for other industries
+    followUps.push({
+      id: 'Q9_INDUSTRY',
+      question: 'Any certifications, awards, or memberships we should show on the site?',
     })
   }
 
-  // No existing website
-  if (!lead.website) {
+  // Hours (moved to dynamic — less important for site quality)
+  if (!collectedData?.hours && !lead.enrichedHours) {
+    followUps.push({
+      id: 'Q10_HOURS',
+      question: 'What are your business hours?',
+    })
+  }
+
+  // Style / brand preferences
+  if (!lead.website && !collectedData?.colorPrefs) {
     followUps.push({
       id: 'DYNAMIC_STYLE',
       question: "Any specific colors or style you like? We'll design from scratch to match your brand.",
@@ -90,7 +136,7 @@ export function getDynamicFollowUps(
     })
   }
 
-  return followUps.slice(0, 3) // Max 3 dynamic follow-ups
+  return followUps.slice(0, 5) // Max 5 dynamic follow-ups
 }
 
 // ============================================
@@ -105,21 +151,25 @@ export function getNextQuestion(
   // Check core questions first
   for (const q of CORE_QUESTIONS) {
     if (!questionsAsked.includes(q.id)) {
-      let question = q.question.replace('{companyName}', lead.companyName || 'your company')
+      const industryLabel = (lead.industry || 'local service').toLowerCase().replace(/_/g, ' ')
+      let question = q.question
+        .replace(/\{companyName\}/g, lead.companyName || 'your company')
+        .replace(/\{industryLabel\}/g, industryLabel)
 
-      // Add hours context for Q2
-      if (q.id === 'Q2_HOURS' && lead.enrichedHours) {
-        question = question.replace('{hoursContext}', '(We found some hours online — just confirm or correct them)')
+      // Add service area context for Q4
+      if (q.id === 'Q4_SERVICE_AREA' && (lead.enrichedAddress || lead.city)) {
+        const knownLocation = lead.city || lead.enrichedAddress?.split(',')[0] || ''
+        question = question.replace('{areaContext}', `We see you're in ${knownLocation} — do you serve surrounding areas too?`)
       } else {
-        question = question.replace('{hoursContext}', '')
+        question = question.replace('{areaContext}', 'Just the main cities or counties.')
       }
 
       return { id: q.id, question: question.trim() }
     }
   }
 
-  // Then dynamic follow-ups (max 6 total = 3 core + 3 dynamic)
-  if (questionsAsked.length < 6) {
+  // Then dynamic follow-ups (max 10 total questions)
+  if (questionsAsked.length < 10) {
     const dynamics = getDynamicFollowUps(lead, collectedData)
     for (const d of dynamics) {
       if (!questionsAsked.includes(d.id)) {
@@ -136,12 +186,20 @@ export function getNextQuestion(
 // ============================================
 
 export function isReadyToBuild(collectedData: any, lead: any): boolean {
-  // Minimum: must have at least one service
+  // Must have at least one service
   const services = collectedData?.services || lead.enrichedServices || lead.services
   if (!services || (Array.isArray(services) && services.length === 0)) {
     return false
   }
-  return true // Everything else has fallbacks
+
+  // Must have at least one of aboutStory or differentiator for quality
+  const hasStory = !!collectedData?.aboutStory
+  const hasDiff = !!collectedData?.differentiator
+  if (!hasStory && !hasDiff) {
+    return false
+  }
+
+  return true
 }
 
 // ============================================
@@ -164,7 +222,12 @@ export function formatForSiteBuilder(lead: any, collectedData: any): Record<stri
     ],
     logo: lead.logo || null,
     colorPrefs: collectedData?.colorPrefs || lead.colorPrefs || null,
-    about: collectedData?.about || null, // AI will generate if null
+    about: collectedData?.aboutStory || collectedData?.about || null,
+    differentiator: collectedData?.differentiator || null,
+    yearsInBusiness: collectedData?.yearsInBusiness || null,
+    serviceArea: collectedData?.serviceArea || null,
+    testimonial: collectedData?.testimonial || null,
+    certifications: collectedData?.certifications || null,
     address: lead.enrichedAddress || `${lead.city || ''}, ${lead.state || ''}`.trim() || null,
     rating: lead.enrichedRating || null,
     reviews: lead.enrichedReviews || null,

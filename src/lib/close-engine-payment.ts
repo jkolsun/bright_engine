@@ -90,14 +90,17 @@ export async function sendPaymentLink(conversationId: string): Promise<{ success
   const message = `Looks great! Here's your payment link to go live: ${paymentUrl}\n\n$${config.firstMonthTotal} gets your site built and launched, plus monthly hosting at $${config.monthlyHosting}/month. You can cancel anytime.\n\nOnce you pay, we'll have your site live within 48 hours!`
 
   if (autonomy.requiresApproval) {
-    await prisma.pendingAction.create({
+    await prisma.approval.create({
       data: {
-        conversationId,
+        gate: 'PAYMENT_LINK',
+        title: `Payment Link — ${lead.companyName}`,
+        description: `Payment link ready for ${lead.companyName}. Approve to send via SMS.`,
+        draftContent: message,
         leadId: lead.id,
-        type: 'SEND_PAYMENT_LINK',
-        draftMessage: message,
-        metadata: { paymentUrl },
+        requestedBy: 'system',
         status: 'PENDING',
+        priority: 'HIGH',
+        metadata: { conversationId, phone: lead.phone, paymentUrl },
       },
     })
     await prisma.notification.create({

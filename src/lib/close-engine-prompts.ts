@@ -43,29 +43,66 @@ const STAGE_INSTRUCTIONS: Record<string, (ctx: ConversationContext) => string> =
 
   QUALIFYING: (ctx) => {
     const asked = ctx.questionsAsked || []
-    const remaining = ['Q1_SERVICES', 'Q2_HOURS', 'Q3_PHOTOS'].filter(q => !asked.includes(q))
-    return `You are collecting information to build their website. Ask core questions one at a time. Extract structured data from their answers.
-Core questions: Q1=services they want highlighted, Q2=business hours (confirm enriched data if available), Q3=logo and photos.
-${remaining.length > 0 ? `Still need to ask: ${remaining.join(', ')}.` : 'All core questions answered.'}
-After all 3 answered, decide if you need more info based on what's missing.`
+    const collected = ctx.collectedData || {}
+    const lead = ctx.lead
+    const industryLabel = (lead.industry || 'local service').toLowerCase().replace(/_/g, ' ')
+
+    // Build smart question queue — what still needs to be asked
+    const queue: string[] = []
+    if (!asked.includes('Q1_SERVICES') && !collected.services) queue.push('Q1: What top services to highlight on the site')
+    if (!asked.includes('Q2_ABOUT') && !collected.aboutStory) queue.push('Q2: Quick description of the company in their own words (what would they want people to know)')
+    if (!asked.includes('Q3_DIFFERENTIATOR') && !collected.differentiator) queue.push('Q3: What sets them apart from other ' + industryLabel + ' companies')
+    if (!asked.includes('Q4_SERVICE_AREA') && !collected.serviceArea) {
+      const loc = lead.city || lead.enrichedAddress?.split(',')[0] || ''
+      queue.push(loc ? `Q4: Confirm/expand service area (based in ${loc})` : 'Q4: What areas they serve')
+    }
+    if (!asked.includes('Q5_YEARS') && !collected.yearsInBusiness) queue.push('Q5: How long in business')
+
+    return `You are collecting information to build their website. Ask ONE question at a time. Keep it casual and conversational.
+Questions still needed (in priority order): ${queue.length > 0 ? queue.join(' | ') : 'All core questions answered — transition to COLLECTING_INFO.'}
+RULES:
+- Ask in the order listed. Don't skip ahead.
+- If they answer multiple questions in one message, extract ALL the data and skip those questions.
+- Quick acknowledgment before each new question ("Perfect!" "Love it!" "Got it!").
+- If they provide their company story or differentiator unprompted, extract it immediately.
+- When all 5 core questions are answered, set nextStage to COLLECTING_INFO (NOT readyToBuild yet — there are still follow-up questions).`
   },
 
   COLLECTING_INFO: (ctx) => {
     const lead = ctx.lead
     const collected = ctx.collectedData || {}
-    const gaps: string[] = []
-    if (!collected.services) gaps.push('services')
-    if (!collected.hours) gaps.push('business hours')
-    if (!collected.photos) gaps.push('photos/logo')
+    const asked = ctx.questionsAsked || []
 
-    const industryHint = lead.industry
-      ? `For ${lead.industry.toLowerCase().replace(/_/g, ' ')} businesses, also consider asking about: service areas, specializations, certifications, or seasonal services.`
-      : ''
+    // Check what high-value data is still missing
+    const missing: string[] = []
+    if (!collected.aboutStory) missing.push('company story (Q2_ABOUT)')
+    if (!collected.differentiator) missing.push('what sets them apart (Q3_DIFFERENTIATOR)')
+    if (!lead.logo && !collected.logo) missing.push('logo')
+    if (!collected.testimonial) missing.push('customer testimonial')
 
-    return `You've asked the core questions. Now ask targeted follow-ups based on what's missing.
-${gaps.length > 0 ? `Missing info: ${gaps.join(', ')}.` : 'Core data collected.'}
-${industryHint}
-Maximum 3 more questions. When you have enough to build a good site, set readyToBuild: true and tell them you're starting the build.`
+    // Check photo situation
+    const enrichedPhotos = Array.isArray(lead.enrichedPhotos) ? lead.enrichedPhotos : []
+    const clientPhotos = Array.isArray(lead.photos) ? lead.photos : []
+    if (enrichedPhotos.length < 3 && clientPhotos.length < 1 && !collected.photos) {
+      missing.push('project photos')
+    }
+
+    // Industry-specific
+    const industryUpper = (lead.industry || '').toUpperCase()
+    if (!asked.includes('Q9_INDUSTRY')) {
+      if (industryUpper.includes('LAW') || industryUpper.includes('LEGAL')) missing.push('practice areas')
+      else if (industryUpper.includes('ROOFING') || industryUpper.includes('PLUMBING') || industryUpper.includes('HVAC') || industryUpper.includes('CONTRACTOR')) missing.push('certifications/licenses')
+      else missing.push('certifications or awards')
+    }
+
+    return `Core questions done. Now collect remaining site content to make the site high quality.
+${missing.length > 0 ? `Still useful to ask about: ${missing.join(', ')}.` : 'All critical data collected.'}
+RULES:
+- Ask ONE question at a time. Keep it natural.
+- Maximum 4 more questions in this stage. Prioritize the items listed above.
+- When you have services + (about story OR differentiator) + at least 7 questions answered total, set readyToBuild: true.
+- Tell them: "Perfect, I've got everything I need. We're getting your site built now — you'll have a preview link soon!"
+- If the lead seems impatient or says "that's all" / "just build it", respect that — set readyToBuild: true immediately.`
   },
 
   BUILDING: () =>
@@ -257,13 +294,28 @@ ${formatMessages(messages)}
 You MUST respond with valid JSON only. No text before or after the JSON.
 {
   "replyText": "Your SMS message to the lead",
-  "extractedData": { "services": [...], "hours": "...", "photos": [...], "specialRequests": "..." } or null,
+  "extractedData": {
+    "services": ["service1", "service2"],
+    "aboutStory": "owner's own words about their company",
+    "differentiator": "what makes them different from competitors",
+    "serviceArea": "cities or counties they serve",
+    "yearsInBusiness": "number or description like '15 years'",
+    "testimonial": "customer quote provided by the owner",
+    "certifications": ["BBB", "Licensed & Insured", "etc"],
+    "hours": "business hours",
+    "photos": ["url1"],
+    "logo": "url",
+    "companyName": "confirmed or corrected name",
+    "colorPrefs": "brand colors or style preference",
+    "specialRequests": "anything special they mentioned"
+  } or null,
   "nextStage": "STAGE_NAME" or null (only if stage should change),
-  "questionAsked": "Q1_SERVICES" | "Q2_HOURS" | "Q3_PHOTOS" | "DYNAMIC_1" etc. or null,
+  "questionAsked": "Q1_SERVICES" | "Q2_ABOUT" | "Q3_DIFFERENTIATOR" | "Q4_SERVICE_AREA" | "Q5_YEARS" | "Q6_LOGO" | "Q7_PHOTOS" | "Q8_TESTIMONIAL" | "Q9_INDUSTRY" | "Q10_HOURS" | "DYNAMIC_1" etc. or null,
   "readyToBuild": true/false,
   "escalate": true/false,
   "escalateReason": "reason" or null
-}`
+}
+IMPORTANT: Extract ALL data from their messages. If they mention their years in business, service area, or what makes them different — even if you didn't ask — capture it in extractedData. Every piece of info improves their site.`
 }
 
 // ============================================
