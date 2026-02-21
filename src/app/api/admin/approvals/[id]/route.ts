@@ -20,7 +20,7 @@ export async function PUT(
     }
 
     const { id } = await context.params
-    const { action, denialReason } = await request.json()
+    const { action, denialReason, paymentUrl: overridePaymentUrl } = await request.json()
 
     if (!['approve', 'deny'].includes(action)) {
       return NextResponse.json({ error: 'action must be "approve" or "deny"' }, { status: 400 })
@@ -36,10 +36,15 @@ export async function PUT(
 
     const newStatus = action === 'approve' ? 'APPROVED' : 'DENIED'
 
-    // Store denial reason in metadata if provided
-    const updatedMetadata = action === 'deny' && denialReason
-      ? { ...(approval.metadata as Record<string, unknown> || {}), denialReason }
-      : approval.metadata
+    // Merge metadata updates: denial reason or admin-edited payment URL
+    const existingMeta = (approval.metadata as Record<string, unknown>) || {}
+    let updatedMeta = { ...existingMeta }
+    if (action === 'deny' && denialReason) {
+      updatedMeta = { ...updatedMeta, denialReason }
+    }
+    if (action === 'approve' && overridePaymentUrl && approval.gate === 'PAYMENT_LINK') {
+      updatedMeta = { ...updatedMeta, paymentUrl: overridePaymentUrl }
+    }
 
     const updated = await prisma.approval.update({
       where: { id },
@@ -47,7 +52,7 @@ export async function PUT(
         status: newStatus,
         resolvedBy: session.name || session.email || 'admin',
         resolvedAt: new Date(),
-        metadata: updatedMetadata || undefined,
+        metadata: updatedMeta as any,
       },
     })
 
@@ -119,14 +124,16 @@ async function executeApprovedAction(approval: any) {
   try {
     switch (approval.gate) {
       case 'PAYMENT_LINK': {
-        // Generate Stripe checkout link NOW (at approval time, not upfront)
-        const { generatePaymentLink } = await import('@/lib/close-engine-payment')
+        // Use static Stripe link from metadata (admin may have edited it before approving)
+        const paymentUrl = (approval.metadata as any)?.paymentUrl || ''
+        if (!paymentUrl) {
+          console.error(`[Approvals] No payment URL for approval ${approval.id}`)
+          break
+        }
         const { getPricingConfig } = await import('@/lib/pricing-config')
-        const paymentUrl = await generatePaymentLink(approval.leadId!)
         const pricingConfig = await getPricingConfig()
 
         const { getSystemMessage } = await import('@/lib/system-messages')
-        // Look up lead for firstName
         const paymentLead = approval.leadId ? await prisma.lead.findUnique({ where: { id: approval.leadId }, select: { firstName: true, companyName: true } }) : null
         const { text: paymentMessage } = await getSystemMessage('payment_link', {
           firstName: paymentLead?.firstName || 'there',

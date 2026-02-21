@@ -79,14 +79,20 @@ export async function sendPaymentLink(conversationId: string): Promise<{ success
   const lead = context.lead
   const config = await getPricingConfig()
 
-  // Always create a PAYMENT_LINK approval — Stripe link is generated when Andrew approves.
-  // This ensures the approval is ALWAYS created even if Stripe is down.
+  // Look up the core product's Stripe payment link from Products table
+  const coreProduct = await prisma.upsellProduct.findFirst({
+    where: { isCore: true, active: true },
+    select: { stripeLink: true },
+  })
+  const paymentUrl = coreProduct?.stripeLink || ''
+
+  // Always create a PAYMENT_LINK approval with the Stripe link visible for admin review.
   await prisma.approval.create({
     data: {
       gate: 'PAYMENT_LINK',
       title: `Payment Link — ${lead.companyName}`,
-      description: `${lead.firstName} at ${lead.companyName} is ready to buy. Approve to generate Stripe link and send via SMS.`,
-      draftContent: `Here's your payment link to go live: [generated on approval]\n\n$${config.firstMonthTotal} gets your site built and launched, plus monthly hosting at $${config.monthlyHosting}/month. You can cancel anytime.\n\nOnce you pay, we'll have your site live within 48 hours!`,
+      description: `${lead.firstName} at ${lead.companyName} is ready to buy. Review the Stripe link below, then approve to send via SMS.`,
+      draftContent: `Here's your payment link to go live: ${paymentUrl || '[no link configured]'}\n\n$${config.firstMonthTotal} gets your site built and launched, plus monthly hosting at $${config.monthlyHosting}/month. You can cancel anytime.\n\nOnce you pay, we'll have your site live within 48 hours!`,
       leadId: lead.id,
       requestedBy: 'system',
       status: 'PENDING',
@@ -95,6 +101,7 @@ export async function sendPaymentLink(conversationId: string): Promise<{ success
         conversationId,
         phone: lead.phone,
         email: lead.email || null,
+        paymentUrl,
         pricing: {
           firstMonthTotal: config.firstMonthTotal,
           monthlyHosting: config.monthlyHosting,

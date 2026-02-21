@@ -43,6 +43,7 @@ export default function ApprovalsPage() {
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [denyingId, setDenyingId] = useState<string | null>(null)
   const [denialReason, setDenialReason] = useState('')
+  const [editedPaymentUrls, setEditedPaymentUrls] = useState<Record<string, string>>({})
 
   const loadApprovals = async () => {
     try {
@@ -73,10 +74,15 @@ export default function ApprovalsPage() {
   const handleApprove = async (id: string) => {
     setProcessingId(id)
     try {
+      const body: Record<string, unknown> = { action: 'approve' }
+      // If admin edited the payment URL, pass it along
+      if (editedPaymentUrls[id] !== undefined) {
+        body.paymentUrl = editedPaymentUrls[id]
+      }
       const res = await fetch(`/api/admin/approvals/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'approve' }),
+        body: JSON.stringify(body),
       })
       if (res.ok) {
         setApprovals(prev => prev.filter(a => a.id !== id))
@@ -302,18 +308,43 @@ export default function ApprovalsPage() {
                     </a>
                   )}
 
-                  {/* Stripe link visible for payment approvals */}
-                  {approval.gate === 'PAYMENT_LINK' && paymentUrl && (
-                    <div className="mt-2 p-2 bg-green-50 rounded-lg border border-green-200">
-                      <p className="text-xs font-medium text-green-700 mb-1">Stripe Payment Link:</p>
-                      <a
-                        href={paymentUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-green-800 underline break-all hover:text-green-900"
-                      >
-                        {paymentUrl}
-                      </a>
+                  {/* Stripe link visible + editable for payment approvals */}
+                  {approval.gate === 'PAYMENT_LINK' && (
+                    <div className="mt-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                      <p className="text-xs font-medium text-green-700 mb-1.5">Stripe Payment Link:</p>
+                      {isPending ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={editedPaymentUrls[approval.id] ?? paymentUrl ?? ''}
+                            onChange={e => setEditedPaymentUrls(prev => ({ ...prev, [approval.id]: e.target.value }))}
+                            placeholder="https://buy.stripe.com/..."
+                            className="flex-1 text-sm font-mono px-2 py-1.5 border border-green-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          />
+                          {(editedPaymentUrls[approval.id] ?? paymentUrl) && (
+                            <a
+                              href={editedPaymentUrls[approval.id] ?? paymentUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-shrink-0 p-1.5 text-green-700 hover:text-green-900 hover:bg-green-100 rounded"
+                              title="Open link"
+                            >
+                              <ExternalLink size={14} />
+                            </a>
+                          )}
+                        </div>
+                      ) : paymentUrl ? (
+                        <a
+                          href={paymentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-green-800 underline break-all hover:text-green-900"
+                        >
+                          {paymentUrl}
+                        </a>
+                      ) : (
+                        <span className="text-sm text-gray-500 italic">No link configured</span>
+                      )}
                     </div>
                   )}
 
