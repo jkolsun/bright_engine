@@ -313,7 +313,7 @@ export async function processCloseEngineInbound(
       select: { content: true },
     })
 
-    if (!await shouldAIRespond(enrichedMessage, lastOutbound?.content || null)) {
+    if (!await shouldAIRespond(enrichedMessage, lastOutbound?.content || null, context.conversation.stage)) {
       console.log(`[CloseEngine] Skipping response — conversation awareness: "${inboundMessage.substring(0, 40)}"`)
       return // Stay silent
     }
@@ -439,11 +439,49 @@ export async function processCloseEngineInbound(
       if (extracted.colorPrefs || extracted.colors) { bsUpdate.colorPrefsCollected = true }
 
       if (Object.keys(bsUpdate).length > 0) {
-        await prisma.buildStatus.upsert({
+        // Inherit global auto-push for new records
+        let globalAutoPush = true
+        try {
+          const setting = await prisma.settings.findUnique({ where: { key: 'globalAutoPush' } })
+          if (setting?.value && typeof setting.value === 'object' && 'enabled' in (setting.value as Record<string, unknown>)) {
+            globalAutoPush = (setting.value as Record<string, unknown>).enabled !== false
+          }
+        } catch { /* default to true */ }
+
+        const updatedBS = await prisma.buildStatus.upsert({
           where: { leadId: lead.id },
-          create: { leadId: lead.id, ...bsUpdate },
+          create: { leadId: lead.id, autoPush: globalAutoPush, ...bsUpdate },
           update: bsUpdate,
         })
+
+        // Auto-push check: if autoPush is ON and services are collected, trigger build
+        if (updatedBS.autoPush && updatedBS.servicesCollected && updatedBS.status !== 'building') {
+          await prisma.buildStatus.update({
+            where: { leadId: lead.id },
+            data: { status: 'building', lastPushedAt: new Date() },
+          })
+          // Only push to QA if not already in site pipeline
+          const currentLead = await prisma.lead.findUnique({
+            where: { id: lead.id },
+            select: { buildStep: true, companyName: true },
+          })
+          const siteBuildSteps = ['QA_REVIEW', 'EDITING', 'QA_APPROVED', 'CLIENT_REVIEW', 'CLIENT_APPROVED', 'LAUNCHING', 'LIVE']
+          if (!currentLead?.buildStep || !siteBuildSteps.includes(currentLead.buildStep)) {
+            await prisma.lead.update({
+              where: { id: lead.id },
+              data: { buildStep: 'QA_REVIEW' },
+            })
+            await prisma.notification.create({
+              data: {
+                type: 'SITE_QA_READY',
+                title: 'Auto-Push: Build Ready',
+                message: `Auto-pushed build for ${currentLead?.companyName || lead.companyName}. Ready for QA review.`,
+                metadata: { leadId: lead.id, autoPush: true },
+              },
+            })
+            console.log(`[BuildStatus] Auto-pushed ${lead.companyName} to QA_REVIEW`)
+          }
+        }
       }
     } catch (err) {
       console.error('[BuildStatus] Auto-update failed:', err)
@@ -693,6 +731,10 @@ export async function processCloseEngineInbound(
  * - Longer than 4 words → RESPOND (probably not just an ack)
  * - Contains a request or new info → RESPOND
  *
+ * Stage-aware: In PREVIEW_SENT, EDIT_LOOP, PENDING_APPROVAL, PAYMENT_SENT
+ * stages, acceptance signals ("looks good", "perfect", "let's do it") ALWAYS
+ * get a response — they trigger the payment flow.
+ *
  * Respects the conversationEnderEnabled setting — if toggled OFF, always responds.
  * The AI can still send proactive/scheduled messages later.
  * This only skips the immediate response.
@@ -700,6 +742,7 @@ export async function processCloseEngineInbound(
 export async function shouldAIRespond(
   inboundMessage: string,
   lastOutboundContent: string | null,
+  stage?: string,
 ): Promise<boolean> {
   const { isConversationEnder, getSmartChatSettings } = require('./message-batcher')
 
@@ -707,6 +750,16 @@ export async function shouldAIRespond(
   const settings = await getSmartChatSettings()
   if (!settings.conversationEnderEnabled) {
     return true // Setting disabled — always respond
+  }
+
+  // In preview/payment stages, acceptance signals should ALWAYS get a response.
+  // "perfect", "great", "awesome" are enders in normal conversation but
+  // they're approval signals when the client is reviewing a preview.
+  if (stage && ['PREVIEW_SENT', 'EDIT_LOOP', 'PENDING_APPROVAL', 'PAYMENT_SENT'].includes(stage)) {
+    if (isClientAcceptance(inboundMessage)) {
+      console.log(`[SmartChat] Acceptance signal in ${stage} stage — responding: "${inboundMessage.slice(0, 40)}"`)
+      return true
+    }
   }
 
   // Use SmartChat conversation-ender detection
@@ -804,8 +857,10 @@ const ACCEPTANCE_PHRASES = [
   'send the link', 'send me the link', 'send payment', 'how do i pay',
   'ready to pay', 'take my money', 'shut up and take my money',
   'i\'m in', 'im in', 'i\'m ready', 'im ready',
-  'perfect', 'go ahead', 'approved', 'approve it',
+  'perfect', 'great', 'awesome', 'go ahead', 'approved', 'approve it',
   'make it live', 'go live', 'launch it', 'publish it',
+  'sounds good', 'this is great', 'that\'s great', 'thats great',
+  'yes', 'yeah', 'yep', 'yup',
 ]
 
 function isClientAcceptance(message: string): boolean {

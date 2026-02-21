@@ -4,6 +4,8 @@ import { useRef, useState } from 'react';
 
 const ACCEPTED_TYPES = 'image/jpeg,image/png,image/webp,image/svg+xml';
 
+const DEFAULT_COLORS = { primary: '#2563EB', secondary: '#1E40AF', accent: '#F59E0B' };
+
 interface Step8Props {
   data: Record<string, any>;
   onChange: (updates: Record<string, any>) => void;
@@ -16,6 +18,7 @@ export default function Step8Logo({ data, onChange, onUpload }: Step8Props) {
   const [error, setError] = useState<string | null>(null);
 
   const logoUrl: string | null = data.logoUrl || null;
+  const colors = data.colorPrefs || DEFAULT_COLORS;
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -35,7 +38,6 @@ export default function Step8Logo({ data, onChange, onUpload }: Step8Props) {
       setError('Something went wrong during upload.');
     } finally {
       setUploading(false);
-      // Reset file input so the same file can be re-selected
       if (fileRef.current) {
         fileRef.current.value = '';
       }
@@ -46,13 +48,17 @@ export default function Step8Logo({ data, onChange, onUpload }: Step8Props) {
     onChange({ logoUrl: null });
   };
 
+  const updateColor = (key: string, value: string) => {
+    onChange({ colorPrefs: { ...colors, [key]: value } });
+  };
+
   return (
     <div className="w-full max-w-lg mx-auto">
       <h2 className="text-2xl font-bold text-gray-900 mb-1">
-        Company Logo
+        Logo &amp; Brand Colors
       </h2>
       <p className="text-gray-500 mb-6 text-sm">
-        Upload your company logo. We will use it on your website and marketing materials.
+        Upload your company logo and choose your brand colors for the website.
       </p>
 
       <div>
@@ -165,6 +171,60 @@ export default function Step8Logo({ data, onChange, onUpload }: Step8Props) {
         {error && (
           <p className="mt-2 text-sm text-red-600">{error}</p>
         )}
+      </div>
+
+      {/* Brand Colors */}
+      <div className="mt-6 pt-6 border-t border-gray-100">
+        <p className="text-sm font-medium text-gray-700 mb-3">Brand Colors</p>
+        <p className="text-xs text-gray-400 mb-4">
+          Pick your brand colors. These will be used for your website design.
+        </p>
+
+        <div className="space-y-3">
+          {[
+            { key: 'primary', label: 'Primary Color' },
+            { key: 'secondary', label: 'Secondary Color' },
+            { key: 'accent', label: 'Accent Color' },
+          ].map(({ key, label }) => (
+            <div key={key} className="flex items-center gap-3">
+              <input
+                type="color"
+                value={colors[key] || DEFAULT_COLORS[key as keyof typeof DEFAULT_COLORS]}
+                onChange={(e) => updateColor(key, e.target.value)}
+                className="w-10 h-10 rounded-lg border border-gray-300 cursor-pointer p-0.5"
+              />
+              <div className="flex-1">
+                <label className="block text-xs text-gray-500 mb-0.5">{label}</label>
+                <input
+                  type="text"
+                  value={colors[key] || DEFAULT_COLORS[key as keyof typeof DEFAULT_COLORS]}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (/^#[0-9A-Fa-f]{0,6}$/.test(val)) {
+                      updateColor(key, val);
+                    }
+                  }}
+                  placeholder="#000000"
+                  className="w-28 rounded border border-gray-300 px-2 py-1 text-sm font-mono text-gray-900
+                             focus:border-blue-600 focus:ring-1 focus:ring-blue-600/20 focus:outline-none"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Color Preview */}
+        <div className="mt-4 flex items-center gap-2">
+          <span className="text-xs text-gray-400">Preview:</span>
+          {['primary', 'secondary', 'accent'].map((key) => (
+            <div
+              key={key}
+              className="w-8 h-8 rounded-full border border-gray-200 shadow-sm"
+              style={{ backgroundColor: colors[key] || DEFAULT_COLORS[key as keyof typeof DEFAULT_COLORS] }}
+              title={key}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

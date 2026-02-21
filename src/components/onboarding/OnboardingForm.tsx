@@ -18,9 +18,9 @@ const STEP_TITLES = [
   'Service Area',
   'Your Story',
   'What Sets You Apart',
-  'Experience',
-  'Testimonial',
-  'Logo',
+  'Experience & Hours',
+  'Testimonials',
+  'Logo & Colors',
   'Photos',
   'Review & Submit',
 ]

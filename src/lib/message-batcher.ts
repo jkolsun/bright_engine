@@ -89,6 +89,29 @@ const CONVERSATION_ENDERS = new Set([
   'noted', 'understood', 'aight',
 ])
 
+// ── Acceptance signal detection ──
+// These phrases indicate client approval (e.g. "looks good" on a preview).
+// They overlap with enders ("perfect", "great") but should NEVER be silenced
+// because the batcher doesn't know the conversation stage. Let the processor
+// handle stage-aware ender detection instead.
+const ACCEPTANCE_PHRASES = [
+  'looks good', 'looks great', 'looks perfect', 'looks amazing', 'looks awesome',
+  'love it', 'i love it', 'looks beautiful',
+  'let\'s do it', 'lets do it', 'let\'s go', 'lets go',
+  'i\'ll take it', 'ill take it', 'i want it',
+  'sign me up', 'ready to go', 'let\'s move forward', 'lets move forward',
+  'send the link', 'send me the link', 'send payment', 'how do i pay',
+  'ready to pay', 'take my money', 'shut up and take my money',
+  'i\'m in', 'im in', 'i\'m ready', 'im ready',
+  'go ahead', 'approved', 'approve it',
+  'make it live', 'go live', 'launch it', 'publish it',
+]
+
+function isAcceptanceSignal(message: string): boolean {
+  const lower = message.toLowerCase().trim()
+  return ACCEPTANCE_PHRASES.some(phrase => lower.includes(phrase))
+}
+
 const EMOJI_ENDERS = new Set([
   '\uD83D\uDC4D',     // 👍
   '\uD83D\uDC4D\uD83C\uDFFB', // 👍🏻
@@ -166,7 +189,7 @@ export async function addToBatch(
 
   if (settings.batchWindowMs <= 0) {
     // Batching disabled — process immediately but still check conversation-ender
-    if (settings.conversationEnderEnabled && isConversationEnder(body) && mediaUrls.length === 0) {
+    if (settings.conversationEnderEnabled && isConversationEnder(body) && !isAcceptanceSignal(body) && mediaUrls.length === 0) {
       console.log(`[SmartChat] Conversation-ender detected, skipping AI response: "${body.slice(0, 50)}"`)
       return true // Consumed — don't process
     }
@@ -221,8 +244,8 @@ async function processBatch(
 
   console.log(`[SmartChat] Processing batch for conversation ${conversationId.slice(0, 8)}... (${batch.messages.length} messages)`)
 
-  // Check conversation-ender on the combined batch
-  if (settings.conversationEnderEnabled && isConversationEnder(combinedBody) && allMediaUrls.length === 0) {
+  // Check conversation-ender on the combined batch (but never block acceptance signals)
+  if (settings.conversationEnderEnabled && isConversationEnder(combinedBody) && !isAcceptanceSignal(combinedBody) && allMediaUrls.length === 0) {
     console.log(`[SmartChat] Batch is all conversation-enders, skipping AI response: "${combinedBody.slice(0, 80)}"`)
     return
   }

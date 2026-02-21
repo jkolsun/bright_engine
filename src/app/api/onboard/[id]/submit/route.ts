@@ -69,6 +69,7 @@ export async function POST(
       directUpdates.enrichedPhotos = allPhotos
     }
     if (formData.hours !== undefined) directUpdates.hours = formData.hours
+    if (formData.colorPrefs !== undefined) directUpdates.colorPrefs = formData.colorPrefs
 
     // ── 2. Merge qualification-related fields into qualificationData ──
     const existingQualData = (lead.qualificationData as Record<string, any>) ?? {}
@@ -82,6 +83,18 @@ export async function POST(
     else if (formData.testimonial !== undefined) qualificationFields.testimonial = formData.testimonial
     if (formData.testimonialName !== undefined) qualificationFields.reviewerName = formData.testimonialName
     if (formData.certifications !== undefined) qualificationFields.certifications = formData.certifications
+    // Testimonials array (multi-testimonial support)
+    if (Array.isArray(formData.testimonials) && formData.testimonials.length > 0) {
+      qualificationFields.testimonials = formData.testimonials
+    }
+    // Social media links
+    const socialMedia: Record<string, string> = {}
+    if (formData.socialFacebook) socialMedia.facebook = formData.socialFacebook
+    if (formData.socialInstagram) socialMedia.instagram = formData.socialInstagram
+    if (formData.socialGoogle) socialMedia.google = formData.socialGoogle
+    if (Object.keys(socialMedia).length > 0) {
+      qualificationFields.socialMedia = socialMedia
+    }
 
     const mergedQualData = { ...existingQualData, ...qualificationFields }
 

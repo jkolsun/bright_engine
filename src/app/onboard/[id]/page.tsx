@@ -25,6 +25,7 @@ export default async function OnboardPage({
       logo: true,
       photos: true,
       hours: true,
+      colorPrefs: true,
       onboardingData: true,
       onboardingStep: true,
       onboardingStatus: true,
@@ -77,6 +78,12 @@ export default async function OnboardPage({
     testimonial: existingQd.testimonial || '',
     reviewerName: existingQd.reviewerName || '',
     certifications: existingQd.certifications || '',
+    testimonials: (existingQd.testimonials as any[]) || [],
+    hours: lead.hours || null,
+    colorPrefs: lead.colorPrefs || null,
+    socialFacebook: (existingQd.socialMedia as any)?.facebook || '',
+    socialInstagram: (existingQd.socialMedia as any)?.instagram || '',
+    socialGoogle: (existingQd.socialMedia as any)?.google || '',
     // Override with saved onboarding data (most recent)
     ...(lead.onboardingData && typeof lead.onboardingData === 'object'
       ? lead.onboardingData as Record<string, unknown>

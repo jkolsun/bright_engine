@@ -317,6 +317,7 @@ export default function SettingsPage() {
   const [editingScenario, setEditingScenario] = useState<string | null>(null)
   const [firstMessageTemplates, setFirstMessageTemplates] = useState<Record<string, string>>({})
   const [qualifyingFlow, setQualifyingFlow] = useState<Record<string, string>>({})
+  const [paymentFlow, setPaymentFlow] = useState<Record<string, string>>({})
 
   // SmartChat settings
   const [smartChat, setSmartChat] = useState({
@@ -451,6 +452,7 @@ export default function SettingsPage() {
         setScenarioTemplates(s.close_engine_scenarios.scenarios || {})
         setFirstMessageTemplates(s.close_engine_scenarios.firstMessages || {})
         setQualifyingFlow(s.close_engine_scenarios.qualifyingFlow || {})
+        setPaymentFlow(s.close_engine_scenarios.paymentFlow || {})
       }
       if (s.smart_chat && typeof s.smart_chat === 'object') {
         setSmartChat(prev => ({ ...prev, ...s.smart_chat }))
@@ -2730,6 +2732,100 @@ export default function SettingsPage() {
                     </div>
                   </Card>
 
+                  {/* Payment Flow */}
+                  <Card className="p-6">
+                    <SectionHeader
+                      title="Payment Flow"
+                      description="The messages sent when a lead approves their preview and moves to payment. This is the Stripe checkout flow."
+                    />
+                    <div className="space-y-1 mb-5">
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold">1</div>
+                          <span>Approval Ack</span>
+                        </div>
+                        <div className="w-6 h-px bg-gray-300" />
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold">2</div>
+                          <span>Payment Link</span>
+                        </div>
+                        <div className="w-6 h-px bg-gray-300" />
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-bold">3</div>
+                          <span>Follow-up</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      {[
+                        {
+                          key: 'TEXT_1_APPROVAL_ACK', step: 1, label: 'Approval Acknowledgment',
+                          desc: 'AI sends this when the lead says "looks good", "perfect", etc. Confirms their approval.',
+                          default: 'Awesome, glad you like it {firstName}! Let me get your payment link ready so we can get {companyName} live.',
+                          hint: 'AI adapts this naturally. Triggers when lead approves the preview.',
+                        },
+                        {
+                          key: 'TEXT_2_PAYMENT_LINK', step: 2, label: 'Payment Link Message',
+                          desc: 'System message sent with the Stripe link after admin approves.',
+                          default: "Here's your payment link to go live: {paymentLink}\n\n{firstMonthTotal} gets your site built and launched, plus monthly hosting at {monthlyHosting}/month. You can cancel anytime.\n\nOnce you pay, we'll have your site live within 48 hours!",
+                          hint: 'Variables: {paymentLink} {firstMonthTotal} {monthlyHosting} {firstName} {companyName}',
+                        },
+                        {
+                          key: 'TEXT_3_PAYMENT_FOLLOWUP', step: 3, label: 'Payment Follow-up',
+                          desc: 'First follow-up if no payment after 4 hours.',
+                          default: 'Hey {firstName}, just checking — any questions about getting your site live?',
+                          hint: 'Additional follow-ups at 24h, 48h, 72h are in Automated Messages.',
+                        },
+                      ].map(({ key, step, label, desc, default: defaultTemplate, hint }) => {
+                        const customTemplate = paymentFlow[key] || ''
+                        return (
+                          <div key={key} className="border rounded-lg overflow-hidden">
+                            <div className="p-4">
+                              <div className="flex items-start gap-3 mb-3">
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${customTemplate ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                                  {step}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-gray-900 text-sm">{label}</span>
+                                    {customTemplate && <span className="text-[10px] bg-emerald-50 text-emerald-600 font-medium px-1.5 py-0.5 rounded">Custom</span>}
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                                </div>
+                              </div>
+                              <textarea
+                                className="w-full p-3 border rounded-md text-sm resize-y min-h-[80px] focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                                value={customTemplate || defaultTemplate}
+                                onChange={(e) => setPaymentFlow(prev => ({ ...prev, [key]: e.target.value }))}
+                                placeholder={defaultTemplate}
+                              />
+                              <div className="flex items-center justify-between mt-1.5">
+                                <p className="text-xs text-gray-400">{hint}</p>
+                                {customTemplate && (
+                                  <button onClick={() => setPaymentFlow(prev => { const u = { ...prev }; delete u[key]; return u })} className="text-xs text-red-500 hover:text-red-700">Reset to default</button>
+                                )}
+                              </div>
+                            </div>
+                            {step < 3 && (
+                              <div className="px-4 pb-3">
+                                <div className="flex items-center gap-2 text-[10px] text-gray-400 uppercase tracking-wider">
+                                  <div className="h-px flex-1 bg-gray-200" />
+                                  <span>{step === 1 ? 'admin approves' : 'lead responds'}</span>
+                                  <div className="h-px flex-1 bg-gray-200" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                      <p className="text-xs text-emerald-800">
+                        <strong>How it works:</strong> When a lead approves their preview, the AI sends Step 1. Then a PAYMENT_LINK approval is created for you to review. When you approve it, Step 2 is sent with the Stripe link. If they don&apos;t pay, follow-ups fire at 4h, 24h, 48h, 72h (see Automated Messages tab).
+                      </p>
+                    </div>
+                  </Card>
+
                   {/* Stage Templates */}
                   <Card className="p-6">
                     <SectionHeader title="Stage Templates" description="Customize AI instructions for each conversation stage. Leave blank to use defaults." />
@@ -2804,6 +2900,7 @@ export default function SettingsPage() {
                         scenarios: scenarioTemplates,
                         firstMessages: firstMessageTemplates,
                         qualifyingFlow,
+                        paymentFlow,
                       })}
                       saving={savingKey === 'close_engine_scenarios'}
                       saved={savedKey === 'close_engine_scenarios'}

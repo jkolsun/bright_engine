@@ -43,7 +43,7 @@ const DEFAULT_QUALIFYING_FLOW: Record<string, string> = {
   TEXT_3_FORM_LINK: 'Perfect here\'s a quick form to fill out with your business info, logo, and photos. Takes about 5-10 minutes and we\'ll have your site built from it: {formUrl}',
 }
 
-const STAGE_INSTRUCTIONS: Record<string, (ctx: ConversationContext, qf?: Record<string, string>) => string> = {
+const STAGE_INSTRUCTIONS: Record<string, (ctx: ConversationContext, qf?: Record<string, string>, pf?: Record<string, string>) => string> = {
   INITIATED: () =>
     `Send the opening message. Reference how they showed interest (see entry point). Ask if they currently have a website or if this would be their first one (Q1). Be warm and excited.`,
 
@@ -200,17 +200,25 @@ NEVER send a Stripe URL or payment link directly. The system handles that.
 Current edit round: ${editRounds}/3.`
   },
 
-  PAYMENT_SENT: () =>
-    `Payment link has been sent. If they have questions about pricing, answer honestly: {{siteBuildFee}} one-time for the build, {{monthlyHosting}}/month for hosting, cancel anytime.
-Don't be pushy. If they haven't paid and reach out, gently remind them the link is ready.`,
+  PAYMENT_SENT: (_ctx, _qf, pf) => {
+    const followUp = pf?.TEXT_3_PAYMENT_FOLLOWUP || "Hey {firstName}, just checking — any questions about getting your site live?"
+    return `Payment link has been sent. If they have questions about pricing, answer honestly: {{siteBuildFee}} one-time for the build, {{monthlyHosting}}/month for hosting, cancel anytime.
+Don't be pushy. If they haven't paid and reach out, gently remind them the link is ready.
+${followUp ? `\nFollow-up approach (adapt naturally): "${followUp}"` : ''}`
+  },
 
   STALLED: (ctx) =>
     `The lead hasn't responded in a while. Send a friendly, low-pressure follow-up. Not desperate.
 Something like "Hey ${ctx.lead.firstName}, just checking in — still interested in getting your site live?"
 Keep it short.`,
 
-  PENDING_APPROVAL: () =>
-    `Waiting for internal approval. If the lead messages, let them know the team is reviewing and will get back to them shortly.`,
+  PENDING_APPROVAL: (_ctx, _qf, pf) => {
+    const ack = pf?.TEXT_1_APPROVAL_ACK || ''
+    return `The lead approved their preview. A payment link approval has been created for admin review. The system will send the Stripe link once admin approves.
+${ack ? `\nApproval acknowledgment style (adapt naturally): "${ack}"` : ''}
+If the lead messages while waiting, let them know we're getting their payment link ready — it should be coming shortly.
+Do NOT send any payment URLs yourself. The system handles that.`
+  },
 
   COMPLETED: () =>
     `This conversation is complete. The lead has paid and the site is being set up. If they message, congratulate them and let them know the team will be in touch for onboarding.`,
@@ -289,6 +297,9 @@ export async function buildPreClientSystemPrompt(context: ConversationContext): 
     _formBaseUrl: formBaseUrl,
   }
 
+  // Payment flow templates
+  const paymentFlowTemplates = templates?.paymentFlow || {}
+
   // Get stage-specific instructions (custom override takes priority)
   let stageInstructions: string
   if (hasOverride) {
@@ -296,7 +307,7 @@ export async function buildPreClientSystemPrompt(context: ConversationContext): 
   } else {
     const stageInstructionFn = STAGE_INSTRUCTIONS[stage]
     stageInstructions = stageInstructionFn
-      ? stageInstructionFn(context, qualifyingFlow)
+      ? stageInstructionFn(context, qualifyingFlow, paymentFlowTemplates)
       : `Unknown stage: ${stage}. Respond helpfully and set escalate: true.`
   }
 
@@ -527,7 +538,7 @@ You MUST respond with valid JSON only. No text before or after the JSON.
 let scenarioCache: { data: any; ts: number } | null = null
 const SCENARIO_CACHE_TTL = 60_000 // 1 minute
 
-async function getScenarioTemplates(): Promise<{ scenarios: Record<string, { instructions_override: string; enabled: boolean }>; firstMessages: Record<string, string>; qualifyingFlow?: Record<string, string> } | null> {
+async function getScenarioTemplates(): Promise<{ scenarios: Record<string, { instructions_override: string; enabled: boolean }>; firstMessages: Record<string, string>; qualifyingFlow?: Record<string, string>; paymentFlow?: Record<string, string> } | null> {
   // Simple in-memory cache to avoid hitting DB on every message
   if (scenarioCache && Date.now() - scenarioCache.ts < SCENARIO_CACHE_TTL) {
     return scenarioCache.data

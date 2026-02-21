@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import ToggleSwitch from '@/components/ui/toggle-switch'
 import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import {
@@ -128,6 +129,10 @@ function MessagesPageInner() {
   const [buildStatus, setBuildStatus] = useState<any>(null)
   const [pushingBuild, setPushingBuild] = useState(false)
 
+  // Global Auto-Push
+  const [globalAutoPush, setGlobalAutoPush] = useState(true)
+  const [globalAutoPushLoaded, setGlobalAutoPushLoaded] = useState(false)
+
   // Search
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -148,6 +153,48 @@ function MessagesPageInner() {
     checkTwilioStatus()
     loadMessages()
     loadCloseConversations()
+    loadGlobalAutoPush()
+  }, [])
+
+  // Load global auto-push setting
+  const loadGlobalAutoPush = async () => {
+    try {
+      const res = await fetch('/api/settings?key=globalAutoPush')
+      if (res.ok) {
+        const data = await res.json()
+        // Default to true if not set
+        setGlobalAutoPush(data.value?.enabled !== false)
+      }
+    } catch { /* default stays true */ }
+    finally { setGlobalAutoPushLoaded(true) }
+  }
+
+  const handleToggleGlobalAutoPush = async () => {
+    const newValue = !globalAutoPush
+    setGlobalAutoPush(newValue)
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'globalAutoPush', value: { enabled: newValue } }),
+      })
+    } catch {
+      // Revert on failure
+      setGlobalAutoPush(!newValue)
+    }
+  }
+
+  // Load build status when viewing a close-engine conversation
+  const loadBuildStatus = useCallback(async (leadId: string) => {
+    try {
+      const res = await fetch(`/api/build-status/${leadId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setBuildStatus(data)
+      } else {
+        setBuildStatus(null)
+      }
+    } catch { setBuildStatus(null) }
   }, [])
 
   // Adaptive polling: 3s in conversation view, 10s in inbox
@@ -157,11 +204,13 @@ function MessagesPageInner() {
       loadMessages()
       loadCloseConversations()
       if (conversationDetail) loadConversationDetail(conversationDetail.id)
+      // Auto-refresh build status when viewing a close-engine conversation
+      if (selectedCloseConv?.leadId) loadBuildStatus(selectedCloseConv.leadId)
     }, interval)
     return () => {
       if (refreshRef.current) clearInterval(refreshRef.current)
     }
-  }, [viewMode, conversationDetail?.id])
+  }, [viewMode, conversationDetail?.id, selectedCloseConv?.leadId, loadBuildStatus])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -296,19 +345,6 @@ function MessagesPageInner() {
     if (viewMode === 'settings') loadAiSettings()
   }, [viewMode, loadAiSettings])
 
-  // Load build status when viewing a close-engine conversation
-  const loadBuildStatus = useCallback(async (leadId: string) => {
-    try {
-      const res = await fetch(`/api/build-status/${leadId}`)
-      if (res.ok) {
-        const data = await res.json()
-        setBuildStatus(data)
-      } else {
-        setBuildStatus(null)
-      }
-    } catch { setBuildStatus(null) }
-  }, [])
-
   useEffect(() => {
     if (viewMode === 'conversation' && selectedCloseConv?.leadId) {
       loadBuildStatus(selectedCloseConv.leadId)
@@ -337,13 +373,14 @@ function MessagesPageInner() {
     }
   }
 
-  const handleToggleAutoPush = async () => {
+  const handleToggleAutoPush = async (newValue?: boolean) => {
     if (!selectedCloseConv?.leadId) return
+    const autoPush = typeof newValue === 'boolean' ? newValue : !buildStatus?.autoPush
     try {
       const res = await fetch(`/api/build-status/${selectedCloseConv.leadId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ autoPush: !buildStatus?.autoPush }),
+        body: JSON.stringify({ autoPush }),
       })
       if (res.ok) {
         const data = await res.json()
@@ -828,12 +865,11 @@ function MessagesPageInner() {
                   {pushingBuild ? 'Pushing...' : 'Push to Build'}
                 </Button>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Auto-push when ready</span>
-                  <input
-                    type="checkbox"
+                  <ToggleSwitch
+                    label="Auto-push when ready"
+                    size="sm"
                     checked={buildStatus.autoPush || false}
                     onChange={handleToggleAutoPush}
-                    className="w-4 h-4"
                   />
                 </div>
               </div>
@@ -1287,10 +1323,23 @@ function MessagesPageInner() {
         ))}
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-        <Input className="pl-10" placeholder="Search conversations..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+      {/* Search + Global Auto-Push */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <Input className="pl-10" placeholder="Search conversations..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        </div>
+        {inboxTab === 'pre_client' && globalAutoPushLoaded && (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg flex-shrink-0">
+            <Hammer size={13} className="text-teal-600" />
+            <ToggleSwitch
+              label="Auto-push builds"
+              size="sm"
+              checked={globalAutoPush}
+              onChange={handleToggleGlobalAutoPush}
+            />
+          </div>
+        )}
       </div>
 
       {/* ─── PRE-CLIENT TAB ─── */}

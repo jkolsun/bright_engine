@@ -1,5 +1,11 @@
 'use client';
 
+const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+const DAY_LABELS: Record<string, string> = {
+  monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu',
+  friday: 'Fri', saturday: 'Sat', sunday: 'Sun',
+};
+
 interface Step10Props {
   data: Record<string, any>;
   onChange: (updates: Record<string, any>) => void;
@@ -44,6 +50,13 @@ export default function Step10Review({
 }: Step10Props) {
   const services: string[] = data.services || [];
   const photos: string[] = data.photos || [];
+  const testimonials = Array.isArray(data.testimonials) && data.testimonials.length > 0
+    ? data.testimonials
+    : data.testimonialQuote
+      ? [{ quote: data.testimonialQuote, name: data.testimonialName || '' }]
+      : [];
+  const hours = data.hours;
+  const colors = data.colorPrefs;
 
   const handleSubmit = async () => {
     await onSubmit();
@@ -72,6 +85,9 @@ export default function Step10Review({
               }
             />
             <InfoRow label="Website" value={data.website} />
+            <InfoRow label="Facebook" value={data.socialFacebook} />
+            <InfoRow label="Instagram" value={data.socialInstagram} />
+            <InfoRow label="Google Business" value={data.socialGoogle} />
           </div>
         </SectionCard>
 
@@ -136,17 +152,47 @@ export default function Step10Review({
           </SectionCard>
         )}
 
-        {/* Testimonial */}
-        {data.testimonialQuote && (
-          <SectionCard title="Customer Testimonial">
-            <blockquote className="text-sm text-gray-700 italic leading-relaxed">
-              &ldquo;{data.testimonialQuote}&rdquo;
-            </blockquote>
-            {data.testimonialName && (
-              <p className="mt-2 text-sm font-medium text-gray-900">
-                &mdash; {data.testimonialName}
-              </p>
-            )}
+        {/* Business Hours */}
+        {hours && typeof hours === 'object' && (
+          <SectionCard title="Business Hours">
+            <div className="space-y-1">
+              {DAYS.map((day) => {
+                const dayData = hours[day];
+                const isOpen = dayData && dayData !== 'closed';
+                return (
+                  <div key={day} className="flex justify-between py-0.5">
+                    <span className="text-sm font-medium text-gray-700 w-12">
+                      {DAY_LABELS[day]}
+                    </span>
+                    <span className={`text-sm ${isOpen ? 'text-gray-900' : 'text-gray-400 italic'}`}>
+                      {isOpen ? `${dayData.open} - ${dayData.close}` : 'Closed'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </SectionCard>
+        )}
+
+        {/* Testimonials */}
+        {testimonials.length > 0 && testimonials.some((t: any) => t.quote?.trim()) && (
+          <SectionCard title={`Customer Testimonial${testimonials.length > 1 ? 's' : ''}`}>
+            <div className="space-y-3">
+              {testimonials
+                .filter((t: any) => t.quote?.trim())
+                .map((t: any, i: number) => (
+                  <div key={i} className={i > 0 ? 'pt-3 border-t border-gray-100' : ''}>
+                    <blockquote className="text-sm text-gray-700 italic leading-relaxed">
+                      &ldquo;{t.quote}&rdquo;
+                    </blockquote>
+                    {t.name && (
+                      <p className="mt-1.5 text-sm font-medium text-gray-900">
+                        &mdash; {t.name}
+                      </p>
+                    )}
+                  </div>
+                ))}
+            </div>
           </SectionCard>
         )}
 
@@ -159,6 +205,30 @@ export default function Step10Review({
                 alt="Company logo"
                 className="max-h-24 max-w-full object-contain rounded"
               />
+            </div>
+          </SectionCard>
+        )}
+
+        {/* Brand Colors */}
+        {colors && (
+          <SectionCard title="Brand Colors">
+            <div className="flex gap-4">
+              {[
+                { key: 'primary', label: 'Primary' },
+                { key: 'secondary', label: 'Secondary' },
+                { key: 'accent', label: 'Accent' },
+              ].map(({ key, label }) => (
+                <div key={key} className="flex items-center gap-2">
+                  <div
+                    className="w-7 h-7 rounded-full border border-gray-200 shadow-sm"
+                    style={{ backgroundColor: colors[key] }}
+                  />
+                  <div>
+                    <span className="text-xs text-gray-500 block">{label}</span>
+                    <span className="text-xs font-mono text-gray-700">{colors[key]}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </SectionCard>
         )}

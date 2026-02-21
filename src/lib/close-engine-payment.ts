@@ -86,13 +86,29 @@ export async function sendPaymentLink(conversationId: string): Promise<{ success
   })
   const paymentUrl = coreProduct?.stripeLink || ''
 
+  // Use system message template for draft content (respects admin edits in Settings)
+  let draftContent: string
+  try {
+    const { getSystemMessage } = await import('./system-messages')
+    const { text } = await getSystemMessage('payment_link', {
+      firstName: lead.firstName || 'there',
+      companyName: lead.companyName || 'your business',
+      paymentLink: paymentUrl || '[no link configured]',
+      firstMonthTotal: `$${config.firstMonthTotal}`,
+      monthlyHosting: `$${config.monthlyHosting}`,
+    })
+    draftContent = text
+  } catch {
+    draftContent = `Here's your payment link to go live: ${paymentUrl || '[no link configured]'}\n\n$${config.firstMonthTotal} gets your site built and launched, plus monthly hosting at $${config.monthlyHosting}/month. You can cancel anytime.\n\nOnce you pay, we'll have your site live within 48 hours!`
+  }
+
   // Always create a PAYMENT_LINK approval with the Stripe link visible for admin review.
   await prisma.approval.create({
     data: {
       gate: 'PAYMENT_LINK',
       title: `Payment Link — ${lead.companyName}`,
       description: `${lead.firstName} at ${lead.companyName} is ready to buy. Review the Stripe link below, then approve to send via SMS.`,
-      draftContent: `Here's your payment link to go live: ${paymentUrl || '[no link configured]'}\n\n$${config.firstMonthTotal} gets your site built and launched, plus monthly hosting at $${config.monthlyHosting}/month. You can cancel anytime.\n\nOnce you pay, we'll have your site live within 48 hours!`,
+      draftContent,
       leadId: lead.id,
       requestedBy: 'system',
       status: 'PENDING',

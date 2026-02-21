@@ -107,11 +107,50 @@ export async function PUT(
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
     }
 
+    // Inherit global auto-push for new records
+    let globalAutoPush = true
+    try {
+      const setting = await prisma.settings.findUnique({ where: { key: 'globalAutoPush' } })
+      if (setting?.value && typeof setting.value === 'object' && 'enabled' in (setting.value as Record<string, unknown>)) {
+        globalAutoPush = (setting.value as Record<string, unknown>).enabled !== false
+      }
+    } catch { /* default to true */ }
+
     const buildStatus = await prisma.buildStatus.upsert({
       where: { leadId },
-      create: { leadId, ...updateData },
+      create: { leadId, autoPush: globalAutoPush, ...updateData },
       update: updateData,
     })
+
+    // Auto-push check: if autoPush is ON and services are collected, trigger build
+    if (buildStatus.autoPush && buildStatus.servicesCollected && buildStatus.status !== 'building') {
+      const lead = await prisma.lead.findUnique({
+        where: { id: leadId },
+        select: { buildStep: true, companyName: true },
+      })
+      const siteBuildSteps = ['QA_REVIEW', 'EDITING', 'QA_APPROVED', 'CLIENT_REVIEW', 'CLIENT_APPROVED', 'LAUNCHING', 'LIVE']
+      if (!lead?.buildStep || !siteBuildSteps.includes(lead.buildStep)) {
+        await prisma.buildStatus.update({
+          where: { leadId },
+          data: { status: 'building', lastPushedAt: new Date() },
+        })
+        await prisma.lead.update({
+          where: { id: leadId },
+          data: { buildStep: 'QA_REVIEW' },
+        })
+        await prisma.notification.create({
+          data: {
+            type: 'SITE_QA_READY',
+            title: 'Auto-Push: Build Ready',
+            message: `Auto-pushed build for ${lead?.companyName || 'Unknown'}. Ready for QA review.`,
+            metadata: { leadId, autoPush: true },
+          },
+        })
+        // Re-fetch to return updated status
+        const updated = await prisma.buildStatus.findUnique({ where: { leadId } })
+        return NextResponse.json(updated)
+      }
+    }
 
     return NextResponse.json(buildStatus)
   } catch (error) {
