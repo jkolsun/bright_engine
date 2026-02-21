@@ -217,14 +217,18 @@ Write ONE text message. 1-2 sentences max. Casual and human. Do not include quot
   const autonomy = await checkAutonomy(conversationId, 'SEND_MESSAGE')
 
   if (autonomy.requiresApproval) {
-    // MANUAL mode — create pending action for review
-    await prisma.pendingAction.create({
+    // MANUAL mode — create approval for review
+    await prisma.approval.create({
       data: {
-        conversationId,
+        gate: 'SEND_MESSAGE',
+        title: `First Message — ${lead.companyName}`,
+        description: `AI drafted first message for ${lead.companyName}. Approve to send.`,
+        draftContent: firstMessage,
         leadId: lead.id,
-        type: 'SEND_MESSAGE',
-        draftMessage: firstMessage,
+        requestedBy: 'system',
         status: 'PENDING',
+        priority: 'NORMAL',
+        metadata: { conversationId, phone: lead.phone },
       },
     })
     await prisma.notification.create({
@@ -518,21 +522,25 @@ export async function processCloseEngineInbound(
   )
 
   if (autonomy.requiresApproval) {
-    // Create pending action for review
-    await prisma.pendingAction.create({
+    // Create approval for review
+    await prisma.approval.create({
       data: {
-        conversationId,
+        gate: actionType === 'SEND_PAYMENT_LINK' ? 'PAYMENT_LINK' : 'SEND_MESSAGE',
+        title: `AI Response — ${lead.companyName}`,
+        description: `AI drafted a response for ${lead.companyName}. Approve to send.`,
+        draftContent: claudeResponse.replyText,
         leadId: lead.id,
-        type: actionType,
-        draftMessage: claudeResponse.replyText,
+        requestedBy: 'system',
         status: 'PENDING',
+        priority: actionType === 'SEND_PAYMENT_LINK' ? 'HIGH' : 'NORMAL',
+        metadata: { conversationId, phone: lead.phone },
       },
     })
     await prisma.notification.create({
       data: {
         type: 'CLOSE_ENGINE',
         title: 'Approval Required',
-        message: `AI drafted response for ${lead.companyName} — review in Messages`,
+        message: `AI drafted response for ${lead.companyName} — review in Approvals`,
         metadata: { conversationId, leadId: lead.id },
       },
     })
@@ -613,92 +621,29 @@ export async function processCloseEngineInbound(
 
 /**
  * Determines if the AI should respond to a message or stay silent.
- * Prevents annoying infinite acknowledgment loops:
- *   client: "sounds good" → AI: "Great!" → client: "thanks" → AI: "You're welcome!" → forever
  *
- * Returns false (skip response) when:
- * 1. Inbound is a conversation closer AND our last message was also a closer/wrapup
- * 2. Inbound is a bare acknowledgment with no question or request
+ * SmartChat conversation-ender detection:
+ * - "ok", "thanks", "cool", emoji-only → DON'T respond
+ * - Has question mark → RESPOND
+ * - Longer than 4 words → RESPOND (probably not just an ack)
+ * - Contains a request or new info → RESPOND
+ *
+ * The AI can still send proactive/scheduled messages later.
+ * This only skips the immediate response.
  */
 export function shouldAIRespond(
   inboundMessage: string,
   lastOutboundContent: string | null,
 ): boolean {
-  const inbound = inboundMessage.toLowerCase().trim()
+  const { isConversationEnder } = require('./message-batcher')
 
-  // Conversation closers / bare acknowledgments
-  const closers = [
-    'ok', 'okay', 'k', 'kk',
-    'thanks', 'thank you', 'thx', 'ty',
-    'sounds good', 'sounds great',
-    'cool', 'nice', 'sweet', 'awesome', 'perfect', 'great', 'got it',
-    'will do', 'for sure', 'bet', 'word', 'alright', 'aight',
-    'good to know', 'appreciate it', 'much appreciated',
-    'noted', 'understood',
-  ]
-
-  // Single emoji acknowledgments
-  const emojiAcks = [
-    '\uD83D\uDC4D', '\uD83D\uDC4D\uD83C\uDFFB', '\uD83D\uDC4D\uD83C\uDFFC', '\uD83D\uDC4D\uD83C\uDFFD', '\uD83D\uDC4D\uD83C\uDFFE', '\uD83D\uDC4D\uD83C\uDFFF', // thumbs up variants
-    '\uD83D\uDE4F', // folded hands / thank you
-    '\u2705', // check mark
-    '\uD83D\uDC4C', // ok hand
-    '\uD83D\uDE0A', '\uD83D\uDE42', '\uD83D\uDE04', // smiles
-    '\u2764\uFE0F', '\u2764', // hearts
-    '\uD83D\uDD25', // fire
-  ]
-
-  // Check if inbound is a bare closer
-  const isCloser = closers.some(c => inbound === c || inbound === c + '!' || inbound === c + '.')
-  const isEmojiAck = emojiAcks.includes(inbound.trim())
-
-  if (!isCloser && !isEmojiAck) {
-    // Not a conversation closer — always respond
-    return true
-  }
-
-  // It IS a closer/ack — now check if our last message was a wrapup
-  if (!lastOutboundContent) {
-    // No previous outbound — this might be a reply to initial outreach, respond
-    return true
-  }
-
-  const lastOut = lastOutboundContent.toLowerCase().trim()
-
-  // AI closing patterns — if our last message looks like a wrapup, don't respond to an ack
-  const aiClosingPatterns = [
-    'let me know', 'reach out', 'here if you need',
-    'happy to help', 'glad to help', 'help anytime',
-    'don\'t hesitate', 'feel free',
-    'have a great', 'have a good', 'talk soon', 'take care',
-    'you\'re all set', 'all set', 'good to go',
-    'we\'ll get', 'working on it', 'on it',
-    'sounds like a plan', 'we\'re on it',
-  ]
-
-  const lastMessageWasClosing = aiClosingPatterns.some(p => lastOut.includes(p))
-
-  // If our last message was a closing statement AND inbound is just an ack → stay silent
-  if (lastMessageWasClosing) {
+  // Use SmartChat conversation-ender detection
+  if (isConversationEnder(inboundMessage)) {
+    console.log(`[SmartChat] Conversation-ender detected: "${inboundMessage.slice(0, 40)}"`)
     return false
   }
 
-  // If the inbound contains a question mark, always respond
-  if (inbound.includes('?')) {
-    return true
-  }
-
-  // If the closer is "thanks" / "thank you" and our last message wasn't a closer,
-  // a brief "you're welcome" is ok — but if it's just "ok" / "cool" / emoji, skip
-  const isThanks = ['thanks', 'thank you', 'thx', 'ty', 'appreciate it', 'much appreciated'].some(t => inbound === t || inbound === t + '!')
-  if (isThanks) {
-    // Respond to thanks only if our last message was substantive (contained useful info)
-    // If our last message was also short (< 40 chars), it was probably a closer itself
-    return lastOutboundContent.length > 40
-  }
-
-  // Plain "ok", "cool", "got it", emoji → don't respond
-  return false
+  return true
 }
 
 // ============================================

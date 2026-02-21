@@ -8,7 +8,8 @@ import {
   CheckCircle2, AlertTriangle, XCircle, RefreshCw, Loader2,
   Save, Plus, Trash2, Phone, Link, Brain, Sparkles,
   BarChart3, ExternalLink, Eye, Search, ChevronDown, Split,
-  Pencil, Shield, AlertCircle, X, Info, RotateCcw, Activity
+  Pencil, Shield, AlertCircle, X, Info, RotateCcw, Activity,
+  MessageSquare
 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 
@@ -23,7 +24,7 @@ type ServiceStatus = {
 
 type SettingsData = Record<string, any>
 
-type TabId = 'company' | 'sequences' | 'personalization' | 'targets' | 'team' | 'api' | 'diagnostics' | 'ai_templates'
+type TabId = 'company' | 'sequences' | 'personalization' | 'targets' | 'team' | 'api' | 'diagnostics' | 'ai_templates' | 'smart_chat'
 
 // ── Helper Components ──────────────────────────────────────────
 
@@ -254,6 +255,14 @@ export default function SettingsPage() {
   const [editingScenario, setEditingScenario] = useState<string | null>(null)
   const [firstMessageTemplates, setFirstMessageTemplates] = useState<Record<string, string>>({})
 
+  // SmartChat settings
+  const [smartChat, setSmartChat] = useState({
+    batchWindowMs: 8000,
+    conversationEnderEnabled: true,
+    qualifyingQuestionCount: 2,
+  })
+  const [smartChatLoaded, setSmartChatLoaded] = useState(false)
+
   const [newProduct, setNewProduct] = useState({
     name: '', price: '', recurring: true, isCore: false,
     stripeLink: '', month1Price: '', recurringPrice: '', annualPrice: '',
@@ -365,6 +374,10 @@ export default function SettingsPage() {
       if (s.close_engine_scenarios && typeof s.close_engine_scenarios === 'object') {
         setScenarioTemplates(s.close_engine_scenarios.scenarios || {})
         setFirstMessageTemplates(s.close_engine_scenarios.firstMessages || {})
+      }
+      if (s.smart_chat && typeof s.smart_chat === 'object') {
+        setSmartChat(prev => ({ ...prev, ...s.smart_chat }))
+        setSmartChatLoaded(true)
       }
 
       setSettingsLoaded(true)
@@ -808,6 +821,7 @@ export default function SettingsPage() {
     { id: 'api' as TabId, label: 'API Keys', icon: <Key size={16} /> },
     { id: 'diagnostics' as TabId, label: 'Diagnostics', icon: <Activity size={16} /> },
     { id: 'ai_templates' as TabId, label: 'AI Templates', icon: <Sparkles size={16} /> },
+    { id: 'smart_chat' as TabId, label: 'SmartChat', icon: <MessageSquare size={16} /> },
   ]
 
   const connectedCount = services?.filter(s => s.connected === true).length ?? 0
@@ -2415,6 +2429,95 @@ export default function SettingsPage() {
         <DiagnosticsPanel />
       )}
 
+      {activeTab === 'smart_chat' && (
+        <div className="space-y-6">
+          <Card className="p-6">
+            <SectionHeader
+              title="SmartChat Settings"
+              description="Control how the AI handles rapid messages, conversation endings, and qualifying questions."
+            />
+
+            <div className="space-y-6">
+              {/* Message Batch Window */}
+              <div>
+                <FieldLabel>Message Batch Window</FieldLabel>
+                <p className="text-xs text-gray-500 mb-2">
+                  When a client sends multiple texts quickly, the AI waits this long for more messages before responding. Set to 0 to disable batching.
+                </p>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={30}
+                    step={1}
+                    className="h-9 w-24 text-sm"
+                    value={smartChat.batchWindowMs / 1000}
+                    onChange={(e) => setSmartChat(prev => ({ ...prev, batchWindowMs: Math.round(parseFloat(e.target.value || '0') * 1000) }))}
+                  />
+                  <span className="text-sm text-gray-500">seconds</span>
+                  <span className="text-xs text-gray-400 ml-2">
+                    {smartChat.batchWindowMs === 0 ? 'Disabled' : smartChat.batchWindowMs <= 5000 ? 'Fast' : smartChat.batchWindowMs <= 10000 ? 'Balanced' : 'Patient'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Conversation-Ender Detection */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <FieldLabel>Conversation-Ender Detection</FieldLabel>
+                    <p className="text-xs text-gray-500">
+                      When enabled, the AI won&apos;t respond to messages like &quot;ok&quot;, &quot;thanks&quot;, or emoji-only texts. Keeps conversations natural.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSmartChat(prev => ({ ...prev, conversationEnderEnabled: !prev.conversationEnderEnabled }))}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${smartChat.conversationEnderEnabled ? 'bg-blue-600' : 'bg-gray-300'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${smartChat.conversationEnderEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+                {smartChat.conversationEnderEnabled && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-lg text-xs text-gray-600 space-y-1">
+                    <p><strong>Won&apos;t respond to:</strong> ok, thanks, cool, sounds good, got it, bye, emoji-only</p>
+                    <p><strong>Will still respond if:</strong> has a question mark, longer than 4 words, or contains a request</p>
+                    <p><strong>Example:</strong> &quot;ok&quot; = no response, but &quot;ok can you also add gutters&quot; = responds</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Qualifying Questions Count */}
+              <div>
+                <FieldLabel>Qualifying Questions Before Form</FieldLabel>
+                <p className="text-xs text-gray-500 mb-2">
+                  How many gate-check questions the AI asks before sending the onboarding form. Default is 2 (website status + decision maker).
+                </p>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={5}
+                    className="h-9 w-20 text-sm"
+                    value={smartChat.qualifyingQuestionCount}
+                    onChange={(e) => setSmartChat(prev => ({ ...prev, qualifyingQuestionCount: parseInt(e.target.value || '2') }))}
+                  />
+                  <span className="text-sm text-gray-500">questions</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Save */}
+          <div className="flex justify-end">
+            <SaveButton
+              onClick={() => saveSetting('smart_chat', smartChat)}
+              saving={savingKey === 'smart_chat'}
+              saved={savedKey === 'smart_chat'}
+            />
+          </div>
+        </div>
+      )}
+
       {activeTab === 'ai_templates' && (
         <div className="space-y-6">
           {/* Stage Instruction Overrides */}
@@ -2501,10 +2604,10 @@ export default function SettingsPage() {
             />
             <div className="space-y-4">
               {[
-                { key: 'INSTANTLY_REPLY', label: 'Email Reply', desc: 'Lead replied to an Instantly email', default: 'Hey {firstName}! Saw your reply about the website \u2014 excited to get {companyName} set up. Quick question: What are the top 3 services you want highlighted on your site?' },
-                { key: 'SMS_REPLY', label: 'SMS Reply', desc: 'Lead replied to an SMS', default: 'Hey {firstName}! Great to hear from you. Let\'s get {companyName}\'s site built. Quick question to start: What are the top 3 services you want front and center on your website?' },
-                { key: 'REP_CLOSE', label: 'Rep Close', desc: 'Rep handed off a lead', default: 'Hey {firstName}! Just spoke with the team \u2014 let\'s get your site live. Quick question: What are the top 3 services {companyName} offers that you want highlighted?' },
-                { key: 'PREVIEW_CTA', label: 'Preview CTA', desc: 'Lead clicked the preview CTA', default: 'Hey {firstName}! Saw you\'re ready to get your site live \u2014 love it. Quick question before we build it out: What are the top 3 services {companyName} offers that you want front and center?' },
+                { key: 'INSTANTLY_REPLY', label: 'Email Reply', desc: 'Lead replied to an Instantly email', default: 'Hey {firstName}! Saw your reply about the website \u2014 excited to get {companyName} set up. Quick question: do you currently have a website or would this be your first one?' },
+                { key: 'SMS_REPLY', label: 'SMS Reply', desc: 'Lead replied to an SMS', default: 'Hey {firstName}! Great to hear from you. Quick question before we get {companyName}\'s site built: do you currently have a website or would this be your first one?' },
+                { key: 'REP_CLOSE', label: 'Rep Close', desc: 'Rep handed off a lead', default: 'Hey {firstName}! Just spoke with the team \u2014 let\'s get your site live. Quick question: do you currently have a website for {companyName} or would this be the first one?' },
+                { key: 'PREVIEW_CTA', label: 'Preview CTA', desc: 'Lead clicked the preview CTA', default: 'Hey {firstName}! Saw you\'re ready to get your site live \u2014 love it. Quick question: do you currently have a website or would this be your first one?' },
               ].map(({ key, label, desc, default: defaultTemplate }) => {
                 const customTemplate = firstMessageTemplates[key] || ''
 

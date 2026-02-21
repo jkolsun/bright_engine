@@ -220,9 +220,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── CLOSE ENGINE HANDLER ──
+    // ── CLOSE ENGINE HANDLER (with SmartChat message batching) ──
     if (lead) {
       const { processCloseEngineInbound, triggerCloseEngine } = await import('@/lib/close-engine')
+      const { addToBatch } = await import('@/lib/message-batcher')
 
       // Check if lead has an active close conversation
       const activeConversation = await prisma.closeEngineConversation.findUnique({
@@ -230,10 +231,20 @@ export async function POST(request: NextRequest) {
       })
 
       if (activeConversation && !['COMPLETED', 'CLOSED_LOST'].includes(activeConversation.stage)) {
-        // Route to existing Close Engine conversation
+        // Route to Close Engine — use message batching to handle rapid-fire texts
         console.log(`[Twilio] Routing inbound to Close Engine conversation ${activeConversation.id}`)
         try {
-          await processCloseEngineInbound(activeConversation.id, body, publicMediaUrls)
+          const batched = await addToBatch(
+            activeConversation.id,
+            lead.id,
+            body,
+            publicMediaUrls || [],
+            processCloseEngineInbound,
+          )
+          if (!batched) {
+            // Batching disabled or not applicable — process immediately
+            await processCloseEngineInbound(activeConversation.id, body, publicMediaUrls)
+          }
         } catch (err) {
           console.error('[Twilio] Close Engine processing failed:', err)
           // Don't fail the webhook

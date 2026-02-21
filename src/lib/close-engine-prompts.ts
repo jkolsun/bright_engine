@@ -39,28 +39,32 @@ export const ESCALATION_KEYWORDS = [
 
 const STAGE_INSTRUCTIONS: Record<string, (ctx: ConversationContext) => string> = {
   INITIATED: () =>
-    `Send the opening message. Reference how they showed interest (see entry point). Ask about their top services (Q1). Be warm and excited.`,
+    `Send the opening message. Reference how they showed interest (see entry point). Ask if they currently have a website or if this would be their first one (Q1). Be warm and excited.`,
 
   QUALIFYING: (ctx) => {
     const asked = ctx.questionsAsked || []
     const collected = ctx.collectedData || {}
     const lead = ctx.lead
-    const industryLabel = (lead.industry || 'local service').toLowerCase().replace(/_/g, ' ')
 
-    // 3 qualifying questions — then send the form for the rest
+    // 2 qualifying questions — quick gate check, then send the form
+    // Q1: Website status (replacing vs first site — different pitch angle)
+    // Q2: Decision maker check (are we talking to the right person?)
     const queue: string[] = []
-    if (!asked.includes('Q1_SERVICES') && !collected.services) queue.push('Q1: What top services to highlight on the site')
-    if (!asked.includes('Q2_ABOUT') && !collected.aboutStory) queue.push('Q2: Quick description of the company in their own words (what would they want people to know)')
-    if (!asked.includes('Q3_DIFFERENTIATOR') && !collected.differentiator) queue.push('Q3: What sets them apart from other ' + industryLabel + ' companies')
+    if (!asked.includes('Q1_WEBSITE') && !collected.hasWebsite) queue.push('Q1: "Do you currently have a website or would this be your first one?"')
+    if (!asked.includes('Q2_DECISION_MAKER') && !collected.isDecisionMaker) queue.push(`Q2: "Are you the one who handles marketing decisions for ${lead.companyName || 'the business'}, or is there someone else I should loop in?"`)
 
-    return `You are qualifying the lead with 3 quick questions before sending them a form. Ask ONE question at a time. Keep it casual and conversational.
-Questions still needed (in priority order): ${queue.length > 0 ? queue.join(' | ') : 'All 3 qualifying questions answered — transition to COLLECTING_INFO now.'}
+    return `You are doing a quick 2-question gate check before sending the onboarding form. The lead already saw their preview site and clicked the CTA — they're interested. Your job is NOT to re-pitch or collect business info. The form handles all of that. You're just confirming they're a real buyer.
+
+Questions still needed: ${queue.length > 0 ? queue.join(' | ') : 'Both questions answered — transition to COLLECTING_INFO now.'}
+
 RULES:
-- Ask in the order listed. Don't skip ahead.
-- If they answer multiple questions in one message, extract ALL the data and skip those questions.
-- Quick acknowledgment before each new question ("Perfect!" "Love it!" "Got it!").
-- If they provide their company story or differentiator unprompted, extract it immediately.
-- When all 3 questions are answered, set nextStage to COLLECTING_INFO immediately. The form will collect everything else (service area, years, logo, photos, etc.).`
+- Ask ONE question at a time. Keep it casual.
+- If they answer both questions in one message (like "yeah I don't have a site and I'm the owner"), recognize it, extract both answers, and skip straight to the form. Set nextStage to COLLECTING_INFO.
+- Quick acknowledgment before the next question ("Got it!" "Perfect!").
+- If the client goes off-script and starts talking about their business or services unprompted, roll with it. Don't force the qualifying questions — if they're clearly interested and engaged, just send the form.
+- When both questions are answered, set nextStage to COLLECTING_INFO immediately. Don't ask anything else — the form collects services, about text, differentiator, photos, logo, hours, everything.
+- Extract data: set hasWebsite to their answer (true/false/"replacing"), set isDecisionMaker to true/false.
+- The goal is: get to the form as fast as possible. These questions are a gate check, not an interview.`
   },
 
   COLLECTING_INFO: (ctx) => {
@@ -345,10 +349,10 @@ IMPORTANT: Extract ALL data from their messages. If they mention their years in 
 // ============================================
 
 const FIRST_MESSAGE_TEMPLATES: Record<string, string> = {
-  INSTANTLY_REPLY: `Hey {firstName}! Saw your reply about the website — excited to get {companyName} set up. Quick question: What are the top 3 services you want highlighted on your site?`,
-  SMS_REPLY: `Hey {firstName}! Great to hear from you. Let's get {companyName}'s site built. Quick question to start: What are the top 3 services you want front and center on your website?`,
-  REP_CLOSE: `Hey {firstName}! Just spoke with the team — let's get your site live. Quick question: What are the top 3 services {companyName} offers that you want highlighted?`,
-  PREVIEW_CTA: `Hey {firstName}! Saw you're ready to get your site live — love it. Quick question before we build it out: What are the top 3 services {companyName} offers that you want front and center?`,
+  INSTANTLY_REPLY: `Hey {firstName}! Saw your reply about the website — excited to get {companyName} set up. Quick question: do you currently have a website or would this be your first one?`,
+  SMS_REPLY: `Hey {firstName}! Great to hear from you. Let's get {companyName}'s site built. Quick question to start: do you currently have a website or would this be your first one?`,
+  REP_CLOSE: `Hey {firstName}! Just spoke with the team — let's get your site live. Quick question: do you currently have a website or would this be your first one?`,
+  PREVIEW_CTA: `Hey {firstName}! Saw you're ready to get your site live — love it. Quick question before we build it out: do you currently have a website or would this be your first one?`,
 }
 
 export async function getFirstMessageTemplate(
