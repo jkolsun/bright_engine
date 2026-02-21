@@ -8,6 +8,7 @@ import {
   Hammer, Eye, Pencil, CheckCircle, Send, Rocket, Globe,
   Loader2, XCircle, Clock, Zap, ExternalLink, ChevronDown, ChevronUp, Code,
 } from 'lucide-react'
+import SiteEditorPanel from '@/components/site-editor/SiteEditorPanel'
 
 // ============================================
 // Site Build Pipeline Steps
@@ -190,7 +191,7 @@ function LaunchPanel({ leadId, onDone }: { leadId: string; onDone: () => void })
 // Site Build Card Component
 // ============================================
 
-function SiteBuildCard({ lead, onRefresh }: { lead: any; onRefresh: () => void }) {
+function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh: () => void; onOpenEditor: (lead: any) => void }) {
   const [expanded, setExpanded] = useState<'edit' | 'launch' | null>(null)
   const [approving, setApproving] = useState(false)
 
@@ -269,13 +270,13 @@ function SiteBuildCard({ lead, onRefresh }: { lead: any; onRefresh: () => void }
             </a>
           )}
           {['QA_REVIEW', 'EDITING', 'QA_APPROVED'].includes(step) && (
-            <Link
-              href={`/site-editor/${lead.id}`}
+            <button
+              onClick={() => onOpenEditor(lead)}
               className="px-3 py-1.5 text-sm text-purple-600 border border-purple-300 rounded-lg hover:bg-purple-50 flex items-center gap-1.5"
             >
               <Code size={14} />
               Site Editor
-            </Link>
+            </button>
           )}
           {showEdit && (
             <button
@@ -474,6 +475,7 @@ export default function BuildQueuePage() {
   const [filterTab, setFilterTab] = useState<FilterTab>('ALL')
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [editorLead, setEditorLead] = useState<any | null>(null)
 
   const loadData = useCallback(async () => {
     try {
@@ -581,7 +583,7 @@ export default function BuildQueuePage() {
             ) : filteredLeads.length > 0 ? (
               <div className="space-y-3">
                 {filteredLeads.map((lead: any) => (
-                  <SiteBuildCard key={lead.id} lead={lead} onRefresh={loadData} />
+                  <SiteBuildCard key={lead.id} lead={lead} onRefresh={loadData} onOpenEditor={setEditorLead} />
                 ))}
               </div>
             ) : (
@@ -594,6 +596,19 @@ export default function BuildQueuePage() {
           </>
         )}
       </div>
+
+      {/* Site Editor Overlay — stays in the UI */}
+      {editorLead && (
+        <SiteEditorPanel
+          leadId={editorLead.id}
+          companyName={editorLead.companyName}
+          buildStep={editorLead.buildStep || 'QA_REVIEW'}
+          previewId={editorLead.previewId || null}
+          siteHtml={editorLead.siteHtml || null}
+          onClose={() => setEditorLead(null)}
+          onRefresh={loadData}
+        />
+      )}
     </div>
   )
 }
