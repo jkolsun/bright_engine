@@ -25,6 +25,17 @@ import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
 import ScrollReveal from '../shared/ScrollReveal'
 
+function formatNavPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '')
+  if (digits.length === 11 && digits[0] === '1') {
+    return `(${digits.slice(1,4)}) ${digits.slice(4,7)}-${digits.slice(7)}`
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`
+  }
+  return phone
+}
+
 /* ────────────────────── Google Icon (custom SVG) ────────────────────── */
 function GoogleIcon({ size = 15, className = '' }: { size?: number; className?: string }) {
   return (
@@ -89,7 +100,7 @@ function ChatbotWidget({ companyName }: { companyName: string }) {
       {/* Floating trigger */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-5 right-5 z-[100] group sm:bottom-5 bottom-[88px]"
+        className="fixed bottom-6 right-5 z-[100] group sm:bottom-6 bottom-[100px]"
         aria-label="Open chat"
       >
         <div className="w-[58px] h-[58px] rounded-full bg-emerald-700 flex items-center justify-center shadow-2xl hover:scale-105 transition-all border border-emerald-600">
@@ -106,7 +117,7 @@ function ChatbotWidget({ companyName }: { companyName: string }) {
 
       {/* Chat window */}
       {isOpen && (
-        <div className="fixed sm:bottom-24 bottom-[152px] right-5 z-[100] w-[370px] max-w-[calc(100vw-2.5rem)] bg-white rounded-2xl shadow-2xl border border-stone-200 overflow-hidden">
+        <div className="fixed sm:bottom-[104px] bottom-[168px] right-5 z-[100] w-[370px] max-w-[calc(100vw-2.5rem)] bg-white rounded-2xl shadow-2xl border border-stone-200 overflow-hidden">
           {/* Header */}
           <div className="px-5 py-4 bg-emerald-800 text-white">
             <div className="flex items-center gap-3">
@@ -245,7 +256,7 @@ function MobileNav({
             {phone && (
               <a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-stone-100 text-stone-800 font-semibold text-sm border border-stone-200">
                 <Phone size={16} />
-                Call {phone}
+                Call {formatNavPhone(phone)}
               </a>
             )}
             <button onClick={() => { onCTAClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-emerald-700 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors">
@@ -327,9 +338,9 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
             </div>
 
             {/* Desktop nav links */}
-            <div className="hidden lg:flex items-center gap-1">
+            <div className="hidden lg:flex items-center gap-1.5">
               {navSections.map((s) => (
-                <a key={s.id} href={`#${s.id}`} className="px-3 py-2 rounded-lg text-[13px] font-medium text-stone-500 hover:text-emerald-700 hover:bg-emerald-50 transition-all">
+                <a key={s.id} href={`#${s.id}`} className="px-3.5 py-2 rounded-lg text-sm font-medium text-stone-500 hover:text-emerald-700 hover:bg-emerald-50 transition-all">
                   {s.label}
                 </a>
               ))}
@@ -349,7 +360,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
               {lead.phone && (
                 <a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-sm text-stone-500 hover:text-emerald-700 font-medium transition-colors">
                   <Phone size={14} />
-                  {lead.phone}
+                  {formatNavPhone(lead.phone)}
                 </a>
               )}
 
@@ -541,8 +552,8 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
             {/* Left — content */}
-            <ScrollReveal animation="fade-left">
-            <div className="lg:col-span-3">
+            <ScrollReveal animation="fade-left" className="lg:col-span-3">
+            <div>
               <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">About</p>
               <h2 className="text-3xl sm:text-4xl font-light text-stone-900 leading-tight mb-6">
                 {lead.companyName}
@@ -594,8 +605,8 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
             </ScrollReveal>
 
             {/* Right — featured testimonial + quick contact */}
-            <ScrollReveal animation="fade-right">
-            <div className="lg:col-span-2 flex flex-col gap-5">
+            <ScrollReveal animation="fade-right" className="lg:col-span-2">
+            <div className="flex flex-col gap-5">
               {/* Featured review */}
               <div className="bg-white border border-stone-200 rounded-2xl p-7">
                 <div className="flex gap-0.5 mb-4">
@@ -670,11 +681,9 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
             </ScrollReveal>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               {photos.slice(0, 6).map((photo, i) => (
-                <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
+                <ScrollReveal key={i} animation="zoom-in" delay={i * 100} className={i === 0 ? 'col-span-1 sm:col-span-2 sm:row-span-2' : ''}>
                 <div
-                  className={`relative overflow-hidden rounded-2xl group border border-stone-200 hover:border-emerald-400/40 transition-all duration-500 hover:shadow-xl hover:shadow-emerald-900/5 ${
-                    i === 0 ? 'col-span-1 sm:col-span-2 sm:row-span-2' : ''
-                  }`}
+                  className="relative overflow-hidden rounded-2xl group border border-stone-200 hover:border-emerald-400/40 transition-all duration-500 hover:shadow-xl hover:shadow-emerald-900/5"
                 >
                   <img
                     src={photo}
@@ -714,10 +723,10 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                 { quote: `Honest quote, no pressure, and the work speaks for itself. Our ${industryLabel} project came out better than we expected.`, name: 'Jennifer K.', loc: lead.city || 'Local' },
               ].slice(0, 3)
               return testimonials.map((r, i) => (
-                <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
+                <ScrollReveal key={i} animation="fade-up" delay={i * 100} className={i === 2 ? 'md:col-span-2' : ''}>
                 <div
                   className={`bg-white border border-stone-200 rounded-2xl p-8 hover:border-emerald-400/30 hover:shadow-lg hover:shadow-emerald-900/5 transition-all ${
-                    i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''
+                    i === 2 ? 'md:max-w-lg md:mx-auto' : ''
                   }`}
                 >
                   <div className="flex gap-0.5 mb-4">

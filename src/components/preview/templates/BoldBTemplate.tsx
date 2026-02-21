@@ -23,6 +23,17 @@ function GoogleIcon({ size = 15, className = '' }) {
   )
 }
 
+function formatNavPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '')
+  if (digits.length === 11 && digits[0] === '1') {
+    return `(${digits.slice(1,4)}) ${digits.slice(4,7)}-${digits.slice(7)}`
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`
+  }
+  return phone
+}
+
 // ─────────────────────────────────────────────
 // CHATBOT WIDGET
 // ─────────────────────────────────────────────
@@ -85,7 +96,7 @@ function ChatbotWidget({ companyName, accentColor = '#3b82f6' }: { companyName: 
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-5 right-5 z-[100] group sm:bottom-5 bottom-[88px]"
+        className="fixed bottom-6 right-5 z-[100] group sm:bottom-6 bottom-[100px]"
         aria-label="Chat with us"
       >
         <div
@@ -110,7 +121,7 @@ function ChatbotWidget({ companyName, accentColor = '#3b82f6' }: { companyName: 
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed sm:bottom-24 bottom-[152px] right-5 z-[100] w-[370px] max-w-[calc(100vw-2.5rem)] bg-gray-950 rounded-2xl shadow-2xl border border-gray-800 overflow-hidden">
+        <div className="fixed sm:bottom-[104px] bottom-[168px] right-5 z-[100] w-[370px] max-w-[calc(100vw-2.5rem)] bg-gray-950 rounded-2xl shadow-2xl border border-gray-800 overflow-hidden">
           {/* Header */}
           <div
             className="px-5 py-4"
@@ -259,7 +270,7 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
                 className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-white text-gray-900 font-bold text-sm transition-all hover:bg-gray-100"
               >
                 <Phone size={16} />
-                Call {phone}
+                Call {formatNavPhone(phone)}
               </a>
             )}
             <button
@@ -357,12 +368,12 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
             </div>
 
             {/* Desktop Nav */}
-            <div className="hidden lg:flex items-center gap-1">
+            <div className="hidden lg:flex items-center gap-1.5">
               {navSections.map((s) => (
                 <a
                   key={s.id}
                   href={`#${s.id}`}
-                  className="px-3 py-2 rounded-lg text-[13px] font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+                  className="px-3.5 py-2 rounded-lg text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-all"
                 >
                   {s.label}
                 </a>
@@ -394,7 +405,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                   className="hidden lg:flex items-center gap-2 text-sm text-gray-400 hover:text-blue-400 transition-colors font-medium"
                 >
                   <Phone size={14} />
-                  {lead.phone}
+                  {formatNavPhone(lead.phone)}
                 </a>
               )}
 

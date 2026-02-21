@@ -23,6 +23,17 @@ function GoogleIcon({ size = 15, className = '' }: { size?: number; className?: 
   )
 }
 
+function formatNavPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '')
+  if (digits.length === 11 && digits[0] === '1') {
+    return `(${digits.slice(1,4)}) ${digits.slice(4,7)}-${digits.slice(7)}`
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`
+  }
+  return phone
+}
+
 // ─── CHATBOT ───
 function ChatbotWidget({ companyName, accentColor = '#f97316' }: { companyName: string; accentColor?: string }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -65,7 +76,7 @@ function ChatbotWidget({ companyName, accentColor = '#f97316' }: { companyName: 
 
   return (
     <>
-      <button onClick={() => setIsOpen(!isOpen)} className="fixed bottom-5 right-5 z-[100] group sm:bottom-5 bottom-[88px]" aria-label="Chat with us">
+      <button onClick={() => setIsOpen(!isOpen)} className="fixed bottom-6 right-5 z-[100] group sm:bottom-6 bottom-[100px]" aria-label="Chat with us">
         <div className="w-[58px] h-[58px] rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-105" style={{ background: `linear-gradient(135deg, ${accentColor}, #ef4444)` }}>
           {isOpen ? <X size={22} className="text-white" /> : <MessageCircle size={22} className="text-white" />}
         </div>
@@ -79,7 +90,7 @@ function ChatbotWidget({ companyName, accentColor = '#f97316' }: { companyName: 
       </button>
 
       {isOpen && (
-        <div className="fixed sm:bottom-24 bottom-[152px] right-5 z-[100] w-[370px] max-w-[calc(100vw-2.5rem)] bg-gray-950 rounded-2xl shadow-2xl border border-gray-800 overflow-hidden">
+        <div className="fixed sm:bottom-[104px] bottom-[168px] right-5 z-[100] w-[370px] max-w-[calc(100vw-2.5rem)] bg-gray-950 rounded-2xl shadow-2xl border border-gray-800 overflow-hidden">
           <div className="px-5 py-4" style={{ background: `linear-gradient(135deg, ${accentColor}, #ef4444)` }}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center"><MessageCircle size={18} className="text-white" /></div>
@@ -152,7 +163,7 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
           </div>
           <div className="space-y-3">
             {phone && (
-              <a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-sm"><Phone size={16} />Call {phone}</a>
+              <a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-sm"><Phone size={16} />Call {formatNavPhone(phone)}</a>
             )}
             <button onClick={() => { onCTAClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-white/10 border border-white/15 text-white font-bold text-sm hover:bg-white hover:text-gray-900 transition-all">Get Free Quote</button>
           </div>
@@ -232,9 +243,9 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
               <span className="font-display text-xl font-black text-white tracking-tight uppercase">{lead.companyName}</span>
             </div>
 
-            <div className="hidden lg:flex items-center gap-1">
+            <div className="hidden lg:flex items-center gap-1.5">
               {navSections.map((s) => (
-                <a key={s.id} href={`#${s.id}`} className="px-3 py-2 rounded-lg text-[13px] font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-all">{s.label}</a>
+                <a key={s.id} href={`#${s.id}`} className="px-3.5 py-2 rounded-lg text-sm font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-all">{s.label}</a>
               ))}
             </div>
 
@@ -247,7 +258,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
               <div className="hidden md:block w-px h-5 bg-white/10" />
               {lead.phone && (
                 <a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-sm text-gray-400 hover:text-orange-400 transition-colors font-medium">
-                  <Phone size={14} />{lead.phone}
+                  <Phone size={14} />{formatNavPhone(lead.phone)}
                 </a>
               )}
               <button onClick={onCTAClick} className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40">Free Quote</button>
@@ -465,8 +476,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       <section id="about" className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
-            <ScrollReveal animation="fade-left">
-            <div className="lg:col-span-3">
+            <ScrollReveal animation="fade-left" className="lg:col-span-3">
               <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">About Us</div>
               <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-8 leading-[0.95]">
                 Built on Hard Work<br />& Results.
@@ -494,12 +504,11 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                   </div>
                 ))}
               </div>
-            </div>
             </ScrollReveal>
 
             {/* Sidebar — Testimonial + Quick Contact */}
-            <ScrollReveal animation="fade-right">
-            <div className="lg:col-span-2 flex flex-col gap-5">
+            <ScrollReveal animation="fade-right" className="lg:col-span-2">
+            <div className="flex flex-col gap-5">
               <div className="bg-gray-900/50 border border-orange-500/15 rounded-2xl p-7">
                 <div className="flex gap-0.5 mb-4">
                   {Array.from({ length: 5 }, (_, i) => <Star key={i} size={14} className="text-amber-400 fill-current" />)}
