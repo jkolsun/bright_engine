@@ -362,6 +362,17 @@ export async function processCloseEngineInbound(
 
     claudeResponse = parseClaudeResponse(rawText)
 
+    // Post-process: intercept Stripe/payment URLs — AI must NEVER send these directly
+    if (claudeResponse.replyText && containsPaymentUrl(claudeResponse.replyText)) {
+      console.warn(`[CloseEngine] BLOCKED: AI tried to send payment URL directly for ${lead.companyName}`)
+      // Strip the URL from the message
+      claudeResponse.replyText = stripPaymentUrls(claudeResponse.replyText)
+      // Force payment link flow through approval
+      if (claudeResponse.nextStage !== CONVERSATION_STAGES.PAYMENT_SENT) {
+        claudeResponse.nextStage = CONVERSATION_STAGES.PAYMENT_SENT
+      }
+    }
+
     // Post-process: replace any literal {formUrl} the AI may have output
     if (claudeResponse.replyText && claudeResponse.replyText.includes('{formUrl}')) {
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'
@@ -768,4 +779,28 @@ export function parseClaudeResponse(raw: string): ClaudeCloseResponse {
       escalateReason: null,
     }
   }
+}
+
+// ============================================
+// Payment URL Detection + Stripping
+// ============================================
+
+const PAYMENT_URL_PATTERNS = [
+  /https?:\/\/buy\.stripe\.com\S*/gi,
+  /https?:\/\/checkout\.stripe\.com\S*/gi,
+  /https?:\/\/[^\s]*stripe\.com\/[^\s]*pay[^\s]*/gi,
+  /https?:\/\/[^\s]*\.stripe\.com\S*/gi,
+]
+
+export function containsPaymentUrl(text: string): boolean {
+  return PAYMENT_URL_PATTERNS.some(pattern => pattern.test(text))
+}
+
+export function stripPaymentUrls(text: string): string {
+  let cleaned = text
+  for (const pattern of PAYMENT_URL_PATTERNS) {
+    cleaned = cleaned.replace(pattern, '')
+  }
+  // Clean up leftover whitespace and empty lines
+  return cleaned.replace(/\n\s*\n/g, '\n').replace(/\s{2,}/g, ' ').trim()
 }

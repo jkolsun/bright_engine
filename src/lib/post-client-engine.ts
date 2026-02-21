@@ -10,7 +10,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { prisma } from './db'
 import { sendSMSViaProvider } from './sms-provider'
 import { buildPostClientSystemPrompt } from './close-engine-prompts'
-import { calculateDelay, shouldAIRespond } from './close-engine-processor'
+import { calculateDelay, shouldAIRespond, containsPaymentUrl, stripPaymentUrls } from './close-engine-processor'
 import { getPricingConfig } from './pricing-config'
 
 const POST_CLIENT_MODEL = 'claude-haiku-4-5-20251001'
@@ -101,6 +101,42 @@ export async function processPostClientInbound(
       parsed = JSON.parse(cleaned)
     } catch {
       parsed = { replyText: rawText.substring(0, 300), intent: 'GENERAL', escalate: false }
+    }
+
+    // ── Guard: intercept payment URLs — AI must NEVER send these directly ──
+    if (parsed.replyText && containsPaymentUrl(parsed.replyText)) {
+      console.warn(`[PostClient] BLOCKED: AI tried to send payment URL directly for ${client.companyName}`)
+      // Strip URL, create approval for Andrew's queue instead
+      const strippedReply = stripPaymentUrls(parsed.replyText)
+      await prisma.approval.create({
+        data: {
+          gate: 'PAYMENT_LINK',
+          title: `Payment Link — ${client.companyName}`,
+          description: `AI attempted to send a payment URL directly to ${client.companyName}. Intercepted for manual review.`,
+          draftContent: parsed.replyText,
+          leadId: client.leadId || undefined,
+          clientId,
+          requestedBy: 'system',
+          status: 'PENDING',
+          priority: 'HIGH',
+          metadata: { clientId, phone: client.lead!.phone },
+        },
+      })
+      await prisma.notification.create({
+        data: {
+          type: 'CLOSE_ENGINE',
+          title: 'Payment Link Intercepted',
+          message: `AI tried to send payment URL to ${client.companyName}. Created approval for review.`,
+          metadata: { clientId, leadId: client.leadId },
+        },
+      })
+      // Send the cleaned message (without the URL) if there's still content
+      if (strippedReply.length > 10) {
+        parsed.replyText = strippedReply
+      } else {
+        // Nothing meaningful left after stripping — send a generic response
+        parsed.replyText = `Our team will follow up with you on that shortly!`
+      }
     }
 
     // ── Handle intents ──

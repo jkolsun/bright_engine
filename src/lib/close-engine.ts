@@ -255,6 +255,10 @@ export async function checkAutonomy(
   const level = conversation.autonomyLevel
 
   if (level === AUTONOMY_LEVELS.FULL_AUTO) {
+    // Payment links ALWAYS require approval — too high-stakes for full auto
+    if (actionType === 'SEND_PAYMENT_LINK') {
+      return { allowed: false, requiresApproval: true }
+    }
     return { allowed: true, requiresApproval: false }
   }
 
