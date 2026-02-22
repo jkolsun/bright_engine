@@ -24,6 +24,7 @@ interface SiteEditorPanelProps {
   companyName: string
   buildStep: string
   previewId: string | null
+  editInstruction?: string
   onClose: () => void
   onRefresh: () => void
 }
@@ -53,7 +54,7 @@ const SUGGESTED_EDITS = [
 
 // ─── Component ──────────────────────────────────────────
 export default function SiteEditorPanel({
-  leadId, companyName, buildStep, previewId, onClose, onRefresh,
+  leadId, companyName, buildStep, previewId, editInstruction, onClose, onRefresh,
 }: SiteEditorPanelProps) {
   // HTML state
   const [html, setHtml] = useState('')
@@ -367,6 +368,14 @@ export default function SiteEditorPanel({
           </button>
         </div>
       </div>
+
+      {/* ── Edit Instruction Banner ───────────────────── */}
+      {editInstruction && (
+        <div className="px-4 py-2.5 bg-blue-600/15 border-b border-blue-500/30 flex items-center gap-2 flex-shrink-0">
+          <span className="text-blue-400 text-xs font-medium uppercase tracking-wider">Client Request:</span>
+          <span className="text-blue-200 text-sm">&quot;{editInstruction}&quot;</span>
+        </div>
+      )}
 
       {/* ── Main Content ───────────────────────────────── */}
       <div className="flex-1 flex overflow-hidden">

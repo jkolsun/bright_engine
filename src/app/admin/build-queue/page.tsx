@@ -6,7 +6,8 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import {
   Hammer, Eye, Pencil, CheckCircle, Send, Rocket, Globe,
-  Loader2, XCircle, Clock, Zap, ExternalLink, ChevronDown, ChevronUp, Code, RefreshCw,
+  Loader2, XCircle, Clock, ExternalLink, ChevronDown, ChevronUp, Code, RefreshCw,
+  AlertTriangle, CheckCircle2, X, Edit3, MessageSquare,
 } from 'lucide-react'
 import SiteEditorPanel from '@/components/site-editor/SiteEditorPanel'
 
@@ -36,7 +37,7 @@ const WORKER_CONFIG: Record<string, { label: string; short: string; color: strin
   DISTRIBUTION: { label: 'Distribution', short: 'D', color: 'bg-green-500' },
 }
 
-type ViewTab = 'site' | 'worker'
+type ViewTab = 'site' | 'edits' | 'worker'
 type FilterTab = 'ALL' | 'QA_REVIEW' | 'EDITING' | 'QA_APPROVED' | 'CLIENT_REVIEW' | 'LAUNCHING'
 
 function formatTimeAgo(date: string): string {
@@ -55,8 +56,16 @@ function formatDuration(ms: number | null | undefined): string {
   return `${(ms / 1000).toFixed(1)}s`
 }
 
+function formatTimeSince(dateStr: string | null) {
+  if (!dateStr) return ''
+  const hours = Math.round((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60) * 10) / 10
+  if (hours < 1) return `${Math.round(hours * 60)}m ago`
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.round(hours / 24)}d ago`
+}
+
 // ============================================
-// Edit Panel Component
+// Edit Panel Component (inline AI edit for build queue cards)
 // ============================================
 
 function EditPanel({ leadId, onDone }: { leadId: string; onDone: () => void }) {
@@ -244,7 +253,6 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
       const data = await res.json()
 
       if (res.status === 409 && data.hasEdits) {
-        // Lead has manually edited HTML — confirm before wiping
         if (confirm(`WARNING: This site has been manually edited in the Site Editor (${Math.round(data.htmlSize / 1024)}KB of HTML). Rebuilding will PERMANENTLY ERASE all manual edits.\n\nAre you sure you want to rebuild from scratch?`)) {
           setRebuilding(false)
           return handleRebuild(true)
@@ -274,7 +282,6 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
     <Card className="p-4">
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3">
-          {/* Logo or placeholder */}
           <div className={`w-12 h-12 rounded-xl ${config.bgColor} flex items-center justify-center flex-shrink-0`}>
             {lead.logo ? (
               <img src={lead.logo} alt="" className="w-10 h-10 rounded-lg object-cover" />
@@ -306,7 +313,6 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
           </div>
         </div>
 
-        {/* Action buttons */}
         <div className="flex items-center gap-2">
           {previewUrl && (
             <a
@@ -381,10 +387,548 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
         </div>
       </div>
 
-      {/* Expandable panels */}
       {expanded === 'edit' && <EditPanel leadId={lead.id} onDone={onRefresh} />}
       {expanded === 'launch' && <LaunchPanel leadId={lead.id} onDone={onRefresh} />}
     </Card>
+  )
+}
+
+// ============================================
+// Client Edits Queue View
+// ============================================
+
+function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
+  onOpenEditor: (lead: any) => void
+  onRefreshBuildData: () => void
+}) {
+  const [editRequests, setEditRequests] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set())
+  const [completingIds, setCompletingIds] = useState<Set<string>>(new Set())
+
+  const fetchEditRequests = useCallback(async () => {
+    try {
+      const res = await fetch('/api/edit-requests')
+      if (res.ok) {
+        const data = await res.json()
+        setEditRequests(data.editRequests || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch edit requests:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchEditRequests() }, [fetchEditRequests])
+  useEffect(() => {
+    const interval = setInterval(fetchEditRequests, 10000)
+    return () => clearInterval(interval)
+  }, [fetchEditRequests])
+
+  // Helper: resolve the lead ID from all possible sources
+  const getLeadId = (req: any): string | null =>
+    req.leadId || req.lead?.id || req.client?.leadId || null
+
+  // Helper: build preview URL
+  const getPreviewUrl = (req: any): string | null => {
+    if (req.lead?.previewUrl) return req.lead.previewUrl
+    if (req.lead?.previewId) return `/preview/${req.lead.previewId}`
+    const leadId = getLeadId(req)
+    if (leadId) return `/preview/${leadId}`
+    return null
+  }
+
+  // Categorize edits by their actual flow state
+  const unprocessed = editRequests.filter((r: any) => r.status === 'new' && r.editFlowState === 'pending')
+  const aiProcessing = editRequests.filter((r: any) => r.status === 'ai_processing' || r.editFlowState === 'ai_editing')
+  const awaitingApproval = editRequests.filter((r: any) =>
+    r.status === 'ready_for_review' && (r.editFlowState === 'awaiting_approval' || (r.editFlowState === 'escalated' && r.postEditHtml))
+  )
+  const needsManualEdit = editRequests.filter((r: any) =>
+    r.status === 'ready_for_review' && r.editFlowState === 'escalated' && !r.postEditHtml
+  )
+  const failed = editRequests.filter((r: any) => r.editFlowState === 'failed' && r.status !== 'rejected')
+  const completed = editRequests.filter((r: any) => r.status === 'approved' || r.status === 'live' || r.status === 'rejected')
+  const autoApplied = completed.filter((r: any) => r.approvedBy === 'ai_auto')
+  const manuallyCompleted = completed.filter((r: any) => r.approvedBy !== 'ai_auto')
+
+  const actionableCount = awaitingApproval.length + needsManualEdit.length + failed.length + unprocessed.length
+  const completedWithTime = completed.filter((r: any) => r.approvedAt && r.createdAt)
+  const avgTurnaround = completedWithTime.length > 0
+    ? Math.round(completedWithTime.reduce((sum: number, r: any) => sum + (new Date(r.approvedAt).getTime() - new Date(r.createdAt).getTime()) / (1000 * 60 * 60), 0) / completedWithTime.length * 10) / 10
+    : 0
+
+  const handleEditAction = async (id: string, action: string) => {
+    try {
+      await fetch(`/api/edit-requests/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: action })
+      })
+      fetchEditRequests()
+      onRefreshBuildData()
+    } catch (error) {
+      console.error('Error updating edit request:', error)
+    }
+  }
+
+  const handleBatchApprove = async (ids: string[]) => {
+    await Promise.all(ids.map(id => handleEditAction(id, 'approved')))
+  }
+
+  const handleProcess = async (id: string, complexity?: string) => {
+    setProcessingIds(prev => new Set(prev).add(id))
+    try {
+      await fetch(`/api/edit-requests/${id}/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(complexity ? { complexity } : {}),
+      })
+      fetchEditRequests()
+      onRefreshBuildData()
+    } catch (error) {
+      console.error('Error processing edit:', error)
+    } finally {
+      setProcessingIds(prev => { const n = new Set(prev); n.delete(id); return n })
+    }
+  }
+
+  const handleBatchProcess = async (ids: string[]) => {
+    await Promise.all(ids.map(id => handleProcess(id)))
+  }
+
+  const handleComplete = async (id: string) => {
+    setCompletingIds(prev => new Set(prev).add(id))
+    try {
+      await fetch(`/api/edit-requests/${id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      fetchEditRequests()
+      onRefreshBuildData()
+    } catch (error) {
+      console.error('Error completing edit:', error)
+    } finally {
+      setCompletingIds(prev => { const n = new Set(prev); n.delete(id); return n })
+    }
+  }
+
+  const openEditorForRequest = (req: any) => {
+    const leadId = getLeadId(req)
+    if (!leadId) return
+    onOpenEditor({
+      id: leadId,
+      companyName: req.client?.companyName || 'Unknown',
+      buildStep: req.lead?.buildStep || 'EDITING',
+      previewId: req.lead?.previewId || null,
+      editInstruction: req.requestText,
+    })
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Summary stats bar */}
+      <div className="grid grid-cols-4 gap-4">
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
+              <MessageSquare size={18} className="text-amber-600" />
+            </div>
+            <div>
+              <p className="text-xl font-bold text-gray-900">{actionableCount}</p>
+              <p className="text-xs text-gray-500">Need Attention</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
+              <Loader2 size={18} className="text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xl font-bold text-gray-900">{aiProcessing.length}</p>
+              <p className="text-xs text-gray-500">AI Processing</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center">
+              <CheckCircle size={18} className="text-green-600" />
+            </div>
+            <div>
+              <p className="text-xl font-bold text-gray-900">{completed.length}</p>
+              <p className="text-xs text-gray-500">Completed</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center">
+              <Clock size={18} className="text-indigo-600" />
+            </div>
+            <div>
+              <p className="text-xl font-bold text-gray-900">{avgTurnaround > 0 ? `${avgTurnaround}h` : '--'}</p>
+              <p className="text-xs text-gray-500">Avg Turnaround</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {loading ? (
+        <Card className="p-12 text-center text-gray-500">Loading edit requests...</Card>
+      ) : editRequests.length === 0 ? (
+        <Card className="p-12 text-center">
+          <CheckCircle2 size={48} className="mx-auto mb-4 text-green-400" />
+          <h3 className="text-lg font-semibold text-gray-900">All caught up!</h3>
+          <p className="text-gray-500 text-sm">No pending edit requests from clients.</p>
+        </Card>
+      ) : (
+        <>
+          {/* Unprocessed: New edits that need to be kicked off */}
+          {unprocessed.length > 0 && (
+            <Card className="p-5 border-blue-200 bg-blue-50/50">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-blue-800 flex items-center gap-2">
+                  <Clock size={16} /> New Requests ({unprocessed.length})
+                </h3>
+                <button
+                  onClick={() => handleBatchProcess(unprocessed.map((r: any) => r.id))}
+                  className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                >
+                  Process All
+                </button>
+              </div>
+              <div className="space-y-3">
+                {unprocessed.map((req: any) => {
+                  const leadId = getLeadId(req)
+                  const previewUrl = getPreviewUrl(req)
+                  return (
+                    <div key={req.id} className="bg-white rounded-lg p-4 border border-blue-100">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{req.client?.companyName}</div>
+                          <div className="text-sm text-gray-600 mt-1">&quot;{req.requestText}&quot;</div>
+                          {req.aiInterpretation && (
+                            <div className="text-xs text-blue-600 mt-1">AI interpretation: {req.aiInterpretation}</div>
+                          )}
+                          <div className="text-xs text-gray-400 mt-1">
+                            {formatTimeSince(req.createdAt)} via {req.requestChannel}
+                          </div>
+                        </div>
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200 capitalize">{req.complexityTier}</Badge>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        {leadId && (
+                          <button
+                            onClick={() => openEditorForRequest(req)}
+                            className="px-3 py-1.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-1.5 font-medium"
+                          >
+                            <Code size={14} /> Open in Editor
+                          </button>
+                        )}
+                        {previewUrl && (
+                          <a
+                            href={previewUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+                          >
+                            <ExternalLink size={14} /> View Site
+                          </a>
+                        )}
+                        <button
+                          onClick={() => handleProcess(req.id)}
+                          disabled={processingIds.has(req.id)}
+                          className="px-3 py-1.5 text-sm text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                          {processingIds.has(req.id) ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                          {processingIds.has(req.id) ? 'Processing...' : 'Let AI Try'}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+          )}
+
+          {/* AI Processing */}
+          {aiProcessing.length > 0 && (
+            <Card className="p-5 bg-yellow-50/50 border-yellow-200">
+              <h3 className="font-semibold text-yellow-800 mb-4 flex items-center gap-2">
+                <Loader2 size={16} className="animate-spin" /> AI Processing ({aiProcessing.length})
+              </h3>
+              <div className="space-y-2">
+                {aiProcessing.map((req: any) => (
+                  <div key={req.id} className="bg-white rounded-lg p-3 text-sm flex items-center justify-between border border-yellow-100">
+                    <div>
+                      <span className="font-medium text-gray-900">{req.client?.companyName}</span>
+                      <span className="text-gray-500 ml-2">&mdash; {req.requestText}</span>
+                    </div>
+                    <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">AI Working...</Badge>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Awaiting Approval: AI applied, needs admin sign-off */}
+          {awaitingApproval.length > 0 && (
+            <Card className="p-5 border-indigo-200 bg-indigo-50/30">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-indigo-800 flex items-center gap-2">
+                  <Eye size={16} /> Awaiting Approval ({awaitingApproval.length})
+                </h3>
+                {awaitingApproval.length > 1 && (
+                  <button
+                    onClick={() => handleBatchApprove(awaitingApproval.map((r: any) => r.id))}
+                    className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                  >
+                    Approve All
+                  </button>
+                )}
+              </div>
+              <div className="space-y-3">
+                {awaitingApproval.map((req: any) => {
+                  const leadId = getLeadId(req)
+                  const previewUrl = getPreviewUrl(req)
+                  return (
+                    <div key={req.id} className="bg-white border border-indigo-100 rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{req.client?.companyName}</div>
+                          <div className="text-sm text-gray-600 mt-1">Request: &quot;{req.requestText}&quot;</div>
+                          {req.editSummary && (
+                            <div className="text-sm text-green-700 mt-1 bg-green-50 rounded px-2 py-1 inline-block">
+                              AI applied: {req.editSummary.replace('[AI attempt] ', '')}
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-400 mt-1">
+                            {formatTimeSince(req.createdAt)} via {req.requestChannel}
+                          </div>
+                        </div>
+                        <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200 capitalize">{req.complexityTier}</Badge>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={() => handleEditAction(req.id, 'approved')}
+                          className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-1.5 font-medium"
+                        >
+                          <CheckCircle size={14} /> Approve & Push
+                        </button>
+                        {previewUrl && (
+                          <a
+                            href={previewUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+                          >
+                            <ExternalLink size={14} /> View Site
+                          </a>
+                        )}
+                        {leadId && (
+                          <button
+                            onClick={() => openEditorForRequest(req)}
+                            className="px-3 py-1.5 text-sm text-purple-600 border border-purple-300 rounded-lg hover:bg-purple-50 flex items-center gap-1.5"
+                          >
+                            <Code size={14} /> Edit More
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleEditAction(req.id, 'rejected')}
+                          className="px-3 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+                        >
+                          <X size={14} /> Reject
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+          )}
+
+          {/* Manual Edit Required: Complex edits */}
+          {needsManualEdit.length > 0 && (
+            <Card className="p-5 border-amber-200 bg-amber-50/30">
+              <h3 className="font-semibold text-amber-800 mb-4 flex items-center gap-2">
+                <AlertTriangle size={16} /> Manual Edit Required ({needsManualEdit.length})
+              </h3>
+              <div className="space-y-3">
+                {needsManualEdit.map((req: any) => {
+                  const leadId = getLeadId(req)
+                  const previewUrl = getPreviewUrl(req)
+                  return (
+                    <div key={req.id} className="bg-white border border-amber-100 rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{req.client?.companyName}</div>
+                          <div className="text-sm text-gray-600 mt-1">&quot;{req.requestText}&quot;</div>
+                          {req.aiInterpretation && (
+                            <div className="text-xs text-blue-600 mt-1">AI interpretation: {req.aiInterpretation}</div>
+                          )}
+                          <div className="text-xs text-gray-400 mt-1">
+                            {formatTimeSince(req.createdAt)} via {req.requestChannel}
+                          </div>
+                        </div>
+                        <Badge className="bg-amber-100 text-amber-800 border-amber-300">Complex</Badge>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        {leadId && (
+                          <button
+                            onClick={() => openEditorForRequest(req)}
+                            className="px-3 py-1.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-1.5 font-medium"
+                          >
+                            <Code size={14} /> Open in Editor
+                          </button>
+                        )}
+                        {previewUrl && (
+                          <a
+                            href={previewUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+                          >
+                            <ExternalLink size={14} /> View Site
+                          </a>
+                        )}
+                        <button
+                          onClick={() => handleComplete(req.id)}
+                          disabled={completingIds.has(req.id)}
+                          className="px-3 py-1.5 text-sm text-green-600 border border-green-300 rounded-lg hover:bg-green-50 disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                          <CheckCircle size={14} /> {completingIds.has(req.id) ? 'Completing...' : 'Mark Complete'}
+                        </button>
+                        <button
+                          onClick={() => handleProcess(req.id, 'medium')}
+                          disabled={processingIds.has(req.id)}
+                          className="px-3 py-1.5 text-sm text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                          {processingIds.has(req.id) ? 'Processing...' : 'Let AI Try'}
+                        </button>
+                        <button
+                          onClick={() => handleEditAction(req.id, 'rejected')}
+                          className="px-3 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+                        >
+                          <X size={14} /> Dismiss
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+          )}
+
+          {/* Failed: AI edit failed */}
+          {failed.length > 0 && (
+            <Card className="p-5 border-red-200 bg-red-50/30">
+              <h3 className="font-semibold text-red-800 mb-4 flex items-center gap-2">
+                <XCircle size={16} /> Failed &mdash; Needs Attention ({failed.length})
+              </h3>
+              <div className="space-y-3">
+                {failed.map((req: any) => {
+                  const leadId = getLeadId(req)
+                  const previewUrl = getPreviewUrl(req)
+                  return (
+                    <div key={req.id} className="bg-white border border-red-100 rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="font-medium text-gray-900">{req.client?.companyName}</div>
+                          <div className="text-sm text-gray-600 mt-1">&quot;{req.requestText}&quot;</div>
+                          <div className="text-xs text-red-600 mt-1">AI edit failed &mdash; manual edit needed</div>
+                        </div>
+                        <Badge className="bg-red-100 text-red-800 border-red-300">Failed</Badge>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        {leadId && (
+                          <button
+                            onClick={() => openEditorForRequest(req)}
+                            className="px-3 py-1.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-1.5 font-medium"
+                          >
+                            <Code size={14} /> Open in Editor
+                          </button>
+                        )}
+                        {previewUrl && (
+                          <a
+                            href={previewUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+                          >
+                            <ExternalLink size={14} /> View Site
+                          </a>
+                        )}
+                        <button
+                          onClick={() => handleComplete(req.id)}
+                          disabled={completingIds.has(req.id)}
+                          className="px-3 py-1.5 text-sm text-green-600 border border-green-300 rounded-lg hover:bg-green-50 disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                          <CheckCircle size={14} /> {completingIds.has(req.id) ? 'Completing...' : 'Mark Complete'}
+                        </button>
+                        <button
+                          onClick={() => handleProcess(req.id)}
+                          disabled={processingIds.has(req.id)}
+                          className="px-3 py-1.5 text-sm text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                          {processingIds.has(req.id) ? 'Retrying...' : 'Retry AI'}
+                        </button>
+                        <button
+                          onClick={() => handleEditAction(req.id, 'rejected')}
+                          className="px-3 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+                        >
+                          <X size={14} /> Dismiss
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+          )}
+
+          {/* Completed */}
+          {completed.length > 0 && (
+            <Card className="p-5">
+              <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-green-500" /> Completed ({completed.length})
+              </h3>
+              <div className="space-y-2 text-sm">
+                {autoApplied.length > 0 && (
+                  <div className="text-xs text-gray-400 mb-2">{autoApplied.length} auto-applied by AI</div>
+                )}
+                {manuallyCompleted.slice(0, 10).map((req: any) => (
+                  <div key={req.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                    <div>
+                      <span className="font-medium text-gray-700">{req.client?.companyName}</span>
+                      <span className="text-gray-500 ml-2">&mdash; &quot;{req.requestText}&quot;</span>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {req.approvedBy === 'ai_auto' ? 'Auto' : req.approvedBy || 'System'}
+                      {req.approvedAt && ` · ${new Date(req.approvedAt).toLocaleDateString()}`}
+                    </div>
+                  </div>
+                ))}
+                {autoApplied.slice(0, 5).map((req: any) => (
+                  <div key={req.id} className="flex items-center justify-between py-2 opacity-60">
+                    <div>
+                      <Badge className="text-xs mr-2 bg-gray-100 text-gray-600">Auto</Badge>
+                      <span className="font-medium text-gray-700">{req.client?.companyName}</span>
+                      <span className="text-gray-500 ml-2">&mdash; {req.editSummary || req.requestText}</span>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {req.approvedAt && new Date(req.approvedAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </>
+      )}
+    </div>
   )
 }
 
@@ -566,6 +1110,7 @@ export default function BuildQueuePage() {
 
   const counts = data?.counts || {}
   const leads = data?.leads || []
+  const editBadgeCount = data?.editBadgeCount || 0
 
   // Filter leads by tab
   const filteredLeads = filterTab === 'ALL'
@@ -590,7 +1135,7 @@ export default function BuildQueuePage() {
             <Hammer size={28} className="text-amber-500" />
             Build Queue
           </h1>
-          <p className="text-gray-600 mt-1">Site builds from QA to launch</p>
+          <p className="text-gray-600 mt-1">Site builds, client edits, and deployments</p>
 
           {/* View tabs */}
           <div className="flex items-center gap-1 mt-4 border-b border-gray-200 -mb-px">
@@ -603,6 +1148,21 @@ export default function BuildQueuePage() {
               }`}
             >
               Site Builds
+            </button>
+            <button
+              onClick={() => setViewTab('edits')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                viewTab === 'edits'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Client Edits
+              {editBadgeCount > 0 && (
+                <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                  {editBadgeCount}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setViewTab('worker')}
@@ -621,6 +1181,11 @@ export default function BuildQueuePage() {
       <div className="p-6">
         {viewTab === 'worker' ? (
           <WorkerPipelineView />
+        ) : viewTab === 'edits' ? (
+          <ClientEditsView
+            onOpenEditor={setEditorLead}
+            onRefreshBuildData={loadData}
+          />
         ) : (
           <>
             {/* Filter tabs */}
@@ -667,13 +1232,14 @@ export default function BuildQueuePage() {
         )}
       </div>
 
-      {/* Site Editor Overlay — stays in the UI */}
+      {/* Site Editor Overlay */}
       {editorLead && (
         <SiteEditorPanel
           leadId={editorLead.id}
           companyName={editorLead.companyName}
           buildStep={editorLead.buildStep || 'QA_REVIEW'}
           previewId={editorLead.previewId || null}
+          editInstruction={editorLead.editInstruction || undefined}
           onClose={() => setEditorLead(null)}
           onRefresh={loadData}
         />

@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
  * Shows leads in QA_REVIEW → EDITING → QA_APPROVED → CLIENT_REVIEW → CLIENT_APPROVED → LAUNCHING → LIVE
  */
 async function getSiteBuildPipelineView() {
-  const [siteBuildLeads, stageCounts] = await Promise.all([
+  const [siteBuildLeads, stageCounts, editBadgeCount] = await Promise.all([
     prisma.lead.findMany({
       where: {
         buildStep: { in: [...SITE_BUILD_STEPS] },
@@ -73,6 +73,13 @@ async function getSiteBuildPipelineView() {
       WHERE build_step IN ('QA_REVIEW', 'EDITING', 'QA_APPROVED', 'CLIENT_REVIEW', 'CLIENT_APPROVED', 'LAUNCHING', 'LIVE')
       GROUP BY build_step
     `,
+    // Count actionable edit requests for badge
+    prisma.editRequest.count({
+      where: {
+        status: { in: ['new', 'ai_processing', 'ready_for_review'] },
+        editFlowState: { notIn: ['confirmed', 'pushed'] },
+      },
+    }),
   ])
 
   // Convert raw counts to object
@@ -88,6 +95,7 @@ async function getSiteBuildPipelineView() {
     leads: siteBuildLeads,
     counts,
     badgeCount,
+    editBadgeCount,
     total: siteBuildLeads.length,
   })
 }

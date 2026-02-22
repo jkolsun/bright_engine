@@ -47,7 +47,7 @@ export default function AdminLayout({
         }
         if (buildRes.ok) {
           const data = await buildRes.json()
-          setBuildQueueBadge(data.badgeCount || 0)
+          setBuildQueueBadge((data.badgeCount || 0) + (data.editBadgeCount || 0))
         }
       } catch { /* silent */ }
     }
