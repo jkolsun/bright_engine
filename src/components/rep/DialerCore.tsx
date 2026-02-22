@@ -1749,7 +1749,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
   // Previous notes from history
   const previousNotes = leadHistory
-    .filter(h => h.eventType === 'REP_NOTE' || h.eventType === 'CALL_NOTE' || (h.description && h.eventType.includes('NOTE')))
+    .filter(h => h.eventType === 'REP_NOTE' || h.eventType === 'CALL_NOTE' || (h.description && h.eventType?.includes('NOTE')))
     .slice(0, 10)
 
   const queueEmpty = queue.length === 0
