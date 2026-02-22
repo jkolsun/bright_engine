@@ -29,21 +29,24 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        phone: true,
-        status: true,
-        portalType: true,
-        dailyLeadCap: true,
-        onboardingComplete: true,
-      },
-    })
+    // Get user from database + onboarding setting in parallel
+    const [user, onboardingSetting] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          phone: true,
+          status: true,
+          portalType: true,
+          dailyLeadCap: true,
+          onboardingComplete: true,
+        },
+      }),
+      prisma.settings.findUnique({ where: { key: 'rep_onboarding_enabled' } }),
+    ])
 
     if (!user) {
       return NextResponse.json(
@@ -52,7 +55,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({ user })
+    return NextResponse.json({
+      user,
+      repOnboardingEnabled: onboardingSetting?.value !== false,
+    })
   } catch (error) {
     console.error('Auth /me error:', error)
     return NextResponse.json(

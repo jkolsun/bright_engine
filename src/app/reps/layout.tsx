@@ -51,10 +51,10 @@ export default function RepsLayout({
       try {
         const meRes = await fetch('/api/auth/me')
         if (!meRes.ok) return
-        const { user } = await meRes.json()
+        const { user, repOnboardingEnabled } = await meRes.json()
         if (user.role === 'ADMIN') { setOnboardingLoaded(true); return }
         setOnboardingUserId(user.id)
-        if (!user.onboardingComplete) {
+        if (repOnboardingEnabled !== false && !user.onboardingComplete) {
           setShowOnboarding(true)
         }
       } catch { /* ignore */ }

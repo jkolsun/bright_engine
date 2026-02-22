@@ -43,6 +43,8 @@ export default function TeamTab() {
 // ─────────────────────────────────────────────────────────
 
 function RepsSection() {
+  const { rawSettings, settingsLoaded, saveSetting, savingKey, savedKey } = useSettingsContext()
+  const [onboardingEnabled, setOnboardingEnabled] = useState(true)
   const [reps, setReps] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -86,6 +88,18 @@ function RepsSection() {
     } catch (error) {
       console.error('Failed to reset onboarding:', error)
     }
+  }
+
+  useEffect(() => {
+    if (settingsLoaded && rawSettings.rep_onboarding_enabled !== undefined) {
+      setOnboardingEnabled(rawSettings.rep_onboarding_enabled !== false)
+    }
+  }, [settingsLoaded, rawSettings])
+
+  const toggleOnboarding = async () => {
+    const newValue = !onboardingEnabled
+    setOnboardingEnabled(newValue)
+    await saveSetting('rep_onboarding_enabled', newValue)
   }
 
   useEffect(() => {
@@ -205,6 +219,34 @@ function RepsSection() {
   return (
     <AccordionSection title="Reps" description="Add, edit, and manage your sales reps" defaultOpen>
       <div className="space-y-6 pt-4">
+        {/* Onboarding Toggle */}
+        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div>
+            <h4 className="text-sm font-semibold text-gray-900">Rep Onboarding Wizard</h4>
+            <p className="text-xs text-gray-500 mt-0.5">
+              When enabled, new reps must complete the onboarding wizard before accessing the dashboard.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {savingKey === 'rep_onboarding_enabled' && (
+              <span className="text-xs text-gray-400">Saving...</span>
+            )}
+            {savedKey === 'rep_onboarding_enabled' && (
+              <span className="text-xs text-green-600">Saved</span>
+            )}
+            <button
+              onClick={toggleOnboarding}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                onboardingEnabled ? 'bg-blue-600' : 'bg-gray-300'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                onboardingEnabled ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
+          </div>
+        </div>
+
         {/* Header with Add Rep button */}
         <div className="flex items-center justify-between">
           <div>
