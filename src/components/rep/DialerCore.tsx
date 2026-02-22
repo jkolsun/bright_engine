@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Phone, SkipForward, CheckCircle, PhoneMissed, PhoneOff,
@@ -144,7 +143,7 @@ function TopBar({
   basePath, isPartTime, dialerMode, setDialerMode,
   callPhase, callTimer, sessionStats, sessionActive,
   linesPerDial, setLinesPerDial,
-  onStartSession, onEndSession,
+  onStartSession, onEndSession, onClose,
 }: {
   basePath: string
   isPartTime: boolean
@@ -158,6 +157,7 @@ function TopBar({
   setLinesPerDial: (n: number) => void
   onStartSession: () => void
   onEndSession: () => void
+  onClose: () => void
 }) {
   const statusBadge = () => {
     switch (callPhase) {
@@ -171,10 +171,10 @@ function TopBar({
   return (
     <div className="h-14 gradient-primary flex items-center px-4 gap-4 flex-shrink-0 shadow-teal">
       {/* Left */}
-      <Link href={basePath} className="flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors">
+      <button onClick={onClose} className="flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors">
         <ArrowLeft size={16} />
-        <span className="hidden sm:inline">Dashboard</span>
-      </Link>
+        <span className="hidden sm:inline">Back</span>
+      </button>
       <div className="h-5 w-px bg-white/20" />
       <span className="text-sm font-semibold text-white">
         {dialerMode === 'power' ? 'Power Dialer' : 'Single Dial'}
@@ -246,9 +246,9 @@ function TopBar({
         )}
 
         {/* Close dialer */}
-        <Link href={basePath} className="p-1.5 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Close Dialer">
+        <button onClick={onClose} className="p-1.5 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Close Dialer">
           <X size={18} />
-        </Link>
+        </button>
       </div>
     </div>
   )
@@ -943,10 +943,11 @@ function DispositionPanel({
 }
 
 function EndOfSessionScreen({
-  sessionStats, basePath,
+  sessionStats, basePath, onClose,
 }: {
   sessionStats: { dials: number; connects: number; previewsSent: number }
   basePath: string
+  onClose: () => void
 }) {
   const connectRate = sessionStats.dials > 0
     ? Math.round((sessionStats.connects / sessionStats.dials) * 100)
@@ -982,12 +983,12 @@ function EndOfSessionScreen({
         </div>
 
         <div className="flex items-center gap-3 justify-center">
-          <Link
-            href={basePath}
-            className="inline-block px-6 py-3 gradient-primary text-white rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity shadow-teal"
+          <button
+            onClick={onClose}
+            className="px-6 py-3 gradient-primary text-white rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity shadow-teal"
           >
             Back to Dashboard
-          </Link>
+          </button>
           <button
             onClick={() => window.location.reload()}
             className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-colors"
@@ -1006,6 +1007,9 @@ function EndOfSessionScreen({
 
 export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   const isPartTime = portalType === 'PART_TIME'
+
+  // ----- Full-Screen Toggle -----
+  const [dialerActive, setDialerActive] = useState(false)
 
   // ----- Queue & Identity -----
   const [queue, setQueue] = useState<Lead[]>([])
@@ -1706,11 +1710,37 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   // RENDER
   // ============================================
 
+  // Launch screen — shown inside the normal layout (sidebar visible)
+  if (!dialerActive) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="text-center max-w-md">
+          <div className="w-20 h-20 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-teal">
+            <Phone size={36} className="text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            Power Dialer
+          </h1>
+          <p className="text-gray-500 text-sm mb-8">
+            Auto-call through your lead queue, log dispositions, and send previews — all in one full-screen workspace.
+          </p>
+          <button
+            onClick={() => setDialerActive(true)}
+            className="px-8 py-3.5 gradient-primary text-white rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity shadow-teal inline-flex items-center gap-2"
+          >
+            <PhoneCall size={18} />
+            Launch Dialer
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-gray-50">
+      <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f0fdfa 40%, #ecfdf5 70%, #f0f9ff 100%)' }}>
         <div className="text-center">
-          <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <div className="w-10 h-10 border-3 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-sm text-gray-500">Loading dialer...</p>
         </div>
       </div>
@@ -1725,7 +1755,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   const queueEmpty = queue.length === 0
 
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f0fdfa 40%, #ecfdf5 70%, #f0f9ff 100%)' }}>
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f0fdfa 40%, #ecfdf5 70%, #f0f9ff 100%)' }}>
       {/* Toast */}
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-sm font-medium ${
@@ -1749,6 +1779,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         setLinesPerDial={setLinesPerDial}
         onStartSession={handleStartSession}
         onEndSession={handleEndSession}
+        onClose={() => setDialerActive(false)}
       />
 
       {/* Main 3-Panel Area */}
@@ -1767,7 +1798,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         {/* Center: Active Lead */}
         <div className="w-1/2 overflow-y-auto p-4 space-y-4">
           {queueEmpty ? (
-            <EndOfSessionScreen sessionStats={sessionStats} basePath={basePath} />
+            <EndOfSessionScreen sessionStats={sessionStats} basePath={basePath} onClose={() => setDialerActive(false)} />
           ) : currentLead ? (
             <>
               <LeadProfile
