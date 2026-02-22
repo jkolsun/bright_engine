@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
       process.env.TWILIO_DIALER_NUMBER_1,
       process.env.TWILIO_DIALER_NUMBER_2,
       process.env.TWILIO_DIALER_NUMBER_3,
+      process.env.TWILIO_DIALER_NUMBER_4,
     ].filter((n): n is string => !!n && n.trim().length > 0)
 
     return NextResponse.json({ numbers })

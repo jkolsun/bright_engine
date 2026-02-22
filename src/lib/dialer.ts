@@ -794,6 +794,7 @@ async function getDialerNumber(repId: string): Promise<string> {
   return process.env.TWILIO_DIALER_NUMBER_1
     || process.env.TWILIO_DIALER_NUMBER_2
     || process.env.TWILIO_DIALER_NUMBER_3
+    || process.env.TWILIO_DIALER_NUMBER_4
     || process.env.TWILIO_PHONE_NUMBER
     || ''
 }
