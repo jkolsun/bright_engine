@@ -13,6 +13,8 @@ import { buildPostClientSystemPrompt } from './close-engine-prompts'
 import { calculateDelay, shouldAIRespond, containsPaymentUrl, stripPaymentUrls } from './close-engine-processor'
 import { getPricingConfig } from './pricing-config'
 import { updateOnboarding, advanceOnboarding, createOnboardingApproval } from './onboarding'
+import { handleEditRequest } from './edit-request-handler'
+import { handleEditConfirmation } from './edit-confirmation-handler'
 
 const POST_CLIENT_MODEL = 'claude-haiku-4-5-20251001'
 
@@ -39,6 +41,41 @@ export async function processPostClientInbound(
     include: { lead: true, analytics: true, revenue: true },
   })
   if (!client || !client.lead) return
+
+  // ── Check for pending edit confirmation BEFORE normal AI processing ──
+  const pendingEdit = await prisma.editRequest.findFirst({
+    where: { clientId, editFlowState: 'awaiting_confirmation' },
+    orderBy: { createdAt: 'desc' },
+  })
+  if (pendingEdit) {
+    const confirmResult = await handleEditConfirmation({
+      clientId,
+      editRequestId: pendingEdit.id,
+      message,
+    })
+    if (confirmResult.handled && confirmResult.replyText) {
+      // Send the confirmation reply, skip normal AI processing
+      const delay = calculateDelay(confirmResult.replyText.length, 'standard')
+      setTimeout(async () => {
+        try {
+          await sendSMSViaProvider({
+            to: client.lead!.phone,
+            message: confirmResult.replyText!,
+            clientId,
+            trigger: 'edit_confirmation_response',
+            aiGenerated: true,
+            aiDelaySeconds: delay,
+            conversationType: 'post_client',
+            sender: 'clawdbot',
+          })
+        } catch (err) {
+          console.error('[PostClient] Edit confirmation send failed:', err)
+        }
+      }, delay * 1000)
+      return
+    }
+    // If not handled (e.g. unrelated message or more_edits), fall through to normal processing
+  }
 
   // Load last 20 messages for this client
   const messages = await prisma.message.findMany({
@@ -147,11 +184,12 @@ export async function processPostClientInbound(
 
     // ── Handle intents ──
 
-    // Edit request → create EditRequest record
+    // Edit request → create EditRequest record and kick off handler
     if (parsed.intent === 'EDIT_REQUEST' && parsed.editRequest) {
-      await prisma.editRequest.create({
+      const editRequest = await prisma.editRequest.create({
         data: {
           clientId,
+          leadId: client.leadId || undefined,
           requestText: message,
           requestChannel: 'SMS',
           aiInterpretation: parsed.editRequest.description,
@@ -159,6 +197,14 @@ export async function processPostClientInbound(
           status: 'new',
         },
       })
+
+      // Kick off the edit handler (async, doesn't block the initial reply)
+      handleEditRequest({
+        clientId,
+        editRequestId: editRequest.id,
+        instruction: parsed.editRequest.description || message,
+        complexity: (parsed.editRequest.complexity || 'medium') as 'simple' | 'medium' | 'complex',
+      }).catch(err => console.error('[PostClient] Edit handler failed:', err))
     }
 
     // Cancel signal or escalation → notify immediately

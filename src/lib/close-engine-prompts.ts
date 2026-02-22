@@ -180,21 +180,36 @@ Don't ask any more questions. If they text, respond warmly and reassure them.`,
     return `The client has received their site preview and is reviewing it.
 Preview URL: ${previewUrl}
 
-CRITICAL RULE — APPROVAL DETECTION:
-If the client says ANYTHING positive about the site ("looks good", "love it", "perfect", "let's do it", "I'll take it", "ready to go", "how do I pay", "let's move forward", "approved", "go live"), you MUST set nextStage to "PAYMENT_SENT" in your JSON response. This triggers the payment link flow. Do NOT just say "our team will be in touch" — that skips the payment step entirely.
+CRITICAL RULE — APPROVAL vs EDIT DETECTION:
+You must carefully distinguish between FULL approval and approval-with-changes:
 
-If they request changes → acknowledge, say "Got it, we'll update that and send you a new preview shortly", and set nextStage to EDIT_LOOP.
+SET nextStage to "PAYMENT_SENT" ONLY when the client gives UNQUALIFIED approval — they are clearly satisfied and ready to move forward with NO remaining changes. Examples:
+- "Looks perfect, let's do it"
+- "Love it! How do I pay?"
+- "Ready to go live"
+- "Approved, let's move forward"
+- "I'll take it"
+- "It's great, no changes needed"
+
+SET nextStage to "EDIT_LOOP" when the client mentions ANY changes, tweaks, or improvements — even if they also say something positive. If there is a "but", "however", "could use", "maybe change", "I want", or ANY edit request, that means EDIT_LOOP. Examples:
+- "It looks good but I want different fonts" → EDIT_LOOP (has edit request)
+- "Love it, just change the header color" → EDIT_LOOP (has edit request)
+- "Pretty good, could use some work" → EDIT_LOOP (has edit request)
+- "Nice, but can you make the text bigger?" → EDIT_LOOP (has edit request)
+
 If they ask questions ("how long to go live?", "how much?") → answer directly. Don't change stage for questions.
 
 NEVER send a Stripe URL or payment link directly in your message. The system handles payment links separately.
-NEVER say "our team will reach out" or "we'll be in touch" when they approve — set nextStage to PAYMENT_SENT so the system creates the payment link.`
+NEVER say "our team will reach out" or "we'll be in touch" when they truly approve — set nextStage to PAYMENT_SENT so the system creates the payment link.`
   },
 
   EDIT_LOOP: (ctx) => {
     const editRounds = ctx.conversation.editRounds || 0
     return `The lead requested changes. Collect their specific feedback. Acknowledge each request. Tell them you'll get it updated.
 
-CRITICAL: When they confirm the updated version looks good or say anything positive ("looks good now", "perfect", "love it", "approved") → you MUST set nextStage to "PAYMENT_SENT". Do NOT just say "our team will be in touch."
+CRITICAL: When they confirm the updated version looks good with NO further changes ("looks good now", "perfect", "love it", "approved", "no more changes") → set nextStage to "PAYMENT_SENT".
+But if they say it looks better AND request more changes ("better, but also change X") → stay in EDIT_LOOP.
+Only trigger PAYMENT_SENT when the client is fully satisfied with zero remaining edits.
 NEVER send a Stripe URL or payment link directly. The system handles that.
 
 Current edit round: ${editRounds}/3.`
@@ -545,7 +560,13 @@ You MUST respond with valid JSON only. No text before or after the JSON.
 {
   "replyText": "Your message",
   "intent": "EDIT_REQUEST" | "QUESTION" | "CANCEL_SIGNAL" | "POSITIVE_FEEDBACK" | "BILLING" | "GENERAL"${onboardingIntents},
-  "editRequest": { "description": "...", "complexity": "simple|medium|complex" } or null,
+  "editRequest": {
+    "description": "Clear, specific instruction describing what to change on the site",
+    "complexity": "simple" or "medium" or "complex"
+    // simple = font change, color swap, text edit, image swap, spacing tweak, show/hide element, make something bigger/smaller
+    // medium = rearranging layout, adding a new section, changing navigation structure, redesigning a component
+    // complex = adding a new page, major redesign, functionality changes, form modifications, adding interactive features
+  } or null,
   "escalate": true/false,
   "escalateReason": "reason" or null${onboardingResponseFields}
 }`

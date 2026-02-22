@@ -341,8 +341,87 @@ async function executeApprovedAction(approval: any) {
         break
       }
       case 'SITE_EDIT': {
-        // Site edit approved — just log (actual edit is manual)
-        console.log(`[Approvals] Site edit approved for ${approval.clientId || approval.leadId}`)
+        // Site edit approved — apply AI edit, push to build queue, notify client
+        const editRequestId = (approval.metadata as any)?.editRequestId
+        if (editRequestId) {
+          try {
+            const editReq = await prisma.editRequest.findUnique({ where: { id: editRequestId } })
+            if (editReq?.leadId) {
+              const { applyAiEdit } = await import('@/lib/ai-site-editor')
+              const editLead = await prisma.lead.findUnique({
+                where: { id: editReq.leadId },
+                select: { siteHtml: true, companyName: true },
+              })
+              if (editLead?.siteHtml) {
+                const editResult = await applyAiEdit({
+                  html: editLead.siteHtml,
+                  instruction: editReq.aiInterpretation || editReq.requestText,
+                  companyName: editLead.companyName || 'the business',
+                })
+                if ('html' in editResult) {
+                  await prisma.lead.update({
+                    where: { id: editReq.leadId },
+                    data: { siteHtml: editResult.html },
+                  })
+                  await prisma.editRequest.update({
+                    where: { id: editRequestId },
+                    data: {
+                      editFlowState: 'confirmed',
+                      postEditHtml: editResult.html,
+                      editSummary: editResult.summary,
+                      status: 'approved',
+                      approvedAt: new Date(),
+                    },
+                  })
+                  // Push to build queue
+                  await prisma.lead.update({
+                    where: { id: editReq.leadId },
+                    data: { buildStep: 'QA_REVIEW' },
+                  })
+                  // Notify client via SMS
+                  const editClient = await prisma.client.findUnique({
+                    where: { id: editReq.clientId },
+                    include: { lead: true },
+                  })
+                  if (editClient?.lead?.phone) {
+                    const { sendSMSViaProvider } = await import('@/lib/sms-provider')
+                    await sendSMSViaProvider({
+                      to: editClient.lead.phone,
+                      message: `Your changes have been made and are going live now!`,
+                      clientId: editClient.id,
+                      trigger: 'edit_approved_applied',
+                      sender: 'clawdbot',
+                      conversationType: 'post_client',
+                      aiGenerated: true,
+                    })
+                  }
+                  await prisma.notification.create({
+                    data: {
+                      type: 'CLOSE_ENGINE',
+                      title: 'Site Edit Applied & Pushed',
+                      message: `Edit for ${editLead.companyName}: ${editResult.summary}`,
+                      metadata: { clientId: editReq.clientId, editRequestId, leadId: editReq.leadId },
+                    },
+                  })
+                } else {
+                  console.error(`[Approvals] SITE_EDIT AI edit failed:`, editResult.error)
+                  await prisma.notification.create({
+                    data: {
+                      type: 'DAILY_AUDIT',
+                      title: 'Site Edit Failed After Approval',
+                      message: `AI could not apply edit for ${editLead.companyName}: ${editResult.error}`,
+                      metadata: { editRequestId, error: editResult.error },
+                    },
+                  })
+                }
+              }
+            }
+          } catch (editErr) {
+            console.error('[Approvals] SITE_EDIT execution failed:', editErr)
+          }
+        } else {
+          console.log(`[Approvals] Site edit approved (no editRequestId) for ${approval.clientId || approval.leadId}`)
+        }
         break
       }
       case 'SEND_PREVIEW': {

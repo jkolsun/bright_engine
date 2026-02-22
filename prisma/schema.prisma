@@ -3,14 +3,1051 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-// ============================================
-// USER MODEL (Andrew, Jared, Reps)
-// ============================================
+model User {
+  id                       String                    @id @default(cuid())
+  email                    String                    @unique
+  name                     String
+  role                     UserRole                  @default(REP)
+  phone                    String?
+  status                   UserStatus                @default(ACTIVE)
+  createdAt                DateTime                  @default(now()) @map("created_at")
+  updatedAt                DateTime                  @updatedAt @map("updated_at")
+  passwordHash             String?
+  commissionRate           Float                     @default(0.5) @map("commission_rate")
+  dailyLeadCap             Int                       @default(25)
+  portalType               String                    @default("FULL")
+  totalCloses              Int                       @default(0)
+  lastSeenAt               DateTime?                 @map("last_seen_at")
+  autoDialDelay            Int?                      @default(5) @map("auto_dial_delay")
+  dialerMode               String?                   @default("single") @map("dialer_mode")
+  voicemailUrl             String?                   @map("voicemail_url")
+  agreedToTermsAt          DateTime?                 @map("agreed_to_terms_at")
+  availableHours           Json?                     @map("available_hours")
+  onboardingComplete       Boolean                   @default(false) @map("onboarding_complete")
+  personalPhone            String?                   @map("personal_phone")
+  stripeConnectId          String?                   @map("stripe_connect_id")
+  stripeConnectStatus      String?                   @map("stripe_connect_status")
+  timezone                 String?                   @default("America/New_York")
+  activities               Activity[]
+  callScorings             CallScoring[]             @relation("RepScoring")
+  calls                    Call[]                    @relation("RepCalls")
+  channelPerformance       ChannelPerformance[]
+  clawdbotActivities       ClawdbotActivity[]
+  clientsAsRep             Client[]                  @relation("ClientRep")
+  closeEngineConversations CloseEngineConversation[] @relation("CloseEngineRep")
+  commissions              Commission[]
+  dialerSessions           DialerSession[]           @relation("DialerSessions")
+  assignedLeads            Lead[]                    @relation("AssignedLeads")
+  messages                 Message[]
+  outboundEvents           OutboundEvent[]           @relation("RepOutboundEvents")
+  repTasks                 RepTask[]                 @relation("RepTasks")
+
+  @@map("users")
+}
+
+model LeadFolder {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#3B82F6")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  leads     Lead[]
+
+  @@map("lead_folders")
+}
+
+model Lead {
+  id                     String                   @id @default(cuid())
+  firstName              String                   @map("first_name")
+  lastName               String?                  @map("last_name")
+  email                  String?
+  phone                  String
+  companyName            String                   @map("company_name")
+  city                   String?
+  state                  String?
+  sourceDetail           String?                  @map("source_detail")
+  previewId              String?                  @unique @map("preview_id")
+  previewUrl             String?                  @map("preview_url")
+  createdAt              DateTime                 @default(now()) @map("created_at")
+  updatedAt              DateTime                 @updatedAt @map("updated_at")
+  assignedToId           String?                  @map("assigned_to_id")
+  churnRiskScore         Int                      @default(0) @map("churn_risk_score")
+  colorPrefs             Json?                    @map("color_prefs")
+  enrichedAddress        String?                  @map("enriched_address")
+  enrichedHours          Json?                    @map("enriched_hours")
+  enrichedPhotos         Json?                    @map("enriched_photos")
+  enrichedRating         Float?                   @map("enriched_rating")
+  enrichedReviews        Int?                     @map("enriched_reviews")
+  enrichedServices       Json?                    @map("enriched_services")
+  hours                  Json?
+  logo                   String?
+  notes                  String?
+  personalization        String?
+  photos                 Json?
+  previewExpiresAt       DateTime?                @map("preview_expires_at")
+  priority               LeadPriority             @default(COLD)
+  services               Json?
+  status                 LeadStatus               @default(NEW)
+  timezone               String?                  @default("America/New_York")
+  website                String?
+  source                 LeadSource
+  callScript             String?                  @map("call_script")
+  campaign               String?
+  instantlyAddedDate     DateTime?                @map("instantly_added_date")
+  instantlyCampaignId    String?                  @map("instantly_campaign_id")
+  instantlyCurrentStep   Int                      @default(0) @map("instantly_current_step")
+  instantlyStatus        String?                  @map("instantly_status")
+  replySentiment         String?                  @map("reply_sentiment")
+  industry               String                   @default("GENERAL_CONTRACTING")
+  folderId               String?                  @map("folder_id")
+  autonomyLevel          String                   @default("FULL_AUTO") @map("autonomy_level")
+  closeEntryPoint        String?                  @map("close_entry_point")
+  qualificationData      Json?                    @map("qualification_data")
+  buildCompletedAt       DateTime?                @map("build_completed_at")
+  buildDistributionMs    Int?                     @map("build_distribution_ms")
+  buildEnrichmentMs      Int?                     @map("build_enrichment_ms")
+  buildError             String?                  @map("build_error")
+  buildPersonalizationMs Int?                     @map("build_personalization_ms")
+  buildPreviewMs         Int?                     @map("build_preview_ms")
+  buildScriptsMs         Int?                     @map("build_scripts_ms")
+  buildStartedAt         DateTime?                @map("build_started_at")
+  buildStep              String?                  @map("build_step")
+  buildNotes             String?                  @map("build_notes")
+  buildReadinessScore    Int?                     @map("build_readiness_score")
+  siteHtml               String?                  @map("site_html")
+  formUrl                String?                  @map("form_url")
+  onboardingData         Json?                    @map("onboarding_data")
+  onboardingStatus       String                   @default("NOT_STARTED") @map("onboarding_status")
+  onboardingStep         Int                      @default(0) @map("onboarding_step")
+  aiFollowup             Boolean                  @default(false) @map("ai_followup")
+  handoffContext         Json?                    @map("handoff_context")
+  activities             Activity[]
+  buildStatus            BuildStatus?
+  calls                  Call[]
+  clawdbotActivities     ClawdbotActivity[]
+  client                 Client?
+  closeConversation      CloseEngineConversation?
+  conversationOutcomes   ConversationOutcome[]
+  alternateContacts      LeadContact[]
+  events                 LeadEvent[]
+  assignedTo             User?                    @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  folder                 LeadFolder?              @relation(fields: [folderId], references: [id])
+  messages               Message[]
+  outboundEvents         OutboundEvent[]
+  pendingActions         PendingAction[]
+  repTasks               RepTask[]
+  touchRecommendations   TouchRecommendation[]
+  editRequests           EditRequest[]
+
+  @@index([status])
+  @@index([assignedToId])
+  @@index([folderId])
+  @@index([industry])
+  @@index([phone])
+  @@index([email])
+  @@index([previewId])
+  @@index([createdAt])
+  @@index([instantlyCampaignId])
+  @@index([instantlyStatus])
+  @@index([instantlyCampaignId, instantlyStatus])
+  @@index([instantlyCampaignId, replySentiment])
+  @@index([personalization])
+  @@index([previewUrl])
+  @@index([buildStep])
+  @@map("leads")
+}
+
+model LeadContact {
+  id      String   @id @default(cuid())
+  leadId  String   @map("lead_id")
+  type    String
+  value   String
+  label   String
+  addedBy String?  @map("added_by")
+  addedAt DateTime @default(now()) @map("added_at")
+  lead    Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([value])
+  @@index([leadId])
+  @@map("lead_contacts")
+}
+
+model LeadEvent {
+  id        String    @id @default(cuid())
+  leadId    String    @map("lead_id")
+  eventType EventType @map("event_type")
+  fromStage String?   @map("from_stage")
+  toStage   String?   @map("to_stage")
+  metadata  Json?
+  actor     String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  lead      Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("lead_events")
+}
+
+model Client {
+  id                   String             @id @default(cuid())
+  leadId               String?            @unique @map("lead_id")
+  companyName          String             @map("company_name")
+  siteUrl              String?            @map("site_url")
+  stagingUrl           String?            @map("staging_url")
+  domainStatus         String?            @map("domain_status")
+  hostingStatus        HostingStatus      @default(ACTIVE)
+  stripeCustomerId     String?            @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
+  monthlyRevenue       Float              @default(39) @map("monthly_revenue")
+  upsells              Json?
+  siteLiveDate         DateTime?          @map("site_live_date")
+  lastInteraction      DateTime?          @map("last_interaction")
+  nextTouchpoint       String?            @map("next_touchpoint")
+  nextTouchpointDate   DateTime?          @map("next_touchpoint_date")
+  churnRiskScore       Int                @default(0) @map("churn_risk_score")
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+  industry             String             @default("GENERAL_CONTRACTING")
+  aiAutoRespond        Boolean            @default(true) @map("ai_auto_respond")
+  channelPreference    String?            @map("channel_preference")
+  churnedDate          DateTime?          @map("churned_date")
+  closedDate           DateTime?          @map("closed_date")
+  contactName          String?            @map("contact_name")
+  email                String?
+  healthScore          Int                @default(50) @map("health_score")
+  location             String?
+  notes                String?
+  phone                String?
+  plan                 String             @default("base")
+  referralCode         String?            @unique @map("referral_code")
+  repId                String?            @map("rep_id")
+  statReportFrequency  String             @default("monthly") @map("stat_report_frequency")
+  tags                 String[]           @default([])
+  autonomyLevel        String             @default("FULL_AUTO") @map("autonomy_level")
+  deletedAt            DateTime?          @map("deleted_at")
+  customDomain         String?            @unique @map("custom_domain")
+  vercelDomainId       String?            @map("vercel_domain_id")
+  onboardingData       Json?              @map("onboarding_data")
+  onboardingStep       Int                @default(0) @map("onboarding_step")
+  clawdbotActivities   ClawdbotActivity[]
+  analytics            ClientAnalytics?
+  lead                 Lead?              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  rep                  User?              @relation("ClientRep", fields: [repId], references: [id])
+  commissions          Commission[]
+  editRequests         EditRequest[]
+  messages             Message[]
+  referralsGiven       Referral[]         @relation("ReferrerClient")
+  revenue              Revenue[]
+  sequenceProgress     SequenceProgress[]
+  siteAnalytics        SiteAnalytic[]
+
+  @@index([hostingStatus])
+  @@index([churnRiskScore])
+  @@index([healthScore])
+  @@index([nextTouchpointDate])
+  @@index([onboardingStep])
+  @@map("clients")
+}
+
+model ClientAnalytics {
+  id               String   @id @default(cuid())
+  clientId         String   @unique @map("client_id")
+  totalVisits      Int      @default(0) @map("total_visits")
+  uniqueVisitors   Int      @default(0) @map("unique_visitors")
+  totalForms       Int      @default(0) @map("total_forms")
+  totalCalls       Int      @default(0) @map("total_calls")
+  avgTimeOnSite    Float?   @map("avg_time_on_site")
+  bounceRate       Float?   @map("bounce_rate")
+  topTrafficSource String?  @map("top_traffic_source")
+  avgResponseTime  Int?     @map("avg_response_time")
+  missedCalls      Int      @default(0) @map("missed_calls")
+  lastCalculated   DateTime @default(now()) @map("last_calculated")
+  client           Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("client_analytics")
+}
+
+model Message {
+  id               String           @id @default(cuid())
+  leadId           String?          @map("lead_id")
+  clientId         String?          @map("client_id")
+  direction        MessageDirection
+  channel          MessageChannel   @default(SMS)
+  recipient        String?
+  content          String
+  trigger          String?
+  escalated        Boolean          @default(false)
+  escalationReason String?          @map("escalation_reason")
+  twilioSid        String?          @unique @map("twilio_sid")
+  twilioStatus     String?          @map("twilio_status")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  senderId         String?          @map("sender_id")
+  senderName       String           @default("clawdbot") @map("sender_name")
+  senderType       String           @default("SYSTEM") @map("sender_type")
+  aiDelaySeconds   Int?             @map("ai_delay_seconds")
+  aiGenerated      Boolean          @default(false) @map("ai_generated")
+  conversationType String?          @map("conversation_type")
+  emailSubject     String?          @map("email_subject")
+  resendId         String?          @unique @map("resend_id")
+  resendStatus     String?          @map("resend_status")
+  aiDecisionLog    Json?            @map("ai_decision_log")
+  mediaType        String?          @map("media_type")
+  mediaUrls        Json?            @map("media_urls")
+  reactionEmoji    String?          @map("reaction_emoji")
+  reactionToId     String?          @map("reaction_to_id")
+  reactionType     String?          @map("reaction_type")
+  mediaTypes       Json?            @map("media_types")
+  client           Client?          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  lead             Lead?            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  sentBy           User?            @relation(fields: [senderId], references: [id])
+
+  @@index([leadId])
+  @@index([clientId])
+  @@index([createdAt])
+  @@index([escalated])
+  @@index([conversationType])
+  @@map("messages")
+}
+
+model Activity {
+  id              String           @id @default(cuid())
+  leadId          String           @map("lead_id")
+  repId           String           @map("rep_id")
+  activityType    ActivityType     @map("activity_type")
+  callDisposition CallDisposition? @map("call_disposition")
+  durationSeconds Int?             @map("duration_seconds")
+  notes           String?
+  callbackDate    DateTime?        @map("callback_date")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  lead            Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  rep             User             @relation(fields: [repId], references: [id])
+
+  @@index([leadId])
+  @@index([repId])
+  @@index([createdAt])
+  @@map("activities")
+}
+
+model RepActivity {
+  id               String   @id @default(cuid())
+  repId            String   @map("rep_id")
+  date             DateTime @db.Date
+  dials            Int      @default(0)
+  conversations    Int      @default(0)
+  previewLinksSent Int      @default(0) @map("preview_links_sent")
+  closes           Int      @default(0)
+  commissionEarned Float    @default(0) @map("commission_earned")
+  notes            String?
+  paymentLinksSent Int      @default(0) @map("payment_links_sent")
+  paymentsClosed   Int      @default(0) @map("payments_closed")
+  previewsOpened   Int      @default(0) @map("previews_opened")
+
+  @@unique([repId, date])
+  @@index([repId])
+  @@index([date])
+  @@map("rep_activity")
+}
+
+model Commission {
+  id        String           @id @default(cuid())
+  repId     String           @map("rep_id")
+  clientId  String           @map("client_id")
+  type      CommissionType
+  amount    Float
+  status    CommissionStatus @default(PENDING)
+  period    String?
+  notes     String?
+  createdAt DateTime         @default(now()) @map("created_at")
+  paidAt    DateTime?        @map("paid_at")
+  client    Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  rep       User             @relation(fields: [repId], references: [id])
+
+  @@index([repId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("commissions")
+}
+
+model Revenue {
+  id              String        @id @default(cuid())
+  clientId        String        @map("client_id")
+  type            RevenueType
+  product         String?
+  amount          Float
+  recurring       Boolean       @default(false)
+  stripePaymentId String?       @unique @map("stripe_payment_id")
+  status          PaymentStatus @default(PENDING)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  client          Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("revenue")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  title     String
+  createdAt DateTime         @default(now()) @map("created_at")
+  message   String
+  metadata  Json?
+  read      Boolean          @default(false)
+  type      NotificationType
+
+  @@index([read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model FailedWebhook {
+  id         String   @id @default(cuid())
+  source     String
+  payload    Json
+  error      String?
+  retryCount Int      @default(0) @map("retry_count")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([source])
+  @@index([retryCount])
+  @@map("failed_webhooks")
+}
+
+model ApiCost {
+  id        String   @id @default(cuid())
+  service   String
+  operation String
+  cost      Float
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([service])
+  @@index([createdAt])
+  @@map("api_costs")
+}
+
+model Settings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+model ClawdbotActivity {
+  id          String             @id @default(cuid())
+  actionType  ClawdbotActionType
+  description String
+  leadId      String?            @map("lead_id")
+  clientId    String?            @map("client_id")
+  repId       String?            @map("rep_id")
+  metadata    Json?
+  tokenCost   Float?             @map("token_cost")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  client      Client?            @relation(fields: [clientId], references: [id])
+  lead        Lead?              @relation(fields: [leadId], references: [id])
+  rep         User?              @relation(fields: [repId], references: [id])
+
+  @@index([actionType])
+  @@index([createdAt])
+  @@index([leadId])
+  @@index([clientId])
+  @@map("clawdbot_activity")
+}
+
+model OutboundEvent {
+  id             String              @id @default(cuid())
+  leadId         String              @map("lead_id")
+  channel        OutboundChannel
+  status         OutboundEventStatus @default(SENT)
+  messageId      String?             @map("message_id")
+  content        String?
+  subject        String?
+  recipientEmail String?             @map("recipient_email")
+  recipientPhone String?             @map("recipient_phone")
+  sentAt         DateTime            @map("sent_at")
+  openedAt       DateTime?           @map("opened_at")
+  clickedAt      DateTime?           @map("clicked_at")
+  repliedAt      DateTime?           @map("replied_at")
+  metadata       Json?
+  repId          String?             @map("rep_id")
+  campaignId     String?             @map("campaign_id")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  lead           Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  rep            User?               @relation("RepOutboundEvents", fields: [repId], references: [id])
+
+  @@index([leadId])
+  @@index([channel])
+  @@index([status])
+  @@index([createdAt])
+  @@index([repId])
+  @@index([campaignId])
+  @@map("outbound_events")
+}
+
+model TouchRecommendation {
+  id            String                 @id @default(cuid())
+  leadId        String                 @map("lead_id")
+  type          RecommendationType
+  priority      RecommendationPriority @default(MEDIUM)
+  reason        String
+  suggestedAt   DateTime               @map("suggested_at")
+  actionTakenAt DateTime?              @map("action_taken_at")
+  actionType    String?                @map("action_type")
+  metadata      Json?
+  confidence    Float?
+  createdAt     DateTime               @default(now()) @map("created_at")
+  lead          Lead                   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([type])
+  @@index([priority])
+  @@index([actionTakenAt])
+  @@map("touch_recommendations")
+}
+
+model ChannelPerformance {
+  id              String          @id @default(cuid())
+  channel         OutboundChannel
+  campaignId      String?         @map("campaign_id")
+  repId           String?         @map("rep_id")
+  period          String          @db.VarChar(10)
+  totalSent       Int             @default(0) @map("total_sent")
+  totalDelivered  Int             @default(0) @map("total_delivered")
+  totalOpened     Int             @default(0) @map("total_opened")
+  totalClicked    Int             @default(0) @map("total_clicked")
+  totalReplied    Int             @default(0) @map("total_replied")
+  totalBounced    Int             @default(0) @map("total_bounced")
+  openRate        Float           @default(0) @map("open_rate")
+  clickRate       Float           @default(0) @map("click_rate")
+  replyRate       Float           @default(0) @map("reply_rate")
+  conversionCount Int             @default(0) @map("conversion_count")
+  revenue         Float           @default(0)
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  rep             User?           @relation(fields: [repId], references: [id])
+
+  @@unique([channel, campaignId, repId, period])
+  @@index([channel])
+  @@index([repId])
+  @@index([period])
+  @@map("channel_performance")
+}
+
+model RepTask {
+  id           String    @id @default(cuid())
+  leadId       String
+  repId        String?
+  priority     String    @default("MEDIUM")
+  taskType     String    @default("INITIAL_CALL")
+  status       String    @default("PENDING")
+  dueAt        DateTime  @default(now())
+  completedAt  DateTime?
+  outcome      String?
+  notes        String?
+  callDuration Int?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lead         Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  rep          User?     @relation("RepTasks", fields: [repId], references: [id])
+
+  @@map("rep_tasks")
+}
+
+model InstantlyDripLog {
+  id                    String   @id @default(cuid())
+  date                  DateTime @map("date")
+  campaign              String?
+  totalLimit            Int      @map("total_limit")
+  usableSends           Int      @map("usable_sends")
+  followupObligations   Int      @map("followup_obligations")
+  availableForNew       Int      @map("available_for_new")
+  leadsPushed           Int      @map("leads_pushed")
+  leadsRemainingInQueue Int      @map("leads_remaining_in_queue")
+  estDaysToClear        Int?     @map("est_days_to_clear")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  @@index([date])
+  @@map("instantly_drip_log")
+}
+
+model InstantlySyncLog {
+  id            String   @id @default(cuid())
+  timestamp     DateTime @map("timestamp")
+  fullReport    Json?    @map("full_report")
+  alerts        Json?    @map("alerts")
+  totalCapacity Int?     @map("total_capacity")
+  totalPushed   Int?     @map("total_pushed")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([timestamp])
+  @@map("instantly_sync_log")
+}
+
+model InstantlySyncChange {
+  id            String   @id @default(cuid())
+  syncTimestamp DateTime @map("sync_timestamp")
+  changeType    String   @map("change_type")
+  entity        String
+  fieldChanged  String?  @map("field_changed")
+  oldValue      String?  @map("old_value")
+  newValue      String?  @map("new_value")
+  impact        String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([syncTimestamp])
+  @@map("instantly_sync_changes")
+}
+
+model Call {
+  id                 String    @id @default(cuid())
+  leadId             String    @map("lead_id")
+  repId              String    @map("rep_id")
+  twilioCallSid      String?   @map("twilio_call_sid")
+  conferenceSid      String?   @map("conference_sid")
+  direction          String    @default("outbound")
+  status             String    @default("initiated")
+  outcome            String?
+  durationSeconds    Int?      @map("duration_seconds")
+  notes              String?
+  callbackDate       DateTime? @map("callback_date")
+  autoTexted         Boolean   @default(false) @map("auto_texted")
+  previewSent        Boolean   @default(false) @map("preview_sent")
+  previewOpened      Boolean   @default(false) @map("preview_opened")
+  previewTimeSeconds Int?      @map("preview_time_seconds")
+  paymentLinkSent    Boolean   @default(false) @map("payment_link_sent")
+  paidOnCall         Boolean   @default(false) @map("paid_on_call")
+  dialBatchId        String?   @map("dial_batch_id")
+  lineNumber         Int?      @map("line_number")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  lead               Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  rep                User      @relation("RepCalls", fields: [repId], references: [id])
+
+  @@index([leadId])
+  @@index([repId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([dialBatchId])
+  @@map("calls")
+}
+
+model CallScoring {
+  id                String   @id @default(cuid())
+  repId             String   @map("rep_id")
+  weekStart         DateTime @map("week_start") @db.Date
+  connectToInterest Float    @default(0) @map("connect_to_interest")
+  interestToClose   Float    @default(0) @map("interest_to_close")
+  previewTextRate   Float    @default(0) @map("preview_text_rate")
+  previewSendRate   Float    @default(0) @map("preview_send_rate")
+  previewToOpenRate Float    @default(0) @map("preview_to_open_rate")
+  openToCloseRate   Float    @default(0) @map("open_to_close_rate")
+  avgDuration       Int      @default(0) @map("avg_duration")
+  callbackShowRate  Float    @default(0) @map("callback_show_rate")
+  dncRate           Float    @default(0) @map("dnc_rate")
+  volumeScore       Int      @default(0) @map("volume_score")
+  totalScore        Int      @default(0) @map("total_score")
+  coachingNotes     String?  @map("coaching_notes")
+  createdAt         DateTime @default(now()) @map("created_at")
+  rep               User     @relation("RepScoring", fields: [repId], references: [id])
+
+  @@unique([repId, weekStart])
+  @@index([repId])
+  @@index([weekStart])
+  @@map("call_scoring")
+}
+
+model DoNotCall {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  reason    String?
+  addedBy   String?  @map("added_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("do_not_call")
+}
+
+model DialerSession {
+  id              String    @id @default(cuid())
+  repId           String    @map("rep_id")
+  mode            String    @default("power")
+  linesPerDial    Int       @default(3) @map("lines_per_dial")
+  status          String    @default("active")
+  totalDials      Int       @default(0) @map("total_dials")
+  totalConnects   Int       @default(0) @map("total_connects")
+  totalInterested Int       @default(0) @map("total_interested")
+  totalPreviews   Int       @default(0) @map("total_previews")
+  startedAt       DateTime  @default(now()) @map("started_at")
+  endedAt         DateTime? @map("ended_at")
+  rep             User      @relation("DialerSessions", fields: [repId], references: [id])
+
+  @@index([repId])
+  @@index([status])
+  @@map("dialer_sessions")
+}
+
+model InstantlyDailyReport {
+  id                  String    @id @default(cuid())
+  reportDate          DateTime  @unique @map("report_date")
+  syncTimestamp       DateTime  @map("sync_timestamp")
+  fullReport          String    @map("full_report")
+  smsReport           String?   @map("sms_report")
+  changes             Json?     @map("changes")
+  todayPlan           Json?     @map("today_plan")
+  alerts              Json?     @map("alerts")
+  totalCapacity       Int?      @map("total_capacity")
+  totalPushing        Int?      @map("total_pushing")
+  totalFollowups      Int?      @map("total_followups")
+  totalSendsExpected  Int?      @map("total_sends_expected")
+  capacityUtilization Float?    @map("capacity_utilization")
+  smsSent             Boolean   @default(false) @map("sms_sent")
+  smsSentAt           DateTime? @map("sms_sent_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  @@index([reportDate])
+  @@index([createdAt])
+  @@map("instantly_daily_reports")
+}
+
+model EditRequest {
+  id                 String    @id @default(cuid())
+  clientId           String    @map("client_id")
+  leadId             String?   @map("lead_id")
+  requestText        String    @map("request_text")
+  requestChannel     String    @default("sms") @map("request_channel")
+  aiInterpretation   String?   @map("ai_interpretation")
+  complexityTier     String    @default("medium") @map("complexity_tier")
+  editFlowState      String    @default("pending") @map("edit_flow_state")
+  preEditHtml        String?   @map("pre_edit_html")
+  postEditHtml       String?   @map("post_edit_html")
+  editSummary        String?   @map("edit_summary")
+  stagingSnapshotUrl String?   @map("staging_snapshot_url")
+  imageUrls          Json?     @map("image_urls")
+  status             String    @default("new") @map("status")
+  approvedBy         String?   @map("approved_by")
+  approvedAt         DateTime? @map("approved_at")
+  pushedLiveAt       DateTime? @map("pushed_live_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  client             Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  lead               Lead?     @relation(fields: [leadId], references: [id])
+
+  @@index([clientId])
+  @@index([leadId])
+  @@index([status])
+  @@index([editFlowState])
+  @@index([createdAt])
+  @@map("edit_requests")
+}
+
+model Sequence {
+  id        String             @id @default(cuid())
+  name      String             @unique
+  steps     Json
+  active    Boolean            @default(true)
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+  progress  SequenceProgress[]
+
+  @@map("sequences")
+}
+
+model SequenceProgress {
+  id          String    @id @default(cuid())
+  clientId    String    @map("client_id")
+  sequenceId  String    @map("sequence_id")
+  currentStep Int       @default(1) @map("current_step")
+  status      String    @default("active")
+  startedAt   DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  nextStepAt  DateTime? @map("next_step_at")
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  sequence    Sequence  @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, sequenceId])
+  @@index([clientId])
+  @@index([sequenceId])
+  @@index([status])
+  @@index([nextStepAt])
+  @@map("sequence_progress")
+}
+
+model UpsellProduct {
+  id                  String        @id @default(cuid())
+  name                String
+  price               Float
+  recurring           Boolean       @default(true)
+  stripeLink          String?       @map("stripe_link")
+  active              Boolean       @default(true)
+  createdAt           DateTime      @default(now()) @map("created_at")
+  aiPitchInstructions String?       @map("ai_pitch_instructions")
+  aiProductSummary    String?       @map("ai_product_summary")
+  description         String?
+  eligibleIndustries  String[]      @default([]) @map("eligible_industries")
+  maxPitchesPerClient Int           @default(3) @map("max_pitches_per_client")
+  minClientAgeDays    Int?          @map("min_client_age_days")
+  pitchChannel        String        @default("sms") @map("pitch_channel")
+  sortOrder           Int           @default(0) @map("sort_order")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  annualPrice         Float?        @map("annual_price")
+  isCore              Boolean       @default(false) @map("is_core")
+  month1Price         Float?        @map("month1_price")
+  pitchOneLiner       String?       @map("pitch_one_liner")
+  previewBannerText   String?       @map("preview_banner_text")
+  recurringPrice      Float?        @map("recurring_price")
+  repCloseScript      String?       @map("rep_close_script")
+  stripeLinkAnnual    String?       @map("stripe_link_annual")
+  deletedAt           DateTime?     @map("deleted_at")
+  repPitch            String?       @map("rep_pitch")
+  pitches             UpsellPitch[]
+
+  @@map("upsell_products")
+}
+
+model UpsellPitch {
+  id           String        @id @default(cuid())
+  clientId     String        @map("client_id")
+  productId    String        @map("product_id")
+  status       String        @default("pitched")
+  pitchedAt    DateTime      @default(now()) @map("pitched_at")
+  openedAt     DateTime?     @map("opened_at")
+  clickedAt    DateTime?     @map("clicked_at")
+  paidAt       DateTime?     @map("paid_at")
+  pitchChannel String        @default("sms") @map("pitch_channel")
+  sequenceDay  Int?          @map("sequence_day")
+  product      UpsellProduct @relation(fields: [productId], references: [id])
+
+  @@index([clientId])
+  @@index([productId])
+  @@index([status])
+  @@map("upsell_pitches")
+}
+
+model Referral {
+  id               String   @id @default(cuid())
+  referrerClientId String   @map("referrer_client_id")
+  referredName     String   @map("referred_name")
+  referredPhone    String?  @map("referred_phone")
+  referredEmail    String?  @map("referred_email")
+  referredCompany  String?  @map("referred_company")
+  leadId           String?  @map("lead_id")
+  status           String   @default("pending")
+  creditAmount     Float    @default(39) @map("credit_amount")
+  creditApplied    Boolean  @default(false) @map("credit_applied")
+  createdAt        DateTime @default(now()) @map("created_at")
+  referrerClient   Client   @relation("ReferrerClient", fields: [referrerClientId], references: [id], onDelete: Cascade)
+
+  @@index([referrerClientId])
+  @@index([status])
+  @@map("referrals")
+}
+
+model SiteAnalytic {
+  id             String   @id @default(cuid())
+  clientId       String   @map("client_id")
+  eventType      String   @map("event_type")
+  page           String?
+  device         String?
+  referralSource String?  @map("referral_source")
+  sessionId      String?  @map("session_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("site_analytics")
+}
+
+model StripeSyncLog {
+  id              String   @id @default(cuid())
+  syncType        String   @map("sync_type")
+  mismatchesFound Int      @default(0) @map("mismatches_found")
+  correctionsMade Json?    @map("corrections_made")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("stripe_sync_log")
+}
+
+model AiPerformanceLog {
+  id             String   @id @default(cuid())
+  conversationId String?  @map("conversation_id")
+  messageId      String?  @map("message_id")
+  aiResponseText String?  @map("ai_response_text")
+  clientReaction String?  @map("client_reaction")
+  outcome        String?
+  editApproved   Boolean? @map("edit_approved")
+  promptVersion  Int      @default(1) @map("prompt_version")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([promptVersion])
+  @@index([outcome])
+  @@index([createdAt])
+  @@map("ai_performance_log")
+}
+
+model PromptVersion {
+  id          String   @id @default(cuid())
+  version     Int      @unique
+  content     String
+  changeNotes String?  @map("change_notes")
+  performance Json?
+  active      Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("prompt_versions")
+}
+
+model ChannelDecision {
+  id            String   @id @default(cuid())
+  clientId      String?  @map("client_id")
+  leadId        String?  @map("lead_id")
+  trigger       String
+  chosenChannel String   @map("chosen_channel")
+  reason        String
+  ruleApplied   String?  @map("rule_applied")
+  aiConfidence  Float?   @map("ai_confidence")
+  signals       Json?
+  latencyMs     Int?     @map("latency_ms")
+  messageSent   Boolean  @default(false) @map("message_sent")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([clientId])
+  @@index([leadId])
+  @@index([chosenChannel])
+  @@index([createdAt])
+  @@map("channel_decisions")
+}
+
+model CloseEngineConversation {
+  id                String          @id @default(cuid())
+  leadId            String          @unique @map("lead_id")
+  repId             String?         @map("rep_id")
+  entryPoint        String          @map("entry_point")
+  stage             String          @default("INITIATED")
+  autonomyLevel     String          @default("FULL_AUTO") @map("autonomy_level")
+  questionsAsked    Json?           @map("questions_asked")
+  collectedData     Json?           @map("collected_data")
+  editRounds        Int             @default(0) @map("edit_rounds")
+  paymentLinkUrl    String?         @map("payment_link_url")
+  paymentLinkSentAt DateTime?       @map("payment_link_sent_at")
+  stalledAt         DateTime?       @map("stalled_at")
+  completedAt       DateTime?       @map("completed_at")
+  closedLostAt      DateTime?       @map("closed_lost_at")
+  closedLostReason  String?         @map("closed_lost_reason")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+  lead              Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  rep               User?           @relation("CloseEngineRep", fields: [repId], references: [id])
+  pendingActions    PendingAction[]
+
+  @@index([stage])
+  @@index([entryPoint])
+  @@index([createdAt])
+  @@map("close_engine_conversations")
+}
+
+model PendingAction {
+  id             String                  @id @default(cuid())
+  conversationId String                  @map("conversation_id")
+  leadId         String                  @map("lead_id")
+  type           String
+  draftMessage   String                  @map("draft_message")
+  metadata       Json?
+  status         String                  @default("PENDING")
+  approvedBy     String?                 @map("approved_by")
+  approvedAt     DateTime?               @map("approved_at")
+  expiresAt      DateTime?               @map("expires_at")
+  createdAt      DateTime                @default(now()) @map("created_at")
+  conversation   CloseEngineConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  lead           Lead                    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([leadId])
+  @@index([conversationId])
+  @@map("pending_actions")
+}
+
+model Approval {
+  id           String    @id @default(cuid())
+  gate         String
+  title        String
+  description  String
+  draftContent String?   @map("draft_content")
+  leadId       String?   @map("lead_id")
+  clientId     String?   @map("client_id")
+  requestedBy  String    @default("system") @map("requested_by")
+  status       String    @default("PENDING")
+  priority     String    @default("NORMAL")
+  metadata     Json?
+  resolvedBy   String?   @map("resolved_by")
+  resolvedAt   DateTime? @map("resolved_at")
+  expiresAt    DateTime? @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([status])
+  @@index([gate])
+  @@index([createdAt])
+  @@index([leadId])
+  @@index([clientId])
+  @@map("approvals")
+}
+
+model BuildStatus {
+  id                   String    @id @default(cuid())
+  leadId               String    @unique @map("lead_id")
+  servicesCollected    Boolean   @default(false) @map("services_collected")
+  servicesData         Json?     @map("services_data")
+  hoursCollected       Boolean   @default(false) @map("hours_collected")
+  hoursData            String?   @map("hours_data")
+  logoCollected        Boolean   @default(false) @map("logo_collected")
+  logoUrl              String?   @map("logo_url")
+  photosCollected      Boolean   @default(false) @map("photos_collected")
+  photosData           Json?     @map("photos_data")
+  companyNameConfirmed Boolean   @default(false) @map("company_name_confirmed")
+  companyNameOverride  String?   @map("company_name_override")
+  colorPrefsCollected  Boolean   @default(false) @map("color_prefs_collected")
+  status               String    @default("collecting")
+  autoPush             Boolean   @default(false) @map("auto_push")
+  lastPushedAt         DateTime? @map("last_pushed_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+  lead                 Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@map("build_status")
+}
+
+model ConversationOutcome {
+  id                  String   @id @default(cuid())
+  leadId              String   @map("lead_id")
+  finalStage          String   @map("final_stage")
+  totalMessages       Int      @map("total_messages")
+  messagesPerStage    Json?    @map("messages_per_stage")
+  timeToConvert       Int?     @map("time_to_convert")
+  stalledAtStage      String?  @map("stalled_at_stage")
+  stalledAfterMessage String?  @map("stalled_after_message")
+  lastLeadMessage     String?  @map("last_lead_message")
+  effectivePatterns   Json?    @map("effective_patterns")
+  ineffectivePatterns Json?    @map("ineffective_patterns")
+  industry            String
+  objectionType       String?  @map("objection_type")
+  objectionResolved   String?  @map("objection_resolved")
+  reactivated         Boolean  @default(false)
+  reactivationTrigger String?  @map("reactivation_trigger")
+  createdAt           DateTime @default(now()) @map("created_at")
+  lead                Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([industry])
+  @@index([finalStage])
+  @@index([createdAt])
+  @@index([leadId])
+  @@map("conversation_outcomes")
+}
+
 enum UserRole {
   ADMIN
   REP
@@ -22,74 +1059,6 @@ enum UserStatus {
   SUSPENDED
 }
 
-model User {
-  id            String     @id @default(cuid())
-  email         String     @unique
-  passwordHash  String?
-  name          String
-  role          UserRole   @default(REP)
-  phone     String?
-  status    UserStatus @default(ACTIVE)
-  createdAt  DateTime   @default(now()) @map("created_at")
-  updatedAt  DateTime   @updatedAt @map("updated_at")
-  lastSeenAt DateTime?  @map("last_seen_at")
-
-  // Rep portal fields
-  portalType     String  @default("FULL")
-  dailyLeadCap   Int     @default(25)
-  totalCloses    Int     @default(0)
-  commissionRate Float   @default(0.5) @map("commission_rate")
-
-  // Dialer preferences
-  voicemailUrl   String?  @map("voicemail_url")    // URL of rep's pre-recorded voicemail audio file
-  autoDialDelay  Int?     @default(5) @map("auto_dial_delay")  // Rep's preferred auto-dial delay in seconds
-  dialerMode     String?  @default("single") @map("dialer_mode")  // "single" or "power"
-
-  // Rep onboarding
-  onboardingComplete  Boolean   @default(false) @map("onboarding_complete")
-  stripeConnectId     String?   @map("stripe_connect_id")
-  stripeConnectStatus String?   @map("stripe_connect_status")
-  availableHours      Json?     @map("available_hours")
-  agreedToTermsAt     DateTime? @map("agreed_to_terms_at")
-  personalPhone       String?   @map("personal_phone")
-  timezone            String?   @default("America/New_York")
-
-  // Relations
-  assignedLeads      Lead[]              @relation("AssignedLeads")
-  activities         Activity[]
-  commissions        Commission[]
-  messages           Message[]
-  clawdbotActivities ClawdbotActivity[]
-  outboundEvents     OutboundEvent[]     @relation("RepOutboundEvents")
-  channelPerformance ChannelPerformance[]
-  repTasks           RepTask[]           @relation("RepTasks")
-  calls              Call[]              @relation("RepCalls")
-  callScorings       CallScoring[]       @relation("RepScoring")
-  dialerSessions     DialerSession[]     @relation("DialerSessions")
-  clientsAsRep       Client[]            @relation("ClientRep")
-  closeEngineConversations CloseEngineConversation[] @relation("CloseEngineRep")
-
-  @@map("users")
-}
-
-// ============================================
-// LEAD FOLDER MODEL (Organize leads into folders)
-// ============================================
-model LeadFolder {
-  id        String   @id @default(cuid())
-  name      String
-  color     String   @default("#3B82F6") // Default blue
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  leads Lead[]
-
-  @@map("lead_folders")
-}
-
-// ============================================
-// LEAD MODEL (Pre-payment prospects)
-// ============================================
 enum LeadStatus {
   NEW
   HOT_LEAD
@@ -122,145 +1091,6 @@ enum LeadPriority {
   COLD
 }
 
-model Lead {
-  id               String       @id @default(cuid())
-  firstName        String       @map("first_name")
-  lastName         String?      @map("last_name")
-  email            String?
-  phone            String
-  companyName      String       @map("company_name")
-  industry         String       @default("GENERAL_CONTRACTING") // Accept any industry as string
-  city             String?
-  state            String?
-  timezone         String?      @default("America/New_York")
-  website          String?
-  status           LeadStatus   @default(NEW)
-  priority         LeadPriority @default(COLD)
-  assignedToId     String?      @map("assigned_to_id")
-  folderId         String?      @map("folder_id")
-  source           LeadSource
-  sourceDetail     String?      @map("source_detail") // Rep name, campaign name, ad variant
-  campaign         String?
-  previewId        String?      @unique @map("preview_id")
-  previewUrl       String?      @map("preview_url")
-  previewExpiresAt DateTime?    @map("preview_expires_at")
-  personalization  String?      @db.Text // AI-generated first line
-  siteHtml         String?      @db.Text @map("site_html")
-
-  // Onboarding form
-  formUrl          String?      @map("form_url")
-  onboardingData   Json?        @map("onboarding_data")
-  onboardingStep   Int          @default(0) @map("onboarding_step")
-  onboardingStatus String       @default("NOT_STARTED") @map("onboarding_status")
-
-  // Enriched data from SerpAPI
-  enrichedAddress  String?      @map("enriched_address")
-  enrichedHours    Json?        @map("enriched_hours")
-  enrichedServices Json?        @map("enriched_services") // Array of services
-  enrichedRating   Float?       @map("enriched_rating")
-  enrichedReviews  Int?         @map("enriched_reviews")
-  enrichedPhotos   Json?        @map("enriched_photos") // Array of photo URLs
-  
-  // Client-provided data
-  logo             String?
-  photos           Json?        // Array of uploaded photo URLs
-  services         Json?        // Client's service list
-  hours            Json?        // Business hours
-  colorPrefs       Json?        @map("color_prefs")
-  
-  notes            String?      @db.Text
-  callScript       String?      @db.Text @map("call_script")
-  churnRiskScore   Int          @default(0) @map("churn_risk_score")
-
-  // AI handoff fields
-  aiFollowup       Boolean      @default(false) @map("ai_followup")  // True when rep hands off to AI
-  handoffContext   Json?        @map("handoff_context")  // Context object built during AI handoff
-  
-  // Close Engine fields
-  autonomyLevel     String   @default("FULL_AUTO") @map("autonomy_level") // FULL_AUTO, SEMI_AUTO, MANUAL
-  closeEntryPoint   String?  @map("close_entry_point")  // INSTANTLY_REPLY, SMS_REPLY, REP_CLOSE, PREVIEW_CTA
-  qualificationData Json?    @map("qualification_data") // Structured data collected by Claude
-
-  // Build pipeline tracking
-  buildStep          String?   @map("build_step") // Worker: ENRICHMENT, PREVIEW, PERSONALIZATION, SCRIPTS, DISTRIBUTION, COMPLETE | Site: QA_REVIEW, EDITING, QA_APPROVED, CLIENT_REVIEW, CLIENT_APPROVED, LAUNCHING, LIVE
-  buildStartedAt     DateTime? @map("build_started_at")
-  buildCompletedAt   DateTime? @map("build_completed_at")
-  buildEnrichmentMs  Int?      @map("build_enrichment_ms")
-  buildPreviewMs     Int?      @map("build_preview_ms")
-  buildPersonalizationMs Int?  @map("build_personalization_ms")
-  buildScriptsMs     Int?      @map("build_scripts_ms")
-  buildDistributionMs Int?     @map("build_distribution_ms")
-  buildError         String?   @map("build_error")
-  buildReadinessScore Int?     @map("build_readiness_score")
-  buildNotes         String?   @db.Text @map("build_notes")
-
-  // Instantly integration fields
-  instantlyStatus  String?      @map("instantly_status") // QUEUED, IN_SEQUENCE, COMPLETED, REPLIED, BOUNCED, UNSUBSCRIBED, PAUSED
-  instantlyAddedDate DateTime?  @map("instantly_added_date") // When lead was pushed to Instantly
-  instantlyCurrentStep Int      @default(0) @map("instantly_current_step") // Which email step they're on (0-4)
-  instantlyCampaignId String?   @map("instantly_campaign_id") // Link to Instantly campaign
-  replySentiment   String?      @map("reply_sentiment") // positive, negative, question, neutral
-  
-  createdAt        DateTime     @default(now()) @map("created_at")
-  updatedAt        DateTime     @updatedAt @map("updated_at")
-
-  // Relations
-  assignedTo         User?               @relation("AssignedLeads", fields: [assignedToId], references: [id])
-  folder             LeadFolder?         @relation(fields: [folderId], references: [id])
-  activities         Activity[]
-  events             LeadEvent[]
-  messages           Message[]
-  client             Client?             // One-to-one after payment
-  clawdbotActivities ClawdbotActivity[]
-  outboundEvents     OutboundEvent[]
-  touchRecommendations TouchRecommendation[]
-  repTasks           RepTask[]
-  calls              Call[]
-  closeConversation  CloseEngineConversation?
-  pendingActions     PendingAction[]
-  conversationOutcomes ConversationOutcome[]
-  buildStatus          BuildStatus?
-  alternateContacts  LeadContact[]
-
-  @@index([status])
-  @@index([assignedToId])
-  @@index([folderId])
-  @@index([industry])
-  @@index([phone])
-  @@index([email])
-  @@index([previewId])
-  @@index([createdAt])
-  @@index([instantlyCampaignId])
-  @@index([instantlyStatus])
-  @@index([instantlyCampaignId, instantlyStatus])
-  @@index([instantlyCampaignId, replySentiment])
-  @@index([personalization])
-  @@index([previewUrl])
-  @@index([buildStep])
-  @@map("leads")
-}
-
-// ============================================
-// LEAD CONTACT MODEL (Alternate contacts for leads)
-// ============================================
-model LeadContact {
-  id        String   @id @default(cuid())
-  leadId    String   @map("lead_id")
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  type      String   // "PHONE" or "EMAIL"
-  value     String   // The phone number or email address
-  label     String   // "Owner Cell", "Business Partner", "Spouse", "Office", "Other"
-  addedBy   String?  @map("added_by") // User ID of the rep who added it
-  addedAt   DateTime @default(now()) @map("added_at")
-
-  @@index([value])
-  @@index([leadId])
-  @@map("lead_contacts")
-}
-
-// ============================================
-// LEAD EVENT MODEL (Activity timeline)
-// ============================================
 enum EventType {
   STAGE_CHANGE
   EMAIL_SENT
@@ -279,11 +1109,9 @@ enum EventType {
   ESCALATED
   CLOSE_ENGINE_TRIGGERED
   CLOSE_ENGINE_STAGE_CHANGE
-  CLOSE_ENGINE_COMPLETED
   POSITIVE_FEEDBACK
+  CLOSE_ENGINE_COMPLETED
   SMS_FALLBACK_EMAIL
-
-  // Rep dialer events
   CALL_ATTEMPTED
   CALL_CONNECTED
   CALL_ENDED
@@ -304,152 +1132,14 @@ enum EventType {
   CALL_SUMMARY
 }
 
-model LeadEvent {
-  id         String    @id @default(cuid())
-  leadId     String    @map("lead_id")
-  eventType  EventType @map("event_type")
-  fromStage  String?   @map("from_stage")
-  toStage    String?   @map("to_stage")
-  metadata   Json?     // Flexible data per event type
-  actor      String?   // 'system', 'andrew', 'clawdbot', 'rep:name', 'client'
-  createdAt  DateTime  @default(now()) @map("created_at")
-
-  // Relations
-  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
-  @@index([leadId])
-  @@index([eventType])
-  @@index([createdAt])
-  @@map("lead_events")
-}
-
-// ============================================
-// CLIENT MODEL (Post-payment)
-// ============================================
 enum HostingStatus {
   ACTIVE
-  DEACTIVATED
   CANCELLED
   FAILED_PAYMENT
   GRACE_PERIOD
+  DEACTIVATED
 }
 
-model Client {
-  id                   String        @id @default(cuid())
-  leadId               String?       @unique @map("lead_id")
-  repId                String?       @map("rep_id")
-  companyName          String        @map("company_name")
-  contactName          String?       @map("contact_name")
-  phone                String?
-  email                String?
-  industry             String        @default("GENERAL_CONTRACTING")
-  location             String?
-  siteUrl              String?       @map("site_url")
-  stagingUrl           String?       @map("staging_url")
-  domainStatus         String?       @map("domain_status") // 'none', 'client_owned', 'registered_by_us'
-  hostingStatus        HostingStatus @default(ACTIVE)
-
-  // Stripe data
-  stripeCustomerId     String?       @unique @map("stripe_customer_id")
-  stripeSubscriptionId String?       @unique @map("stripe_subscription_id")
-
-  // Revenue tracking
-  monthlyRevenue       Float         @default(39) @map("monthly_revenue")
-  plan                 String        @default("base") // base, seo, ads, premium
-  upsells              Json?         // Array of active upsell products with prices
-
-  // Health & engagement
-  healthScore          Int           @default(50) @map("health_score")
-  aiAutoRespond        Boolean       @default(true) @map("ai_auto_respond")
-  statReportFrequency  String        @default("monthly") @map("stat_report_frequency")
-  referralCode         String?       @unique @map("referral_code")
-  tags                 String[]      @default([])
-  notes                String?       @db.Text
-
-  // Close Engine fields
-  autonomyLevel        String        @default("FULL_AUTO") @map("autonomy_level") // FULL_AUTO, SEMI_AUTO, MANUAL
-
-  // Channel routing
-  channelPreference    String?       @map("channel_preference") // SMS, EMAIL, or null (no preference)
-
-  // Domain & launch
-  customDomain         String?       @unique @map("custom_domain")
-  vercelDomainId       String?       @map("vercel_domain_id")
-
-  // Lifecycle
-  siteLiveDate         DateTime?     @map("site_live_date")
-  lastInteraction      DateTime?     @map("last_interaction")
-  nextTouchpoint       String?       @map("next_touchpoint")
-  nextTouchpointDate   DateTime?     @map("next_touchpoint_date")
-  churnRiskScore       Int           @default(0) @map("churn_risk_score")
-  closedDate           DateTime?     @map("closed_date")
-  churnedDate          DateTime?     @map("churned_date")
-
-  // Onboarding (post-payment lifecycle)
-  onboardingStep       Int           @default(0) @map("onboarding_step") // 0=Not Started, 1=Welcome, 2=Domain, 3=Content Review, 4=Domain Setup, 5=DNS, 6=Go-Live, 7=Complete
-  onboardingData       Json?         @map("onboarding_data")
-
-  deletedAt            DateTime?     @map("deleted_at")
-  createdAt            DateTime      @default(now()) @map("created_at")
-  updatedAt            DateTime      @updatedAt @map("updated_at")
-
-  // Relations
-  lead               Lead?               @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  rep                User?               @relation("ClientRep", fields: [repId], references: [id])
-  messages           Message[]
-  commissions        Commission[]
-  revenue            Revenue[]
-  analytics          ClientAnalytics?
-  clawdbotActivities ClawdbotActivity[]
-  editRequests       EditRequest[]
-  sequenceProgress   SequenceProgress[]
-  referralsGiven     Referral[]          @relation("ReferrerClient")
-  siteAnalytics      SiteAnalytic[]
-
-  @@index([hostingStatus])
-  @@index([churnRiskScore])
-  @@index([healthScore])
-  @@index([nextTouchpointDate])
-  @@index([onboardingStep])
-  @@map("clients")
-}
-
-// ============================================
-// CLIENT ANALYTICS MODEL
-// ============================================
-model ClientAnalytics {
-  id                String   @id @default(cuid())
-  clientId          String   @unique @map("client_id")
-  
-  // Traffic
-  totalVisits       Int      @default(0) @map("total_visits")
-  uniqueVisitors    Int      @default(0) @map("unique_visitors")
-  
-  // Conversions
-  totalForms        Int      @default(0) @map("total_forms")
-  totalCalls        Int      @default(0) @map("total_calls")
-  
-  // Engagement
-  avgTimeOnSite     Float?   @map("avg_time_on_site")
-  bounceRate        Float?   @map("bounce_rate")
-  topTrafficSource  String?  @map("top_traffic_source")
-  
-  // Lead response (for upsell triggers)
-  avgResponseTime   Int?     @map("avg_response_time") // In minutes
-  missedCalls       Int      @default(0) @map("missed_calls")
-  
-  // Last updated
-  lastCalculated    DateTime @default(now()) @map("last_calculated")
-  
-  // Relations
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-
-  @@map("client_analytics")
-}
-
-// ============================================
-// MESSAGE MODEL (All SMS communication)
-// ============================================
 enum MessageDirection {
   OUTBOUND
   INBOUND
@@ -460,62 +1150,6 @@ enum MessageChannel {
   EMAIL
 }
 
-model Message {
-  id              String           @id @default(cuid())
-  leadId          String?          @map("lead_id")
-  clientId        String?          @map("client_id")
-  direction       MessageDirection
-  channel         MessageChannel   @default(SMS)
-  senderType      String           @default("SYSTEM") @map("sender_type") // SYSTEM, ADMIN, REP, AI, LEAD, CLIENT
-  senderName      String           @default("clawdbot") @map("sender_name")
-  senderId        String?          @map("sender_id")
-  recipient       String?          // Phone or email
-  content         String           @db.Text
-  trigger         String?          // 'qualification', 'nudge', 'sequence_day_7', etc.
-  escalated       Boolean          @default(false)
-  escalationReason String?         @map("escalation_reason")
-  conversationType String?         @map("conversation_type") // pre_client, post_client
-  aiDelaySeconds  Int?             @map("ai_delay_seconds") // humanizing delay used
-  aiGenerated     Boolean          @default(false) @map("ai_generated")
-  aiDecisionLog   Json?            @map("ai_decision_log")
-
-  // MMS / Media
-  mediaUrls    Json?          @map("media_urls") // Array of image/media URLs from MMS
-  mediaTypes   Json?          @map("media_types") // Array of MIME content types (image/jpeg, etc.)
-  mediaType    String?        @map("media_type") // AI classification: logo, team_photo, project_photo, document, unknown
-
-  // iMessage Reactions
-  reactionType    String?     @map("reaction_type") // like, love, laugh, emphasize, dislike, question
-  reactionToId    String?     @map("reaction_to_id") // ID of the original message being reacted to
-  reactionEmoji   String?     @map("reaction_emoji") // Display emoji
-
-  // Twilio data
-  twilioSid  String?          @unique @map("twilio_sid")
-  twilioStatus String?        @map("twilio_status")
-
-  // Resend data
-  resendId     String?        @unique @map("resend_id")
-  resendStatus String?        @map("resend_status")
-  emailSubject String?        @map("email_subject")
-
-  createdAt  DateTime         @default(now()) @map("created_at")
-
-  // Relations
-  lead     Lead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  sentBy   User?   @relation(fields: [senderId], references: [id])
-
-  @@index([leadId])
-  @@index([clientId])
-  @@index([createdAt])
-  @@index([escalated])
-  @@index([conversationType])
-  @@map("messages")
-}
-
-// ============================================
-// ACTIVITY MODEL (Rep actions)
-// ============================================
 enum ActivityType {
   CALL
   VOICEMAIL
@@ -536,53 +1170,6 @@ enum CallDisposition {
   INTERESTED
 }
 
-model Activity {
-  id              String           @id @default(cuid())
-  leadId          String           @map("lead_id")
-  repId           String           @map("rep_id")
-  activityType    ActivityType     @map("activity_type")
-  callDisposition CallDisposition? @map("call_disposition")
-  durationSeconds Int?             @map("duration_seconds")
-  notes           String?          @db.Text
-  callbackDate    DateTime?        @map("callback_date")
-  createdAt       DateTime         @default(now()) @map("created_at")
-
-  // Relations
-  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  rep  User @relation(fields: [repId], references: [id])
-
-  @@index([leadId])
-  @@index([repId])
-  @@index([createdAt])
-  @@map("activities")
-}
-
-// ============================================
-// REP ACTIVITY MODEL (Daily tracking)
-// ============================================
-model RepActivity {
-  id               String   @id @default(cuid())
-  repId            String   @map("rep_id")
-  date             DateTime @db.Date
-  dials            Int      @default(0)
-  conversations    Int      @default(0)
-  previewLinksSent Int      @default(0) @map("preview_links_sent")
-  previewsOpened   Int      @default(0) @map("previews_opened")
-  paymentLinksSent Int      @default(0) @map("payment_links_sent")
-  paymentsClosed   Int      @default(0) @map("payments_closed")
-  closes           Int      @default(0)
-  commissionEarned Float    @default(0) @map("commission_earned")
-  notes            String?  @db.Text
-
-  @@unique([repId, date])
-  @@index([repId])
-  @@index([date])
-  @@map("rep_activity")
-}
-
-// ============================================
-// COMMISSION MODEL
-// ============================================
 enum CommissionType {
   SITE_BUILD
   MONTHLY_RESIDUAL
@@ -596,31 +1183,6 @@ enum CommissionStatus {
   REJECTED
 }
 
-model Commission {
-  id        String           @id @default(cuid())
-  repId     String           @map("rep_id")
-  clientId  String           @map("client_id")
-  type      CommissionType
-  amount    Float
-  status    CommissionStatus @default(PENDING)
-  period    String?          // For residuals: "2026-02"
-  notes     String?
-  createdAt DateTime         @default(now()) @map("created_at")
-  paidAt    DateTime?        @map("paid_at")
-
-  // Relations
-  rep    User   @relation(fields: [repId], references: [id])
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-
-  @@index([repId])
-  @@index([status])
-  @@index([createdAt])
-  @@map("commissions")
-}
-
-// ============================================
-// REVENUE MODEL (All payments)
-// ============================================
 enum RevenueType {
   SITE_BUILD
   HOSTING_MONTHLY
@@ -636,29 +1198,6 @@ enum PaymentStatus {
   PENDING
 }
 
-model Revenue {
-  id               String        @id @default(cuid())
-  clientId         String        @map("client_id")
-  type             RevenueType
-  product          String?       // Specific product name
-  amount           Float
-  recurring        Boolean       @default(false)
-  stripePaymentId  String?       @unique @map("stripe_payment_id")
-  status           PaymentStatus @default(PENDING)
-  createdAt        DateTime      @default(now()) @map("created_at")
-
-  // Relations
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-
-  @@index([clientId])
-  @@index([type])
-  @@index([createdAt])
-  @@map("revenue")
-}
-
-// ============================================
-// NOTIFICATION MODEL
-// ============================================
 enum NotificationType {
   HOT_LEAD
   PAYMENT_RECEIVED
@@ -671,66 +1210,6 @@ enum NotificationType {
   CLOSE_ENGINE
 }
 
-model Notification {
-  id        String           @id @default(cuid())
-  type      NotificationType
-  title     String
-  message   String           @db.Text
-  metadata  Json?            // leadId, clientId, etc.
-  read      Boolean          @default(false)
-  createdAt DateTime         @default(now()) @map("created_at")
-
-  @@index([read])
-  @@index([createdAt])
-  @@map("notifications")
-}
-
-// ============================================
-// FAILED WEBHOOK MODEL (Retry queue)
-// ============================================
-model FailedWebhook {
-  id         String   @id @default(cuid())
-  source     String   // 'stripe', 'instantly', 'twilio', 'preview'
-  payload    Json
-  error      String?  @db.Text
-  retryCount Int      @default(0) @map("retry_count")
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  @@index([source])
-  @@index([retryCount])
-  @@map("failed_webhooks")
-}
-
-// ============================================
-// API COST TRACKING MODEL
-// ============================================
-model ApiCost {
-  id        String   @id @default(cuid())
-  service   String   // 'serpapi', 'serper', 'twilio'
-  operation String   // 'enrichment', 'personalization', 'sms'
-  cost      Float
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@index([service])
-  @@index([createdAt])
-  @@map("api_costs")
-}
-
-// ============================================
-// SETTINGS MODEL
-// ============================================
-model Settings {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     Json
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("settings")
-}
-
-// ============================================
-// CLAWDBOT ACTIVITY MODEL (Audit Trail)
-// ============================================
 enum ClawdbotActionType {
   TEXT_SENT
   TEXT_RECEIVED
@@ -738,7 +1217,6 @@ enum ClawdbotActionType {
   HEARTBEAT
   IMPORT
   ENRICHMENT
-  PERSONALIZATION
   PREVIEW_GENERATED
   NURTURE_ACTION
   URGENCY_ACTION
@@ -755,34 +1233,9 @@ enum ClawdbotActionType {
   NIGHTLY_DIGEST
   MORNING_REPORT
   WEEKLY_REPORT
+  PERSONALIZATION
 }
 
-model ClawdbotActivity {
-  id          String               @id @default(cuid())
-  actionType  ClawdbotActionType
-  description String               @db.Text
-  leadId      String?              @map("lead_id")
-  clientId    String?              @map("client_id")
-  repId       String?              @map("rep_id")
-  metadata    Json?
-  tokenCost   Float?               @map("token_cost")
-  createdAt   DateTime             @default(now()) @map("created_at")
-
-  // Relations
-  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  rep    User?   @relation(fields: [repId], references: [id], onDelete: SetNull)
-
-  @@index([actionType])
-  @@index([createdAt])
-  @@index([leadId])
-  @@index([clientId])
-  @@map("clawdbot_activity")
-}
-
-// ============================================
-// OUTBOUND EVENT MODEL (Multi-channel tracking)
-// ============================================
 enum OutboundChannel {
   EMAIL
   SMS
@@ -802,41 +1255,6 @@ enum OutboundEventStatus {
   FAILED
 }
 
-model OutboundEvent {
-  id            String              @id @default(cuid())
-  leadId        String              @map("lead_id")
-  channel       OutboundChannel
-  status        OutboundEventStatus @default(SENT)
-  messageId     String?             @map("message_id") // Instantly/provider ID
-  content       String?             @db.Text
-  subject       String?
-  recipientEmail String?            @map("recipient_email")
-  recipientPhone String?            @map("recipient_phone")
-  sentAt        DateTime            @map("sent_at")
-  openedAt      DateTime?           @map("opened_at")
-  clickedAt     DateTime?           @map("clicked_at")
-  repliedAt     DateTime?           @map("replied_at")
-  metadata      Json?               // Provider-specific data
-  repId         String?             @map("rep_id")
-  campaignId    String?             @map("campaign_id")
-  createdAt     DateTime            @default(now()) @map("created_at")
-
-  // Relations
-  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  rep  User? @relation("RepOutboundEvents", fields: [repId], references: [id], onDelete: SetNull)
-
-  @@index([leadId])
-  @@index([channel])
-  @@index([status])
-  @@index([createdAt])
-  @@index([repId])
-  @@index([campaignId])
-  @@map("outbound_events")
-}
-
-// ============================================
-// TOUCH RECOMMENDATION MODEL (AI next-best-action)
-// ============================================
 enum RecommendationPriority {
   URGENT
   HIGH
@@ -856,659 +1274,4 @@ enum RecommendationType {
   NURTURE
   RE_ENGAGEMENT
   ESCALATION
-}
-
-model TouchRecommendation {
-  id          String                 @id @default(cuid())
-  leadId      String                 @map("lead_id")
-  type        RecommendationType
-  priority    RecommendationPriority @default(MEDIUM)
-  reason      String                 @db.Text // Why this recommendation
-  suggestedAt DateTime               @map("suggested_at")
-  actionTakenAt DateTime?            @map("action_taken_at")
-  actionType  String?                @map("action_type") // EMAIL, SMS, etc.
-  metadata    Json?                  // Hook, script, timing data
-  confidence  Float?                 // 0.0 - 1.0 confidence score
-  createdAt   DateTime               @default(now()) @map("created_at")
-
-  // Relations
-  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
-  @@index([leadId])
-  @@index([type])
-  @@index([priority])
-  @@index([actionTakenAt])
-  @@map("touch_recommendations")
-}
-
-// ============================================
-// CHANNEL PERFORMANCE MODEL (Analytics)
-// ============================================
-model ChannelPerformance {
-  id               String   @id @default(cuid())
-  channel          OutboundChannel
-  campaignId       String?  @map("campaign_id")
-  repId            String?  @map("rep_id")
-  period           String   @db.VarChar(10) // YYYY-MM-DD
-  totalSent        Int      @default(0) @map("total_sent")
-  totalDelivered   Int      @default(0) @map("total_delivered")
-  totalOpened      Int      @default(0) @map("total_opened")
-  totalClicked     Int      @default(0) @map("total_clicked")
-  totalReplied     Int      @default(0) @map("total_replied")
-  totalBounced     Int      @default(0) @map("total_bounced")
-  openRate         Float    @default(0) @map("open_rate") // 0.0 - 1.0
-  clickRate        Float    @default(0) @map("click_rate")
-  replyRate        Float    @default(0) @map("reply_rate")
-  conversionCount  Int      @default(0) @map("conversion_count") // Leads → Clients
-  revenue          Float    @default(0)
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  rep User? @relation(fields: [repId], references: [id], onDelete: SetNull)
-
-  @@unique([channel, campaignId, repId, period])
-  @@index([channel])
-  @@index([repId])
-  @@index([period])
-  @@map("channel_performance")
-}
-
-// ============================================
-// REP TASK MODEL (Rep task management)
-// ============================================
-model RepTask {
-  id          String    @id @default(cuid())
-  leadId      String
-  lead        Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  repId       String?
-  rep         User?     @relation("RepTasks", fields: [repId], references: [id])
-  priority    String    @default("MEDIUM")
-  taskType    String    @default("INITIAL_CALL")
-  status      String    @default("PENDING")
-  dueAt       DateTime  @default(now())
-  completedAt DateTime?
-  outcome     String?
-  notes       String?
-  callDuration Int?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@map("rep_tasks")
-}
-
-// ============================================
-// INSTANTLY INTEGRATION MODELS
-// ============================================
-
-model InstantlyDripLog {
-  id                       String    @id @default(cuid())
-  date                     DateTime  @map("date")
-  campaign                 String?   // 'A' or 'B'
-  totalLimit               Int       @map("total_limit") // Total inbox capacity (e.g., 750)
-  usableSends              Int       @map("usable_sends") // After safety buffer (e.g., 637)
-  followupObligations      Int       @map("followup_obligations") // Follow-ups due today
-  availableForNew          Int       @map("available_for_new") // Capacity left for new leads
-  leadsPushed              Int       @map("leads_pushed") // How many new leads actually pushed
-  leadsRemainingInQueue    Int       @map("leads_remaining_in_queue") // Still waiting to push
-  estDaysToClear           Int?      @map("est_days_to_clear") // Estimated days to clear queue
-  createdAt                DateTime  @default(now()) @map("created_at")
-
-  @@map("instantly_drip_log")
-  @@index([date])
-}
-
-model InstantlySyncLog {
-  id              String    @id @default(cuid())
-  timestamp       DateTime  @map("timestamp")
-  fullReport      Json?     @map("full_report") // Complete sync data
-  alerts          Json?     @map("alerts") // Array of alerts
-  totalCapacity   Int?      @map("total_capacity")
-  totalPushed     Int?      @map("total_pushed")
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  @@map("instantly_sync_log")
-  @@index([timestamp])
-}
-
-model InstantlySyncChange {
-  id              String    @id @default(cuid())
-  syncTimestamp   DateTime  @map("sync_timestamp")
-  changeType      String    @map("change_type") // 'inbox_added', 'inbox_removed', 'inbox_limit_changed', etc.
-  entity          String    // inbox email or campaign name
-  fieldChanged    String?   @map("field_changed") // 'daily_limit', 'health_score', etc.
-  oldValue        String?   @map("old_value")
-  newValue        String?   @map("new_value")
-  impact          String?   // 'capacity +21', 'inbox throttled', etc.
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  @@map("instantly_sync_changes")
-  @@index([syncTimestamp])
-}
-
-// ============================================
-// DIALER CALL MODEL (Power Dialer calls)
-// ============================================
-model Call {
-  id               String    @id @default(cuid())
-  leadId           String    @map("lead_id")
-  repId            String    @map("rep_id")
-  twilioCallSid    String?   @map("twilio_call_sid")
-  conferenceSid    String?   @map("conference_sid")
-  direction        String    @default("outbound")
-  status           String    @default("initiated") // initiated, ringing, connected, completed, no_answer, voicemail, busy, failed
-  outcome          String?   // interested, not_interested, callback, wrong_number, dnc, voicemail_left, voicemail_skipped
-  durationSeconds  Int?      @map("duration_seconds")
-  notes            String?   @db.Text
-  callbackDate     DateTime? @map("callback_date")
-  autoTexted         Boolean   @default(false) @map("auto_texted")
-  previewSent        Boolean   @default(false) @map("preview_sent")
-  previewOpened      Boolean   @default(false) @map("preview_opened")
-  previewTimeSeconds Int?      @map("preview_time_seconds")
-  paymentLinkSent    Boolean   @default(false) @map("payment_link_sent")
-  paidOnCall         Boolean   @default(false) @map("paid_on_call")
-  dialBatchId        String?   @map("dial_batch_id") // Groups parallel dial attempts
-  lineNumber         Int?      @map("line_number") // 1, 2, or 3 in parallel dial
-  createdAt          DateTime  @default(now()) @map("created_at")
-
-  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  rep  User @relation("RepCalls", fields: [repId], references: [id])
-
-  @@index([leadId])
-  @@index([repId])
-  @@index([status])
-  @@index([createdAt])
-  @@index([dialBatchId])
-  @@map("calls")
-}
-
-// ============================================
-// CALL SCORING MODEL (Weekly rep performance)
-// ============================================
-model CallScoring {
-  id                  String   @id @default(cuid())
-  repId               String   @map("rep_id")
-  weekStart           DateTime @map("week_start") @db.Date
-  connectToInterest   Float    @default(0) @map("connect_to_interest")
-  interestToClose     Float    @default(0) @map("interest_to_close")
-  previewTextRate     Float    @default(0) @map("preview_text_rate") // deprecated — kept for migration compat
-  previewSendRate     Float    @default(0) @map("preview_send_rate")
-  previewToOpenRate   Float    @default(0) @map("preview_to_open_rate")
-  openToCloseRate     Float    @default(0) @map("open_to_close_rate")
-  avgDuration         Int      @default(0) @map("avg_duration")
-  callbackShowRate    Float    @default(0) @map("callback_show_rate")
-  dncRate             Float    @default(0) @map("dnc_rate")
-  volumeScore         Int      @default(0) @map("volume_score")
-  totalScore          Int      @default(0) @map("total_score")
-  coachingNotes       String?  @db.Text @map("coaching_notes")
-  createdAt           DateTime @default(now()) @map("created_at")
-
-  rep User @relation("RepScoring", fields: [repId], references: [id])
-
-  @@unique([repId, weekStart])
-  @@index([repId])
-  @@index([weekStart])
-  @@map("call_scoring")
-}
-
-// ============================================
-// DO NOT CALL MODEL
-// ============================================
-model DoNotCall {
-  id        String   @id @default(cuid())
-  phone     String   @unique
-  reason    String?
-  addedBy   String?  @map("added_by")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@map("do_not_call")
-}
-
-// ============================================
-// DIALER SESSION MODEL (Track active dialing sessions)
-// ============================================
-model DialerSession {
-  id              String    @id @default(cuid())
-  repId           String    @map("rep_id")
-  mode            String    @default("power") // power, single, manual
-  linesPerDial    Int       @default(3) @map("lines_per_dial")
-  status          String    @default("active") // active, paused, ended
-  totalDials      Int       @default(0) @map("total_dials")
-  totalConnects   Int       @default(0) @map("total_connects")
-  totalInterested Int       @default(0) @map("total_interested")
-  totalPreviews   Int       @default(0) @map("total_previews")
-  startedAt       DateTime  @default(now()) @map("started_at")
-  endedAt         DateTime? @map("ended_at")
-
-  rep User @relation("DialerSessions", fields: [repId], references: [id])
-
-  @@index([repId])
-  @@index([status])
-  @@map("dialer_sessions")
-}
-
-model InstantlyDailyReport {
-  id                        String    @id @default(cuid())
-  reportDate                DateTime  @unique @map("report_date")
-  syncTimestamp             DateTime  @map("sync_timestamp")
-  fullReport                String    @db.Text @map("full_report") // Complete formatted report
-  smsReport                 String?   @db.Text @map("sms_report") // Condensed SMS version
-  changes                   Json?     @map("changes") // Structured change data
-  todayPlan                 Json?     @map("today_plan") // What's being pushed + why
-  alerts                    Json?     @map("alerts") // Action items
-  totalCapacity             Int?      @map("total_capacity")
-  totalPushing              Int?      @map("total_pushing")
-  totalFollowups            Int?      @map("total_followups")
-  totalSendsExpected        Int?      @map("total_sends_expected")
-  capacityUtilization       Float?    @map("capacity_utilization") // percentage
-  smsSent                   Boolean   @default(false) @map("sms_sent")
-  smsSentAt                 DateTime? @map("sms_sent_at")
-  createdAt                 DateTime  @default(now()) @map("created_at")
-
-  @@map("instantly_daily_reports")
-  @@index([reportDate])
-  @@index([createdAt])
-}
-
-// ============================================
-// EDIT REQUEST MODEL (Client site edit queue)
-// ============================================
-model EditRequest {
-  id                String    @id @default(cuid())
-  clientId          String    @map("client_id")
-  requestText       String    @db.Text @map("request_text")
-  requestChannel    String    @default("sms") @map("request_channel") // sms, email
-  aiInterpretation  String?   @db.Text @map("ai_interpretation")
-  complexityTier    String    @default("medium") @map("complexity_tier") // simple, medium, complex
-  stagingSnapshotUrl String?  @map("staging_snapshot_url")
-  imageUrls         Json?     @map("image_urls") // Array of attached image URLs
-  status            String    @default("new") @map("status") // new, ai_processing, ready_for_review, approved, rejected, live
-  approvedBy        String?   @map("approved_by")
-  approvedAt        DateTime? @map("approved_at")
-  pushedLiveAt      DateTime? @map("pushed_live_at")
-  createdAt         DateTime  @default(now()) @map("created_at")
-
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-
-  @@index([clientId])
-  @@index([status])
-  @@index([createdAt])
-  @@map("edit_requests")
-}
-
-// ============================================
-// SEQUENCE MODEL (Automated messaging sequences)
-// ============================================
-model Sequence {
-  id        String   @id @default(cuid())
-  name      String   @unique // onboarding, upsell, anti_churn, stat_report
-  steps     Json     // [{step: 1, delayDays: 0, channel: "sms", content: "...", active: true}]
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  progress SequenceProgress[]
-
-  @@map("sequences")
-}
-
-// ============================================
-// SEQUENCE PROGRESS (Per-client sequence tracking)
-// ============================================
-model SequenceProgress {
-  id          String    @id @default(cuid())
-  clientId    String    @map("client_id")
-  sequenceId  String    @map("sequence_id")
-  currentStep Int       @default(1) @map("current_step")
-  status      String    @default("active") // active, paused, completed, cancelled
-  startedAt   DateTime  @default(now()) @map("started_at")
-  completedAt DateTime? @map("completed_at")
-  nextStepAt  DateTime? @map("next_step_at")
-
-  client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  sequence Sequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
-
-  @@unique([clientId, sequenceId])
-  @@index([clientId])
-  @@index([sequenceId])
-  @@index([status])
-  @@index([nextStepAt])
-  @@map("sequence_progress")
-}
-
-// ============================================
-// UNIFIED PRODUCTS TABLE (Core plan + upsells in one table)
-// ============================================
-model UpsellProduct {
-  id                  String   @id @default(cuid())
-  name                String
-  price               Float
-  recurring           Boolean  @default(true)
-  stripeLink          String?  @map("stripe_link")
-  active              Boolean  @default(true)
-  deletedAt           DateTime? @map("deleted_at")
-
-  // Product type
-  isCore              Boolean  @default(false) @map("is_core")  // true = core plan, false = upsell
-
-  // Core product pricing fields (only used when isCore=true)
-  month1Price         Float?   @map("month1_price")       // First month combined price (e.g., 188)
-  recurringPrice      Float?   @map("recurring_price")    // Month 2+ price (e.g., 39)
-  annualPrice         Float?   @map("annual_price")       // Annual option (e.g., 399)
-  stripeLinkAnnual    String?  @map("stripe_link_annual") // Annual payment link
-
-  // Copy strings (core product uses these system-wide; upsells use pitchOneLiner only)
-  pitchOneLiner       String?  @map("pitch_one_liner")    // "$188 to go live, $39/mo after that"
-  previewBannerText   String?  @map("preview_banner_text") // "$188 to get started"
-  repCloseScript      String?  @db.Text @map("rep_close_script") // Full close script for reps
-
-  // Rep pitch field
-  repPitch            String?  @map("rep_pitch")  // One-liner pitch for reps to read during calls
-
-  // AI awareness fields
-  description         String?  @db.Text                            // Admin reference
-  aiPitchInstructions String?  @db.Text @map("ai_pitch_instructions") // How to sell this
-  aiProductSummary    String?  @map("ai_product_summary")           // One-liner for AI conversation
-
-  // Eligibility & targeting (upsells only — core products skip these checks)
-  eligibleIndustries  String[] @default([]) @map("eligible_industries")
-  minClientAgeDays    Int?     @map("min_client_age_days")
-  maxPitchesPerClient Int      @default(3) @map("max_pitches_per_client")
-  pitchChannel        String   @default("sms") @map("pitch_channel")
-  sortOrder           Int      @default(0) @map("sort_order")
-
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
-
-  pitches UpsellPitch[]
-
-  @@map("upsell_products")
-}
-
-// ============================================
-// UPSELL PITCH (Track upsell attempts per client)
-// ============================================
-model UpsellPitch {
-  id             String    @id @default(cuid())
-  clientId       String    @map("client_id")
-  productId      String    @map("product_id")
-  status         String    @default("pitched") // pitched, opened, clicked, paid, declined
-  pitchedAt      DateTime  @default(now()) @map("pitched_at")
-  openedAt       DateTime? @map("opened_at")
-  clickedAt      DateTime? @map("clicked_at")
-  paidAt         DateTime? @map("paid_at")
-  pitchChannel   String    @default("sms") @map("pitch_channel")
-  sequenceDay    Int?      @map("sequence_day") // Which day of upsell sequence
-
-  product UpsellProduct @relation(fields: [productId], references: [id])
-
-  @@index([clientId])
-  @@index([productId])
-  @@index([status])
-  @@map("upsell_pitches")
-}
-
-// ============================================
-// REFERRAL MODEL (Client referral tracking)
-// ============================================
-model Referral {
-  id              String    @id @default(cuid())
-  referrerClientId String   @map("referrer_client_id")
-  referredName    String    @map("referred_name")
-  referredPhone   String?   @map("referred_phone")
-  referredEmail   String?   @map("referred_email")
-  referredCompany String?   @map("referred_company")
-  leadId          String?   @map("lead_id") // If lead was created
-  status          String    @default("pending") // pending, in_pipeline, closed, no_response
-  creditAmount    Float     @default(39) @map("credit_amount")
-  creditApplied   Boolean   @default(false) @map("credit_applied")
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  referrerClient Client @relation("ReferrerClient", fields: [referrerClientId], references: [id], onDelete: Cascade)
-
-  @@index([referrerClientId])
-  @@index([status])
-  @@map("referrals")
-}
-
-// ============================================
-// SITE ANALYTICS EVENT MODEL (Self-hosted tracking)
-// ============================================
-model SiteAnalytic {
-  id             String   @id @default(cuid())
-  clientId       String   @map("client_id")
-  eventType      String   @map("event_type") // pageview, cta_click, return_visit
-  page           String?
-  device         String?  // mobile, desktop
-  referralSource String?  @map("referral_source")
-  sessionId      String?  @map("session_id")
-  createdAt      DateTime @default(now()) @map("created_at")
-
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-
-  @@index([clientId])
-  @@index([eventType])
-  @@index([createdAt])
-  @@map("site_analytics")
-}
-
-// ============================================
-// STRIPE SYNC LOG (Daily reconciliation safety net)
-// ============================================
-model StripeSyncLog {
-  id              String   @id @default(cuid())
-  syncType        String   @map("sync_type") // daily_reconciliation, manual
-  mismatchesFound Int      @default(0) @map("mismatches_found")
-  correctionsMade Json?    @map("corrections_made") // [{clientId, field, oldValue, newValue}]
-  createdAt       DateTime @default(now()) @map("created_at")
-
-  @@map("stripe_sync_log")
-}
-
-// ============================================
-// AI PERFORMANCE LOG (Learning loop)
-// ============================================
-model AiPerformanceLog {
-  id              String   @id @default(cuid())
-  conversationId  String?  @map("conversation_id")
-  messageId       String?  @map("message_id")
-  aiResponseText  String?  @db.Text @map("ai_response_text")
-  clientReaction  String?  @map("client_reaction") // positive, neutral, negative, escalated
-  outcome         String?  // converted, resolved, escalated, churned
-  editApproved    Boolean? @map("edit_approved")
-  promptVersion   Int      @default(1) @map("prompt_version")
-  createdAt       DateTime @default(now()) @map("created_at")
-
-  @@index([promptVersion])
-  @@index([outcome])
-  @@index([createdAt])
-  @@map("ai_performance_log")
-}
-
-// ============================================
-// PROMPT VERSION MODEL (AI prompt versioning)
-// ============================================
-model PromptVersion {
-  id          String   @id @default(cuid())
-  version     Int      @unique
-  content     String   @db.Text // Full system prompt
-  changeNotes String?  @db.Text @map("change_notes")
-  performance Json?    // {conversionRate, escalationRate, approvalRate}
-  active      Boolean  @default(false)
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  @@map("prompt_versions")
-}
-
-// ============================================
-// CHANNEL DECISION MODEL (AI routing audit log)
-// ============================================
-model ChannelDecision {
-  id              String   @id @default(cuid())
-  clientId        String?  @map("client_id")
-  leadId          String?  @map("lead_id")
-  trigger         String   // 'post_launch_day_3', 'urgency_day_5', 'win_back', etc.
-  chosenChannel   String   @map("chosen_channel") // SMS or EMAIL
-  reason          String   // 'HARD_RULE:NO_EMAIL', 'AI:prefers_sms', 'FALLBACK:default_sms'
-  ruleApplied     String?  @map("rule_applied") // Which hard rule fired, if any
-  aiConfidence    Float?   @map("ai_confidence") // 0.0-1.0 from Claude
-  signals         Json?    // Snapshot of signals used for decision
-  latencyMs       Int?     @map("latency_ms") // How long the decision took
-  messageSent     Boolean  @default(false) @map("message_sent")
-  createdAt       DateTime @default(now()) @map("created_at")
-
-  @@index([clientId])
-  @@index([leadId])
-  @@index([chosenChannel])
-  @@index([createdAt])
-  @@map("channel_decisions")
-}
-
-// ============================================
-// CLOSE ENGINE CONVERSATION (AI sales conversations)
-// ============================================
-model CloseEngineConversation {
-  id              String    @id @default(cuid())
-  leadId          String    @unique @map("lead_id")
-  repId           String?   @map("rep_id")
-  entryPoint      String    @map("entry_point")     // INSTANTLY_REPLY, SMS_REPLY, REP_CLOSE, PREVIEW_CTA
-  stage           String    @default("INITIATED")    // INITIATED, QUALIFYING, COLLECTING_INFO, BUILDING, PREVIEW_SENT, EDIT_LOOP, PENDING_APPROVAL, PAYMENT_SENT, COMPLETED, STALLED, CLOSED_LOST
-  autonomyLevel   String    @default("FULL_AUTO") @map("autonomy_level") // FULL_AUTO, SEMI_AUTO, MANUAL
-  questionsAsked  Json?     @map("questions_asked")  // Array of question IDs asked so far
-  collectedData   Json?     @map("collected_data")   // Structured qualification data from Claude
-  editRounds      Int       @default(0) @map("edit_rounds")
-  paymentLinkUrl  String?   @map("payment_link_url")
-  paymentLinkSentAt DateTime? @map("payment_link_sent_at")
-  stalledAt       DateTime? @map("stalled_at")
-  completedAt     DateTime? @map("completed_at")
-  closedLostAt    DateTime? @map("closed_lost_at")
-  closedLostReason String?  @map("closed_lost_reason")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  lead           Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  rep            User?           @relation("CloseEngineRep", fields: [repId], references: [id])
-  pendingActions PendingAction[]
-
-  @@index([stage])
-  @@index([entryPoint])
-  @@index([createdAt])
-  @@map("close_engine_conversations")
-}
-
-// ============================================
-// PENDING ACTION (Approval queue for Semi-Auto/Manual)
-// ============================================
-model PendingAction {
-  id              String    @id @default(cuid())
-  conversationId  String    @map("conversation_id")
-  leadId          String    @map("lead_id")
-  type            String    // SEND_PAYMENT_LINK, SEND_MESSAGE, SEND_PREVIEW
-  draftMessage    String    @db.Text @map("draft_message")
-  metadata        Json?     // paymentUrl, previewUrl, etc.
-  status          String    @default("PENDING") // PENDING, APPROVED, REJECTED, EXPIRED
-  approvedBy      String?   @map("approved_by")
-  approvedAt      DateTime? @map("approved_at")
-  expiresAt       DateTime? @map("expires_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  conversation CloseEngineConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  lead         Lead                     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
-  @@index([status])
-  @@index([leadId])
-  @@index([conversationId])
-  @@map("pending_actions")
-}
-
-// ============================================
-// APPROVAL MODEL (System-wide safety net)
-// ============================================
-model Approval {
-  id              String    @id @default(cuid())
-  gate            String    // PAYMENT_LINK, SITE_PUBLISH, REFUND, SEND_MESSAGE, SEND_PREVIEW, STATUS_CHANGE, DELETE_LEAD, BULK_ACTION, AI_RESPONSE, SUBSCRIPTION_CANCEL, HIGH_VALUE_SEND
-  title           String    // Short description: "Payment link to John's Roofing"
-  description     String    @db.Text // Full context: who, what, why
-  draftContent    String?   @db.Text @map("draft_content") // The exact message/action content
-  leadId          String?   @map("lead_id")
-  clientId        String?   @map("client_id")
-  requestedBy     String    @default("system") @map("requested_by") // system, clawdbot, rep:name
-  status          String    @default("PENDING") // PENDING, APPROVED, DENIED, EXPIRED
-  priority        String    @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
-  metadata        Json?     // paymentUrl, previewUrl, amount, etc.
-  resolvedBy      String?   @map("resolved_by")
-  resolvedAt      DateTime? @map("resolved_at")
-  expiresAt       DateTime? @map("expires_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  @@index([status])
-  @@index([gate])
-  @@index([createdAt])
-  @@index([leadId])
-  @@index([clientId])
-  @@map("approvals")
-}
-
-// ============================================
-// BUILD STATUS MODEL (Live site build progress tracking)
-// ============================================
-model BuildStatus {
-  id                    String    @id @default(cuid())
-  leadId                String    @unique @map("lead_id")
-
-  // Collected info flags
-  servicesCollected     Boolean   @default(false) @map("services_collected")
-  servicesData          Json?     @map("services_data")
-  hoursCollected        Boolean   @default(false) @map("hours_collected")
-  hoursData             String?   @map("hours_data")
-  logoCollected         Boolean   @default(false) @map("logo_collected")
-  logoUrl               String?   @map("logo_url")
-  photosCollected       Boolean   @default(false) @map("photos_collected")
-  photosData            Json?     @map("photos_data")
-  companyNameConfirmed  Boolean   @default(false) @map("company_name_confirmed")
-  companyNameOverride   String?   @map("company_name_override")
-  colorPrefsCollected   Boolean   @default(false) @map("color_prefs_collected")
-
-  // Build pipeline
-  status                String    @default("collecting") // collecting, ready_to_build, building, review, live
-  autoPush              Boolean   @default(false) @map("auto_push")
-  lastPushedAt          DateTime? @map("last_pushed_at")
-
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
-
-  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
-  @@map("build_status")
-}
-
-// ============================================
-// CONVERSATION OUTCOME MODEL (AI Learning)
-// ============================================
-model ConversationOutcome {
-  id                  String    @id @default(cuid())
-  leadId              String    @map("lead_id")
-  finalStage          String    @map("final_stage") // PAID, STALLED, LOST
-  totalMessages       Int       @map("total_messages")
-  messagesPerStage    Json?     @map("messages_per_stage") // {qualifying: 4, collecting_info: 6, ...}
-  timeToConvert       Int?      @map("time_to_convert") // minutes, null if didn't convert
-  stalledAtStage      String?   @map("stalled_at_stage")
-  stalledAfterMessage String?   @db.Text @map("stalled_after_message")
-  lastLeadMessage     String?   @db.Text @map("last_lead_message")
-  effectivePatterns   Json?     @map("effective_patterns") // [{stage, aiMessage, leadResponse, responseTimeSeconds}]
-  ineffectivePatterns Json?     @map("ineffective_patterns") // [{stage, aiMessage, silenceHours}]
-  industry            String
-  objectionType       String?   @map("objection_type") // price, timing, trust, partner, competition, none
-  objectionResolved   String?   @map("objection_resolved") // overcame, lost, deferred
-  reactivated         Boolean   @default(false)
-  reactivationTrigger String?   @map("reactivation_trigger")
-  createdAt           DateTime  @default(now()) @map("created_at")
-
-  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
-  @@index([industry])
-  @@index([finalStage])
-  @@index([createdAt])
-  @@index([leadId])
-  @@map("conversation_outcomes")
 }
