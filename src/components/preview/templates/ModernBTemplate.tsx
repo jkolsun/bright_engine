@@ -14,6 +14,7 @@ import {
   Minus, Plus, Facebook, Instagram
 } from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
+import { brandGradientStyle, brandAccent } from '../shared/colorUtils'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
 import ScrollReveal from '../shared/ScrollReveal'
 import usePageRouter from '../shared/usePageRouter'
@@ -88,7 +89,7 @@ function ChatbotWidget({ companyName, accentColor = '#8b5cf6' }: { companyName: 
   )
 }
 
-function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
+function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick, onCTAClick, onNavigate, config }: { isOpen: boolean; onClose: () => void; companyName: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void; config?: import('../config/template-types').IndustryConfig }) {
   if (!isOpen) return null
   return (
     <div className="fixed inset-0 z-[90] lg:hidden">
@@ -104,7 +105,7 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
           </div>
           <div className="space-y-3">
             {phone && (<a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gray-100 text-gray-800 font-bold text-sm border border-gray-200"><Phone size={16} />Call {formatNavPhone(phone)}</a>)}
-            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold text-sm">Get Free Quote</button>
+            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-xl ${config?.primaryHex ? '' : 'bg-gradient-to-r from-violet-500 to-purple-600'} text-white font-bold text-sm`} style={config ? brandGradientStyle(config, 'to right') : undefined}>Get Free Quote</button>
           </div>
         </div>
       </div>
@@ -127,9 +128,9 @@ function FAQItem({ question, answer, isOpen, onToggle }: { question: string; ans
 }
 
 /* ═══════ CTA BAND (reused on multiple pages) ═══════ */
-function CTABand({ closingHeadline, onCTAClick, onNavigateContact }: { closingHeadline?: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void }) {
+function CTABand({ closingHeadline, onCTAClick, onNavigateContact, config }: { closingHeadline?: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void; config?: import('../config/template-types').IndustryConfig }) {
   return (
-    <section className="relative py-16 sm:py-20 md:py-24 overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600">
+    <section className={`relative py-16 sm:py-20 md:py-24 overflow-hidden ${config?.primaryHex ? '' : 'bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600'}`} style={config ? brandGradientStyle(config, 'to right') : undefined}>
       <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
       <ScrollReveal animation="fade-in">
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 md:px-8 text-center">
@@ -225,14 +226,14 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
               </div>
               <div className="hidden md:block w-px h-5 bg-gray-200" />
               {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-sm text-gray-500 hover:text-violet-600 font-medium"><Phone size={14} />{formatNavPhone(lead.phone)}</a>)}
-              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className="hidden sm:flex bg-gradient-to-r from-violet-500 to-purple-600 text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:from-violet-600 hover:to-purple-700 transition-all shadow-md">Free Quote</button>
+              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className={`hidden sm:flex ${config.primaryHex ? '' : 'bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700'} text-white px-5 py-2.5 rounded-full text-sm font-semibold transition-all shadow-md`} style={brandGradientStyle(config, 'to right')}>Free Quote</button>
               <button onClick={() => setMobileNavOpen(true)} className="lg:hidden w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600"><Menu size={20} /></button>
             </div>
           </div>
         </div>
       </nav>
 
-      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} />
+      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} config={config} />
 
       {/* ═══════════════════════════════════════════
           PAGE: HOME
@@ -254,7 +255,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                   <p className="text-lg sm:text-xl text-gray-500 max-w-2xl mb-8 leading-relaxed">{wc.heroSubheadline}</p>
                 )}
                 <div className="flex flex-col sm:flex-row gap-4">
-                  {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white px-9 py-4 rounded-full font-semibold text-base hover:from-violet-600 hover:to-purple-700 transition-all shadow-lg hover:-translate-y-0.5"><Phone size={18} />Call Now</a>)}
+                  {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className={`inline-flex items-center justify-center gap-2.5 ${config.primaryHex ? '' : 'bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700'} text-white px-9 py-4 rounded-full font-semibold text-base transition-all shadow-lg hover:-translate-y-0.5`} style={brandGradientStyle(config, 'to right')}><Phone size={18} />Call Now</a>)}
                   <button onClick={onCTAClick} className="inline-flex items-center justify-center gap-2.5 bg-white border-2 border-gray-200 text-gray-700 px-9 py-4 rounded-full font-semibold text-base hover:border-violet-300 hover:text-violet-600 transition-all group">{config.ctaText}<ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></button>
                 </div>
               </div>
@@ -266,7 +267,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                     {hasRating && (<div className="flex items-center gap-2 mb-6"><div className="flex gap-0.5">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={18} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-amber-400 fill-current' : 'text-gray-200'} />)}</div><span className="font-bold text-gray-900 text-lg">{lead.enrichedRating}</span>{lead.enrichedReviews && <span className="text-sm text-gray-400">({lead.enrichedReviews} reviews)</span>}</div>)}
                     <h3 className="text-xl font-bold text-gray-900 mb-2">Get Your Free Quote</h3>
                     <p className="text-gray-400 text-sm mb-6">Same-day response</p>
-                    <button onClick={onCTAClick} className="w-full bg-gradient-to-r from-violet-500 to-purple-600 text-white py-3.5 rounded-xl font-bold text-base hover:from-violet-600 hover:to-purple-700 transition-all shadow-md mb-3">Request a Quote</button>
+                    <button onClick={onCTAClick} className={`w-full ${config.primaryHex ? '' : 'bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700'} text-white py-3.5 rounded-xl font-bold text-base transition-all shadow-md mb-3`} style={brandGradientStyle(config, 'to right')}>Request a Quote</button>
                     {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-600 py-3 rounded-xl font-medium text-sm hover:border-violet-300 hover:text-violet-600 transition-all"><Phone size={15} />Or call {lead.phone}</a>)}
                   </div>
                 </div>
@@ -413,7 +414,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
         </section>
 
         {/* HOMEPAGE: CTA BAND */}
-        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -423,7 +424,8 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
         <PageHeader
           title="Our Services"
           subtitle={`Expert ${industryLabel}${location ? ` serving ${location}` : ''} and surrounding areas.`}
-          bgClass="bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600"
+          bgClass={config.primaryHex ? '' : 'bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600'}
+          bgStyle={brandGradientStyle(config, 'to right')}
           subtitleClass="text-violet-200/60"
           accentClass="text-violet-300"
           onBackClick={() => navigateTo('home')}
@@ -452,7 +454,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
               </div>
               <ScrollReveal animation="fade-up" delay={100}>
               <div className="mt-12 flex justify-center">
-                <button onClick={onCTAClick} className="flex items-center gap-2 bg-gradient-to-r from-violet-500 to-purple-600 text-white px-7 py-3.5 rounded-full font-semibold text-sm hover:from-violet-600 hover:to-purple-700 transition-all shadow-md">Get a Free Quote<ArrowRight size={16} /></button>
+                <button onClick={onCTAClick} className={`flex items-center gap-2 ${config.primaryHex ? '' : 'bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700'} text-white px-7 py-3.5 rounded-full font-semibold text-sm transition-all shadow-md`} style={brandGradientStyle(config, 'to right')}>Get a Free Quote<ArrowRight size={16} /></button>
               </div>
               </ScrollReveal>
             </div>
@@ -474,7 +476,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
           </section>
         )}
 
-        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -484,7 +486,8 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
         <PageHeader
           title="About Us"
           subtitle={`Get to know ${lead.companyName} — your trusted ${industryLabel} professionals.`}
-          bgClass="bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600"
+          bgClass={config.primaryHex ? '' : 'bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600'}
+          bgStyle={brandGradientStyle(config, 'to right')}
           subtitleClass="text-violet-200/60"
           accentClass="text-violet-300"
           onBackClick={() => navigateTo('home')}
@@ -562,7 +565,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -572,7 +575,8 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
         <PageHeader
           title="Our Work"
           subtitle="Browse our portfolio of completed projects."
-          bgClass="bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600"
+          bgClass={config.primaryHex ? '' : 'bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600'}
+          bgStyle={brandGradientStyle(config, 'to right')}
           subtitleClass="text-violet-200/60"
           accentClass="text-violet-300"
           onBackClick={() => navigateTo('home')}
@@ -612,7 +616,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                 </div>
                 <h3 className="text-lg font-bold text-gray-800 mb-2">Portfolio Coming Soon</h3>
                 <p className="text-sm text-gray-500 max-w-md mx-auto">We&apos;re putting together our best project photos. Contact us to see examples of our work.</p>
-                <button onClick={onCTAClick} className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-violet-500 to-purple-600 text-white px-6 py-3 rounded-full font-semibold text-sm hover:from-violet-600 hover:to-purple-700 transition-all shadow-md">
+                <button onClick={onCTAClick} className={`mt-6 inline-flex items-center gap-2 ${config.primaryHex ? '' : 'bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700'} text-white px-6 py-3 rounded-full font-semibold text-sm transition-all shadow-md`} style={brandGradientStyle(config, 'to right')}>
                   Request Examples <ArrowRight size={14} />
                 </button>
               </div>
@@ -620,7 +624,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -630,7 +634,8 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
         <PageHeader
           title="Get In Touch"
           subtitle="We'd love to hear from you. Reach out for a free quote."
-          bgClass="bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600"
+          bgClass={config.primaryHex ? '' : 'bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600'}
+          bgStyle={brandGradientStyle(config, 'to right')}
           subtitleClass="text-violet-200/60"
           accentClass="text-violet-300"
           onBackClick={() => navigateTo('home')}
@@ -676,7 +681,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                   </div>
                   <div><label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Email</label><input type="email" placeholder="your@email.com" value={formData.email} onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-300 placeholder:text-gray-300 transition-all" /></div>
                   <div><label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Project details</label><textarea rows={4} placeholder="Tell us about your project..." value={formData.message} onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-300 placeholder:text-gray-300 transition-all resize-none" /></div>
-                  <button onClick={handleFormSubmit} disabled={formLoading} className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-semibold text-sm hover:from-violet-600 hover:to-purple-700 transition-all shadow-md disabled:opacity-50">{formLoading ? 'Sending...' : 'Send Message'}</button>
+                  <button onClick={handleFormSubmit} disabled={formLoading} className={`w-full py-3.5 rounded-xl ${config.primaryHex ? '' : 'bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700'} text-white font-semibold text-sm transition-all shadow-md disabled:opacity-50`} style={brandGradientStyle(config, 'to right')}>{formLoading ? 'Sending...' : 'Send Message'}</button>
                 </div>
                 </>
                 )}
@@ -735,7 +740,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
         </div>
       </footer>
 
-      <ChatbotWidget companyName={lead.companyName} />
+      <ChatbotWidget companyName={lead.companyName} accentColor={brandAccent(config, '#8b5cf6')} />
       <div className="h-16 sm:h-0" />
     </div>
   )

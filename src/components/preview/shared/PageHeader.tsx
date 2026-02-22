@@ -1,5 +1,6 @@
 'use client'
 
+import type { CSSProperties } from 'react'
 import { ArrowLeft } from 'lucide-react'
 
 interface PageHeaderProps {
@@ -7,6 +8,8 @@ interface PageHeaderProps {
   subtitle?: string
   /** Tailwind bg class for the banner, e.g. 'bg-emerald-800' */
   bgClass: string
+  /** Optional inline style for the banner background (used for client color overrides) */
+  bgStyle?: CSSProperties
   /** Tailwind text class for the title, e.g. 'text-white' */
   titleClass?: string
   /** Tailwind text class for subtitle/back link, e.g. 'text-emerald-200' */
@@ -20,13 +23,14 @@ export default function PageHeader({
   title,
   subtitle,
   bgClass,
+  bgStyle,
   titleClass = 'text-white',
   subtitleClass = 'text-white/60',
   accentClass = 'text-white/80',
   onBackClick,
 }: PageHeaderProps) {
   return (
-    <div className={`${bgClass} pt-28 pb-12 sm:pt-32 sm:pb-16 px-4 sm:px-6 md:px-8`}>
+    <div className={`${bgClass} pt-28 pb-12 sm:pt-32 sm:pb-16 px-4 sm:px-6 md:px-8`} style={bgStyle}>
       <div className="max-w-7xl mx-auto">
         <button
           onClick={onBackClick}

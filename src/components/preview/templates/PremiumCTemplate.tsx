@@ -19,6 +19,7 @@ import {
   Minus, Plus, Facebook, Instagram
 } from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
+import { brandGradientStyle, brandGradientClass, brandAccent } from '../shared/colorUtils'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
 import ScrollReveal from '../shared/ScrollReveal'
 import usePageRouter from '../shared/usePageRouter'
@@ -50,7 +51,7 @@ function GoogleIcon({ size = 15, className = '' }: { size?: number; className?: 
 }
 
 /* ────────────────────── Chatbot Widget ────────────────────── */
-function ChatbotWidget({ companyName }: { companyName: string }) {
+function ChatbotWidget({ companyName, accentHex }: { companyName: string; accentHex?: string }) {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<{ from: string; text: string }[]>([])
   const [input, setInput] = useState('')
@@ -104,7 +105,7 @@ function ChatbotWidget({ companyName }: { companyName: string }) {
         className="fixed bottom-6 right-5 z-[100] group sm:bottom-6 bottom-20"
         aria-label="Open chat"
       >
-        <div className="w-[58px] h-[58px] rounded-full bg-emerald-700 flex items-center justify-center shadow-2xl hover:scale-105 transition-all border border-emerald-600">
+        <div className={`w-[58px] h-[58px] rounded-full flex items-center justify-center shadow-2xl hover:scale-105 transition-all border border-emerald-600 ${accentHex ? '' : 'bg-emerald-700'}`} style={accentHex ? { background: accentHex } : undefined}>
           {isOpen ? <X size={22} className="text-white" /> : <MessageCircle size={22} className="text-white" />}
         </div>
         {!isOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-10 bg-emerald-500" />}
@@ -195,7 +196,8 @@ function ChatbotWidget({ companyName }: { companyName: string }) {
               <button
                 onClick={() => handleSend()}
                 disabled={!input.trim()}
-                className="w-10 h-10 rounded-full bg-emerald-700 flex items-center justify-center text-white transition-all disabled:opacity-30 hover:bg-emerald-600"
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-white transition-all disabled:opacity-30 ${accentHex ? '' : 'bg-emerald-700 hover:bg-emerald-600'}`}
+                style={accentHex ? { background: accentHex } : undefined}
               >
                 <Send size={15} />
               </button>
@@ -209,11 +211,12 @@ function ChatbotWidget({ companyName }: { companyName: string }) {
 
 /* ────────────────────── Mobile Nav Drawer ────────────────────── */
 function MobileNav({
-  isOpen, onClose, companyName, logo, sections, phone, onCallClick, onCTAClick, onNavigate
+  isOpen, onClose, companyName, logo, sections, phone, onCallClick, onCTAClick, onNavigate, config
 }: {
   isOpen: boolean; onClose: () => void; companyName: string; logo?: string;
   sections: { page: PageName; label: string }[]; phone?: string;
   onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void;
+  config: import('../config/template-types').IndustryConfig;
 }) {
   if (!isOpen) return null
   return (
@@ -264,7 +267,7 @@ function MobileNav({
                 Call {formatNavPhone(phone)}
               </a>
             )}
-            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-emerald-700 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors">
+            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 transition-colors ${config.primaryHex ? '' : 'bg-emerald-700 hover:bg-emerald-600'}`} style={brandGradientStyle(config, 'to right') || undefined}>
               Free Consultation
             </button>
           </div>
@@ -296,9 +299,9 @@ function FAQItem({ question, answer, isOpen, onToggle }: {
 }
 
 /* ═══════ CTA BAND (reused on multiple pages) ═══════ */
-function CTABand({ closingHeadline, location, onCTAClick, onNavigateContact }: { closingHeadline?: string; location: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void }) {
+function CTABand({ closingHeadline, location, onCTAClick, onNavigateContact, config }: { closingHeadline?: string; location: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void; config: import('../config/template-types').IndustryConfig }) {
   return (
-    <section className="relative py-16 sm:py-20 md:py-24 overflow-hidden bg-emerald-800">
+    <section className={`relative py-16 sm:py-20 md:py-24 overflow-hidden ${config.primaryHex ? '' : 'bg-emerald-800'}`} style={brandGradientStyle(config) || undefined}>
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-400 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-300 rounded-full translate-y-1/2 -translate-x-1/3 blur-3xl" />
@@ -430,7 +433,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
               )}
 
               {/* CTA — desktop */}
-              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className="hidden sm:flex bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-600 transition-all shadow-md">
+              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className={`hidden sm:flex text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-all shadow-md ${config.primaryHex ? '' : 'bg-emerald-700 hover:bg-emerald-600'}`} style={brandGradientStyle(config, 'to right') || undefined}>
                 Free Consultation
               </button>
 
@@ -454,6 +457,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
         onCallClick={onCallClick}
         onCTAClick={onCTAClick}
         onNavigate={navigateTo}
+        config={config}
       />
 
       {/* ═══════════════════════════════════════════
@@ -502,7 +506,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
             {/* Hero CTAs */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {lead.phone && (
-                <a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 bg-emerald-700 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-700/20">
+                <a href={`tel:${lead.phone}`} onClick={onCallClick} className={`inline-flex items-center justify-center gap-2.5 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:opacity-90 transition-all shadow-lg shadow-emerald-700/20 ${config.primaryHex ? '' : 'bg-emerald-700 hover:bg-emerald-600'}`} style={brandGradientStyle(config, 'to right') || undefined}>
                   <Phone size={20} />
                   Call Now
                 </a>
@@ -688,7 +692,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
         </section>
 
         {/* HOMEPAGE: CTA BAND */}
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -698,7 +702,8 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
         <PageHeader
           title="Our Services"
           subtitle={`Expert ${industryLabel}${location ? ` serving ${location}` : ''} and surrounding areas.`}
-          bgClass="bg-gradient-to-br from-emerald-800 via-green-900 to-emerald-900"
+          bgClass={brandGradientClass(config)}
+          bgStyle={brandGradientStyle(config)}
           subtitleClass="text-emerald-200/60"
           accentClass="text-emerald-300"
           onBackClick={() => navigateTo('home')}
@@ -744,7 +749,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
           </section>
         )}
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -754,7 +759,8 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
         <PageHeader
           title="About Us"
           subtitle={`Get to know ${lead.companyName} — your trusted partner in ${industryLabel}.`}
-          bgClass="bg-gradient-to-br from-emerald-800 via-green-900 to-emerald-900"
+          bgClass={brandGradientClass(config)}
+          bgStyle={brandGradientStyle(config)}
           subtitleClass="text-emerald-200/60"
           accentClass="text-emerald-300"
           onBackClick={() => navigateTo('home')}
@@ -882,7 +888,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -892,7 +898,8 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
         <PageHeader
           title="Our Work"
           subtitle="Browse our portfolio of completed projects."
-          bgClass="bg-gradient-to-br from-emerald-800 via-green-900 to-emerald-900"
+          bgClass={brandGradientClass(config)}
+          bgStyle={brandGradientStyle(config)}
           subtitleClass="text-emerald-200/60"
           accentClass="text-emerald-300"
           onBackClick={() => navigateTo('home')}
@@ -926,7 +933,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                 </div>
                 <h3 className="text-lg font-medium text-stone-800 mb-2">Portfolio Coming Soon</h3>
                 <p className="text-sm text-stone-500 max-w-md mx-auto">We&apos;re putting together our best project photos. Contact us to see examples of our work.</p>
-                <button onClick={onCTAClick} className="mt-6 inline-flex items-center gap-2 bg-emerald-700 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-emerald-600 transition-all">
+                <button onClick={onCTAClick} className={`mt-6 inline-flex items-center gap-2 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-all ${config.primaryHex ? '' : 'bg-emerald-700 hover:bg-emerald-600'}`} style={brandGradientStyle(config, 'to right') || undefined}>
                   Request Examples <ArrowRight size={14} />
                 </button>
               </div>
@@ -934,7 +941,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -944,7 +951,8 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
         <PageHeader
           title="Get In Touch"
           subtitle="We'd love to hear from you. Reach out for a free consultation."
-          bgClass="bg-gradient-to-br from-emerald-800 via-green-900 to-emerald-900"
+          bgClass={brandGradientClass(config)}
+          bgStyle={brandGradientStyle(config)}
           subtitleClass="text-emerald-200/60"
           accentClass="text-emerald-300"
           onBackClick={() => navigateTo('home')}
@@ -1033,7 +1041,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                     <label className="block text-[11px] font-medium text-stone-400 mb-1.5 uppercase tracking-wider">Project details</label>
                     <textarea rows={4} placeholder="Tell us about your project..." value={formData.message} onChange={(e) => setFormData(p => ({ ...p, message: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-stone-200 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 placeholder:text-stone-300 transition-all resize-none" />
                   </div>
-                  <button onClick={handleFormSubmit} className="w-full py-3.5 rounded-xl bg-emerald-700 text-white font-semibold text-sm hover:bg-emerald-600 transition-all shadow-md">
+                  <button onClick={handleFormSubmit} className={`w-full py-3.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 transition-all shadow-md ${config.primaryHex ? '' : 'bg-emerald-700 hover:bg-emerald-600'}`} style={brandGradientStyle(config, 'to right') || undefined}>
                     {formLoading ? 'Sending...' : 'Send Message'}
                   </button>
                 </div>
@@ -1131,7 +1139,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
       </footer>
 
       {/* ═══════════════════════ CHATBOT ═══════════════════════ */}
-      <ChatbotWidget companyName={lead.companyName} />
+      <ChatbotWidget companyName={lead.companyName} accentHex={config.primaryHex ? brandAccent(config, '#047857') : undefined} />
 
       {/* Mobile bottom spacer */}
       <div className="h-16 sm:h-0" />

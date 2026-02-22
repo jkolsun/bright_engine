@@ -69,6 +69,7 @@ export default function Step9Photos({ data, onChange, onUpload }: Step9Props) {
       </h2>
       <p className="text-gray-500 mb-6 text-sm">
         Upload photos of your best work. High-quality images help win more customers.
+        <span className="block text-xs text-amber-600 mt-1">At least 1 photo required <span className="text-red-500">*</span></span>
       </p>
 
       {/* Count indicator */}

@@ -85,6 +85,7 @@ export default async function PreviewPage({ params }: { params: { id: string } }
             enrichedServices: services,
             enrichedPhotos: photos,
             logo: lead.logo || undefined,
+            colorPrefs: lead.colorPrefs ? (lead.colorPrefs as any) : undefined,
           }}
           websiteCopy={personalization?.websiteCopy || undefined}
         />

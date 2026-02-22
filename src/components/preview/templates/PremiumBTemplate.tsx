@@ -14,6 +14,7 @@ import {
   Minus, Plus, Facebook, Instagram
 } from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
+import { brandGradientStyle, brandAccent } from '../shared/colorUtils'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
 import ScrollReveal from '../shared/ScrollReveal'
 import usePageRouter from '../shared/usePageRouter'
@@ -36,7 +37,7 @@ function GoogleIcon({ size = 15, className = '' }: { size?: number; className?: 
   return (<svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>)
 }
 
-function ChatbotWidget({ companyName }: { companyName: string }) {
+function ChatbotWidget({ companyName, accentHex }: { companyName: string; accentHex?: string }) {
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<{from: string; text: string}[]>([])
   const [input, setInput] = useState('')
@@ -63,7 +64,7 @@ function ChatbotWidget({ companyName }: { companyName: string }) {
   return (
     <>
       <button onClick={() => setIsOpen(!isOpen)} className="fixed bottom-6 right-5 z-[100] group sm:bottom-6 bottom-20" aria-label="Chat">
-        <div className="w-[58px] h-[58px] rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-105 bg-emerald-700 border border-emerald-600">
+        <div className={`w-[58px] h-[58px] rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-105 ${accentHex ? '' : 'bg-emerald-700'} border border-emerald-600`} style={accentHex ? { background: accentHex } : undefined}>
           {isOpen ? <X size={22} className="text-white" /> : <MessageCircle size={22} className="text-white" />}
         </div>
         {!isOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-10 bg-emerald-500" />}
@@ -81,14 +82,14 @@ function ChatbotWidget({ companyName }: { companyName: string }) {
             <div ref={endRef} />
           </div>
           {messages.length <= 1 && (<div className="px-4 pb-2 flex gap-2 flex-wrap bg-stone-50/50">{quickReplies.map((qr, i) => (<button key={i} onClick={() => handleSend(qr)} className="text-xs px-3 py-1.5 rounded-full border border-stone-200 text-stone-600 hover:bg-emerald-50 hover:border-emerald-200 transition-all">{qr}</button>))}</div>)}
-          <div className="px-4 py-3 border-t border-stone-100 bg-white"><div className="flex gap-2"><input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder="Type a message..." className="flex-1 text-sm px-4 py-2.5 rounded-full bg-stone-50 border border-stone-200 text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 placeholder:text-stone-400" /><button onClick={() => handleSend()} disabled={!input.trim()} className="w-10 h-10 rounded-full bg-emerald-700 flex items-center justify-center text-white transition-all disabled:opacity-30"><Send size={15} /></button></div></div>
+          <div className="px-4 py-3 border-t border-stone-100 bg-white"><div className="flex gap-2"><input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder="Type a message..." className="flex-1 text-sm px-4 py-2.5 rounded-full bg-stone-50 border border-stone-200 text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 placeholder:text-stone-400" /><button onClick={() => handleSend()} disabled={!input.trim()} className={`w-10 h-10 rounded-full flex items-center justify-center text-white transition-all disabled:opacity-30 ${accentHex ? '' : 'bg-emerald-700'}`} style={accentHex ? { background: accentHex } : undefined}><Send size={15} /></button></div></div>
         </div>
       )}
     </>
   )
 }
 
-function MobileNav({ isOpen, onClose, companyName, logo, sections, phone, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; logo?: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
+function MobileNav({ isOpen, onClose, companyName, logo, sections, phone, onCallClick, onCTAClick, onNavigate, config }: { isOpen: boolean; onClose: () => void; companyName: string; logo?: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void; config: import('../config/template-types').IndustryConfig }) {
   if (!isOpen) return null
   return (
     <div className="fixed inset-0 z-[90] lg:hidden">
@@ -107,7 +108,7 @@ function MobileNav({ isOpen, onClose, companyName, logo, sections, phone, onCall
           </div>
           <div className="space-y-3">
             {phone && (<a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-stone-100 text-stone-800 font-semibold text-sm border border-stone-200"><Phone size={16} />Call {formatNavPhone(phone)}</a>)}
-            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-emerald-700 text-white font-semibold text-sm">Free Consultation</button>
+            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-white font-semibold text-sm ${config.primaryHex ? '' : 'bg-emerald-700'}`} style={brandGradientStyle(config, 'to right') || undefined}>Free Consultation</button>
           </div>
         </div>
       </div>
@@ -130,9 +131,9 @@ function FAQItem({ question, answer, isOpen, onToggle }: { question: string; ans
 }
 
 /* ═══════ CTA BAND (reused on multiple pages) ═══════ */
-function CTABand({ closingHeadline, location, onCTAClick, onNavigateContact }: { closingHeadline?: string; location: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void }) {
+function CTABand({ closingHeadline, location, onCTAClick, onNavigateContact, config }: { closingHeadline?: string; location: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void; config: import('../config/template-types').IndustryConfig }) {
   return (
-    <section className="relative py-16 sm:py-20 md:py-24 overflow-hidden bg-emerald-800">
+    <section className={`relative py-16 sm:py-20 md:py-24 overflow-hidden ${config.primaryHex ? '' : 'bg-emerald-800'}`} style={brandGradientStyle(config) || undefined}>
       <div className="absolute inset-0 opacity-10"><div className="absolute top-0 right-0 w-96 h-96 bg-emerald-400 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" /><div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-300 rounded-full translate-y-1/2 -translate-x-1/3 blur-3xl" /></div>
       <ScrollReveal animation="fade-up" delay={0}>
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 md:px-8 text-center">
@@ -232,14 +233,14 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
               </div>
               <div className="hidden md:block w-px h-5 bg-stone-200" />
               {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-sm text-stone-500 hover:text-emerald-700 font-medium"><Phone size={14} />{formatNavPhone(lead.phone)}</a>)}
-              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className="hidden sm:flex bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-600 transition-all shadow-md">Free Consultation</button>
+              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className={`hidden sm:flex text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-all shadow-md ${config.primaryHex ? '' : 'bg-emerald-700 hover:bg-emerald-600'}`} style={brandGradientStyle(config, 'to right') || undefined}>Free Consultation</button>
               <button onClick={() => setMobileNavOpen(true)} className="lg:hidden w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center text-stone-600 border border-stone-200"><Menu size={20} /></button>
             </div>
           </div>
         </div>
       </nav>
 
-      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} logo={lead.logo} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} />
+      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} logo={lead.logo} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} config={config} />
 
       {/* ═══════════════════════════════════════════
           PAGE: HOME
@@ -265,7 +266,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
               </div>
             )}
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 bg-emerald-700 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-700/20"><Phone size={20} />Call Now</a>)}
+              {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className={`inline-flex items-center justify-center gap-2.5 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:opacity-90 transition-all shadow-lg shadow-emerald-700/20 ${config.primaryHex ? '' : 'bg-emerald-700 hover:bg-emerald-600'}`} style={brandGradientStyle(config, 'to right') || undefined}><Phone size={20} />Call Now</a>)}
               <button onClick={onCTAClick} className="inline-flex items-center justify-center gap-2.5 border-2 border-emerald-700/25 text-emerald-700 px-10 py-4 rounded-xl font-semibold text-lg hover:bg-emerald-700 hover:text-white hover:border-emerald-700 transition-all duration-300 group">{config.ctaText}<ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></button>
             </div>
           </div>
@@ -416,7 +417,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
         </section>
 
         {/* HOMEPAGE: CTA BAND */}
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -426,7 +427,8 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
         <PageHeader
           title="Our Services"
           subtitle={`Expert ${industryLabel}${location ? ` serving ${location}` : ''} and surrounding areas.`}
-          bgClass="bg-emerald-800"
+          bgClass={config.primaryHex ? '' : 'bg-emerald-800'}
+          bgStyle={brandGradientStyle(config)}
           subtitleClass="text-emerald-200/60"
           accentClass="text-emerald-300"
           onBackClick={() => navigateTo('home')}
@@ -472,7 +474,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
           </section>
         )}
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -482,7 +484,8 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
         <PageHeader
           title="About Us"
           subtitle={`Get to know ${lead.companyName} — your trusted partner in ${industryLabel}.`}
-          bgClass="bg-emerald-800"
+          bgClass={config.primaryHex ? '' : 'bg-emerald-800'}
+          bgStyle={brandGradientStyle(config)}
           subtitleClass="text-emerald-200/60"
           accentClass="text-emerald-300"
           onBackClick={() => navigateTo('home')}
@@ -565,7 +568,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -575,7 +578,8 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
         <PageHeader
           title="Our Work"
           subtitle="Browse our portfolio of completed projects."
-          bgClass="bg-emerald-800"
+          bgClass={config.primaryHex ? '' : 'bg-emerald-800'}
+          bgStyle={brandGradientStyle(config)}
           subtitleClass="text-emerald-200/60"
           accentClass="text-emerald-300"
           onBackClick={() => navigateTo('home')}
@@ -601,7 +605,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
                 </div>
                 <h3 className="text-lg font-medium text-stone-800 mb-2">Portfolio Coming Soon</h3>
                 <p className="text-sm text-stone-500 max-w-md mx-auto">We&apos;re putting together our best project photos. Contact us to see examples of our work.</p>
-                <button onClick={onCTAClick} className="mt-6 inline-flex items-center gap-2 bg-emerald-700 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-emerald-600 transition-all">
+                <button onClick={onCTAClick} className={`mt-6 inline-flex items-center gap-2 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-all ${config.primaryHex ? '' : 'bg-emerald-700 hover:bg-emerald-600'}`} style={brandGradientStyle(config, 'to right') || undefined}>
                   Request Examples <ArrowRight size={14} />
                 </button>
               </div>
@@ -609,7 +613,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -619,7 +623,8 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
         <PageHeader
           title="Get In Touch"
           subtitle="We'd love to hear from you. Reach out for a free consultation."
-          bgClass="bg-emerald-800"
+          bgClass={config.primaryHex ? '' : 'bg-emerald-800'}
+          bgStyle={brandGradientStyle(config)}
           subtitleClass="text-emerald-200/60"
           accentClass="text-emerald-300"
           onBackClick={() => navigateTo('home')}
@@ -664,7 +669,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
                   </div>
                   <div><label className="block text-[11px] font-medium text-stone-400 mb-1.5 uppercase tracking-wider">Email</label><input type="email" placeholder="your@email.com" value={formData.email} onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-stone-200 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 placeholder:text-stone-300 transition-all" /></div>
                   <div><label className="block text-[11px] font-medium text-stone-400 mb-1.5 uppercase tracking-wider">Project details</label><textarea rows={4} placeholder="Tell us about your project..." value={formData.message} onChange={(e) => setFormData(p => ({ ...p, message: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-stone-200 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 placeholder:text-stone-300 transition-all resize-none" /></div>
-                  <button onClick={handleFormSubmit} className="w-full py-3.5 rounded-xl bg-emerald-700 text-white font-semibold text-sm hover:bg-emerald-600 transition-all shadow-md">{formLoading ? 'Sending...' : 'Send Message'}</button>
+                  <button onClick={handleFormSubmit} className={`w-full py-3.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 transition-all shadow-md ${config.primaryHex ? '' : 'bg-emerald-700 hover:bg-emerald-600'}`} style={brandGradientStyle(config, 'to right') || undefined}>{formLoading ? 'Sending...' : 'Send Message'}</button>
                 </div>
                 )}
               </div>
@@ -720,7 +725,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
         </div>
       </footer>
 
-      <ChatbotWidget companyName={lead.companyName} />
+      <ChatbotWidget companyName={lead.companyName} accentHex={config.primaryHex ? brandAccent(config, '#047857') : undefined} />
       <div className="h-16 sm:h-0" />
     </div>
   )

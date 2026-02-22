@@ -30,6 +30,12 @@ export interface PreviewLead {
   enrichedServices: string[]
   enrichedPhotos: string[]
   logo?: string
+  colorPrefs?: {
+    primary: string
+    secondary: string
+    accent?: string
+    extra?: Array<{ label: string; hex: string }>
+  }
 }
 
 export interface IndustryConfig {
@@ -38,6 +44,10 @@ export interface IndustryConfig {
   tagline: string
   ctaText: string
   template: TemplateVariant
+  // Client color overrides (set when lead.colorPrefs exists)
+  primaryHex?: string
+  secondaryHex?: string
+  accentHex?: string
 }
 
 export interface TemplateProps {

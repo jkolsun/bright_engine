@@ -31,6 +31,33 @@ interface OnboardingFormProps {
   initialStep: number
 }
 
+/** Validate required fields for each step. Returns error message or null. */
+function validateStep(step: number, data: Record<string, any>): string | null {
+  switch (step) {
+    case 0:
+      if (!data.companyName?.trim()) return 'Company name is required.'
+      if (!data.phone?.trim()) return 'Phone number is required.'
+      return null
+    case 1:
+      if (!Array.isArray(data.services) || data.services.length < 2)
+        return 'Please add at least 2 services.'
+      return null
+    case 3:
+      if (!data.aboutStory?.trim() || data.aboutStory.trim().length < 10)
+        return 'Please tell us your company story (at least a few sentences).'
+      return null
+    case 7:
+      if (!data.logoUrl) return 'Please upload your company logo.'
+      return null
+    case 8:
+      if (!Array.isArray(data.photos) || data.photos.length < 1)
+        return 'Please upload at least 1 project photo.'
+      return null
+    default:
+      return null
+  }
+}
+
 export default function OnboardingForm({ leadId, initialData, initialStep }: OnboardingFormProps) {
   const [currentStep, setCurrentStep] = useState(Math.min(initialStep, 9))
   const [data, setData] = useState<Record<string, any>>(initialData)
@@ -64,6 +91,13 @@ export default function OnboardingForm({ leadId, initialData, initialStep }: Onb
   }
 
   const handleNext = async () => {
+    // Validate required fields before advancing
+    const validationError = validateStep(currentStep, data)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+    setError(null)
     // Save current step
     await saveStep(currentStep + 1)
     if (currentStep < 9) {

@@ -24,7 +24,7 @@ export default function Step4AboutStory({ data, onChange }: Step4Props) {
           htmlFor="aboutStory"
           className="block text-sm font-medium text-gray-700 mb-1"
         >
-          About Your Business
+          About Your Business <span className="text-red-500">*</span>
         </label>
         <textarea
           id="aboutStory"

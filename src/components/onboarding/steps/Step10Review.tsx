@@ -212,24 +212,46 @@ export default function Step10Review({
         {/* Brand Colors */}
         {colors && (
           <SectionCard title="Brand Colors">
-            <div className="flex gap-4">
+            <div className="flex gap-4 flex-wrap">
+              {/* Primary & Secondary (always present) */}
               {[
                 { key: 'primary', label: 'Primary' },
                 { key: 'secondary', label: 'Secondary' },
-                { key: 'accent', label: 'Accent' },
+                ...(colors.accent ? [{ key: 'accent', label: 'Accent' }] : []),
               ].map(({ key, label }) => (
-                <div key={key} className="flex items-center gap-2">
+                colors[key] ? (
+                  <div key={key} className="flex items-center gap-2">
+                    <div
+                      className="w-7 h-7 rounded-full border border-gray-200 shadow-sm"
+                      style={{ backgroundColor: colors[key] }}
+                    />
+                    <div>
+                      <span className="text-xs text-gray-500 block">{label}</span>
+                      <span className="text-xs font-mono text-gray-700">{colors[key]}</span>
+                    </div>
+                  </div>
+                ) : null
+              ))}
+              {/* Extra colors */}
+              {Array.isArray(colors.extra) && colors.extra.map((ec: { label: string; hex: string }, i: number) => (
+                <div key={`extra-${i}`} className="flex items-center gap-2">
                   <div
                     className="w-7 h-7 rounded-full border border-gray-200 shadow-sm"
-                    style={{ backgroundColor: colors[key] }}
+                    style={{ backgroundColor: ec.hex }}
                   />
                   <div>
-                    <span className="text-xs text-gray-500 block">{label}</span>
-                    <span className="text-xs font-mono text-gray-700">{colors[key]}</span>
+                    <span className="text-xs text-gray-500 block">{ec.label}</span>
+                    <span className="text-xs font-mono text-gray-700">{ec.hex}</span>
                   </div>
                 </div>
               ))}
             </div>
+            {/* Gradient preview */}
+            {colors.primary && colors.secondary && (
+              <div className="mt-3 h-6 rounded-lg overflow-hidden border border-gray-200">
+                <div className="w-full h-full" style={{ background: `linear-gradient(to right, ${colors.primary}, ${colors.secondary})` }} />
+              </div>
+            )}
           </SectionCard>
         )}
 

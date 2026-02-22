@@ -23,6 +23,7 @@ import usePageRouter from '../shared/usePageRouter'
 import type { PageName } from '../shared/usePageRouter'
 import PageShell from '../shared/PageShell'
 import PageHeader from '../shared/PageHeader'
+import { brandGradientStyle, brandGradientClass, brandAccent } from '../shared/colorUtils'
 
 function formatNavPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '')
@@ -120,7 +121,7 @@ function ChatbotWidget({ companyName, accentColor = '#15803d' }: { companyName: 
 }
 
 // ─── MOBILE NAV ───
-function MobileNav({ isOpen, onClose, companyName, logo, sections, phone, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; logo?: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
+function MobileNav({ isOpen, onClose, companyName, logo, sections, phone, config, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; logo?: string; sections: { page: PageName; label: string }[]; phone?: string; config: import('../config/template-types').IndustryConfig; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
   if (!isOpen) return null
   return (
     <div className="fixed inset-0 z-[90] lg:hidden">
@@ -128,7 +129,7 @@ function MobileNav({ isOpen, onClose, companyName, logo, sections, phone, onCall
       <div className="absolute right-0 top-0 bottom-0 w-[300px] bg-white shadow-2xl">
         <div className="p-6 h-full flex flex-col">
           <div className="flex justify-between items-center mb-10">
-            <div className="flex items-center gap-2">{logo ? (<img src={logo} alt="" className="h-7 w-7 rounded-lg object-cover" />) : (<div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-700 to-emerald-600 flex items-center justify-center"><Leaf size={13} className="text-white" /></div>)}<span className="text-lg font-bold text-green-900">{companyName}</span></div>
+            <div className="flex items-center gap-2">{logo ? (<img src={logo} alt="" className="h-7 w-7 rounded-lg object-cover" />) : (<div className={`w-7 h-7 rounded-lg ${brandGradientClass(config)} flex items-center justify-center`} style={brandGradientStyle(config)}><Leaf size={13} className="text-white" /></div>)}<span className="text-lg font-bold text-green-900">{companyName}</span></div>
             <button onClick={onClose} className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center text-green-700"><X size={18} /></button>
           </div>
           <nav className="space-y-1 flex-1">{sections.map((s) => (<button key={s.page} data-nav-page={s.page} onClick={() => { onNavigate(s.page); onClose() }} className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-green-800 hover:bg-green-50 transition-all text-[15px] font-medium">{s.label}<ChevronRight size={16} className="text-green-300" /></button>))}</nav>
@@ -139,7 +140,7 @@ function MobileNav({ isOpen, onClose, companyName, logo, sections, phone, onCall
           </div>
           <div className="space-y-3">
             {phone && (<a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-green-50 text-green-900 font-bold text-sm border border-green-200"><Phone size={16} />Call {formatNavPhone(phone)}</a>)}
-            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-green-700 to-emerald-600 text-white font-bold text-sm">Get Free Estimate</button>
+            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-xl ${brandGradientClass(config, 'bg-gradient-to-r')} text-white font-bold text-sm`} style={brandGradientStyle(config, 'to right')}>Get Free Estimate</button>
           </div>
         </div>
       </div>
@@ -165,9 +166,9 @@ function FAQItem({ question, answer, isOpen, onToggle }: { question: string; ans
 }
 
 /* ═══════ CTA BAND (reused on multiple pages) ═══════ */
-function CTABand({ closingHeadline, companyName, location, onCTAClick, onNavigateContact }: { closingHeadline?: string; companyName: string; location: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void }) {
+function CTABand({ closingHeadline, companyName, location, config, onCTAClick, onNavigateContact }: { closingHeadline?: string; companyName: string; location: string; config: import('../config/template-types').IndustryConfig; onCTAClick: () => Promise<void>; onNavigateContact: () => void }) {
   return (
-    <section className="relative py-16 sm:py-20 md:py-28 overflow-hidden bg-gradient-to-r from-green-700 via-emerald-700 to-green-800">
+    <section className={`relative py-16 sm:py-20 md:py-28 overflow-hidden ${brandGradientClass(config, 'bg-gradient-to-r')}`} style={brandGradientStyle(config, 'to right')}>
       <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
       <ScrollReveal animation="fade-in" delay={0}>
       <div className="relative max-w-4xl mx-auto px-5 sm:px-8 text-center">
@@ -254,7 +255,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               {lead.logo ? (
                 <img src={lead.logo} alt="" className="h-8 w-8 rounded-lg object-cover" />
               ) : (
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-700 to-emerald-600 flex items-center justify-center"><Leaf size={15} className="text-white" /></div>
+                <div className={`w-8 h-8 rounded-lg ${brandGradientClass(config)} flex items-center justify-center`} style={brandGradientStyle(config)}><Leaf size={15} className="text-white" /></div>
               )}
               <span className="text-lg font-bold text-green-900">{lead.companyName}</span>
             </button>
@@ -269,21 +270,21 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               </div>
               <div className="hidden md:block w-px h-5 bg-green-200" />
               {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-sm font-medium text-green-700/60 hover:text-green-900"><Phone size={14} />{formatNavPhone(lead.phone)}</a>)}
-              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className="hidden sm:flex bg-gradient-to-r from-green-700 to-emerald-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-all shadow-md">Free Estimate</button>
+              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className={`hidden sm:flex ${brandGradientClass(config, 'bg-gradient-to-r')} text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-all shadow-md`} style={brandGradientStyle(config, 'to right')}>Free Estimate</button>
               <button onClick={() => setMobileNavOpen(true)} className="lg:hidden w-10 h-10 rounded-lg bg-green-50 text-green-700 flex items-center justify-center transition-colors"><Menu size={20} /></button>
             </div>
           </div>
         </div>
       </nav>
 
-      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} logo={lead.logo} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} />
+      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} logo={lead.logo} sections={navSections} phone={lead.phone} config={config} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} />
 
       {/* ═══════════════════════════════════════════
           PAGE: HOME
        ═══════════════════════════════════════════ */}
       <PageShell page="home" currentPage={currentPage}>
         {/* HERO */}
-        <section className="relative min-h-[100svh] flex items-center overflow-hidden bg-gradient-to-br from-green-800 via-green-900 to-emerald-900">
+        <section className={`relative min-h-[100svh] flex items-center overflow-hidden ${brandGradientClass(config)}`} style={brandGradientStyle(config)}>
           <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-emerald-400/10 rounded-full -translate-y-1/3 translate-x-1/4 blur-3xl" />
           <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-green-400/8 rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl" />
           <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-32">
@@ -463,7 +464,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
         </section>
 
         {/* HOMEPAGE: CTA BAND */}
-        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} config={config} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -473,7 +474,8 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
         <PageHeader
           title="Our Services"
           subtitle={`Expert ${industryLabel}${location ? ` serving ${location}` : ''} and surrounding areas.`}
-          bgClass="bg-gradient-to-br from-green-800 via-green-900 to-emerald-900"
+          bgClass={brandGradientClass(config)}
+          bgStyle={brandGradientStyle(config)}
           subtitleClass="text-emerald-200/60"
           accentClass="text-emerald-300"
           onBackClick={() => navigateTo('home')}
@@ -501,7 +503,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
                 ))}
               </div>
               <div className="mt-10 sm:mt-12 flex justify-center">
-                <button onClick={onCTAClick} className="flex items-center gap-2 bg-gradient-to-r from-green-700 to-emerald-600 text-white px-7 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-all shadow-md">Request a Free Estimate<ArrowRight size={16} /></button>
+                <button onClick={onCTAClick} className={`flex items-center gap-2 ${brandGradientClass(config, 'bg-gradient-to-r')} text-white px-7 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition-all shadow-md`} style={brandGradientStyle(config, 'to right')}>Request a Free Estimate<ArrowRight size={16} /></button>
               </div>
             </div>
           </section>
@@ -522,7 +524,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
           </section>
         )}
 
-        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} config={config} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -532,7 +534,8 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
         <PageHeader
           title="About Us"
           subtitle={`Get to know ${lead.companyName} — your trusted partner in ${industryLabel}.`}
-          bgClass="bg-gradient-to-br from-green-800 via-green-900 to-emerald-900"
+          bgClass={brandGradientClass(config)}
+          bgStyle={brandGradientStyle(config)}
           subtitleClass="text-emerald-200/60"
           accentClass="text-emerald-300"
           onBackClick={() => navigateTo('home')}
@@ -602,7 +605,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} config={config} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -612,7 +615,8 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
         <PageHeader
           title="Our Work"
           subtitle="Browse our portfolio of completed projects."
-          bgClass="bg-gradient-to-br from-green-800 via-green-900 to-emerald-900"
+          bgClass={brandGradientClass(config)}
+          bgStyle={brandGradientStyle(config)}
           subtitleClass="text-emerald-200/60"
           accentClass="text-emerald-300"
           onBackClick={() => navigateTo('home')}
@@ -653,7 +657,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
                 </div>
                 <h3 className="text-lg font-bold text-green-900 mb-2">Portfolio Coming Soon</h3>
                 <p className="text-sm text-green-700/50 max-w-md mx-auto">We&apos;re putting together our best project photos. Contact us to see examples of our work.</p>
-                <button onClick={onCTAClick} className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-green-700 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-all shadow-md">
+                <button onClick={onCTAClick} className={`mt-6 inline-flex items-center gap-2 ${brandGradientClass(config, 'bg-gradient-to-r')} text-white px-6 py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-all shadow-md`} style={brandGradientStyle(config, 'to right')}>
                   Request Examples <ArrowRight size={14} />
                 </button>
               </div>
@@ -661,7 +665,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} config={config} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -671,7 +675,8 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
         <PageHeader
           title="Get In Touch"
           subtitle="We'd love to hear from you. Reach out for a free estimate."
-          bgClass="bg-gradient-to-br from-green-800 via-green-900 to-emerald-900"
+          bgClass={brandGradientClass(config)}
+          bgStyle={brandGradientStyle(config)}
           subtitleClass="text-emerald-200/60"
           accentClass="text-emerald-300"
           onBackClick={() => navigateTo('home')}
@@ -687,9 +692,9 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
                 <h2 className="font-display text-3xl sm:text-4xl font-bold text-green-950 leading-tight mb-6">Ready to get started?</h2>
                 <p className="text-green-800/50 text-base leading-relaxed mb-10">{wc?.closingBody || `Free estimates, fast response. Reach out today.`}</p>
                 <div className="space-y-5">
-                  {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 group"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-700 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm"><Phone size={20} className="text-white" /></div><div><p className="text-sm font-bold text-green-900">{lead.phone}</p><p className="text-xs text-green-600/40">Call or text anytime</p></div></a>)}
-                  {lead.email && (<a href={`mailto:${lead.email}`} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-700 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm"><Mail size={20} className="text-white" /></div><div><p className="text-sm font-bold text-green-900">{lead.email}</p><p className="text-xs text-green-600/40">We reply fast</p></div></a>)}
-                  {lead.enrichedAddress && (<div className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-700 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm"><MapPin size={20} className="text-white" /></div><div><p className="text-sm font-bold text-green-900">{lead.enrichedAddress}</p><p className="text-xs text-green-600/40">{location}</p></div></div>)}
+                  {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 group"><div className={`w-12 h-12 rounded-xl ${brandGradientClass(config)} flex items-center justify-center flex-shrink-0 shadow-sm`} style={brandGradientStyle(config)}><Phone size={20} className="text-white" /></div><div><p className="text-sm font-bold text-green-900">{lead.phone}</p><p className="text-xs text-green-600/40">Call or text anytime</p></div></a>)}
+                  {lead.email && (<a href={`mailto:${lead.email}`} className="flex items-center gap-4"><div className={`w-12 h-12 rounded-xl ${brandGradientClass(config)} flex items-center justify-center flex-shrink-0 shadow-sm`} style={brandGradientStyle(config)}><Mail size={20} className="text-white" /></div><div><p className="text-sm font-bold text-green-900">{lead.email}</p><p className="text-xs text-green-600/40">We reply fast</p></div></a>)}
+                  {lead.enrichedAddress && (<div className="flex items-center gap-4"><div className={`w-12 h-12 rounded-xl ${brandGradientClass(config)} flex items-center justify-center flex-shrink-0 shadow-sm`} style={brandGradientStyle(config)}><MapPin size={20} className="text-white" /></div><div><p className="text-sm font-bold text-green-900">{lead.enrichedAddress}</p><p className="text-xs text-green-600/40">{location}</p></div></div>)}
                 </div>
                 <div className="flex gap-3 mt-10">
                   <a href="#" className="w-10 h-10 rounded-xl bg-green-50 border border-green-200 flex items-center justify-center text-green-500 hover:text-green-700 hover:border-green-300 transition-all"><Facebook size={16} /></a>
@@ -719,7 +724,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
                       </div>
                       <div><label className="block text-[11px] font-bold text-green-700/50 mb-1.5 uppercase tracking-wider">Email</label><input type="email" placeholder="your@email.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-white border border-green-200 text-sm text-green-900 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400 placeholder:text-green-400/40 transition-all" /></div>
                       <div><label className="block text-[11px] font-bold text-green-700/50 mb-1.5 uppercase tracking-wider">How can we help?</label><textarea rows={4} placeholder="Tell us about your project..." value={formData.message} onChange={(e) => setFormData({ ...formData, message: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-white border border-green-200 text-sm text-green-900 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400 placeholder:text-green-400/40 transition-all resize-none" /></div>
-                      <button onClick={handleFormSubmit} disabled={formLoading} className="w-full py-3.5 rounded-xl bg-gradient-to-r from-green-700 to-emerald-600 text-white font-semibold text-sm hover:opacity-90 transition-all shadow-md hover:shadow-lg disabled:opacity-50">{formLoading ? 'Sending...' : 'Send Message'}</button>
+                      <button onClick={handleFormSubmit} disabled={formLoading} className={`w-full py-3.5 rounded-xl ${brandGradientClass(config, 'bg-gradient-to-r')} text-white font-semibold text-sm hover:opacity-90 transition-all shadow-md hover:shadow-lg disabled:opacity-50`} style={brandGradientStyle(config, 'to right')}>{formLoading ? 'Sending...' : 'Send Message'}</button>
                     </div>
                   </>
                 )}
@@ -752,7 +757,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
             <div>
-              <div className="flex items-center gap-2.5 mb-4">{lead.logo ? (<img src={lead.logo} alt="" className="h-7 w-7 rounded-lg object-cover" />) : (<div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-600 to-emerald-500 flex items-center justify-center"><Leaf size={14} className="text-white" /></div>)}<span className="text-white font-bold text-lg">{lead.companyName}</span></div>
+              <div className="flex items-center gap-2.5 mb-4">{lead.logo ? (<img src={lead.logo} alt="" className="h-7 w-7 rounded-lg object-cover" />) : (<div className={`w-7 h-7 rounded-lg ${brandGradientClass(config)} flex items-center justify-center`} style={brandGradientStyle(config)}><Leaf size={14} className="text-white" /></div>)}<span className="text-white font-bold text-lg">{lead.companyName}</span></div>
               <p className="text-green-200/40 text-sm leading-relaxed">Trusted {industryLabel} professionals{location ? ` in ${location}` : ''}. Licensed, insured, committed to quality.</p>
               {hasRating && (<div className="flex items-center gap-2 mt-4"><div className="flex gap-0.5">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={11} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-amber-400 fill-current' : 'text-green-800'} />)}</div><span className="text-green-200/40 text-xs">{lead.enrichedRating} rating</span></div>)}
               <div className="flex gap-2.5 mt-5">
@@ -786,7 +791,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
       </footer>
 
       {/* ═══════ CHATBOT ═══════ */}
-      <ChatbotWidget companyName={lead.companyName} accentColor="#15803d" />
+      <ChatbotWidget companyName={lead.companyName} accentColor={brandAccent(config, '#15803d')} />
 
       <div className="h-16 sm:h-0" />
     </div>

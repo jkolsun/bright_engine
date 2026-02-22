@@ -72,9 +72,15 @@ export default function PreviewTemplate({ lead, websiteCopy }: { lead: any; webs
     enrichedServices: lead.enrichedServices || lead.services || [],
     enrichedPhotos: lead.enrichedPhotos || lead.photos || [],
     logo: lead.logo,
+    colorPrefs: lead.colorPrefs || undefined,
   }
 
-  const config = getIndustryConfig(typedLead.industry, typedLead.companyName)
+  // Get base config from industry mapping, then override with client colors if present
+  const baseConfig = getIndustryConfig(typedLead.industry, typedLead.companyName)
+  const cp = typedLead.colorPrefs
+  const config = cp
+    ? { ...baseConfig, primaryHex: cp.primary, secondaryHex: cp.secondary, accentHex: cp.accent || cp.primary }
+    : baseConfig
 
   const onCTAClick = useCallback(async () => {
     await fetch('/api/preview/track', {

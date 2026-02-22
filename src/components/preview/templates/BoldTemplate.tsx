@@ -20,6 +20,7 @@ import usePageRouter from '../shared/usePageRouter'
 import type { PageName } from '../shared/usePageRouter'
 import PageShell from '../shared/PageShell'
 import PageHeader from '../shared/PageHeader'
+import { brandGradientStyle, brandGradientClass, brandAccent } from '../shared/colorUtils'
 
 // Google "G" icon
 function GoogleIcon({ size = 15, className = '' }: { size?: number; className?: string }) {
@@ -148,7 +149,7 @@ function ChatbotWidget({ companyName, accentColor = '#f97316' }: { companyName: 
 }
 
 // ─── MOBILE NAV ───
-function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
+function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick, onCTAClick, onNavigate, config }: { isOpen: boolean; onClose: () => void; companyName: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void; config: TemplateProps['config'] }) {
   if (!isOpen) return null
   return (
     <div className="fixed inset-0 z-[90] lg:hidden">
@@ -173,7 +174,7 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
           </div>
           <div className="space-y-3">
             {phone && (
-              <a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-sm"><Phone size={16} />Call {formatNavPhone(phone)}</a>
+              <a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-xl ${config.primaryHex ? '' : 'bg-gradient-to-r from-orange-500 to-red-500'} text-white font-bold text-sm`} style={brandGradientStyle(config, 'to right')}><Phone size={16} />Call {formatNavPhone(phone)}</a>
             )}
             <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-white/10 border border-white/15 text-white font-bold text-sm hover:bg-white hover:text-gray-900 transition-all">Get Free Quote</button>
           </div>
@@ -201,9 +202,9 @@ function FAQItem({ question, answer, isOpen, onToggle }: { question: string; ans
 }
 
 /* ═══════ CTA BAND (reused on multiple pages) ═══════ */
-function CTABand({ phone, onCallClick, onCTAClick, onNavigateContact }: { phone?: string; onCallClick: () => void; onCTAClick: () => Promise<void>; onNavigateContact: () => void }) {
+function CTABand({ phone, onCallClick, onCTAClick, onNavigateContact, config }: { phone?: string; onCallClick: () => void; onCTAClick: () => Promise<void>; onNavigateContact: () => void; config: TemplateProps['config'] }) {
   return (
-    <section className="relative py-10 px-4 sm:px-6 md:px-8 bg-gradient-to-r from-orange-500 via-red-500 to-orange-500 overflow-hidden">
+    <section className={`relative py-10 px-4 sm:px-6 md:px-8 ${config.primaryHex ? '' : 'bg-gradient-to-r from-orange-500 via-red-500 to-orange-500'} overflow-hidden`} style={brandGradientStyle(config, 'to right')}>
       <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
       <ScrollReveal animation="fade-in">
       <div className="relative max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
@@ -332,14 +333,14 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                   <Phone size={14} />{formatNavPhone(lead.phone)}
                 </a>
               )}
-              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40">Free Quote</button>
+              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className={`hidden sm:flex items-center gap-2 ${config.primaryHex ? '' : 'bg-gradient-to-r from-orange-500 to-red-500'} text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40`} style={brandGradientStyle(config, 'to right')}>Free Quote</button>
               <button onClick={() => setMobileNavOpen(true)} className="lg:hidden w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-white transition-colors"><Menu size={20} /></button>
             </div>
           </div>
         </div>
       </nav>
 
-      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} />
+      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} config={config} />
 
       {/* ═══════════════════════════════════════════
           PAGE: HOME
@@ -347,7 +348,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       <PageShell page="home" currentPage={currentPage}>
         {/* ═══════ HERO — Left-Aligned Dramatic ═══════ */}
         <section className="relative min-h-[100svh] flex items-center overflow-hidden">
-          <div className={`absolute inset-0 bg-gradient-to-br ${config.gradient}`} />
+          <div className={`absolute inset-0 ${brandGradientClass(config)}`} style={brandGradientStyle(config)} />
           <div className="absolute inset-0 bg-black/60" />
           <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/20 to-transparent" />
 
@@ -384,7 +385,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
 
             <div className="flex flex-col sm:flex-row gap-4">
               {lead.phone && (
-                <a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white px-10 py-5 rounded-xl font-black text-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-2xl shadow-orange-500/20">
+                <a href={`tel:${lead.phone}`} onClick={onCallClick} className={`inline-flex items-center justify-center gap-2.5 ${config.primaryHex ? '' : 'bg-gradient-to-r from-orange-500 to-red-500'} text-white px-10 py-5 rounded-xl font-black text-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-2xl shadow-orange-500/20`} style={brandGradientStyle(config, 'to right')}>
                   <Phone size={22} />Call Now
                 </a>
               )}
@@ -583,7 +584,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         </section>
 
         {/* HOMEPAGE: CTA BAND */}
-        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -624,7 +625,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
 
               <ScrollReveal animation="fade-up">
               <div className="mt-14 flex justify-center">
-                <button onClick={onCTAClick} className="flex items-center gap-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-xl font-bold text-base hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15 hover:shadow-orange-500/30">
+                <button onClick={onCTAClick} className={`flex items-center gap-2.5 ${config.primaryHex ? '' : 'bg-gradient-to-r from-orange-500 to-red-500'} text-white px-8 py-4 rounded-xl font-bold text-base hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15 hover:shadow-orange-500/30`} style={brandGradientStyle(config, 'to right')}>
                   Request a Quote<ArrowRight size={18} />
                 </button>
               </div>
@@ -648,7 +649,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           </section>
         )}
 
-        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -774,7 +775,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           </div>
         </section>
 
-        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -825,7 +826,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                 </div>
                 <h3 className="text-lg font-bold text-white mb-2">Portfolio Coming Soon</h3>
                 <p className="text-sm text-gray-500 max-w-md mx-auto">We&apos;re putting together our best project photos. Contact us to see examples of our work.</p>
-                <button onClick={onCTAClick} className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-xl font-bold text-sm hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15">
+                <button onClick={onCTAClick} className={`mt-6 inline-flex items-center gap-2 ${config.primaryHex ? '' : 'bg-gradient-to-r from-orange-500 to-red-500'} text-white px-6 py-3 rounded-xl font-bold text-sm hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15`} style={brandGradientStyle(config, 'to right')}>
                   Request Examples <ArrowRight size={14} />
                 </button>
               </div>
@@ -833,7 +834,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           </div>
         </section>
 
-        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -906,7 +907,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                   </div>
                   <div><label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Email</label><input type="email" placeholder="your@email.com" value={formData.email} onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 placeholder:text-gray-600 transition-all" /></div>
                   <div><label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">How can we help?</label><textarea rows={4} placeholder="Tell us about your project..." value={formData.message} onChange={(e) => setFormData(p => ({ ...p, message: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 placeholder:text-gray-600 transition-all resize-none" /></div>
-                  <button onClick={handleFormSubmit} className="w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-sm hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15 hover:shadow-orange-500/30 hover:scale-[1.01] active:scale-[0.99]">{formLoading ? 'Sending...' : 'Send Message'}</button>
+                  <button onClick={handleFormSubmit} className={`w-full py-3.5 rounded-xl ${config.primaryHex ? '' : 'bg-gradient-to-r from-orange-500 to-red-500'} text-white font-bold text-sm hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15 hover:shadow-orange-500/30 hover:scale-[1.01] active:scale-[0.99]`} style={brandGradientStyle(config, 'to right')}>{formLoading ? 'Sending...' : 'Send Message'}</button>
                 </div>
                 )}
               </div>
@@ -979,13 +980,13 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       {/* ═══════ STICKY MOBILE CTA ═══════ */}
       <div className="fixed bottom-0 left-0 right-0 z-40 sm:hidden bg-gray-950/95 backdrop-blur-xl border-t border-gray-800 px-4 py-3">
         <div className="flex gap-3">
-          {lead.phone && <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-sm"><Phone size={16} />Call Now</a>}
+          {lead.phone && <a href={`tel:${lead.phone}`} onClick={onCallClick} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl ${config.primaryHex ? '' : 'bg-gradient-to-r from-orange-500 to-red-500'} text-white font-bold text-sm`} style={brandGradientStyle(config, 'to right')}><Phone size={16} />Call Now</a>}
           <button onClick={onCTAClick} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-white/10 border border-white/15 text-white font-bold text-sm">Free Quote</button>
         </div>
       </div>
 
       {/* ═══════ CHATBOT ═══════ */}
-      <ChatbotWidget companyName={lead.companyName} accentColor="#f97316" />
+      <ChatbotWidget companyName={lead.companyName} accentColor={brandAccent(config, '#f97316')} />
 
       <div className="h-20 sm:h-0" />
     </div>

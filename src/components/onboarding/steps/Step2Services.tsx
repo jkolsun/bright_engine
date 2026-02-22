@@ -37,6 +37,7 @@ export default function Step2Services({ data, onChange }: Step2Props) {
       </h2>
       <p className="text-gray-500 mb-6 text-sm">
         Type each service your company offers and press Enter or click Add.
+        <span className="block text-xs text-amber-600 mt-1">At least 2 services required <span className="text-red-500">*</span></span>
       </p>
 
       {/* Service Input */}

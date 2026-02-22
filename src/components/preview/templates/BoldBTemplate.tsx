@@ -20,6 +20,7 @@ import usePageRouter from '../shared/usePageRouter'
 import type { PageName } from '../shared/usePageRouter'
 import PageShell from '../shared/PageShell'
 import PageHeader from '../shared/PageHeader'
+import { brandGradientStyle, brandGradientClass, brandAccent } from '../shared/colorUtils'
 
 // Google "G" icon (not in lucide)
 function GoogleIcon({ size = 15, className = '' }: { size?: number; className?: string }) {
@@ -230,7 +231,7 @@ function ChatbotWidget({ companyName, accentColor = '#3b82f6' }: { companyName: 
 // ─────────────────────────────────────────────
 // MOBILE NAVIGATION DRAWER
 // ─────────────────────────────────────────────
-function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
+function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick, onCTAClick, onNavigate, config }: { isOpen: boolean; onClose: () => void; companyName: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void; config: TemplateProps['config'] }) {
   if (!isOpen) return null
   return (
     <div className="fixed inset-0 z-[90] lg:hidden">
@@ -285,7 +286,8 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
             )}
             <button
               onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }}
-              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold text-sm hover:from-blue-600 hover:to-cyan-600 transition-all"
+              className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-xl ${config.primaryHex ? '' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'} text-white font-bold text-sm transition-all`}
+              style={brandGradientStyle(config, 'to right')}
             >
               Get Free Quote
             </button>
@@ -316,10 +318,10 @@ function FAQItem({ question, answer, isOpen, onToggle }: { question: string; ans
 }
 
 /* ═══════ CTA BAND (reused on multiple pages) ═══════ */
-function CTABand({ closingHeadline, location, onCTAClick, onNavigateContact }: { closingHeadline?: string; location: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void }) {
+function CTABand({ closingHeadline, location, onCTAClick, onNavigateContact, config }: { closingHeadline?: string; location: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void; config: TemplateProps['config'] }) {
   return (
     <section className="relative py-16 sm:py-20 md:py-28 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500" />
+      <div className={`absolute inset-0 ${config.primaryHex ? '' : 'bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500'}`} style={brandGradientStyle(config, 'to right')} />
       <div
         className="absolute inset-0 opacity-10"
         style={{
@@ -482,7 +484,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               {/* CTA */}
               <button
                 onClick={() => { onCTAClick(); navigateTo('contact') }}
-                className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40"
+                className={`hidden sm:flex items-center gap-2 ${config.primaryHex ? '' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-blue-500/20 hover:shadow-blue-500/40'} text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-lg`}
+                style={brandGradientStyle(config, 'to right')}
               >
                 Free Quote
               </button>
@@ -508,6 +511,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         onCallClick={onCallClick}
         onCTAClick={onCTAClick}
         onNavigate={navigateTo}
+        config={config}
       />
 
       {/* ═══════════════════════════════════════════
@@ -516,7 +520,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
       <PageShell page="home" currentPage={currentPage}>
         {/* HERO — Centered with Watermark */}
         <section className="relative min-h-[100svh] flex items-center justify-center overflow-hidden">
-          <div className={`absolute inset-0 bg-gradient-to-br ${config.gradient}`} />
+          <div className={`absolute inset-0 ${brandGradientClass(config)}`} style={brandGradientStyle(config)} />
           <div className="absolute inset-0 bg-black/60" />
           <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/20 to-transparent" />
 
@@ -565,7 +569,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                 <a
                   href={`tel:${lead.phone}`}
                   onClick={onCallClick}
-                  className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-10 py-5 rounded-xl font-black text-lg hover:from-blue-600 hover:to-cyan-600 transition-all shadow-2xl shadow-blue-500/20"
+                  className={`inline-flex items-center justify-center gap-2.5 ${config.primaryHex ? '' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-blue-500/20'} text-white px-10 py-5 rounded-xl font-black text-lg transition-all shadow-2xl`}
+                  style={brandGradientStyle(config, 'to right')}
                 >
                   <Phone size={22} />
                   Call Now — Free Estimate
@@ -817,7 +822,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         </section>
 
         {/* HOMEPAGE: CTA BAND */}
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -827,7 +832,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         <PageHeader
           title="Our Services"
           subtitle={`Expert ${industryLabel}${location ? ` serving ${location}` : ''} and surrounding areas.`}
-          bgClass="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500"
+          bgClass={config.primaryHex ? '' : 'bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500'}
+          bgStyle={brandGradientStyle(config, 'to right')}
           subtitleClass="text-white/60"
           accentClass="text-white/80"
           onBackClick={() => navigateTo('home')}
@@ -869,7 +875,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               <div className="mt-12 sm:mt-14 flex justify-center">
                 <button
                   onClick={onCTAClick}
-                  className="flex items-center gap-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-8 py-3.5 sm:py-4 rounded-xl font-bold text-base hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/15 hover:shadow-blue-500/30"
+                  className={`flex items-center gap-2.5 ${config.primaryHex ? '' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-blue-500/15 hover:shadow-blue-500/30'} text-white px-8 py-3.5 sm:py-4 rounded-xl font-bold text-base transition-all shadow-lg`}
+                  style={brandGradientStyle(config, 'to right')}
                 >
                   Request a Quote
                   <ArrowRight size={18} />
@@ -895,7 +902,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           </section>
         )}
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -905,7 +912,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         <PageHeader
           title="About Us"
           subtitle={`Get to know ${lead.companyName} — your trusted partner in ${industryLabel}.`}
-          bgClass="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500"
+          bgClass={config.primaryHex ? '' : 'bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500'}
+          bgStyle={brandGradientStyle(config, 'to right')}
           subtitleClass="text-white/60"
           accentClass="text-white/80"
           onBackClick={() => navigateTo('home')}
@@ -1079,7 +1087,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -1089,7 +1097,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         <PageHeader
           title="Our Work"
           subtitle="Browse our portfolio of completed projects."
-          bgClass="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500"
+          bgClass={config.primaryHex ? '' : 'bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500'}
+          bgStyle={brandGradientStyle(config, 'to right')}
           subtitleClass="text-white/60"
           accentClass="text-white/80"
           onBackClick={() => navigateTo('home')}
@@ -1147,7 +1156,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                 </div>
                 <h3 className="text-lg font-bold text-white mb-2">Portfolio Coming Soon</h3>
                 <p className="text-sm text-gray-500 max-w-md mx-auto">We&apos;re putting together our best project photos. Contact us to see examples of our work.</p>
-                <button onClick={onCTAClick} className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-6 py-3 rounded-xl font-bold text-sm hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/15">
+                <button onClick={onCTAClick} className={`mt-6 inline-flex items-center gap-2 ${config.primaryHex ? '' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-blue-500/15'} text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-lg`} style={brandGradientStyle(config, 'to right')}>
                   Request Examples <ArrowRight size={14} />
                 </button>
               </div>
@@ -1155,7 +1164,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -1165,7 +1174,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         <PageHeader
           title="Get In Touch"
           subtitle="Free estimates, fast response. Reach out today."
-          bgClass="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500"
+          bgClass={config.primaryHex ? '' : 'bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500'}
+          bgStyle={brandGradientStyle(config, 'to right')}
           subtitleClass="text-white/60"
           accentClass="text-white/80"
           onBackClick={() => navigateTo('home')}
@@ -1302,7 +1312,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                       <button
                         onClick={handleFormSubmit}
                         disabled={formLoading}
-                        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold text-sm hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/15 hover:shadow-blue-500/30 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+                        className={`w-full py-3.5 rounded-xl ${config.primaryHex ? '' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-blue-500/15 hover:shadow-blue-500/30'} text-white font-bold text-sm transition-all shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50`}
+                        style={brandGradientStyle(config, 'to right')}
                       >
                         {formLoading ? 'Sending...' : 'Send Message'}
                       </button>
@@ -1429,7 +1440,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
       {/* ═══════════════════════════════════════════
           CHATBOT
           ═══════════════════════════════════════════ */}
-      <ChatbotWidget companyName={lead.companyName} accentColor="#3b82f6" />
+      <ChatbotWidget companyName={lead.companyName} accentColor={brandAccent(config, '#3b82f6')} />
 
       {/* Bottom padding */}
       <div className="h-16 sm:h-0" />
