@@ -555,7 +555,7 @@ function StepPayment(props: StepPaymentProps) {
         </button>
         <div className="flex items-center gap-3">
           {!stripeDetailsSubmitted && stripeStatus !== 'active' && (
-            <span className="text-xs text-gray-400">You can set this up later</span>
+            <span className="text-xs text-gray-400">You can set this up later in your profile settings</span>
           )}
           <button
             onClick={onNext}
