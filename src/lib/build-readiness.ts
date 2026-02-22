@@ -180,9 +180,9 @@ export async function checkAndTransitionToQA(leadId: string): Promise<ReadinessR
   const alreadyInSitePipeline = lead.buildStep && siteBuildSteps.includes(lead.buildStep)
 
   if (result.score >= 70 && !alreadyInSitePipeline) {
-    // Only transition from relevant statuses
-    const eligibleStatuses = ['BUILDING', 'INFO_COLLECTED', 'QUALIFIED']
-    if (eligibleStatuses.includes(lead.status)) {
+    // Transition from any active lead status (not PAID/CLOSED)
+    const ineligibleStatuses = ['PAID', 'CLOSED_LOST', 'DO_NOT_CONTACT']
+    if (!ineligibleStatuses.includes(lead.status)) {
       await prisma.lead.update({
         where: { id: leadId },
         data: {

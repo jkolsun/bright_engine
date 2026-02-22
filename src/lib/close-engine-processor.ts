@@ -467,31 +467,41 @@ export async function processCloseEngineInbound(
         })
 
         // Auto-push check: use GLOBAL setting (not per-lead) + services collected
-        if (globalAutoPush && updatedBS.servicesCollected && updatedBS.status !== 'building') {
-          await prisma.buildStatus.update({
-            where: { leadId: lead.id },
-            data: { status: 'building', lastPushedAt: new Date() },
-          })
-          // Only push to QA if not already in site pipeline
+        // Re-check every time to catch leads that were missed on earlier extractions
+        if (globalAutoPush && updatedBS.servicesCollected) {
           const currentLead = await prisma.lead.findUnique({
             where: { id: lead.id },
-            select: { buildStep: true, companyName: true },
+            select: { buildStep: true, companyName: true, status: true },
           })
           const siteBuildSteps = ['QA_REVIEW', 'EDITING', 'QA_APPROVED', 'CLIENT_REVIEW', 'CLIENT_APPROVED', 'LAUNCHING', 'LIVE']
-          if (!currentLead?.buildStep || !siteBuildSteps.includes(currentLead.buildStep)) {
-            await prisma.lead.update({
-              where: { id: lead.id },
-              data: { buildStep: 'QA_REVIEW' },
+          const alreadyInSitePipeline = currentLead?.buildStep && siteBuildSteps.includes(currentLead.buildStep)
+
+          // Mark BuildStatus as building if not already
+          if (updatedBS.status !== 'building') {
+            await prisma.buildStatus.update({
+              where: { leadId: lead.id },
+              data: { status: 'building', lastPushedAt: new Date() },
             })
-            await prisma.notification.create({
-              data: {
-                type: 'SITE_QA_READY',
-                title: 'Auto-Push: Build Ready',
-                message: `Auto-pushed build for ${currentLead?.companyName || lead.companyName}. Ready for QA review.`,
-                metadata: { leadId: lead.id, autoPush: true },
-              },
-            })
-            console.log(`[BuildStatus] Auto-pushed ${lead.companyName} to QA_REVIEW`)
+          }
+
+          // Ensure lead.buildStep = QA_REVIEW if not already in site pipeline
+          if (!alreadyInSitePipeline) {
+            const ineligibleStatuses = ['PAID', 'CLOSED_LOST', 'DO_NOT_CONTACT']
+            if (!ineligibleStatuses.includes(currentLead?.status || '')) {
+              await prisma.lead.update({
+                where: { id: lead.id },
+                data: { buildStep: 'QA_REVIEW' },
+              })
+              await prisma.notification.create({
+                data: {
+                  type: 'SITE_QA_READY',
+                  title: 'Auto-Push: Build Ready',
+                  message: `Auto-pushed build for ${currentLead?.companyName || lead.companyName}. Ready for QA review.`,
+                  metadata: { leadId: lead.id, autoPush: true },
+                },
+              })
+              console.log(`[BuildStatus] Auto-pushed ${lead.companyName} to QA_REVIEW`)
+            }
           }
         }
       }
