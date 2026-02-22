@@ -870,33 +870,40 @@ export function parseClaudeResponse(raw: string): ClaudeCloseResponse {
 // Stage Normalization — catch hallucinated stage names from Claude
 // ============================================
 
-const VALID_STAGES = new Set<string>(Object.values(CONVERSATION_STAGES))
+// Lazy-initialized to avoid circular dependency with close-engine.ts
+let _validStages: Set<string> | null = null
+function getValidStages(): Set<string> {
+  if (!_validStages) {
+    _validStages = new Set<string>(Object.values(CONVERSATION_STAGES))
+  }
+  return _validStages
+}
 
 const STAGE_ALIASES: Record<string, string> = {
-  'PAYMENT_PENDING': CONVERSATION_STAGES.PAYMENT_SENT,
-  'PENDING_PAYMENT': CONVERSATION_STAGES.PAYMENT_SENT,
-  'PAYMENT': CONVERSATION_STAGES.PAYMENT_SENT,
-  'SEND_PAYMENT': CONVERSATION_STAGES.PAYMENT_SENT,
-  'AWAITING_PAYMENT': CONVERSATION_STAGES.PAYMENT_SENT,
-  'READY_TO_PAY': CONVERSATION_STAGES.PAYMENT_SENT,
-  'PAYMENT_LINK': CONVERSATION_STAGES.PAYMENT_SENT,
-  'SEND_PAYMENT_LINK': CONVERSATION_STAGES.PAYMENT_SENT,
-  'PAYMENT_READY': CONVERSATION_STAGES.PAYMENT_SENT,
-  'APPROVE_PAYMENT': CONVERSATION_STAGES.PAYMENT_SENT,
-  'EDITING': CONVERSATION_STAGES.EDIT_LOOP,
-  'EDITS': CONVERSATION_STAGES.EDIT_LOOP,
-  'CHANGES': CONVERSATION_STAGES.EDIT_LOOP,
-  'REVISION': CONVERSATION_STAGES.EDIT_LOOP,
-  'BUILT': CONVERSATION_STAGES.BUILDING,
-  'BUILD': CONVERSATION_STAGES.BUILDING,
-  'DONE': CONVERSATION_STAGES.COMPLETED,
-  'COMPLETE': CONVERSATION_STAGES.COMPLETED,
-  'CLOSED': CONVERSATION_STAGES.CLOSED_LOST,
-  'LOST': CONVERSATION_STAGES.CLOSED_LOST,
+  'PAYMENT_PENDING': 'PAYMENT_SENT',
+  'PENDING_PAYMENT': 'PAYMENT_SENT',
+  'PAYMENT': 'PAYMENT_SENT',
+  'SEND_PAYMENT': 'PAYMENT_SENT',
+  'AWAITING_PAYMENT': 'PAYMENT_SENT',
+  'READY_TO_PAY': 'PAYMENT_SENT',
+  'PAYMENT_LINK': 'PAYMENT_SENT',
+  'SEND_PAYMENT_LINK': 'PAYMENT_SENT',
+  'PAYMENT_READY': 'PAYMENT_SENT',
+  'APPROVE_PAYMENT': 'PAYMENT_SENT',
+  'EDITING': 'EDIT_LOOP',
+  'EDITS': 'EDIT_LOOP',
+  'CHANGES': 'EDIT_LOOP',
+  'REVISION': 'EDIT_LOOP',
+  'BUILT': 'BUILDING',
+  'BUILD': 'BUILDING',
+  'DONE': 'COMPLETED',
+  'COMPLETE': 'COMPLETED',
+  'CLOSED': 'CLOSED_LOST',
+  'LOST': 'CLOSED_LOST',
 }
 
 function normalizeNextStage(stage: string): string {
-  if (VALID_STAGES.has(stage)) return stage
+  if (getValidStages().has(stage)) return stage
   const normalized = STAGE_ALIASES[stage]
   if (normalized) {
     console.warn(`[CloseEngine] Normalized hallucinated stage "${stage}" → "${normalized}"`)
