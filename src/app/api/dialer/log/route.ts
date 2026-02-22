@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       'interested', 'interested_saw_preview', 'interested_no_preview',
       'not_interested', 'callback', 'callback_reviewing',
       'no_answer', 'voicemail_left', 'voicemail_skipped', 'voicemail_preview_sent',
-      'wrong_number', 'dnc',
+      'voicemail_no_vm', 'wrong_number', 'bad_number', 'dnc',
       'payment_link_sent', 'closed_paid', 'wants_changes',
     ]
 
