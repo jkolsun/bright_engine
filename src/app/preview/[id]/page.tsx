@@ -18,14 +18,22 @@ export default async function PreviewPage({ params }: { params: { id: string } }
 
   // Serve custom HTML if it exists (edited in Site Editor)
   if (lead.siteHtml) {
-    const headMatch = lead.siteHtml.match(/<head[^>]*>([\s\S]*?)<\/head>/i)
-    const bodyMatch = lead.siteHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
+    // Clean the HTML — strip any overlays, CTA banners, and placeholder text
+    let cleanHtml = lead.siteHtml
+    // Strip CTA "Get This Site Live" banner if it survived snapshot generation
+    cleanHtml = cleanHtml.replace(/<div[^>]*class="[^"]*fixed bottom-0[^"]*bg-\[#0D7377\][^"]*"[^>]*>[\s\S]*?<\/div>\s*<\/div>/g, '')
+    // Strip any raw AI placeholder labels
+    cleanHtml = cleanHtml.replace(/\bABOUT_P[0-9]:\s*/gi, '')
+    cleanHtml = cleanHtml.replace(/\bVP[0-9]_(TITLE|DESC)\b:?\s*/gi, '')
+
+    const headMatch = cleanHtml.match(/<head[^>]*>([\s\S]*?)<\/head>/i)
+    const bodyMatch = cleanHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
     const headContent = headMatch?.[1] || ''
-    const bodyContent = bodyMatch?.[1] || lead.siteHtml
+    const bodyContent = bodyMatch?.[1] || cleanHtml
     // Tracking script
     const trackScript = `<script>fetch('/api/preview/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({previewId:'${lead.previewId || params.id}',event:'page_view'})})</script>`
-    // Kill the DisclaimerBanner overlay — CSS hides it instantly, script removes it from DOM
-    const killOverlay = `<style>.fixed.inset-0[class*="z-[9999"]{display:none!important}</style><script>document.querySelectorAll('div').forEach(function(e){if(e.className&&e.className.indexOf('z-[9999]')!==-1)e.remove()})</script>`
+    // Kill the DisclaimerBanner overlay + any stray CTA banners — CSS hides, script removes
+    const killOverlay = `<style>.fixed.inset-0[class*="z-[9999"]{display:none!important}.fixed.bottom-0[class*="bg-\\[#0D7377"]{display:none!important}</style><script>document.querySelectorAll('div').forEach(function(e){if(e.className&&(e.className.indexOf('z-[9999]')!==-1||(e.className.indexOf('fixed')!==-1&&e.className.indexOf('bg-[#0D7377')!==-1)))e.remove()})</script>`
     return (
       <html lang="en">
         <head dangerouslySetInnerHTML={{ __html: headContent + killOverlay }} />
@@ -51,6 +59,10 @@ export default async function PreviewPage({ params }: { params: { id: string } }
       <head>
         <title>{lead.companyName} | Professional Services</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+        <style dangerouslySetInnerHTML={{ __html: `.preview-template { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; } .preview-template h1, .preview-template h2, .preview-template h3, .preview-template .font-display { font-family: 'DM Serif Display', Georgia, serif; }` }} />
       </head>
       <body>
         <PreviewTracker
@@ -77,7 +89,10 @@ export default async function PreviewPage({ params }: { params: { id: string } }
           websiteCopy={personalization?.websiteCopy || undefined}
         />
         </div>
-        <PreviewCTABanner previewId={lead.previewId || params.id} />
+        {/* Only show CTA banner for first-stage previews — hide once site is approved/edited/live */}
+        {!['QA_APPROVED', 'CLIENT_APPROVED', 'LAUNCHING', 'LIVE'].includes(lead.buildStep || '') && (
+          <PreviewCTABanner previewId={lead.previewId || params.id} />
+        )}
       </body>
     </html>
   )

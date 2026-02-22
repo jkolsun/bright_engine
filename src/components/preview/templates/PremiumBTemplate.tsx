@@ -88,7 +88,7 @@ function ChatbotWidget({ companyName }: { companyName: string }) {
   )
 }
 
-function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
+function MobileNav({ isOpen, onClose, companyName, logo, sections, phone, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; logo?: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
   if (!isOpen) return null
   return (
     <div className="fixed inset-0 z-[90] lg:hidden">
@@ -96,7 +96,7 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
       <div className="absolute right-0 top-0 bottom-0 w-[300px] bg-white shadow-2xl">
         <div className="p-6 h-full flex flex-col">
           <div className="flex justify-between items-center mb-10">
-            <div className="flex items-center gap-2.5"><div className="w-8 h-8 rounded-lg bg-emerald-700 flex items-center justify-center"><Leaf size={14} className="text-white" /></div><span className="text-lg font-medium text-stone-800">{companyName}</span></div>
+            <div className="flex items-center gap-2.5">{logo ? <img src={logo} alt="" className="h-8 w-8 rounded-lg object-cover" /> : <div className="w-8 h-8 rounded-lg bg-emerald-700 flex items-center justify-center"><Leaf size={14} className="text-white" /></div>}<span className="text-lg font-medium text-stone-800">{companyName}</span></div>
             <button onClick={onClose} className="w-9 h-9 rounded-lg bg-stone-100 flex items-center justify-center text-stone-500"><X size={18} /></button>
           </div>
           <nav className="space-y-1 flex-1">{sections.map((s) => (<button key={s.page} data-nav-page={s.page} onClick={() => { onNavigate(s.page); onClose() }} className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-stone-700 hover:bg-emerald-50 transition-all text-[15px] font-medium">{s.label}<ChevronRight size={16} className="text-stone-300" /></button>))}</nav>
@@ -107,7 +107,7 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
           </div>
           <div className="space-y-3">
             {phone && (<a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-stone-100 text-stone-800 font-semibold text-sm border border-stone-200"><Phone size={16} />Call {formatNavPhone(phone)}</a>)}
-            <button onClick={() => { onCTAClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-emerald-700 text-white font-semibold text-sm">Free Consultation</button>
+            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-emerald-700 text-white font-semibold text-sm">Free Consultation</button>
           </div>
         </div>
       </div>
@@ -130,14 +130,14 @@ function FAQItem({ question, answer, isOpen, onToggle }: { question: string; ans
 }
 
 /* ═══════ CTA BAND (reused on multiple pages) ═══════ */
-function CTABand({ closingHeadline, location, onCTAClick }: { closingHeadline?: string; location: string; onCTAClick: () => Promise<void> }) {
+function CTABand({ closingHeadline, location, onCTAClick, onNavigateContact }: { closingHeadline?: string; location: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void }) {
   return (
     <section className="relative py-16 sm:py-20 md:py-24 overflow-hidden bg-emerald-800">
       <div className="absolute inset-0 opacity-10"><div className="absolute top-0 right-0 w-96 h-96 bg-emerald-400 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" /><div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-300 rounded-full translate-y-1/2 -translate-x-1/3 blur-3xl" /></div>
       <ScrollReveal animation="fade-up" delay={0}>
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 md:px-8 text-center">
         <p className="text-2xl sm:text-3xl md:text-4xl font-light text-white leading-snug tracking-tight mb-8">{closingHeadline || "Excellence in every detail."}</p>
-        <button onClick={onCTAClick} className="inline-flex items-center gap-2.5 bg-white text-emerald-800 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-emerald-50 transition-all shadow-lg group">
+        <button onClick={() => { onCTAClick(); onNavigateContact() }} className="inline-flex items-center gap-2.5 bg-white text-emerald-800 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-emerald-50 transition-all shadow-lg group">
           Get Started <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
         </button>
         {location && <p className="mt-6 text-emerald-200/40 text-sm font-medium tracking-wide">{location}</p>}
@@ -214,7 +214,11 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
           <div className="flex items-center justify-between h-[68px]">
             <button onClick={() => navigateTo('home')} className="flex items-center gap-2.5 cursor-pointer">
-              <div className="w-8 h-8 rounded-lg bg-emerald-700 flex items-center justify-center"><Leaf size={14} className="text-white" /></div>
+              {lead.logo ? (
+                <img src={lead.logo} alt="" className="h-8 w-8 rounded-lg object-cover" />
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-emerald-700 flex items-center justify-center"><Leaf size={14} className="text-white" /></div>
+              )}
               <span className="text-lg font-medium text-stone-900 tracking-wide">{lead.companyName}</span>
             </button>
             <div className="hidden lg:flex items-center gap-1.5">{navSections.map((s) => (
@@ -228,14 +232,14 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
               </div>
               <div className="hidden md:block w-px h-5 bg-stone-200" />
               {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-sm text-stone-500 hover:text-emerald-700 font-medium"><Phone size={14} />{formatNavPhone(lead.phone)}</a>)}
-              <button onClick={onCTAClick} className="hidden sm:flex bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-600 transition-all shadow-md">Free Consultation</button>
+              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className="hidden sm:flex bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-600 transition-all shadow-md">Free Consultation</button>
               <button onClick={() => setMobileNavOpen(true)} className="lg:hidden w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center text-stone-600 border border-stone-200"><Menu size={20} /></button>
             </div>
           </div>
         </div>
       </nav>
 
-      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} />
+      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} logo={lead.logo} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} />
 
       {/* ═══════════════════════════════════════════
           PAGE: HOME
@@ -295,7 +299,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
               <div className="flex items-end justify-between mb-12 sm:mb-16">
                 <div>
                   <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">What We Do</p>
-                  <h2 className="text-3xl sm:text-4xl font-light text-stone-900 leading-tight">Our Services</h2>
+                  <h2 className="font-display text-3xl sm:text-4xl font-light text-stone-900 leading-tight">Our Services</h2>
                 </div>
                 <button onClick={() => navigateTo('services')} className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-emerald-700 hover:text-emerald-600 transition-colors group">
                   View All Services <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -333,7 +337,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
               <ScrollReveal animation="fade-left" delay={0}>
               <div>
                 <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">About Us</p>
-                <h2 className="text-3xl sm:text-4xl font-light text-stone-900 leading-tight mb-6">{lead.companyName}</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-light text-stone-900 leading-tight mb-6">{lead.companyName}</h2>
                 <p className="text-stone-600 text-base leading-relaxed mb-6">{wc?.aboutParagraph1 || `${lead.companyName} delivers expert ${industryLabel}${location ? ` in ${location}` : ''} with a client-first approach.`}</p>
                 <div className="flex flex-wrap gap-8 mb-8">
                   <div><p className="font-display text-3xl font-light text-emerald-700">{hasRating ? lead.enrichedRating : '5.0'}</p><p className="text-[11px] uppercase tracking-[0.2em] text-stone-500 mt-1">Star Rating</p></div>
@@ -372,7 +376,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
               <div className="flex items-end justify-between mb-10 sm:mb-14">
                 <div>
                   <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">Portfolio</p>
-                  <h2 className="text-3xl sm:text-4xl font-light text-stone-900">Our Work</h2>
+                  <h2 className="font-display text-3xl sm:text-4xl font-light text-stone-900">Our Work</h2>
                 </div>
                 <button onClick={() => navigateTo('portfolio')} className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-emerald-700 hover:text-emerald-600 transition-colors group">
                   View All Work <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -412,7 +416,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
         </section>
 
         {/* HOMEPAGE: CTA BAND */}
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -468,7 +472,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
           </section>
         )}
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -490,7 +494,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
               <ScrollReveal animation="fade-left" delay={0} className="lg:col-span-3">
               <div>
-                <h2 className="text-3xl sm:text-4xl font-light text-stone-900 leading-tight mb-6">{lead.companyName}</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-light text-stone-900 leading-tight mb-6">{lead.companyName}</h2>
                 <div className="space-y-4 text-stone-600 text-base leading-relaxed">
                   <p>{wc?.aboutParagraph1 || `${lead.companyName} delivers expert ${industryLabel}${location ? ` in ${location}` : ''} with a client-first approach.`}</p>
                   {wc?.aboutParagraph2 && <p>{wc.aboutParagraph2}</p>}
@@ -541,7 +545,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
             <ScrollReveal animation="fade-up" delay={0}>
             <div className="text-center mb-12 sm:mb-16">
               <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">Testimonials</p>
-              <h2 className="text-3xl sm:text-4xl font-light text-stone-900">What clients say.</h2>
+              <h2 className="font-display text-3xl sm:text-4xl font-light text-stone-900">What clients say.</h2>
             </div>
             </ScrollReveal>
             <div className={testimonials.length === 1 ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 md:grid-cols-2 gap-6'}>
@@ -561,7 +565,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -605,7 +609,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -627,7 +631,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
               <ScrollReveal animation="fade-left" delay={0}>
               <div>
-                <h2 className="text-3xl sm:text-4xl font-light text-stone-900 leading-tight mb-8">Contact Information</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-light text-stone-900 leading-tight mb-8">Contact Information</h2>
                 <div className="space-y-5">
                   {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0 border border-emerald-100"><Phone size={20} className="text-emerald-600" /></div><div><p className="text-sm font-medium text-stone-800">{lead.phone}</p><p className="text-xs text-stone-400">Call or text anytime</p></div></a>)}
                   {lead.email && (<a href={`mailto:${lead.email}`} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0 border border-emerald-100"><Mail size={20} className="text-emerald-600" /></div><div><p className="text-sm font-medium text-stone-800">{lead.email}</p><p className="text-xs text-stone-400">We respond same-day</p></div></a>)}
@@ -675,7 +679,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
             <ScrollReveal animation="fade-up" delay={0}>
             <div className="text-center mb-10 sm:mb-14">
               <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">FAQ</p>
-              <h2 className="text-3xl sm:text-4xl font-light text-stone-900">Common questions.</h2>
+              <h2 className="font-display text-3xl sm:text-4xl font-light text-stone-900">Common questions.</h2>
             </div>
             </ScrollReveal>
             <div className="bg-white rounded-2xl border border-stone-200 px-6 sm:px-8 shadow-sm">
@@ -690,7 +694,7 @@ export default function PremiumBTemplate({ lead, config, onCTAClick, onCallClick
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
             <div>
-              <span className="text-emerald-300/70 font-light text-lg tracking-wide">{lead.companyName}</span>
+              <div className="flex items-center gap-2.5">{lead.logo ? <img src={lead.logo} alt="" className="h-8 w-8 rounded-lg object-cover" /> : null}<span className="text-emerald-300/70 font-light text-lg tracking-wide">{lead.companyName}</span></div>
               <p className="text-emerald-100/30 text-sm leading-relaxed mt-3">Premium {industryLabel}{location ? ` in ${location}` : ''}. Excellence in every detail.</p>
               {hasRating && (<div className="flex items-center gap-2 mt-4"><div className="flex gap-0.5">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={11} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-emerald-400 fill-current' : 'text-emerald-800'} />)}</div><span className="text-emerald-100/30 text-xs">{lead.enrichedRating} rating</span></div>)}
               <div className="flex gap-2.5 mt-5">

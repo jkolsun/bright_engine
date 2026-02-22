@@ -284,7 +284,7 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
               </a>
             )}
             <button
-              onClick={() => { onCTAClick(); onClose() }}
+              onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }}
               className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold text-sm hover:from-blue-600 hover:to-cyan-600 transition-all"
             >
               Get Free Quote
@@ -316,7 +316,7 @@ function FAQItem({ question, answer, isOpen, onToggle }: { question: string; ans
 }
 
 /* ═══════ CTA BAND (reused on multiple pages) ═══════ */
-function CTABand({ closingHeadline, location, onCTAClick }: { closingHeadline?: string; location: string; onCTAClick: () => Promise<void> }) {
+function CTABand({ closingHeadline, location, onCTAClick, onNavigateContact }: { closingHeadline?: string; location: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void }) {
   return (
     <section className="relative py-16 sm:py-20 md:py-28 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500" />
@@ -333,7 +333,7 @@ function CTABand({ closingHeadline, location, onCTAClick }: { closingHeadline?: 
           {closingHeadline || `"We don't do shortcuts. Every job gets our best — period."`}
         </p>
         <button
-          onClick={onCTAClick}
+          onClick={() => { onCTAClick(); onNavigateContact() }}
           className="inline-flex items-center gap-2.5 bg-white text-gray-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all shadow-lg group"
         >
           Get Started <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
@@ -481,7 +481,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
 
               {/* CTA */}
               <button
-                onClick={onCTAClick}
+                onClick={() => { onCTAClick(); navigateTo('contact') }}
                 className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40"
               >
                 Free Quote
@@ -817,7 +817,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         </section>
 
         {/* HOMEPAGE: CTA BAND */}
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -895,7 +895,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           </section>
         )}
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -1079,7 +1079,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -1155,7 +1155,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════

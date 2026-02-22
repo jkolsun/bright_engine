@@ -209,9 +209,9 @@ function ChatbotWidget({ companyName }: { companyName: string }) {
 
 /* ────────────────────── Mobile Nav Drawer ────────────────────── */
 function MobileNav({
-  isOpen, onClose, companyName, sections, phone, onCallClick, onCTAClick, onNavigate
+  isOpen, onClose, companyName, logo, sections, phone, onCallClick, onCTAClick, onNavigate
 }: {
-  isOpen: boolean; onClose: () => void; companyName: string;
+  isOpen: boolean; onClose: () => void; companyName: string; logo?: string;
   sections: { page: PageName; label: string }[]; phone?: string;
   onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void;
 }) {
@@ -223,9 +223,13 @@ function MobileNav({
         <div className="p-6 h-full flex flex-col">
           <div className="flex justify-between items-center mb-10">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-emerald-700 flex items-center justify-center">
-                <Leaf size={14} className="text-white" />
-              </div>
+              {logo ? (
+                <img src={logo} alt="" className="h-8 w-8 rounded-lg object-cover" />
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-emerald-700 flex items-center justify-center">
+                  <Leaf size={14} className="text-white" />
+                </div>
+              )}
               <span className="text-lg font-medium text-stone-800">{companyName}</span>
             </div>
             <button onClick={onClose} className="w-9 h-9 rounded-lg bg-stone-100 flex items-center justify-center text-stone-500">
@@ -260,7 +264,7 @@ function MobileNav({
                 Call {formatNavPhone(phone)}
               </a>
             )}
-            <button onClick={() => { onCTAClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-emerald-700 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors">
+            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-emerald-700 text-white font-semibold text-sm hover:bg-emerald-600 transition-colors">
               Free Consultation
             </button>
           </div>
@@ -292,7 +296,7 @@ function FAQItem({ question, answer, isOpen, onToggle }: {
 }
 
 /* ═══════ CTA BAND (reused on multiple pages) ═══════ */
-function CTABand({ closingHeadline, location, onCTAClick }: { closingHeadline?: string; location: string; onCTAClick: () => Promise<void> }) {
+function CTABand({ closingHeadline, location, onCTAClick, onNavigateContact }: { closingHeadline?: string; location: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void }) {
   return (
     <section className="relative py-16 sm:py-20 md:py-24 overflow-hidden bg-emerald-800">
       <div className="absolute inset-0 opacity-10">
@@ -302,7 +306,7 @@ function CTABand({ closingHeadline, location, onCTAClick }: { closingHeadline?: 
       <ScrollReveal animation="fade-up" delay={0}>
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 md:px-8 text-center">
         <p className="text-2xl sm:text-3xl md:text-4xl font-light text-white leading-snug tracking-tight mb-8">{closingHeadline || "Excellence in every detail."}</p>
-        <button onClick={onCTAClick} className="inline-flex items-center gap-2.5 bg-white text-emerald-800 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-emerald-50 transition-all shadow-lg group">
+        <button onClick={() => { onCTAClick(); onNavigateContact() }} className="inline-flex items-center gap-2.5 bg-white text-emerald-800 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-emerald-50 transition-all shadow-lg group">
           Get Started <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
         </button>
         {location && <p className="mt-6 text-emerald-200/40 text-sm font-medium tracking-wide">{location}</p>}
@@ -383,9 +387,13 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
           <div className="flex items-center justify-between h-[68px]">
             {/* Logo */}
             <button onClick={() => navigateTo('home')} className="flex items-center gap-2.5 cursor-pointer">
-              <div className="w-8 h-8 rounded-lg bg-emerald-700 flex items-center justify-center">
-                <Leaf size={14} className="text-white" />
-              </div>
+              {lead.logo ? (
+                <img src={lead.logo} alt="" className="h-8 w-8 rounded-lg object-cover" />
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-emerald-700 flex items-center justify-center">
+                  <Leaf size={14} className="text-white" />
+                </div>
+              )}
               <span className="text-lg font-medium text-stone-900 tracking-wide">{lead.companyName}</span>
             </button>
 
@@ -422,7 +430,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
               )}
 
               {/* CTA — desktop */}
-              <button onClick={onCTAClick} className="hidden sm:flex bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-600 transition-all shadow-md">
+              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className="hidden sm:flex bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-600 transition-all shadow-md">
                 Free Consultation
               </button>
 
@@ -440,6 +448,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
         isOpen={mobileNavOpen}
         onClose={() => setMobileNavOpen(false)}
         companyName={lead.companyName}
+        logo={lead.logo}
         sections={navSections}
         phone={lead.phone}
         onCallClick={onCallClick}
@@ -562,7 +571,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
               <div className="flex items-end justify-between mb-12 sm:mb-16">
                 <div>
                   <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">Our Expertise</p>
-                  <h2 className="text-3xl sm:text-4xl font-light text-stone-900 leading-tight">Services.</h2>
+                  <h2 className="font-display text-3xl sm:text-4xl font-light text-stone-900 leading-tight">Services.</h2>
                 </div>
                 <button onClick={() => navigateTo('services')} className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-emerald-700 hover:text-emerald-600 transition-colors group">
                   View All Services <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -600,7 +609,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
               <ScrollReveal animation="fade-left" delay={0}>
               <div>
                 <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">About Us</p>
-                <h2 className="text-3xl sm:text-4xl font-light text-stone-900 leading-tight mb-6">{lead.companyName}</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-light text-stone-900 leading-tight mb-6">{lead.companyName}</h2>
                 <p className="text-stone-600 text-base leading-relaxed mb-6">{wc?.aboutParagraph1 || `${lead.companyName} delivers expert ${industryLabel}${location ? ` in ${location}` : ''} with a client-first approach.`}</p>
                 <div className="flex flex-wrap gap-8 mb-8">
                   <div><p className="font-display text-3xl font-light text-emerald-700">{hasRating ? lead.enrichedRating : '5.0'}</p><p className="text-[11px] uppercase tracking-[0.2em] text-stone-500 mt-1">Star Rating</p></div>
@@ -639,7 +648,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
               <div className="flex items-end justify-between mb-10 sm:mb-14">
                 <div>
                   <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">Portfolio</p>
-                  <h2 className="text-3xl sm:text-4xl font-light text-stone-900">Our Work</h2>
+                  <h2 className="font-display text-3xl sm:text-4xl font-light text-stone-900">Our Work</h2>
                 </div>
                 <button onClick={() => navigateTo('portfolio')} className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-emerald-700 hover:text-emerald-600 transition-colors group">
                   View Our Work <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -679,7 +688,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
         </section>
 
         {/* HOMEPAGE: CTA BAND */}
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -735,7 +744,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
           </section>
         )}
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -757,7 +766,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
               <ScrollReveal animation="fade-left" delay={0} className="lg:col-span-3">
               <div>
-                <h2 className="text-3xl sm:text-4xl font-light text-stone-900 leading-tight mb-6">{lead.companyName}</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-light text-stone-900 leading-tight mb-6">{lead.companyName}</h2>
                 <div className="space-y-4 text-stone-600 text-base leading-relaxed">
                   <p>{wc?.aboutParagraph1 || `${lead.companyName} delivers expert ${industryLabel}${location ? ` in ${location}` : ''} with a client-first approach.`}</p>
                   {wc?.aboutParagraph2 && <p>{wc.aboutParagraph2}</p>}
@@ -853,7 +862,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
             <ScrollReveal animation="fade-up" delay={0}>
             <div className="text-center mb-12 sm:mb-16">
               <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">Testimonials</p>
-              <h2 className="text-3xl sm:text-4xl font-light text-stone-900">What clients say.</h2>
+              <h2 className="font-display text-3xl sm:text-4xl font-light text-stone-900">What clients say.</h2>
             </div>
             </ScrollReveal>
             <div className={testimonials.length === 1 ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 md:grid-cols-2 gap-6'}>
@@ -873,7 +882,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -925,7 +934,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -947,7 +956,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
               <ScrollReveal animation="fade-left" delay={0}>
               <div>
-                <h2 className="text-3xl sm:text-4xl font-light text-stone-900 leading-tight mb-8">Contact Information</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-light text-stone-900 leading-tight mb-8">Contact Information</h2>
                 <div className="space-y-5">
                   {lead.phone && (
                     <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 group">
@@ -1041,7 +1050,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
             <ScrollReveal animation="fade-up" delay={0}>
             <div className="text-center mb-10 sm:mb-14">
               <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">FAQ</p>
-              <h2 className="text-3xl sm:text-4xl font-light text-stone-900">Common questions.</h2>
+              <h2 className="font-display text-3xl sm:text-4xl font-light text-stone-900">Common questions.</h2>
             </div>
             </ScrollReveal>
             <div className="bg-white rounded-2xl border border-stone-200 px-6 sm:px-8 shadow-sm">
@@ -1057,7 +1066,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
             {/* Brand */}
             <div>
-              <span className="text-emerald-300/70 font-light text-lg tracking-wide">{lead.companyName}</span>
+              <div className="flex items-center gap-2.5">{lead.logo ? <img src={lead.logo} alt="" className="h-8 w-8 rounded-lg object-cover" /> : null}<span className="text-emerald-300/70 font-light text-lg tracking-wide">{lead.companyName}</span></div>
               <p className="text-emerald-100/30 text-sm leading-relaxed mt-3">
                 Premium {industryLabel}{location ? ` in ${location}` : ''}. Excellence in every detail.
               </p>

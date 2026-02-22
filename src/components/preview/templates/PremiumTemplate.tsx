@@ -87,7 +87,7 @@ function ChatbotWidget({ companyName }: { companyName: string }) {
   )
 }
 
-function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
+function MobileNav({ isOpen, onClose, companyName, logo, sections, phone, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; logo?: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
   if (!isOpen) return null
   return (
     <div className="fixed inset-0 z-[90] lg:hidden">
@@ -95,7 +95,7 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
       <div className="absolute right-0 top-0 bottom-0 w-[300px] bg-gray-900 shadow-2xl border-l border-amber-500/10">
         <div className="p-6 h-full flex flex-col">
           <div className="flex justify-between items-center mb-10">
-            <div className="flex items-center gap-2.5"><div className="w-1 h-6 bg-gradient-to-b from-amber-400 to-amber-600 rounded-full" /><span className="text-lg font-light text-white tracking-wide">{companyName}</span></div>
+            <div className="flex items-center gap-2.5">{logo ? <img src={logo} alt="" className="h-8 w-8 rounded-lg object-cover" /> : <div className="w-1 h-6 bg-gradient-to-b from-amber-400 to-amber-600 rounded-full" />}<span className="text-lg font-light text-white tracking-wide">{companyName}</span></div>
             <button onClick={onClose} className="w-9 h-9 rounded-lg bg-gray-800 flex items-center justify-center text-gray-400 border border-gray-700"><X size={18} /></button>
           </div>
           <nav className="space-y-1 flex-1">{sections.map((s) => (<button key={s.page} data-nav-page={s.page} onClick={() => { onNavigate(s.page); onClose() }} className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-gray-300 hover:bg-gray-800 hover:text-white transition-all text-[15px] font-medium">{s.label}<ChevronRight size={16} className="text-gray-600" /></button>))}</nav>
@@ -106,7 +106,7 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
           </div>
           <div className="space-y-3">
             {phone && (<a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gray-800 text-white font-semibold text-sm border border-gray-700"><Phone size={16} />Call {formatNavPhone(phone)}</a>)}
-            <button onClick={() => { onCTAClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-black font-semibold text-sm" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>Free Consultation</button>
+            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl text-black font-semibold text-sm" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>Free Consultation</button>
           </div>
         </div>
       </div>
@@ -129,14 +129,14 @@ function FAQItem({ question, answer, isOpen, onToggle }: { question: string; ans
 }
 
 /* ═══════ CTA BAND (reused on multiple pages) ═══════ */
-function CTABand({ closingHeadline, location, onCTAClick }: { closingHeadline?: string; location: string; onCTAClick: () => Promise<void> }) {
+function CTABand({ closingHeadline, location, onCTAClick, onNavigateContact }: { closingHeadline?: string; location: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void }) {
   return (
     <section className="relative py-16 sm:py-20 md:py-24 overflow-hidden" style={{ background: 'linear-gradient(135deg, #d97706, #b45309)' }}>
       <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
       <ScrollReveal animation="fade-up" delay={0}>
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 md:px-8 text-center">
         <p className="text-2xl sm:text-3xl md:text-4xl font-light text-white leading-snug tracking-tight mb-8">{closingHeadline || "Excellence in every detail."}</p>
-        <button onClick={onCTAClick} className="inline-flex items-center gap-2.5 bg-white text-amber-800 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-amber-50 transition-all shadow-lg group">
+        <button onClick={() => { onCTAClick(); onNavigateContact() }} className="inline-flex items-center gap-2.5 bg-white text-amber-800 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-amber-50 transition-all shadow-lg group">
           Get Started <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
         </button>
         {location && <p className="mt-6 text-white/40 text-sm font-medium tracking-wide">{location}</p>}
@@ -213,7 +213,11 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
           <div className="flex items-center justify-between h-[68px]">
             <button onClick={() => navigateTo('home')} className="flex items-center gap-2.5 cursor-pointer">
-              <div className="w-1 h-6 bg-gradient-to-b from-amber-400 to-amber-600 rounded-full" />
+              {lead.logo ? (
+                <img src={lead.logo} alt="" className="h-8 w-8 rounded-lg object-cover" />
+              ) : (
+                <div className="w-1 h-6 bg-gradient-to-b from-amber-400 to-amber-600 rounded-full" />
+              )}
               <span className="text-lg font-light text-white tracking-wide">{lead.companyName}</span>
             </button>
             <div className="hidden lg:flex items-center gap-1.5">{navSections.map((s) => (
@@ -227,14 +231,14 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
               </div>
               <div className="hidden md:block w-px h-5 bg-gray-800" />
               {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-sm text-gray-500 hover:text-amber-400 font-medium"><Phone size={14} />{formatNavPhone(lead.phone)}</a>)}
-              <button onClick={onCTAClick} className="hidden sm:flex text-black px-5 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-md" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>Free Consultation</button>
+              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className="hidden sm:flex text-black px-5 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-md" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>Free Consultation</button>
               <button onClick={() => setMobileNavOpen(true)} className="lg:hidden w-10 h-10 rounded-lg bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-400"><Menu size={20} /></button>
             </div>
           </div>
         </div>
       </nav>
 
-      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} />
+      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} logo={lead.logo} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} />
 
       {/* ═══════════════════════════════════════════
           PAGE: HOME
@@ -314,7 +318,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
               <div className="flex items-end justify-between mb-12 sm:mb-16">
                 <div>
                   <p className="text-xs uppercase tracking-[0.25em] text-amber-400/40 mb-3 font-medium">Our Expertise</p>
-                  <h2 className="text-3xl sm:text-4xl font-light text-white leading-tight">Services.</h2>
+                  <h2 className="font-display text-3xl sm:text-4xl font-light text-white leading-tight">Services.</h2>
                 </div>
                 <button onClick={() => navigateTo('services')} className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-amber-400 hover:text-amber-300 transition-colors group">
                   View All Services <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -352,7 +356,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
               <ScrollReveal animation="fade-left" delay={0}>
               <div>
                 <p className="text-xs uppercase tracking-[0.25em] text-amber-400/40 mb-3 font-medium">About</p>
-                <h2 className="text-3xl sm:text-4xl font-light text-white leading-tight mb-6">{lead.companyName}</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-light text-white leading-tight mb-6">{lead.companyName}</h2>
                 <p className="text-gray-400 text-base leading-relaxed mb-6">{wc?.aboutParagraph1 || `${lead.companyName} delivers expert ${industryLabel}${location ? ` in ${location}` : ''} with a client-first approach.`}</p>
                 <div className="flex flex-wrap gap-8 mb-8">
                   <div><p className="font-display text-3xl font-light text-transparent bg-clip-text" style={{ backgroundImage: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>{hasRating ? lead.enrichedRating : '5.0'}</p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-600 mt-1">Star Rating</p></div>
@@ -391,7 +395,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
               <div className="flex items-end justify-between mb-10 sm:mb-14">
                 <div>
                   <p className="text-xs uppercase tracking-[0.25em] text-amber-400/40 mb-3 font-medium">Portfolio</p>
-                  <h2 className="text-3xl sm:text-4xl font-light text-white">Our work.</h2>
+                  <h2 className="font-display text-3xl sm:text-4xl font-light text-white">Our work.</h2>
                 </div>
                 <button onClick={() => navigateTo('portfolio')} className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-amber-400 hover:text-amber-300 transition-colors group">
                   View Our Work <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -431,7 +435,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
         </section>
 
         {/* HOMEPAGE: CTA BAND */}
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -487,7 +491,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
           </section>
         )}
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -509,7 +513,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
               <ScrollReveal animation="fade-left" delay={0} className="lg:col-span-3">
               <div>
-                <h2 className="text-3xl sm:text-4xl font-light text-white leading-tight mb-6">{lead.companyName}</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-light text-white leading-tight mb-6">{lead.companyName}</h2>
                 <div className="space-y-4 text-gray-400 text-base leading-relaxed">
                   <p>{wc?.aboutParagraph1 || `${lead.companyName} delivers expert ${industryLabel}${location ? ` in ${location}` : ''} with a client-first approach.`}</p>
                   {wc?.aboutParagraph2 && <p>{wc.aboutParagraph2}</p>}
@@ -560,7 +564,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
             <ScrollReveal animation="fade-up" delay={0}>
             <div className="text-center mb-12 sm:mb-16">
               <p className="text-xs uppercase tracking-[0.25em] text-amber-400/40 mb-3 font-medium">Testimonials</p>
-              <h2 className="text-3xl sm:text-4xl font-light text-white">What clients say.</h2>
+              <h2 className="font-display text-3xl sm:text-4xl font-light text-white">What clients say.</h2>
             </div>
             </ScrollReveal>
             <div className={testimonials.length === 1 ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 md:grid-cols-2 gap-6'}>
@@ -580,7 +584,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -624,7 +628,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -646,7 +650,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
               <ScrollReveal animation="fade-left" delay={0}>
               <div>
-                <h2 className="text-3xl sm:text-4xl font-light text-white leading-tight mb-8">Contact Information</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-light text-white leading-tight mb-8">Contact Information</h2>
                 <div className="space-y-5">
                   {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-amber-400/5 border border-amber-500/10 flex items-center justify-center flex-shrink-0"><Phone size={20} className="text-amber-400" /></div><div><p className="text-sm font-medium text-white">{lead.phone}</p><p className="text-xs text-gray-600">Call or text anytime</p></div></a>)}
                   {lead.email && (<a href={`mailto:${lead.email}`} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-amber-400/5 border border-amber-500/10 flex items-center justify-center flex-shrink-0"><Mail size={20} className="text-amber-400" /></div><div><p className="text-sm font-medium text-white">{lead.email}</p><p className="text-xs text-gray-600">We respond same-day</p></div></a>)}
@@ -694,7 +698,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
             <ScrollReveal animation="fade-up" delay={0}>
             <div className="text-center mb-10 sm:mb-14">
               <p className="text-xs uppercase tracking-[0.25em] text-amber-400/40 mb-3 font-medium">FAQ</p>
-              <h2 className="text-3xl sm:text-4xl font-light text-white">Common questions.</h2>
+              <h2 className="font-display text-3xl sm:text-4xl font-light text-white">Common questions.</h2>
             </div>
             </ScrollReveal>
             <div className="bg-gray-900/60 rounded-2xl border border-gray-800/50 px-6 sm:px-8">
@@ -709,7 +713,7 @@ export default function PremiumTemplate({ lead, config, onCTAClick, onCallClick,
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
             <div>
-              <span className="text-amber-400/60 font-light text-lg tracking-wide">{lead.companyName}</span>
+              <div className="flex items-center gap-2.5">{lead.logo ? <img src={lead.logo} alt="" className="h-8 w-8 rounded-lg object-cover" /> : null}<span className="text-amber-400/60 font-light text-lg tracking-wide">{lead.companyName}</span></div>
               <p className="text-gray-700 text-sm leading-relaxed mt-3">Premium {industryLabel}{location ? ` in ${location}` : ''}. Excellence in every detail.</p>
               {hasRating && (<div className="flex items-center gap-2 mt-4"><div className="flex gap-0.5">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={11} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-amber-400 fill-current' : 'text-gray-800'} />)}</div><span className="text-gray-700 text-xs">{lead.enrichedRating} rating</span></div>)}
               <div className="flex gap-2.5 mt-5">

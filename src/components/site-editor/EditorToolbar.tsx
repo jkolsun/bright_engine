@@ -1,6 +1,6 @@
 'use client'
 
-import { Save, RotateCcw, ArrowLeft, Eye, EyeOff, MessageSquare, Loader2, Check, AlertCircle } from 'lucide-react'
+import { Save, RotateCcw, ArrowLeft, Eye, EyeOff, MessageSquare, Loader2, Check, AlertCircle, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 
 interface EditorToolbarProps {
@@ -9,6 +9,8 @@ interface EditorToolbarProps {
   saveStatus: 'saved' | 'unsaved' | 'saving' | 'error'
   onSave: () => void
   onReset: () => void
+  onRegenerate: () => void
+  isRegenerating?: boolean
   onTogglePreview: () => void
   onToggleChat: () => void
   showPreview: boolean
@@ -76,6 +78,15 @@ export default function EditorToolbar(props: EditorToolbarProps) {
           AI Chat
         </button>
         <div className="h-5 w-px bg-gray-600" />
+        <button
+          onClick={props.onRegenerate}
+          disabled={props.isRegenerating}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors disabled:opacity-50"
+          title="Regenerate snapshot from template"
+        >
+          <RefreshCw size={14} className={props.isRegenerating ? 'animate-spin' : ''} />
+          {props.isRegenerating ? 'Regenerating...' : 'Regenerate'}
+        </button>
         <button
           onClick={props.onReset}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors"

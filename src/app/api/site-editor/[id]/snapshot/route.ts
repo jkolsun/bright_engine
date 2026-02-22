@@ -39,8 +39,11 @@ export async function POST(
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     }
 
-    // Return cached if already exists
-    if (lead.siteHtml) {
+    // Check for force-regenerate flag (default: use cache)
+    const body = await request.json().catch(() => ({}))
+    const forceRegenerate = body?.force === true
+
+    if (lead.siteHtml && !forceRegenerate) {
       // Strip DisclaimerBanner if it got baked in — it's stuck without JS click handlers
       const disclaimerRe = /<div[^>]*z-\[9999\][^>]*>[\s\S]*?View My Preview[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/g
       const cleanHtml = lead.siteHtml.replace(disclaimerRe, '')
@@ -119,9 +122,9 @@ export async function POST(
 
     // Post-process: add Tailwind CDN + Google Fonts + font config, strip Next.js scripts
     const tailwindCdn = '<script src="https://cdn.tailwindcss.com"></script>'
-    const tailwindConfig = `<script>tailwind.config={theme:{extend:{fontFamily:{display:['"Space Grotesk"','sans-serif']}}}}</script>`
-    const googleFonts = '<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">'
-    const baseFontCss = `<style>body,.preview-template{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}h1,h2,h3,h4,.preview-template h1,.preview-template h2,.preview-template h3,.preview-template h4{font-family:'Space Grotesk','Inter',sans-serif}</style>`
+    const tailwindConfig = `<script>tailwind.config={theme:{extend:{fontFamily:{display:['"DM Serif Display"','Georgia','serif']}}}}</script>`
+    const googleFonts = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">'
+    const baseFontCss = `<style>body,.preview-template{font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif}h1,h2,h3,h4,.preview-template h1,.preview-template h2,.preview-template h3,.preview-template h4,.font-display{font-family:'DM Serif Display',Georgia,serif}</style>`
     const metaCharset = '<meta charset="UTF-8">'
 
     // Inject into <head>
@@ -150,6 +153,16 @@ export async function POST(
     html = html.replace(/<div[^>]*class="[^"]*fixed bottom-0[^"]*bg-\[#0D7377\][^"]*"[^>]*>[\s\S]*?<\/div>\s*<\/div>/g, '')
     // Also strip the bottom padding wrapper that accommodates the banner
     html = html.replace(/<div class="pb-16">([\s\S]*?)<\/div>\s*$/m, '$1')
+
+    // Clean up any raw AI placeholder labels that leaked through (ABOUT_P1:, VP1_DESC, etc.)
+    html = html.replace(/\bABOUT_P[0-9]:\s*/gi, '')
+    html = html.replace(/\bVP[0-9]_(TITLE|DESC)\b:?\s*/gi, '')
+    html = html.replace(/\bHERO_(HEADLINE|SUBHEADLINE)\b:?\s*/gi, '')
+    html = html.replace(/\bCLOSING_(HEADLINE|BODY)\b:?\s*/gi, '')
+    html = html.replace(/\bTESTIMONIAL_(QUOTE|AUTHOR)\b:?\s*/gi, '')
+    html = html.replace(/\bSVC_[A-Z0-9_]+\b:?\s*/gi, '')
+    html = html.replace(/\bYEARS_BADGE\b:?\s*/gi, '')
+    html = html.replace(/\bSERVICE_AREA_TEXT\b:?\s*/gi, '')
 
     // Inject multi-page hash router for static HTML — shows/hides [data-page] sections
     html = html.replace(/<\/body>/i, `${STATIC_PAGE_ROUTER_SCRIPT}\n</body>`)

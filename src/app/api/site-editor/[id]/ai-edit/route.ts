@@ -67,7 +67,7 @@ The site belongs to: ${lead.companyName}`
     const anthropic = getAnthropicClient()
     const response = await anthropic.messages.create({
       model: AI_MODEL,
-      max_tokens: 16000,
+      max_tokens: 32000,
       system: systemPrompt,
       messages: [
         {
@@ -112,6 +112,7 @@ The site belongs to: ${lead.companyName}`
     return NextResponse.json({ html: modifiedHtml, summary })
   } catch (error) {
     console.error('[AI Edit] Error:', error)
-    return NextResponse.json({ error: 'AI edit failed' }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ error: `AI edit failed: ${message}` }, { status: 500 })
   }
 }

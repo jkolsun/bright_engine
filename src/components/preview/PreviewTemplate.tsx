@@ -13,6 +13,48 @@ import PremiumTemplate from './templates/PremiumTemplate'
 import PremiumBTemplate from './templates/PremiumBTemplate'
 import PremiumCTemplate from './templates/PremiumCTemplate'
 
+/** Detect if a string is a raw placeholder label leaked from the AI parser */
+function isPlaceholder(text: string): boolean {
+  const t = text.trim()
+  return /^(VP[0-9]_|ABOUT_P[0-9]|HERO_|CLOSING_|SVC_|TESTIMONIAL_|YEARS_|SERVICE_AREA)/i.test(t)
+}
+
+/** Strip leading "LABEL:" prefix that may have leaked through parsing */
+function cleanField(text: string | undefined): string {
+  if (!text) return ''
+  if (isPlaceholder(text)) return ''
+  // Strip any leading LABEL: prefix (e.g. "ABOUT_P1: actual text here")
+  const stripped = text.replace(/^[A-Z][A-Z0-9_]+:\s*/, '')
+  if (isPlaceholder(stripped)) return ''
+  return stripped
+}
+
+/** Sanitize websiteCopy to remove any raw placeholder labels from AI output */
+function sanitizeWebsiteCopy(wc?: WebsiteCopy): WebsiteCopy | undefined {
+  if (!wc) return undefined
+  return {
+    ...wc,
+    heroHeadline: cleanField(wc.heroHeadline) || wc.heroHeadline,
+    heroSubheadline: cleanField(wc.heroSubheadline) || wc.heroSubheadline,
+    aboutParagraph1: cleanField(wc.aboutParagraph1),
+    aboutParagraph2: cleanField(wc.aboutParagraph2),
+    closingHeadline: cleanField(wc.closingHeadline),
+    closingBody: cleanField(wc.closingBody),
+    testimonialQuote: cleanField(wc.testimonialQuote) || undefined,
+    testimonialAuthor: cleanField(wc.testimonialAuthor) || undefined,
+    yearsBadge: cleanField(wc.yearsBadge) || undefined,
+    serviceAreaText: cleanField(wc.serviceAreaText) || undefined,
+    valueProps: wc.valueProps?.map(vp => ({
+      title: cleanField(vp.title) || vp.title,
+      description: cleanField(vp.description),
+    })).filter(vp => vp.title && !isPlaceholder(vp.title)),
+    serviceDescriptions: Object.fromEntries(
+      Object.entries(wc.serviceDescriptions || {}).map(([k, v]) => [k, cleanField(v)])
+        .filter(([, v]) => v)
+    ),
+  }
+}
+
 export default function PreviewTemplate({ lead, websiteCopy }: { lead: any; websiteCopy?: WebsiteCopy }) {
   // Map the raw lead prop to the typed interface
   const typedLead: PreviewLead = {
@@ -50,7 +92,8 @@ export default function PreviewTemplate({ lead, websiteCopy }: { lead: any; webs
     })
   }, [typedLead.previewId])
 
-  const props = { lead: typedLead, config, onCTAClick, onCallClick, websiteCopy }
+  const cleanCopy = sanitizeWebsiteCopy(websiteCopy)
+  const props = { lead: typedLead, config, onCTAClick, onCallClick, websiteCopy: cleanCopy }
 
   switch (config.template) {
     case 'modern':    return <ModernTemplate {...props} />

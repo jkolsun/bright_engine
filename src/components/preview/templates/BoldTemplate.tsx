@@ -175,7 +175,7 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
             {phone && (
               <a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-sm"><Phone size={16} />Call {formatNavPhone(phone)}</a>
             )}
-            <button onClick={() => { onCTAClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-white/10 border border-white/15 text-white font-bold text-sm hover:bg-white hover:text-gray-900 transition-all">Get Free Quote</button>
+            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-white/10 border border-white/15 text-white font-bold text-sm hover:bg-white hover:text-gray-900 transition-all">Get Free Quote</button>
           </div>
         </div>
       </div>
@@ -201,7 +201,7 @@ function FAQItem({ question, answer, isOpen, onToggle }: { question: string; ans
 }
 
 /* ═══════ CTA BAND (reused on multiple pages) ═══════ */
-function CTABand({ phone, onCallClick, onCTAClick }: { phone?: string; onCallClick: () => void; onCTAClick: () => Promise<void> }) {
+function CTABand({ phone, onCallClick, onCTAClick, onNavigateContact }: { phone?: string; onCallClick: () => void; onCTAClick: () => Promise<void>; onNavigateContact: () => void }) {
   return (
     <section className="relative py-10 px-4 sm:px-6 md:px-8 bg-gradient-to-r from-orange-500 via-red-500 to-orange-500 overflow-hidden">
       <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
@@ -218,7 +218,7 @@ function CTABand({ phone, onCallClick, onCTAClick }: { phone?: string; onCallCli
             <Phone size={20} />{phone}
           </a>
         ) : (
-          <button onClick={onCTAClick} className="inline-flex items-center gap-2.5 bg-white text-gray-900 px-8 py-4 rounded-xl font-black text-base sm:text-lg hover:bg-gray-100 transition-all shadow-xl flex-shrink-0">
+          <button onClick={() => { onCTAClick(); onNavigateContact() }} className="inline-flex items-center gap-2.5 bg-white text-gray-900 px-8 py-4 rounded-xl font-black text-base sm:text-lg hover:bg-gray-100 transition-all shadow-xl flex-shrink-0">
             Get Free Quote <ArrowRight size={18} />
           </button>
         )}
@@ -332,7 +332,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                   <Phone size={14} />{formatNavPhone(lead.phone)}
                 </a>
               )}
-              <button onClick={onCTAClick} className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40">Free Quote</button>
+              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40">Free Quote</button>
               <button onClick={() => setMobileNavOpen(true)} className="lg:hidden w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-300 hover:text-white transition-colors"><Menu size={20} /></button>
             </div>
           </div>
@@ -583,7 +583,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         </section>
 
         {/* HOMEPAGE: CTA BAND */}
-        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} />
+        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -648,7 +648,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           </section>
         )}
 
-        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} />
+        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -774,7 +774,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           </div>
         </section>
 
-        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} />
+        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -833,7 +833,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           </div>
         </section>
 
-        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} />
+        <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════

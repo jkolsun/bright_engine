@@ -31,6 +31,7 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
   const [showPreview, setShowPreview] = useState(true)
   const [showChat, setShowChat] = useState(true)
   const [snapshotError, setSnapshotError] = useState<string | null>(null)
+  const [isRegenerating, setIsRegenerating] = useState(false)
 
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
 
@@ -144,6 +145,37 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
     }
   }, [html, props.leadId, saveHtml])
 
+  const handleRegenerate = useCallback(async () => {
+    if (!confirm('Regenerate from template? This will replace the current HTML with a fresh snapshot.')) return
+    setIsRegenerating(true)
+    try {
+      // Clear siteHtml first so snapshot route generates fresh
+      await fetch(`/api/site-editor/${props.leadId}/save`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html: '' }),
+      })
+      // Force regenerate
+      const res = await fetch(`/api/site-editor/${props.leadId}/snapshot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: true }),
+      })
+      const data = await res.json()
+      if (res.ok && data.html) {
+        setHtml(data.html)
+        setOriginalHtml(data.html)
+        setSaveStatus('saved')
+      } else {
+        alert(data.error || 'Failed to regenerate snapshot')
+      }
+    } catch {
+      alert('Network error regenerating snapshot')
+    } finally {
+      setIsRegenerating(false)
+    }
+  }, [props.leadId])
+
   const handleReset = useCallback(() => {
     if (confirm('Reset to original HTML? Your changes will be lost.')) {
       setHtml(originalHtml)
@@ -159,6 +191,8 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
         saveStatus={saveStatus}
         onSave={handleManualSave}
         onReset={handleReset}
+        onRegenerate={handleRegenerate}
+        isRegenerating={isRegenerating}
         onTogglePreview={() => setShowPreview(p => !p)}
         onToggleChat={() => setShowChat(c => !c)}
         showPreview={showPreview}

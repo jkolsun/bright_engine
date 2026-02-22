@@ -75,7 +75,7 @@ export default function PreviewPanel({ html }: PreviewPanelProps) {
             height: '100%',
             border: 'none',
           }}
-          sandbox="allow-scripts allow-same-origin"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation"
           title="Site Preview"
         />
       </div>

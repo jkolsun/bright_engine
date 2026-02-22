@@ -90,14 +90,14 @@ function ChatbotWidget({ companyName, accentColor = '#78716c' }: { companyName: 
   )
 }
 
-function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
+function MobileNav({ isOpen, onClose, companyName, logo, sections, phone, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; logo?: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
   if (!isOpen) return null
   return (
     <div className="fixed inset-0 z-[90] lg:hidden">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
       <div className="absolute right-0 top-0 bottom-0 w-[300px] bg-white shadow-2xl">
         <div className="p-6 h-full flex flex-col">
-          <div className="flex justify-between items-center mb-10"><span className="text-lg font-bold text-stone-800">{companyName}</span><button onClick={onClose} className="w-9 h-9 rounded-lg bg-stone-100 flex items-center justify-center text-stone-500"><X size={18} /></button></div>
+          <div className="flex justify-between items-center mb-10"><div className="flex items-center gap-2">{logo ? (<img src={logo} alt="" className="h-7 w-7 rounded-lg object-cover" />) : null}<span className="text-lg font-bold text-stone-800">{companyName}</span></div><button onClick={onClose} className="w-9 h-9 rounded-lg bg-stone-100 flex items-center justify-center text-stone-500"><X size={18} /></button></div>
           <nav className="space-y-1 flex-1">{sections.map((s) => (<button key={s.page} data-nav-page={s.page} onClick={() => { onNavigate(s.page); onClose() }} className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-stone-700 hover:bg-stone-50 transition-all text-[15px] font-medium">{s.label}<ChevronRight size={16} className="text-stone-300" /></button>))}</nav>
           <div className="flex gap-3 mb-5">
             <a href="#" className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center text-stone-500 hover:text-stone-700 transition-colors"><Facebook size={16} /></a>
@@ -106,7 +106,7 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
           </div>
           <div className="space-y-3">
             {phone && (<a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-stone-100 text-stone-800 font-bold text-sm border border-stone-200"><Phone size={16} />Call {formatNavPhone(phone)}</a>)}
-            <button onClick={() => { onCTAClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-stone-800 text-white font-bold text-sm">Get Free Estimate</button>
+            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-stone-800 text-white font-bold text-sm">Get Free Estimate</button>
           </div>
         </div>
       </div>
@@ -129,7 +129,7 @@ function FAQItem({ question, answer, isOpen, onToggle }: { question: string; ans
 }
 
 /* ═══════ CTA BAND (reused on multiple pages) ═══════ */
-function CTABand({ closingHeadline, location, gradient, onCTAClick }: { closingHeadline?: string; location: string; gradient: string; onCTAClick: () => Promise<void> }) {
+function CTABand({ closingHeadline, location, gradient, onCTAClick, onNavigateContact }: { closingHeadline?: string; location: string; gradient: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void }) {
   return (
     <section className={`relative py-16 sm:py-20 md:py-28 overflow-hidden bg-gradient-to-r ${gradient}`}>
       <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
@@ -138,7 +138,7 @@ function CTABand({ closingHeadline, location, gradient, onCTAClick }: { closingH
         <Quote size={40} className="text-white/15 mx-auto mb-6" />
         <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-snug">{closingHeadline || "We treat your home like it's our own. That's our promise."}</p>
         <div className="w-12 h-0.5 bg-white/25 mx-auto my-6 rounded-full" />
-        <button onClick={onCTAClick} className="inline-flex items-center gap-2.5 bg-white text-stone-800 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-stone-50 transition-all shadow-lg group">
+        <button onClick={() => { onCTAClick(); onNavigateContact() }} className="inline-flex items-center gap-2.5 bg-white text-stone-800 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-stone-50 transition-all shadow-lg group">
           Get Started <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
         </button>
         {location && <p className="mt-6 text-white/30 text-sm font-medium tracking-wide">{location}</p>}
@@ -216,7 +216,9 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
           <div className="flex items-center justify-between h-[68px]">
             <button onClick={() => navigateTo('home')} className="flex items-center gap-3 cursor-pointer">
-              {lead.logo && <img src={lead.logo} alt="" className="h-8 w-8 rounded-lg object-cover" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />}
+              {lead.logo ? (
+                <img src={lead.logo} alt="" className="h-8 w-8 rounded-lg object-cover" />
+              ) : null}
               <span className="text-lg font-bold text-stone-800">{lead.companyName}</span>
             </button>
             <div className="hidden lg:flex items-center gap-1.5">{navSections.map((s) => (
@@ -230,14 +232,14 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
               </div>
               <div className="hidden md:block w-px h-5 bg-stone-200" />
               {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-sm font-medium text-stone-500 hover:text-stone-800 transition-colors"><Phone size={14} />{formatNavPhone(lead.phone)}</a>)}
-              <button onClick={onCTAClick} className={`hidden sm:flex bg-gradient-to-r ${config.gradient} text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-all shadow-md`}>Free Estimate</button>
+              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className={`hidden sm:flex bg-gradient-to-r ${config.gradient} text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-all shadow-md`}>Free Estimate</button>
               <button onClick={() => setMobileNavOpen(true)} className="lg:hidden w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center text-stone-600"><Menu size={20} /></button>
             </div>
           </div>
         </div>
       </nav>
 
-      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} />
+      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} logo={lead.logo} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} />
 
       {/* ═══════════════════════════════════════════
           PAGE: HOME
@@ -302,7 +304,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
               <div className="flex items-end justify-between mb-12 sm:mb-16">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] font-semibold text-stone-400 mb-3">Our Services</p>
-                  <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 leading-tight">What we do best.</h2>
+                  <h2 className="font-display text-3xl sm:text-4xl font-bold text-stone-900 leading-tight">What we do best.</h2>
                 </div>
                 <button onClick={() => navigateTo('services')} className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-800 transition-colors group">
                   View All Services <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -340,7 +342,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
               <ScrollReveal animation="fade-left" delay={0}>
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] font-semibold text-stone-400 mb-4">About Us</p>
-                <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 leading-tight mb-6">A name you can trust.</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-stone-900 leading-tight mb-6">A name you can trust.</h2>
                 <p className="text-stone-600 text-base leading-relaxed mb-6">{wc?.aboutParagraph1 || `${lead.companyName} delivers reliable ${industryLabel}${location ? ` across ${location}` : ''} — on time, honest, and guaranteed.`}</p>
                 <div className="flex flex-wrap gap-8 mb-8">
                   <div><p className="font-display text-3xl font-bold text-stone-800">{hasRating ? lead.enrichedRating : '5.0'}</p><p className="text-[11px] uppercase tracking-[0.2em] text-stone-500 mt-1">Star Rating</p></div>
@@ -379,7 +381,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
               <div className="flex items-end justify-between mb-10 sm:mb-14">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] font-semibold text-stone-400 mb-3">Portfolio</p>
-                  <h2 className="text-3xl sm:text-4xl font-bold text-stone-900">Quality you can see.</h2>
+                  <h2 className="font-display text-3xl sm:text-4xl font-bold text-stone-900">Quality you can see.</h2>
                 </div>
                 <button onClick={() => navigateTo('portfolio')} className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-800 transition-colors group">
                   View Our Work <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -419,7 +421,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
         </section>
 
         {/* HOMEPAGE: CTA BAND */}
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} gradient={config.gradient} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} gradient={config.gradient} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -478,7 +480,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
           </section>
         )}
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} gradient={config.gradient} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} gradient={config.gradient} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -500,7 +502,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
               <ScrollReveal animation="fade-left" delay={0} className="lg:col-span-3">
               <div>
-                <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 leading-tight mb-6">A name you can trust.</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-stone-900 leading-tight mb-6">A name you can trust.</h2>
                 <div className="space-y-4 text-stone-600 text-base leading-relaxed">
                   <p>{wc?.aboutParagraph1 || `${lead.companyName} delivers reliable ${industryLabel}${location ? ` across ${location}` : ''} — on time, honest, and guaranteed.`}</p>
                   {wc?.aboutParagraph2 && <p className="text-gray-500">{wc.aboutParagraph2}</p>}
@@ -550,7 +552,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
             <ScrollReveal animation="fade-up" delay={0}>
             <div className="text-center mb-12 sm:mb-16">
               <p className="text-xs uppercase tracking-[0.2em] font-semibold text-stone-400 mb-3">Testimonials</p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-stone-900">Trusted by the community.</h2>
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-stone-900">Trusted by the community.</h2>
             </div>
             </ScrollReveal>
             <div className={testimonials.length === 1 ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 md:grid-cols-2 gap-6'}>
@@ -570,7 +572,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} gradient={config.gradient} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} gradient={config.gradient} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -629,7 +631,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} location={location} gradient={config.gradient} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} location={location} gradient={config.gradient} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -651,7 +653,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
               <ScrollReveal animation="fade-left" delay={0}>
               <div>
-                <h2 className="text-3xl sm:text-4xl font-bold text-stone-900 leading-tight mb-6">Contact Information</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-stone-900 leading-tight mb-6">Contact Information</h2>
                 <p className="text-stone-500 text-base leading-relaxed mb-10">{wc?.closingBody || `Free estimates, fast response. Reach out today.`}</p>
                 <div className="space-y-5">
                   {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4"><div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center flex-shrink-0 shadow-sm`}><Phone size={20} className="text-white" /></div><div><p className="text-sm font-bold text-stone-800">{lead.phone}</p><p className="text-xs text-stone-400">Call or text anytime</p></div></a>)}
@@ -702,7 +704,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-14">
               <p className="text-xs uppercase tracking-[0.2em] font-semibold text-stone-400 mb-3">Common Questions</p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-stone-900">Frequently asked questions.</h2>
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-stone-900">Frequently asked questions.</h2>
             </div>
             <div className="bg-stone-50 rounded-2xl border border-stone-200/60 px-6 sm:px-8">
               {faqs.map((f, i) => <FAQItem key={i} question={f.q} answer={f.a} isOpen={openFAQ === i} onToggle={() => setOpenFAQ(openFAQ === i ? null : i)} />)}
@@ -717,7 +719,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
             <div>
-              <span className="text-white font-bold text-lg">{lead.companyName}</span>
+              <div className="flex items-center gap-2.5">{lead.logo ? (<img src={lead.logo} alt="" className="h-7 w-7 rounded-lg object-cover" />) : null}<span className="text-white font-bold text-lg">{lead.companyName}</span></div>
               <p className="text-stone-400 text-sm leading-relaxed mt-3">Trusted {industryLabel} professionals{location ? ` in ${location}` : ''}. Licensed, insured, committed to quality.</p>
               {hasRating && (<div className="flex items-center gap-2 mt-4"><div className="flex gap-0.5">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={11} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-amber-400 fill-current' : 'text-stone-700'} />)}</div><span className="text-stone-500 text-xs">{lead.enrichedRating} rating</span></div>)}
               <div className="flex gap-2.5 mt-5">

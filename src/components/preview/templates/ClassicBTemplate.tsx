@@ -120,7 +120,7 @@ function ChatbotWidget({ companyName, accentColor = '#15803d' }: { companyName: 
 }
 
 // ─── MOBILE NAV ───
-function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
+function MobileNav({ isOpen, onClose, companyName, logo, sections, phone, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; logo?: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
   if (!isOpen) return null
   return (
     <div className="fixed inset-0 z-[90] lg:hidden">
@@ -128,7 +128,7 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
       <div className="absolute right-0 top-0 bottom-0 w-[300px] bg-white shadow-2xl">
         <div className="p-6 h-full flex flex-col">
           <div className="flex justify-between items-center mb-10">
-            <div className="flex items-center gap-2"><div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-700 to-emerald-600 flex items-center justify-center"><Leaf size={13} className="text-white" /></div><span className="text-lg font-bold text-green-900">{companyName}</span></div>
+            <div className="flex items-center gap-2">{logo ? (<img src={logo} alt="" className="h-7 w-7 rounded-lg object-cover" />) : (<div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-700 to-emerald-600 flex items-center justify-center"><Leaf size={13} className="text-white" /></div>)}<span className="text-lg font-bold text-green-900">{companyName}</span></div>
             <button onClick={onClose} className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center text-green-700"><X size={18} /></button>
           </div>
           <nav className="space-y-1 flex-1">{sections.map((s) => (<button key={s.page} data-nav-page={s.page} onClick={() => { onNavigate(s.page); onClose() }} className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-green-800 hover:bg-green-50 transition-all text-[15px] font-medium">{s.label}<ChevronRight size={16} className="text-green-300" /></button>))}</nav>
@@ -139,7 +139,7 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
           </div>
           <div className="space-y-3">
             {phone && (<a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-green-50 text-green-900 font-bold text-sm border border-green-200"><Phone size={16} />Call {formatNavPhone(phone)}</a>)}
-            <button onClick={() => { onCTAClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-green-700 to-emerald-600 text-white font-bold text-sm">Get Free Estimate</button>
+            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-green-700 to-emerald-600 text-white font-bold text-sm">Get Free Estimate</button>
           </div>
         </div>
       </div>
@@ -165,7 +165,7 @@ function FAQItem({ question, answer, isOpen, onToggle }: { question: string; ans
 }
 
 /* ═══════ CTA BAND (reused on multiple pages) ═══════ */
-function CTABand({ closingHeadline, companyName, location, onCTAClick }: { closingHeadline?: string; companyName: string; location: string; onCTAClick: () => Promise<void> }) {
+function CTABand({ closingHeadline, companyName, location, onCTAClick, onNavigateContact }: { closingHeadline?: string; companyName: string; location: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void }) {
   return (
     <section className="relative py-16 sm:py-20 md:py-28 overflow-hidden bg-gradient-to-r from-green-700 via-emerald-700 to-green-800">
       <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
@@ -173,7 +173,7 @@ function CTABand({ closingHeadline, companyName, location, onCTAClick }: { closi
       <div className="relative max-w-4xl mx-auto px-5 sm:px-8 text-center">
         <Quote size={40} className="text-white/15 mx-auto mb-6" />
         <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-snug">{closingHeadline || "We don't just do the job — we build relationships that last."}</p>
-        <button onClick={onCTAClick} className="mt-8 inline-flex items-center gap-2.5 bg-white text-green-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-green-50 transition-all shadow-xl group">
+        <button onClick={() => { onCTAClick(); onNavigateContact() }} className="mt-8 inline-flex items-center gap-2.5 bg-white text-green-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-green-50 transition-all shadow-xl group">
           Get Free Estimate <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
         </button>
         <p className="mt-6 text-white/50 text-sm font-medium">— The {companyName} Team{location ? ` · ${location}` : ''}</p>
@@ -251,7 +251,11 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
         <div className="max-w-7xl mx-auto px-5 sm:px-8">
           <div className="flex items-center justify-between h-[68px]">
             <button onClick={() => navigateTo('home')} className="flex items-center gap-2.5 cursor-pointer">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-700 to-emerald-600 flex items-center justify-center"><Leaf size={15} className="text-white" /></div>
+              {lead.logo ? (
+                <img src={lead.logo} alt="" className="h-8 w-8 rounded-lg object-cover" />
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-700 to-emerald-600 flex items-center justify-center"><Leaf size={15} className="text-white" /></div>
+              )}
               <span className="text-lg font-bold text-green-900">{lead.companyName}</span>
             </button>
             <div className="hidden lg:flex items-center gap-1.5">{navSections.map((s) => (
@@ -265,14 +269,14 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               </div>
               <div className="hidden md:block w-px h-5 bg-green-200" />
               {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-sm font-medium text-green-700/60 hover:text-green-900"><Phone size={14} />{formatNavPhone(lead.phone)}</a>)}
-              <button onClick={onCTAClick} className="hidden sm:flex bg-gradient-to-r from-green-700 to-emerald-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-all shadow-md">Free Estimate</button>
+              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className="hidden sm:flex bg-gradient-to-r from-green-700 to-emerald-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-all shadow-md">Free Estimate</button>
               <button onClick={() => setMobileNavOpen(true)} className="lg:hidden w-10 h-10 rounded-lg bg-green-50 text-green-700 flex items-center justify-center transition-colors"><Menu size={20} /></button>
             </div>
           </div>
         </div>
       </nav>
 
-      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} />
+      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} logo={lead.logo} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} />
 
       {/* ═══════════════════════════════════════════
           PAGE: HOME
@@ -342,7 +346,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               <div className="flex items-end justify-between mb-12 sm:mb-16">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-3">What We Do</p>
-                  <h2 className="text-3xl sm:text-4xl font-bold text-green-950 leading-tight">Our Services</h2>
+                  <h2 className="font-display text-3xl sm:text-4xl font-bold text-green-950 leading-tight">Our Services</h2>
                 </div>
                 <button onClick={() => navigateTo('services')} className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-600 transition-colors group">
                   View All Services <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -380,7 +384,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               <ScrollReveal animation="fade-left" delay={0}>
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-4">Our Story</p>
-                <h2 className="text-3xl sm:text-4xl font-bold text-green-950 leading-tight mb-6">Built on trust. Driven by community.</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-green-950 leading-tight mb-6">Built on trust. Driven by community.</h2>
                 <p className="text-green-800/55 text-base leading-relaxed mb-6">{wc?.aboutParagraph1 || `${lead.companyName} delivers trusted ${industryLabel}${location ? ` across ${location}` : ''} — honest work, every time.`}</p>
                 <div className="flex flex-wrap gap-8 mb-8">
                   <div><p className="text-3xl font-bold text-green-700">{hasRating ? lead.enrichedRating : '5.0'}</p><p className="text-[11px] uppercase tracking-[0.2em] text-green-700/40 mt-1">Star Rating</p></div>
@@ -419,7 +423,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               <div className="flex items-end justify-between mb-10 sm:mb-14">
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-3">Our Work</p>
-                  <h2 className="text-3xl sm:text-4xl font-bold text-green-950">See the difference.</h2>
+                  <h2 className="font-display text-3xl sm:text-4xl font-bold text-green-950">See the difference.</h2>
                 </div>
                 <button onClick={() => navigateTo('portfolio')} className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-600 transition-colors group">
                   View Our Work <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -459,7 +463,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
         </section>
 
         {/* HOMEPAGE: CTA BAND */}
-        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -518,7 +522,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
           </section>
         )}
 
-        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -544,7 +548,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               <ScrollReveal animation="fade-right" delay={200} className="lg:col-span-7">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-4">Our Story</p>
-                <h2 className="text-3xl sm:text-4xl font-bold text-green-950 leading-tight mb-6">Built on trust. Driven by community.</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-green-950 leading-tight mb-6">Built on trust. Driven by community.</h2>
                 <div className="text-green-800/55 text-base leading-relaxed">
                   <p>{wc?.aboutParagraph1 || `${lead.companyName} delivers trusted ${industryLabel}${location ? ` across ${location}` : ''} — honest work, every time.`}</p>
                   {wc?.aboutParagraph2 && (
@@ -578,7 +582,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
             <ScrollReveal animation="fade-up" delay={0}>
             <div className="text-center mb-12 sm:mb-16">
               <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-3">Reviews</p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-green-950">What our customers say.</h2>
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-green-950">What our customers say.</h2>
             </div>
             </ScrollReveal>
             <div className={testimonials.length === 1 ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 md:grid-cols-2 gap-6'}>
@@ -598,7 +602,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -657,7 +661,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -680,7 +684,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               <ScrollReveal animation="fade-left" delay={0}>
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-4">Get In Touch</p>
-                <h2 className="text-3xl sm:text-4xl font-bold text-green-950 leading-tight mb-6">Ready to get started?</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-green-950 leading-tight mb-6">Ready to get started?</h2>
                 <p className="text-green-800/50 text-base leading-relaxed mb-10">{wc?.closingBody || `Free estimates, fast response. Reach out today.`}</p>
                 <div className="space-y-5">
                   {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 group"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-700 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm"><Phone size={20} className="text-white" /></div><div><p className="text-sm font-bold text-green-900">{lead.phone}</p><p className="text-xs text-green-600/40">Call or text anytime</p></div></a>)}
@@ -731,7 +735,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
             <ScrollReveal animation="fade-up" delay={0}>
             <div className="text-center mb-14">
               <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-3">Common Questions</p>
-              <h2 className="text-3xl sm:text-4xl font-bold text-green-950">Got questions? We've got answers.</h2>
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-green-950">Got questions? We've got answers.</h2>
             </div>
             </ScrollReveal>
             <ScrollReveal animation="fade-up" delay={200}>
@@ -748,7 +752,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
             <div>
-              <div className="flex items-center gap-2.5 mb-4"><div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-600 to-emerald-500 flex items-center justify-center"><Leaf size={14} className="text-white" /></div><span className="text-white font-bold text-lg">{lead.companyName}</span></div>
+              <div className="flex items-center gap-2.5 mb-4">{lead.logo ? (<img src={lead.logo} alt="" className="h-7 w-7 rounded-lg object-cover" />) : (<div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-600 to-emerald-500 flex items-center justify-center"><Leaf size={14} className="text-white" /></div>)}<span className="text-white font-bold text-lg">{lead.companyName}</span></div>
               <p className="text-green-200/40 text-sm leading-relaxed">Trusted {industryLabel} professionals{location ? ` in ${location}` : ''}. Licensed, insured, committed to quality.</p>
               {hasRating && (<div className="flex items-center gap-2 mt-4"><div className="flex gap-0.5">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={11} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-amber-400 fill-current' : 'text-green-800'} />)}</div><span className="text-green-200/40 text-xs">{lead.enrichedRating} rating</span></div>)}
               <div className="flex gap-2.5 mt-5">

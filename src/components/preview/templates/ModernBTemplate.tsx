@@ -104,7 +104,7 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
           </div>
           <div className="space-y-3">
             {phone && (<a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gray-100 text-gray-800 font-bold text-sm border border-gray-200"><Phone size={16} />Call {formatNavPhone(phone)}</a>)}
-            <button onClick={() => { onCTAClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold text-sm">Get Free Quote</button>
+            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold text-sm">Get Free Quote</button>
           </div>
         </div>
       </div>
@@ -127,7 +127,7 @@ function FAQItem({ question, answer, isOpen, onToggle }: { question: string; ans
 }
 
 /* ═══════ CTA BAND (reused on multiple pages) ═══════ */
-function CTABand({ closingHeadline, onCTAClick }: { closingHeadline?: string; onCTAClick: () => Promise<void> }) {
+function CTABand({ closingHeadline, onCTAClick, onNavigateContact }: { closingHeadline?: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void }) {
   return (
     <section className="relative py-16 sm:py-20 md:py-24 overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-violet-600">
       <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
@@ -135,7 +135,7 @@ function CTABand({ closingHeadline, onCTAClick }: { closingHeadline?: string; on
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 md:px-8 text-center">
         <Quote size={36} className="text-white/15 mx-auto mb-5" />
         <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-snug mb-8">{closingHeadline || "Quality work. Honest pricing. Guaranteed."}</p>
-        <button onClick={onCTAClick} className="inline-flex items-center gap-2.5 bg-white text-violet-700 px-8 py-4 rounded-full font-semibold text-lg hover:bg-violet-50 transition-all shadow-lg group">
+        <button onClick={() => { onCTAClick(); onNavigateContact() }} className="inline-flex items-center gap-2.5 bg-white text-violet-700 px-8 py-4 rounded-full font-semibold text-lg hover:bg-violet-50 transition-all shadow-lg group">
           Get Started <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
         </button>
       </div>
@@ -225,7 +225,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
               </div>
               <div className="hidden md:block w-px h-5 bg-gray-200" />
               {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-sm text-gray-500 hover:text-violet-600 font-medium"><Phone size={14} />{formatNavPhone(lead.phone)}</a>)}
-              <button onClick={onCTAClick} className="hidden sm:flex bg-gradient-to-r from-violet-500 to-purple-600 text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:from-violet-600 hover:to-purple-700 transition-all shadow-md">Free Quote</button>
+              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className="hidden sm:flex bg-gradient-to-r from-violet-500 to-purple-600 text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:from-violet-600 hover:to-purple-700 transition-all shadow-md">Free Quote</button>
               <button onClick={() => setMobileNavOpen(true)} className="lg:hidden w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600"><Menu size={20} /></button>
             </div>
           </div>
@@ -301,7 +301,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
               <div className="flex items-end justify-between mb-12 sm:mb-14">
                 <div>
                   <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100">Services</div>
-                  <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">What we do.</h2>
+                  <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">What we do.</h2>
                 </div>
                 <button onClick={() => navigateTo('services')} className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-violet-600 hover:text-violet-500 transition-colors group">
                   View All Services <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -339,7 +339,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
               <ScrollReveal animation="fade-left">
               <div>
                 <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100">About {lead.companyName}</div>
-                <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-6">Your trusted {industryLabel} professionals.</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-6">Your trusted {industryLabel} professionals.</h2>
                 <p className="text-gray-500 text-base leading-relaxed mb-6">
                   {wc?.aboutParagraph1 || `${lead.companyName} delivers expert ${industryLabel}${location ? ` in ${location}` : ''}. Licensed, insured, and dedicated to getting it right.`}
                 </p>
@@ -373,7 +373,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
               <div className="flex items-end justify-between mb-10 sm:mb-14">
                 <div>
                   <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100"><Camera size={12} />Portfolio</div>
-                  <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Our recent work.</h2>
+                  <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900">Our recent work.</h2>
                 </div>
                 <button onClick={() => navigateTo('portfolio')} className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-violet-600 hover:text-violet-500 transition-colors group">
                   View Our Work <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -413,7 +413,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
         </section>
 
         {/* HOMEPAGE: CTA BAND */}
-        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -474,7 +474,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
           </section>
         )}
 
-        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -497,7 +497,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
               <ScrollReveal animation="fade-left" className="lg:col-span-3">
               <div>
                 <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100">About {lead.companyName}</div>
-                <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-6">Your trusted {industryLabel} professionals.</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-6">Your trusted {industryLabel} professionals.</h2>
                 <div className="space-y-4 text-gray-500 text-base leading-relaxed">
                   <p>{wc?.aboutParagraph1 || `${lead.companyName} delivers expert ${industryLabel}${location ? ` in ${location}` : ''}. Licensed, insured, and dedicated to getting it right.`}</p>
                   {wc?.aboutParagraph2 && <p>{wc.aboutParagraph2}</p>}
@@ -542,7 +542,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
             <ScrollReveal animation="fade-up">
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100">Reviews</div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">What clients say.</h2>
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900">What clients say.</h2>
             </div>
             </ScrollReveal>
             <div className={testimonials.length === 1 ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 md:grid-cols-2 gap-6'}>
@@ -562,7 +562,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -620,7 +620,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
           </div>
         </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} />
+        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -642,7 +642,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
               <ScrollReveal animation="fade-left">
               <div>
-                <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-8">Get your free estimate.</h2>
+                <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-8">Get your free estimate.</h2>
                 <div className="space-y-5">
                   {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-sm"><Phone size={20} className="text-white" /></div><div><p className="text-sm font-bold text-gray-800">{lead.phone}</p><p className="text-xs text-gray-400">Call or text anytime</p></div></a>)}
                   {lead.email && (<a href={`mailto:${lead.email}`} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-sm"><Mail size={20} className="text-white" /></div><div><p className="text-sm font-bold text-gray-800">{lead.email}</p><p className="text-xs text-gray-400">We reply fast</p></div></a>)}
@@ -692,7 +692,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
             <ScrollReveal animation="fade-up">
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100">FAQ</div>
-              <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">Common questions.</h2>
+              <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900">Common questions.</h2>
             </div>
             </ScrollReveal>
             <ScrollReveal animation="fade-up" delay={100}>
