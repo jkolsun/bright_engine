@@ -71,6 +71,7 @@ export async function GET(request: NextRequest) {
           name: rep.name,
           email: rep.email,
           phone: rep.phone,
+          assignedDialerPhone: rep.assignedDialerPhone,
           status: rep.status,
           portalType: rep.portalType,
           createdAt: rep.createdAt,

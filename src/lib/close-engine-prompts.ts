@@ -483,6 +483,7 @@ export function buildPostClientSystemPrompt(context: {
   messages: Array<{ direction: string; content: string }>
   onboardingStep?: number
   onboardingData?: Record<string, unknown>
+  onboardingStageTemplate?: string
 }): string {
   const {
     companyName,
@@ -495,10 +496,11 @@ export function buildPostClientSystemPrompt(context: {
     messages,
     onboardingStep,
     onboardingData,
+    onboardingStageTemplate,
   } = context
 
   const onboardingSection = onboardingStep !== undefined && onboardingStep > 0 && onboardingStep < 7
-    ? buildOnboardingPromptSection(onboardingStep, onboardingData || {}, companyName)
+    ? buildOnboardingPromptSection(onboardingStep, onboardingData || {}, companyName, onboardingStageTemplate)
     : ''
 
   // During onboarding, include onboarding-specific intents in the response format
@@ -572,7 +574,7 @@ You MUST respond with valid JSON only. No text before or after the JSON.
 }`
 }
 
-function buildOnboardingPromptSection(step: number, data: Record<string, unknown>, _companyName: string): string {
+function buildOnboardingPromptSection(step: number, data: Record<string, unknown>, _companyName: string, stageTemplate?: string): string {
   const stagingUrl = data.stagingUrl as string || 'being prepared'
   const requestedDomain = (data.domainPreference || data.requestedDomain) as string || null
 
@@ -637,7 +639,14 @@ If they confirm (positive response like "looks good", "perfect", "love it"):
 If they request changes: set intent to "EDIT_REQUEST" with details.`,
   }
 
-  return sections[step] || ''
+  let prompt = sections[step] || ''
+
+  // Append admin's custom stage template if set in Settings > Post-AQ
+  if (stageTemplate) {
+    prompt += `\n\n[ADMIN ONBOARDING INSTRUCTIONS]\n${stageTemplate}`
+  }
+
+  return prompt
 }
 
 // ============================================

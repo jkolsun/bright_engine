@@ -162,9 +162,10 @@ export async function initiateParallelDial(options: DialOptions): Promise<DialRe
 
     for (const { call, lead } of callRecords) {
       try {
+        const dialerFrom = await getDialerNumber(repId)
         const twilioCall = await client.calls.create({
           to: lead.phone,
-          from: getDialerNumber(call.lineNumber || 1),
+          from: dialerFrom,
           url: `${process.env.BASE_URL}/api/webhooks/twilio-voice?callId=${call.id}&batchId=${batchId}&repId=${repId}`,
           statusCallback: `${process.env.BASE_URL}/api/webhooks/twilio-voice?event=status&callId=${call.id}`,
           statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
@@ -779,11 +780,20 @@ export async function updateDialerSettings(updates: Partial<DialerSettings>) {
 // HELPER: Get dialer phone number for a line
 // ============================================
 
-function getDialerNumber(lineNumber: number): string {
-  const numbers = [
-    process.env.TWILIO_DIALER_NUMBER_1 || process.env.TWILIO_PHONE_NUMBER || '',
-    process.env.TWILIO_DIALER_NUMBER_2 || process.env.TWILIO_PHONE_NUMBER || '',
-    process.env.TWILIO_DIALER_NUMBER_3 || process.env.TWILIO_PHONE_NUMBER || '',
-  ]
-  return numbers[(lineNumber - 1) % numbers.length] || process.env.TWILIO_PHONE_NUMBER || ''
+async function getDialerNumber(repId: string): Promise<string> {
+  // 1. Check rep's assigned dialer phone (set by admin in Settings → Team)
+  try {
+    const rep = await prisma.user.findUnique({
+      where: { id: repId },
+      select: { assignedDialerPhone: true },
+    })
+    if (rep?.assignedDialerPhone) return rep.assignedDialerPhone
+  } catch { /* fallback to env pool */ }
+
+  // 2. Fallback to first available dialer number from env
+  return process.env.TWILIO_DIALER_NUMBER_1
+    || process.env.TWILIO_DIALER_NUMBER_2
+    || process.env.TWILIO_DIALER_NUMBER_3
+    || process.env.TWILIO_PHONE_NUMBER
+    || ''
 }

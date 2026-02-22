@@ -27,7 +27,8 @@ export async function GET(request: NextRequest) {
 
   const where: any = {}
   
-  // Default: hide CLOSED_LOST (soft deleted) leads unless explicitly requested
+  // Default: hide PAID and CLOSED_LOST leads unless explicitly requested
+  // PAID leads are now clients and appear on the clients page
   if (status) {
     if (status.includes(',')) {
       where.status = { in: status.split(',') }
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
       where.status = status
     }
   } else {
-    where.NOT = { status: 'CLOSED_LOST' }
+    where.status = { notIn: ['CLOSED_LOST', 'PAID'] }
   }
   
   if (source) where.source = source

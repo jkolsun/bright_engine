@@ -30,6 +30,7 @@ model User {
   availableHours           Json?                     @map("available_hours")
   onboardingComplete       Boolean                   @default(false) @map("onboarding_complete")
   personalPhone            String?                   @map("personal_phone")
+  assignedDialerPhone      String?                   @map("assigned_dialer_phone")
   stripeConnectId          String?                   @map("stripe_connect_id")
   stripeConnectStatus      String?                   @map("stripe_connect_status")
   timezone                 String?                   @default("America/New_York")

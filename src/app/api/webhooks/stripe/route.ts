@@ -309,14 +309,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     console.error('[Stripe Webhook] Onboarding email sequence failed:', err)
   }
 
-  // ── Step 11: Send confirmation SMS ──
+  // ── Step 11: Send confirmation SMS (uses Post-AQ onboarding flow settings) ──
   try {
-    const { getSystemMessage } = await import('@/lib/system-messages')
-    const { text: welcomeMessage, enabled: welcomeEnabled } = await getSystemMessage('welcome_after_payment', {
+    const { getOnboardingFlowSettings, interpolateTemplate } = await import('@/lib/onboarding')
+    const flowSettings = await getOnboardingFlowSettings()
+    const welcomeMessage = interpolateTemplate(flowSettings.welcome, {
       firstName: lead.firstName || 'there',
+      companyName: lead.companyName || 'your business',
     })
 
-    if (welcomeEnabled && lead.phone) {
+    if (lead.phone) {
       const { sendSMSViaProvider } = await import('@/lib/sms-provider')
       await sendSMSViaProvider({
         to: lead.phone,
@@ -324,7 +326,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         leadId: lead.id,
         clientId: client.id,
         trigger: 'welcome_after_payment',
-        aiGenerated: true,
+        aiGenerated: false,
         conversationType: 'post_client',
         sender: 'clawdbot',
       })

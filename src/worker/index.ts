@@ -433,6 +433,9 @@ async function startWorkers() {
           case 'onboarding-advance-to-domain':
             await handleOnboardingAdvanceToDomain(job.data.clientId)
             break
+          case 'onboarding-gbp-prompt':
+            await handleOnboardingGbpPrompt(job.data.clientId)
+            break
           case 'onboarding-dns-check':
             await handleOnboardingDnsCheck(job.data.clientId)
             break
@@ -1311,7 +1314,7 @@ async function closeEngineExpireStalled() {
  * Sends the domain question SMS.
  */
 async function handleOnboardingAdvanceToDomain(clientId: string) {
-  const { getOnboarding, advanceOnboarding, ONBOARDING_STEPS } = await import('../lib/onboarding')
+  const { getOnboarding, advanceOnboarding, ONBOARDING_STEPS, getOnboardingFlowSettings, interpolateTemplate } = await import('../lib/onboarding')
   const onboarding = await getOnboarding(clientId)
   if (!onboarding || onboarding.onboardingStep !== ONBOARDING_STEPS.WELCOME) {
     console.log(`[Onboarding] Skipping domain advance — client ${clientId} not at step 1 (current: ${onboarding?.onboardingStep})`)
@@ -1327,18 +1330,12 @@ async function handleOnboardingAdvanceToDomain(clientId: string) {
   if (!client?.lead?.phone) return
 
   const { sendSMSViaProvider } = await import('../lib/sms-provider')
-  const { getSystemMessage } = await import('../lib/system-messages')
   const firstName = client.lead.firstName || 'there'
   const companyName = client.companyName
 
-  const { text: domainMessage, enabled } = await getSystemMessage('onboarding_domain_question', {
-    firstName,
-    companyName,
-  })
-  if (!enabled) {
-    console.log(`[Onboarding] Domain question message disabled — skipping for ${companyName}`)
-    return
-  }
+  // Use onboarding flow settings from Post-AQ settings
+  const flowSettings = await getOnboardingFlowSettings()
+  const domainMessage = interpolateTemplate(flowSettings.domainQuestion, { firstName, companyName })
 
   await sendSMSViaProvider({
     to: client.lead.phone,
@@ -1349,7 +1346,52 @@ async function handleOnboardingAdvanceToDomain(clientId: string) {
     conversationType: 'post_client',
   })
 
+  // Queue GBP prompt 30 minutes after domain question
+  const { addSequenceJob } = await import('./queue')
+  await addSequenceJob('onboarding-gbp-prompt', { clientId }, 30 * 60 * 1000)
+
   console.log(`[Onboarding] Domain question sent to ${client.lead.phone} for ${companyName}`)
+}
+
+/**
+ * Send the Google Business Profile prompt to the client.
+ * Fires ~30 minutes after the domain question.
+ */
+async function handleOnboardingGbpPrompt(clientId: string) {
+  const { getOnboarding, getOnboardingFlowSettings, interpolateTemplate } = await import('../lib/onboarding')
+  const onboarding = await getOnboarding(clientId)
+
+  // Only send if still at domain collection step (haven't moved past it yet)
+  if (!onboarding || onboarding.onboardingStep !== 2) {
+    console.log(`[Onboarding] Skipping GBP prompt — client ${clientId} not at step 2`)
+    return
+  }
+
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true },
+  })
+  if (!client?.lead?.phone) return
+
+  const flowSettings = await getOnboardingFlowSettings()
+  if (!flowSettings.gbpPrompt) return // Empty = disabled
+
+  const { sendSMSViaProvider } = await import('../lib/sms-provider')
+  const firstName = client.lead.firstName || 'there'
+  const companyName = client.companyName
+
+  const gbpMessage = interpolateTemplate(flowSettings.gbpPrompt, { firstName, companyName })
+
+  await sendSMSViaProvider({
+    to: client.lead.phone,
+    message: gbpMessage,
+    clientId,
+    sender: 'clawdbot',
+    trigger: 'onboarding_gbp_prompt',
+    conversationType: 'post_client',
+  })
+
+  console.log(`[Onboarding] GBP prompt sent to ${client.lead.phone} for ${companyName}`)
 }
 
 /**

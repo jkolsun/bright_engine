@@ -17,7 +17,7 @@ import {
 import {
   Plus, UserCheck, UserX, KeyRound, Copy, RefreshCw,
   DollarSign, Save, FileText, ChevronDown, ChevronRight,
-  RotateCcw,
+  RotateCcw, Phone,
 } from 'lucide-react'
 import { useSettingsContext } from '../_lib/context'
 import { AccordionSection, SectionHeader, FieldLabel, SaveButton } from '../_lib/components'
@@ -32,6 +32,7 @@ export default function TeamTab() {
     <div className="space-y-4">
       <RepsSection />
       <CommissionsSection />
+      <PhoneAssignmentsSection />
       <RepScriptsSection />
       <PerRepTargetsSection />
     </div>
@@ -943,6 +944,167 @@ function RepScriptsSection() {
             onClick={handleSave}
             saving={savingKey === 'personalization'}
             saved={savedKey === 'personalization'}
+          />
+        </div>
+      </div>
+    </AccordionSection>
+  )
+}
+
+// ─────────────────────────────────────────────────────────
+//  Section 3.5: Phone Assignments — Assign Twilio dialer numbers to reps
+// ─────────────────────────────────────────────────────────
+
+function formatPhoneDisplay(phone: string): string {
+  const digits = phone.replace(/\D/g, '')
+  if (digits.length === 11 && digits[0] === '1') return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
+  if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+  return phone
+}
+
+function PhoneAssignmentsSection() {
+  const [reps, setReps] = useState<{ id: string; name: string; status: string; assignedDialerPhone?: string | null }[]>([])
+  const [availableNumbers, setAvailableNumbers] = useState<string[]>([])
+  const [assignments, setAssignments] = useState<Record<string, string>>({}) // repId → phone
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    setLoading(true)
+    try {
+      const [repsRes, numbersRes] = await Promise.all([
+        fetch('/api/reps'),
+        fetch('/api/dialer/numbers'),
+      ])
+      if (repsRes.ok) {
+        const data = await repsRes.json()
+        const activeReps = (data.reps || []).filter((r: any) => r.status === 'ACTIVE')
+        setReps(activeReps)
+        // Initialize assignments from current rep data
+        const current: Record<string, string> = {}
+        for (const rep of activeReps) {
+          if (rep.assignedDialerPhone) current[rep.id] = rep.assignedDialerPhone
+        }
+        setAssignments(current)
+      }
+      if (numbersRes.ok) {
+        const data = await numbersRes.json()
+        setAvailableNumbers(data.numbers || [])
+      }
+    } catch { /* ignore */ }
+    finally { setLoading(false) }
+  }
+
+  const handleAssign = (repId: string, phone: string) => {
+    setAssignments(prev => {
+      const updated = { ...prev }
+      if (!phone) {
+        delete updated[repId]
+      } else {
+        updated[repId] = phone
+      }
+      return updated
+    })
+    setSaved(false)
+  }
+
+  const getAssignedTo = (phone: string, excludeRepId: string): string | null => {
+    for (const rep of reps) {
+      if (rep.id !== excludeRepId && assignments[rep.id] === phone) return rep.name
+    }
+    return null
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      // Update each rep's assigned phone
+      await Promise.all(
+        reps.map(rep =>
+          fetch(`/api/users/${rep.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ assignedDialerPhone: assignments[rep.id] || null }),
+          })
+        )
+      )
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch { /* ignore */ }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <AccordionSection title="Phone Assignments" description="Assign Twilio dialer numbers to reps for cold calling">
+      <div className="space-y-4 pt-4">
+        {loading ? (
+          <div className="text-center py-6 text-gray-500 text-sm">Loading...</div>
+        ) : availableNumbers.length === 0 ? (
+          <div className="text-center py-6 text-gray-400 text-sm">
+            No dialer numbers configured. Add TWILIO_DIALER_NUMBER_1/2/3 to your environment variables.
+          </div>
+        ) : reps.length === 0 ? (
+          <div className="text-center py-6 text-gray-400 text-sm">
+            No active reps found.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {reps.map((rep) => {
+              const assigned = assignments[rep.id] || ''
+              return (
+                <div
+                  key={rep.id}
+                  className={`p-4 rounded-lg border ${
+                    assigned ? 'border-teal-200 bg-teal-50/50' : 'border-gray-200 bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm">
+                        {rep.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="font-medium text-gray-900 text-sm">{rep.name}</span>
+                      {assigned && (
+                        <Badge variant="secondary" className="text-xs bg-teal-100 text-teal-700">
+                          <Phone className="w-3 h-3 mr-1" />
+                          Assigned
+                        </Badge>
+                      )}
+                    </div>
+                    <select
+                      value={assigned}
+                      onChange={(e) => handleAssign(rep.id, e.target.value)}
+                      className="text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white min-w-[200px]"
+                    >
+                      <option value="">Unassigned</option>
+                      {availableNumbers.map((num) => {
+                        const takenBy = getAssignedTo(num, rep.id)
+                        return (
+                          <option key={num} value={num} disabled={!!takenBy}>
+                            {formatPhoneDisplay(num)}{takenBy ? ` (${takenBy})` : ''}
+                          </option>
+                        )
+                      })}
+                    </select>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        <div className="mt-6 flex items-center justify-between">
+          <p className="text-xs text-gray-400">
+            Reps without an assigned number will use the first available dialer number.
+          </p>
+          <SaveButton
+            onClick={handleSave}
+            saving={saving}
+            saved={saved}
           />
         </div>
       </div>

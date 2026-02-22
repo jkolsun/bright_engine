@@ -5,6 +5,59 @@
 
 import { prisma } from './db'
 
+// ── Onboarding flow settings (from Settings > Communication > Post-AQ) ──
+export interface OnboardingFlowSettings {
+  welcome: string
+  domainQuestion: string
+  gbpPrompt: string
+  stageTemplate: string
+}
+
+const DEFAULT_ONBOARDING_FLOW: OnboardingFlowSettings = {
+  welcome: "Welcome aboard! Let's get {companyName} live.",
+  domainQuestion: "Do you already have a domain you'd like to use, or would you like us to help pick one?",
+  gbpPrompt: "Do you have a Google Business Profile? If so, we can connect it to your site for better local visibility.",
+  stageTemplate: '',
+}
+
+let _cachedFlow: OnboardingFlowSettings | null = null
+let _cacheTime = 0
+const CACHE_TTL = 60_000 // 1 min
+
+/**
+ * Load onboarding flow settings from the DB (Settings > Communication > Post-AQ).
+ * Cached for 1 minute. Returns defaults if nothing saved.
+ */
+export async function getOnboardingFlowSettings(): Promise<OnboardingFlowSettings> {
+  if (_cachedFlow && Date.now() - _cacheTime < CACHE_TTL) return _cachedFlow
+
+  try {
+    const setting = await prisma.settings.findUnique({ where: { key: 'onboarding_flow' } })
+    const saved = setting?.value as Record<string, string> | null
+    _cachedFlow = {
+      welcome: saved?.welcome || DEFAULT_ONBOARDING_FLOW.welcome,
+      domainQuestion: saved?.domainQuestion || DEFAULT_ONBOARDING_FLOW.domainQuestion,
+      gbpPrompt: saved?.gbpPrompt || DEFAULT_ONBOARDING_FLOW.gbpPrompt,
+      stageTemplate: saved?.stageTemplate || DEFAULT_ONBOARDING_FLOW.stageTemplate,
+    }
+    _cacheTime = Date.now()
+    return _cachedFlow
+  } catch {
+    return DEFAULT_ONBOARDING_FLOW
+  }
+}
+
+/**
+ * Interpolate variables like {firstName}, {companyName} into a template string.
+ */
+export function interpolateTemplate(template: string, vars: Record<string, string>): string {
+  let result = template
+  for (const [key, value] of Object.entries(vars)) {
+    result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), value)
+  }
+  return result
+}
+
 // ── Step constants ──
 export const ONBOARDING_STEPS = {
   NOT_STARTED: 0,

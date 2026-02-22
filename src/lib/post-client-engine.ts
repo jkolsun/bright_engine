@@ -12,7 +12,7 @@ import { sendSMSViaProvider } from './sms-provider'
 import { buildPostClientSystemPrompt } from './close-engine-prompts'
 import { calculateDelay, shouldAIRespond, containsPaymentUrl, stripPaymentUrls } from './close-engine-processor'
 import { getPricingConfig } from './pricing-config'
-import { updateOnboarding, advanceOnboarding, createOnboardingApproval } from './onboarding'
+import { updateOnboarding, advanceOnboarding, createOnboardingApproval, getOnboardingFlowSettings } from './onboarding'
 import { handleEditRequest } from './edit-request-handler'
 import { handleEditConfirmation } from './edit-confirmation-handler'
 
@@ -107,6 +107,11 @@ export async function processPostClientInbound(
     ? (Array.isArray(client.upsells) ? client.upsells as string[] : [])
     : []
 
+  // Load admin's custom onboarding instructions from Settings > Post-AQ
+  const flowSettings = client.onboardingStep > 0 && client.onboardingStep < 7
+    ? await getOnboardingFlowSettings()
+    : null
+
   const systemPrompt = buildPostClientSystemPrompt({
     companyName: client.companyName,
     plan: client.plan || 'Standard',
@@ -121,6 +126,7 @@ export async function processPostClientInbound(
       ...(client.onboardingData as Record<string, unknown> || {}),
       stagingUrl: client.stagingUrl,
     },
+    onboardingStageTemplate: flowSettings?.stageTemplate || undefined,
   })
 
   try {

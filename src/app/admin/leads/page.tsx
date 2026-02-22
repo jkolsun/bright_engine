@@ -1064,13 +1064,12 @@ function LeadsPageInner() {
       </Dialog>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <StatCard label="Total Leads" value={stats.total} variant="default" onClick={() => { setStatusFilter('all'); setSelectedLeads(new Set()); setCurrentPage(0) }} active={statusFilter === 'all'} />
         <StatCard label="New" value={stats.new} variant="default" onClick={() => { setStatusFilter('NEW'); setSelectedLeads(new Set()); setCurrentPage(0) }} active={statusFilter === 'NEW'} />
         <StatCard label="Hot Leads" value={stats.hot} variant="danger" onClick={() => { setStatusFilter('HOT_LEAD'); setSelectedLeads(new Set()); setCurrentPage(0) }} active={statusFilter === 'HOT_LEAD'} />
         <StatCard label="Qualified" value={stats.qualified} variant="success" onClick={() => { setStatusFilter('QUALIFIED'); setSelectedLeads(new Set()); setCurrentPage(0) }} active={statusFilter === 'QUALIFIED'} />
         <StatCard label="Building" value={stats.building} variant="warning" onClick={() => { setStatusFilter('BUILDING'); setSelectedLeads(new Set()); setCurrentPage(0) }} active={statusFilter === 'BUILDING'} />
-        <StatCard label="Closed" value={folderFilteredLeads.filter(l => l.status === 'PAID').length} variant="success" onClick={() => { setStatusFilter('PAID'); setSelectedLeads(new Set()); setCurrentPage(0) }} active={statusFilter === 'PAID'} />
       </div>
 
       {/* Search & Filters */}
