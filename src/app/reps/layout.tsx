@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import RepOnboardingWizard from '@/components/rep/RepOnboardingWizard'
 import {
   LayoutDashboard,
   Phone,
@@ -33,6 +34,33 @@ export default function RepsLayout({
   const [feedbackCategory, setFeedbackCategory] = useState('general')
   const [feedbackSending, setFeedbackSending] = useState(false)
   const [feedbackSent, setFeedbackSent] = useState(false)
+
+  // Onboarding gate
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onboardingLoaded, setOnboardingLoaded] = useState(false)
+  const [onboardingUserId, setOnboardingUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Skip onboarding check for stripe-return page
+    if (pathname === '/reps/stripe-return') {
+      setOnboardingLoaded(true)
+      return
+    }
+    async function checkOnboarding() {
+      try {
+        const meRes = await fetch('/api/auth/me')
+        if (!meRes.ok) return
+        const { user } = await meRes.json()
+        if (user.role === 'ADMIN') { setOnboardingLoaded(true); return }
+        setOnboardingUserId(user.id)
+        if (!user.onboardingComplete) {
+          setShowOnboarding(true)
+        }
+      } catch { /* ignore */ }
+      finally { setOnboardingLoaded(true) }
+    }
+    checkOnboarding()
+  }, [pathname])
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -77,6 +105,26 @@ export default function RepsLayout({
     { href: '/reps/tasks', icon: Target, label: 'Tasks' },
     { href: '/reps/leaderboard', icon: Award, label: 'Leaderboard' },
   ]
+
+  if (!onboardingLoaded) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-teal-600 mx-auto mb-3" />
+          <p className="text-gray-500">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (showOnboarding && onboardingUserId) {
+    return (
+      <RepOnboardingWizard
+        userId={onboardingUserId}
+        onComplete={() => { setShowOnboarding(false); router.refresh() }}
+      />
+    )
+  }
 
   return (
     <div className="flex h-screen bg-mesh-teal" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f0fdfa 40%, #ecfdf5 70%, #f0f9ff 100%)' }}>

@@ -12,6 +12,7 @@ import { sendSMSViaProvider } from './sms-provider'
 import { buildPostClientSystemPrompt } from './close-engine-prompts'
 import { calculateDelay, shouldAIRespond, containsPaymentUrl, stripPaymentUrls } from './close-engine-processor'
 import { getPricingConfig } from './pricing-config'
+import { updateOnboarding, advanceOnboarding, createOnboardingApproval } from './onboarding'
 
 const POST_CLIENT_MODEL = 'claude-haiku-4-5-20251001'
 
@@ -78,6 +79,11 @@ export async function processPostClientInbound(
     daysSinceLaunch,
     upsells,
     messages: messages.map(m => ({ direction: m.direction, content: m.content })),
+    onboardingStep: client.onboardingStep,
+    onboardingData: {
+      ...(client.onboardingData as Record<string, unknown> || {}),
+      stagingUrl: client.stagingUrl,
+    },
   })
 
   try {
@@ -178,6 +184,65 @@ export async function processPostClientInbound(
           metadata: { clientId, message: message.substring(0, 200) },
         },
       })
+    }
+
+    // ── Onboarding intent handlers ──
+
+    // Client says they OWN a domain → save domain, create DOMAIN_SETUP approval, advance to step 3
+    if (parsed.intent === 'DOMAIN_OWN' && parsed.domainName && client.onboardingStep === 2) {
+      const domain = parsed.domainName.toLowerCase().trim()
+      await updateOnboarding(clientId, {
+        domainPreference: domain,
+        domainOwnership: 'owns_domain',
+      })
+      await createOnboardingApproval({
+        gate: 'DOMAIN_SETUP',
+        title: `Domain Setup — ${client.companyName}`,
+        description: `Client owns ${domain}. Needs DNS instructions sent and domain added to Vercel.`,
+        clientId,
+        metadata: { domain, ownership: 'owns_domain', phone: client.lead!.phone },
+      })
+      await advanceOnboarding(clientId, 3)
+      console.log(`[PostClient] Onboarding: ${client.companyName} owns domain ${domain} → step 3`)
+    }
+
+    // Client wants us to REGISTER a domain → save preference, create DOMAIN_REGISTRATION approval
+    if (parsed.intent === 'DOMAIN_REGISTER' && parsed.domainName && client.onboardingStep === 2) {
+      const domain = parsed.domainName.toLowerCase().trim()
+      await updateOnboarding(clientId, {
+        domainPreference: domain,
+        domainOwnership: 'needs_new',
+      })
+      await createOnboardingApproval({
+        gate: 'DOMAIN_REGISTRATION',
+        title: `Domain Registration — ${client.companyName}`,
+        description: `Client wants ${domain} registered. Purchase and configure.`,
+        clientId,
+        metadata: { domain, ownership: 'needs_new', phone: client.lead!.phone },
+      })
+      await advanceOnboarding(clientId, 3)
+      console.log(`[PostClient] Onboarding: ${client.companyName} wants domain ${domain} registered → step 3`)
+    }
+
+    // Client approves their site content → advance to step 4 (domain setup)
+    if (parsed.intent === 'CONTENT_APPROVED' && client.onboardingStep === 3) {
+      await updateOnboarding(clientId, { contentReviewed: true, contentApprovedAt: new Date().toISOString() })
+      await advanceOnboarding(clientId, 4)
+      await prisma.notification.create({
+        data: {
+          type: 'CLIENT_TEXT',
+          title: 'Content Approved',
+          message: `${client.companyName} approved their site content. Ready for domain setup.`,
+          metadata: { clientId },
+        },
+      })
+      console.log(`[PostClient] Onboarding: ${client.companyName} approved content → step 4`)
+    }
+
+    // Client confirms go-live → advance to step 7 (complete, triggers post-launch sequences)
+    if (parsed.intent === 'GO_LIVE_CONFIRM' && client.onboardingStep === 6) {
+      await advanceOnboarding(clientId, 7)
+      console.log(`[PostClient] Onboarding: ${client.companyName} confirmed go-live → step 7 (complete)`)
     }
 
     // ── Check autonomy and send ──

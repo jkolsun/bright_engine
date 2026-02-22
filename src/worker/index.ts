@@ -346,7 +346,27 @@ async function startWorkers() {
       'sequence',
       async (job) => {
         console.log(`Processing sequence job: ${job.name} - ${job.id}`)
-        
+
+        // Gate post-launch sequences behind onboarding completion
+        const ONBOARDING_GATED_JOBS = new Set([
+          'post-launch-day-3', 'post-launch-day-7', 'post-launch-day-28',
+          'win-back-day-7', 'referral-day-45',
+          'post-launch-day-3-email', 'post-launch-day-7-email', 'post-launch-day-14-email',
+          'post-launch-day-21-email', 'post-launch-day-28-email',
+          'win-back-day-7-email', 'win-back-day-14-email', 'win-back-day-30-email',
+          'referral-day-45-email', 'referral-day-90-email', 'referral-day-180-email',
+        ])
+        if (ONBOARDING_GATED_JOBS.has(job.name) && job.data.clientId) {
+          const gateClient = await prisma.client.findUnique({
+            where: { id: job.data.clientId },
+            select: { onboardingStep: true },
+          })
+          if (gateClient && gateClient.onboardingStep > 0 && gateClient.onboardingStep < 7) {
+            console.log(`[Sequence] Skipping ${job.name} — client onboarding not complete (step ${gateClient.onboardingStep}/7)`)
+            return { success: true, skipped: true, reason: 'onboarding_incomplete' }
+          }
+        }
+
         switch (job.name) {
           case 'post-launch-day-3':
             await sendPostLaunchDay3(job.data.clientId)
@@ -407,6 +427,14 @@ async function startWorkers() {
             break
           case 'referral-day-180-email':
             await sendReferralDay180Email(job.data.clientId)
+            break
+
+          // ── Onboarding sequences ──
+          case 'onboarding-advance-to-domain':
+            await handleOnboardingAdvanceToDomain(job.data.clientId)
+            break
+          case 'onboarding-dns-check':
+            await handleOnboardingDnsCheck(job.data.clientId)
             break
 
           default:
@@ -1272,6 +1300,167 @@ async function closeEngineExpireStalled() {
       },
     })
   }
+}
+
+// ══════════════════════════════════════════════
+// ONBOARDING WORKER HANDLERS
+// ══════════════════════════════════════════════
+
+/**
+ * Advance client from Welcome (step 1) to Domain Collection (step 2).
+ * Sends the domain question SMS.
+ */
+async function handleOnboardingAdvanceToDomain(clientId: string) {
+  const { getOnboarding, advanceOnboarding, ONBOARDING_STEPS } = await import('../lib/onboarding')
+  const onboarding = await getOnboarding(clientId)
+  if (!onboarding || onboarding.onboardingStep !== ONBOARDING_STEPS.WELCOME) {
+    console.log(`[Onboarding] Skipping domain advance — client ${clientId} not at step 1 (current: ${onboarding?.onboardingStep})`)
+    return
+  }
+
+  await advanceOnboarding(clientId, ONBOARDING_STEPS.DOMAIN_COLLECTION)
+
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true },
+  })
+  if (!client?.lead?.phone) return
+
+  const { sendSMSViaProvider } = await import('../lib/sms-provider')
+  const { getSystemMessage } = await import('../lib/system-messages')
+  const firstName = client.lead.firstName || 'there'
+  const companyName = client.companyName
+
+  const { text: domainMessage, enabled } = await getSystemMessage('onboarding_domain_question', {
+    firstName,
+    companyName,
+  })
+  if (!enabled) {
+    console.log(`[Onboarding] Domain question message disabled — skipping for ${companyName}`)
+    return
+  }
+
+  await sendSMSViaProvider({
+    to: client.lead.phone,
+    message: domainMessage,
+    clientId,
+    sender: 'clawdbot',
+    trigger: 'onboarding_domain_question',
+    conversationType: 'post_client',
+  })
+
+  console.log(`[Onboarding] Domain question sent to ${client.lead.phone} for ${companyName}`)
+}
+
+/**
+ * Check DNS propagation for clients at step 5 (DNS Verification).
+ * If verified, advance to Go-Live Confirmation and send the go-live SMS.
+ * If not, re-queue the check and send nudges at 24h/48h.
+ */
+async function handleOnboardingDnsCheck(clientId: string) {
+  const { getOnboarding, updateOnboarding, advanceOnboarding, ONBOARDING_STEPS } = await import('../lib/onboarding')
+  const onboarding = await getOnboarding(clientId)
+
+  if (!onboarding || onboarding.onboardingStep !== ONBOARDING_STEPS.DNS_VERIFICATION) {
+    console.log(`[Onboarding] Skipping DNS check — client ${clientId} not at step 5`)
+    return
+  }
+  if (!onboarding.customDomain) {
+    console.log(`[Onboarding] Skipping DNS check — no custom domain for ${clientId}`)
+    return
+  }
+
+  const { checkDomain, verifyDomain } = await import('../lib/vercel')
+  const domainStatus = await checkDomain(onboarding.customDomain)
+
+  if (domainStatus.configured && domainStatus.verified) {
+    // DNS verified — advance to go-live confirmation
+    const verifyResult = await verifyDomain(onboarding.customDomain)
+    if (verifyResult.verified || domainStatus.verified) {
+      await updateOnboarding(clientId, { dnsVerified: true })
+      await advanceOnboarding(clientId, ONBOARDING_STEPS.GO_LIVE_CONFIRMATION)
+
+      await prisma.client.update({
+        where: { id: clientId },
+        data: {
+          siteUrl: `https://${onboarding.customDomain}`,
+          domainStatus: 'verified',
+        },
+      })
+
+      // Send go-live SMS
+      const client = await prisma.client.findUnique({
+        where: { id: clientId },
+        include: { lead: true },
+      })
+      if (client?.lead?.phone) {
+        const { sendSMSViaProvider } = await import('../lib/sms-provider')
+        await sendSMSViaProvider({
+          to: client.lead.phone,
+          message: `Your site is live! 🚀\n\nCheck it out: https://${onboarding.customDomain}\n\nEverything is set up — SSL security, mobile optimization, and SEO basics. How does it look?`,
+          clientId,
+          sender: 'clawdbot',
+          trigger: 'site_go_live',
+          conversationType: 'post_client',
+        })
+      }
+
+      const { notifyAdmin } = await import('../lib/notifications')
+      await notifyAdmin('payment', 'Site Live', `${onboarding.companyName} is live at https://${onboarding.customDomain}`)
+
+      console.log(`[Onboarding] DNS verified — ${onboarding.companyName} is live at ${onboarding.customDomain}`)
+      return
+    }
+  }
+
+  // DNS not ready — re-queue check in 15 minutes
+  const { addSequenceJob } = await import('./queue')
+  await addSequenceJob('onboarding-dns-check', { clientId }, 15 * 60 * 1000)
+
+  // Send nudges at 24h and 48h
+  const data = onboarding.data as Record<string, any>
+  const nudgesSent = (data.nudgesSent as number) || 0
+  const instructionsSentAt = data.dnsInstructionsSentAt as string | undefined
+
+  if (instructionsSentAt) {
+    const hoursSince = (Date.now() - new Date(instructionsSentAt).getTime()) / (1000 * 60 * 60)
+
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+      include: { lead: true },
+    })
+
+    if (hoursSince > 24 && nudgesSent === 0 && client?.lead?.phone) {
+      const { sendSMSViaProvider } = await import('../lib/sms-provider')
+      await sendSMSViaProvider({
+        to: client.lead.phone,
+        message: `Hey ${client.lead.firstName || 'there'}, just checking in — have you had a chance to update your DNS settings for ${onboarding.customDomain}? If you need help, just text me the name of your domain registrar (like GoDaddy or Namecheap) and I'll walk you through it.`,
+        clientId,
+        sender: 'clawdbot',
+        trigger: 'dns_nudge',
+        conversationType: 'post_client',
+      })
+      await updateOnboarding(clientId, { nudgesSent: 1 })
+    }
+
+    if (hoursSince > 48 && nudgesSent === 1 && client?.lead?.phone) {
+      const { sendSMSViaProvider } = await import('../lib/sms-provider')
+      await sendSMSViaProvider({
+        to: client.lead.phone,
+        message: `Hey ${client.lead.firstName || 'there'}, your site for ${onboarding.companyName} is ready to go live — we just need your DNS updated. Want us to hop on a quick call and walk you through it? Takes about 5 minutes.`,
+        clientId,
+        sender: 'clawdbot',
+        trigger: 'dns_nudge_2',
+        conversationType: 'post_client',
+      })
+      await updateOnboarding(clientId, { nudgesSent: 2 })
+
+      const { notifyAdmin } = await import('../lib/notifications')
+      await notifyAdmin('escalation', 'DNS Help Needed', `${onboarding.companyName} hasn't set up DNS after 48hrs. May need a call.`)
+    }
+  }
+
+  console.log(`[Onboarding] DNS not verified for ${onboarding.customDomain} — re-queued check`)
 }
 
 export { startWorkers }

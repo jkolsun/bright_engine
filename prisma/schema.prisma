@@ -45,6 +45,15 @@ model User {
   autoDialDelay  Int?     @default(5) @map("auto_dial_delay")  // Rep's preferred auto-dial delay in seconds
   dialerMode     String?  @default("single") @map("dialer_mode")  // "single" or "power"
 
+  // Rep onboarding
+  onboardingComplete  Boolean   @default(false) @map("onboarding_complete")
+  stripeConnectId     String?   @map("stripe_connect_id")
+  stripeConnectStatus String?   @map("stripe_connect_status")
+  availableHours      Json?     @map("available_hours")
+  agreedToTermsAt     DateTime? @map("agreed_to_terms_at")
+  personalPhone       String?   @map("personal_phone")
+  timezone            String?   @default("America/New_York")
+
   // Relations
   assignedLeads      Lead[]              @relation("AssignedLeads")
   activities         Activity[]
@@ -376,6 +385,10 @@ model Client {
   closedDate           DateTime?     @map("closed_date")
   churnedDate          DateTime?     @map("churned_date")
 
+  // Onboarding (post-payment lifecycle)
+  onboardingStep       Int           @default(0) @map("onboarding_step") // 0=Not Started, 1=Welcome, 2=Domain, 3=Content Review, 4=Domain Setup, 5=DNS, 6=Go-Live, 7=Complete
+  onboardingData       Json?         @map("onboarding_data")
+
   deletedAt            DateTime?     @map("deleted_at")
   createdAt            DateTime      @default(now()) @map("created_at")
   updatedAt            DateTime      @updatedAt @map("updated_at")
@@ -397,6 +410,7 @@ model Client {
   @@index([churnRiskScore])
   @@index([healthScore])
   @@index([nextTouchpointDate])
+  @@index([onboardingStep])
   @@map("clients")
 }
 

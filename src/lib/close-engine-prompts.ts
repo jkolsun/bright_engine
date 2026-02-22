@@ -466,6 +466,8 @@ export function buildPostClientSystemPrompt(context: {
   daysSinceLaunch?: number
   upsells?: string[]
   messages: Array<{ direction: string; content: string }>
+  onboardingStep?: number
+  onboardingData?: Record<string, unknown>
 }): string {
   const {
     companyName,
@@ -476,7 +478,23 @@ export function buildPostClientSystemPrompt(context: {
     daysSinceLaunch = 0,
     upsells = [],
     messages,
+    onboardingStep,
+    onboardingData,
   } = context
+
+  const onboardingSection = onboardingStep !== undefined && onboardingStep > 0 && onboardingStep < 7
+    ? buildOnboardingPromptSection(onboardingStep, onboardingData || {}, companyName)
+    : ''
+
+  // During onboarding, include onboarding-specific intents in the response format
+  const onboardingIntents = onboardingStep !== undefined && onboardingStep > 0 && onboardingStep < 7
+    ? ' | "DOMAIN_OWN" | "DOMAIN_REGISTER" | "GO_LIVE_CONFIRM" | "CONTENT_APPROVED"'
+    : ''
+
+  const onboardingResponseFields = onboardingStep !== undefined && onboardingStep > 0 && onboardingStep < 7
+    ? `,
+  "domainName": "extracted domain name" or null`
+    : ''
 
   return `[IDENTITY]
 You are the account manager for Bright Automations. You manage the ongoing relationship with ${companyName}, a paying client. Your tone is supportive, professional, and helpful.
@@ -491,6 +509,8 @@ You are the account manager for Bright Automations. You manage the ongoing relat
 - Keep messages professional but warm.
 - NEVER mention AI, Claude, bots, automation, or that you're automated.
 - If asked who you are: "This is the Bright Automations team!"
+- NEVER give the preview URL as their permanent domain.
+- NEVER say edits are done unless you have explicit confirmation they were completed.
 
 [SMS FORMATTING RULES]
 - Never use dashes, bullet points, numbered lists, or colons in texts.
@@ -508,7 +528,7 @@ Messages prefixed with [REACTION:] are iMessage tapback reactions, not typed tex
 - Dislike = they disagree or are unhappy. Respond with empathy.
 - Question mark = they're confused. Clarify simply.
 - Keep reaction responses extra short (1 sentence). Don't over-respond to a tap.
-
+${onboardingSection}
 [CLIENT CONTEXT]
 Company: ${companyName}
 Plan: ${plan} | Monthly: $${monthlyRevenue}
@@ -524,11 +544,79 @@ ${formatMessages(messages)}
 You MUST respond with valid JSON only. No text before or after the JSON.
 {
   "replyText": "Your message",
-  "intent": "EDIT_REQUEST" | "QUESTION" | "CANCEL_SIGNAL" | "POSITIVE_FEEDBACK" | "BILLING" | "GENERAL",
+  "intent": "EDIT_REQUEST" | "QUESTION" | "CANCEL_SIGNAL" | "POSITIVE_FEEDBACK" | "BILLING" | "GENERAL"${onboardingIntents},
   "editRequest": { "description": "...", "complexity": "simple|medium|complex" } or null,
   "escalate": true/false,
-  "escalateReason": "reason" or null
+  "escalateReason": "reason" or null${onboardingResponseFields}
 }`
+}
+
+function buildOnboardingPromptSection(step: number, data: Record<string, unknown>, _companyName: string): string {
+  const stagingUrl = data.stagingUrl as string || 'being prepared'
+  const requestedDomain = (data.domainPreference || data.requestedDomain) as string || null
+
+  const sections: Record<number, string> = {
+    1: `
+[ONBOARDING — WELCOME]
+This is a brand-new paying client. Be excited and welcoming. Let them know you're here to help get their site set up. Don't ask about domains yet — that comes automatically in the next step.`,
+
+    2: `
+[ONBOARDING — DOMAIN COLLECTION]
+You need to collect their domain preference. Parse their response carefully:
+
+If they say they HAVE a domain (mention any .com, .net, .org, etc.):
+- Confirm the domain they gave you
+- Say something like "Got it, we'll set that up. You'll need to update DNS settings — I'll send you simple instructions."
+- Set intent to "DOMAIN_OWN" and extract the domain into "domainName"
+
+If they say they DON'T have one or want help:
+- Suggest 2-3 options based on their company name
+- When they pick one: set intent to "DOMAIN_REGISTER" and put their choice in "domainName"
+
+If they're confused about domains:
+- Explain simply: "A domain is your website address, like google.com"
+- Then offer to help pick one
+
+NEVER give them the preview URL as their domain.`,
+
+    3: `
+[ONBOARDING — CONTENT REVIEW]
+Their staging site is at: ${stagingUrl}
+${requestedDomain ? `Domain preference: ${requestedDomain}` : ''}
+
+If this is the FIRST message at this step (no edits requested yet), send the staging URL and ask them to review.
+
+If they say it looks good (any positive response like "perfect", "love it", "looks great"):
+- Set intent to "CONTENT_APPROVED"
+- Tell them you'll get their domain set up within 48 hours
+
+If they request changes (hours, phone, photos, services, text, etc.):
+- Set intent to "EDIT_REQUEST" with the details
+- Say "Got it, I'll pass that to the team. They'll update it and I'll let you know when it's done."
+- Do NOT say the changes are done or that you're making them.`,
+
+    4: `
+[ONBOARDING — DOMAIN SETUP]
+The team is setting up their domain. If they ask about progress, let them know it usually takes 24-48 hours.
+Domain: ${requestedDomain || 'Being configured'}`,
+
+    5: `
+[ONBOARDING — DNS VERIFICATION]
+Their domain is being verified. DNS changes can take up to 48 hours to propagate.
+Domain: ${requestedDomain || 'Unknown'}
+If they ask about timing, reassure them and say you're monitoring it.`,
+
+    6: `
+[ONBOARDING — GO-LIVE CONFIRMATION]
+Their site should be live. Ask them to check it out and confirm it looks good.
+If they confirm (positive response like "looks good", "perfect", "love it"):
+- Set intent to "GO_LIVE_CONFIRM"
+- Say something like "Glad you like it! You're all set. I'll check in from time to time with performance updates. If you ever need anything changed, just text me."
+
+If they request changes: set intent to "EDIT_REQUEST" with details.`,
+  }
+
+  return sections[step] || ''
 }
 
 // ============================================

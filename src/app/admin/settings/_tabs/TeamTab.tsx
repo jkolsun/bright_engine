@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/dialog'
 import {
   Plus, UserCheck, UserX, KeyRound, Copy, RefreshCw,
-  DollarSign, Save, FileText,
+  DollarSign, Save, FileText, ChevronDown, ChevronRight,
+  RotateCcw,
 } from 'lucide-react'
 import { useSettingsContext } from '../_lib/context'
 import { AccordionSection, SectionHeader, FieldLabel, SaveButton } from '../_lib/components'
@@ -62,6 +63,30 @@ function RepsSection() {
   const [resetResult, setResetResult] = useState<string | null>(null)
   const [resetting, setResetting] = useState(false)
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, string>>({})
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+
+  const toggleRowExpanded = (id: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handleResetOnboarding = async (repId: string, repName: string) => {
+    if (!confirm(`Reset onboarding for ${repName}? They will need to complete the wizard again on next login.`)) return
+    try {
+      const res = await fetch(`/api/users/${repId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ onboardingComplete: false }),
+      })
+      if (res.ok) loadReps()
+    } catch (error) {
+      console.error('Failed to reset onboarding:', error)
+    }
+  }
 
   useEffect(() => {
     loadReps()
@@ -345,18 +370,18 @@ function RepsSection() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="p-6">
             <div className="text-sm text-gray-600 mb-1">Total Reps</div>
-            <div className="text-3xl font-bold text-gray-900">{reps.length}</div>
+            <div className="text-3xl font-bold text-gray-900">{repUsers.length}</div>
           </Card>
           <Card className="p-6">
             <div className="text-sm text-gray-600 mb-1">Active</div>
             <div className="text-3xl font-bold text-green-600">
-              {reps.filter((r) => r.status === 'ACTIVE').length}
+              {repUsers.filter((r) => r.status === 'ACTIVE').length}
             </div>
           </Card>
           <Card className="p-6">
             <div className="text-sm text-gray-600 mb-1">Inactive</div>
             <div className="text-3xl font-bold text-gray-400">
-              {reps.filter((r) => r.status === 'INACTIVE').length}
+              {repUsers.filter((r) => r.status === 'INACTIVE').length}
             </div>
           </Card>
         </div>
@@ -380,52 +405,140 @@ function RepsSection() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
+                    <th className="w-8 p-4"></th>
                     <th className="text-left p-4 text-sm font-semibold text-gray-700">Name</th>
                     <th className="text-left p-4 text-sm font-semibold text-gray-700">Email</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Phone</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Role</th>
                     <th className="text-left p-4 text-sm font-semibold text-gray-700">Type</th>
                     <th className="text-left p-4 text-sm font-semibold text-gray-700">Status</th>
+                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Onboarding</th>
+                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Stripe</th>
                     <th className="text-right p-4 text-sm font-semibold text-gray-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {reps.map((rep) => (
-                    <tr key={rep.id} className="hover:bg-gray-50">
-                      <td className="p-4 font-medium text-gray-900">{rep.name}</td>
-                      <td className="p-4 text-gray-700">{rep.email}</td>
-                      <td className="p-4 text-gray-700">{rep.phone || '-'}</td>
-                      <td className="p-4">
-                        <Badge variant={rep.role === 'ADMIN' ? 'default' : 'secondary'}>{rep.role}</Badge>
-                      </td>
-                      <td className="p-4">
-                        {rep.role === 'REP' ? (
-                          <Badge variant={rep.portalType === 'PART_TIME' ? 'outline' : 'secondary'}>
-                            {rep.portalType === 'PART_TIME' ? 'Part-Time' : 'Full-Time'}
-                          </Badge>
-                        ) : (
-                          <span className="text-gray-400 text-sm">&mdash;</span>
+                  {reps.map((rep) => {
+                    const isExpanded = expandedRows.has(rep.id)
+                    const stripeStatus = rep.stripeConnectStatus || 'not_started'
+                    const hours = rep.availableHours as Record<string, { active: boolean; start: string; end: string }> | null
+                    const formatHoursSummary = () => {
+                      if (!hours) return 'Not set'
+                      const activeDays = Object.entries(hours)
+                        .filter(([, v]) => v.active)
+                        .map(([d]) => d.slice(0, 3))
+                      if (activeDays.length === 0) return 'Not set'
+                      const firstEntry = Object.values(hours).find(v => v.active)
+                      const timeRange = firstEntry ? `${firstEntry.start}-${firstEntry.end}` : ''
+                      return `${activeDays.join(', ')} ${timeRange}`
+                    }
+                    const stripeVariant = stripeStatus === 'active' ? 'default' : stripeStatus === 'pending' ? 'secondary' : stripeStatus === 'restricted' ? 'destructive' : 'outline'
+                    const stripeLabel = stripeStatus === 'active' ? 'Connected' : stripeStatus === 'pending' ? 'Pending' : stripeStatus === 'restricted' ? 'Restricted' : 'Not Started'
+                    return (
+                      <React.Fragment key={rep.id}>
+                        <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => rep.role === 'REP' && toggleRowExpanded(rep.id)}>
+                          <td className="p-4 text-gray-400">
+                            {rep.role === 'REP' && (
+                              isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />
+                            )}
+                          </td>
+                          <td className="p-4 font-medium text-gray-900">{rep.name}</td>
+                          <td className="p-4 text-gray-700">{rep.email}</td>
+                          <td className="p-4">
+                            {rep.role === 'REP' ? (
+                              <Badge variant={rep.portalType === 'PART_TIME' ? 'outline' : 'secondary'}>
+                                {rep.portalType === 'PART_TIME' ? 'Part-Time' : 'Full-Time'}
+                              </Badge>
+                            ) : (
+                              <Badge variant="default">ADMIN</Badge>
+                            )}
+                          </td>
+                          <td className="p-4">
+                            <Badge variant={rep.status === 'ACTIVE' ? 'default' : 'secondary'}>{rep.status}</Badge>
+                          </td>
+                          <td className="p-4">
+                            {rep.role === 'REP' ? (
+                              <Badge variant={rep.onboardingComplete ? 'default' : 'outline'}>
+                                {rep.onboardingComplete ? 'Complete' : 'Incomplete'}
+                              </Badge>
+                            ) : (
+                              <span className="text-gray-400 text-sm">&mdash;</span>
+                            )}
+                          </td>
+                          <td className="p-4">
+                            {rep.role === 'REP' ? (
+                              <Badge variant={stripeVariant as any}>{stripeLabel}</Badge>
+                            ) : (
+                              <span className="text-gray-400 text-sm">&mdash;</span>
+                            )}
+                          </td>
+                          <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => toggleStatus(rep.id, rep.status)}>
+                                {rep.status === 'ACTIVE' ? <UserX size={16} /> : <UserCheck size={16} />}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleDeleteRep(rep.id, rep.name)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                        {/* Expanded Detail Row */}
+                        {isExpanded && rep.role === 'REP' && (
+                          <tr className="bg-gray-50/80">
+                            <td colSpan={8} className="px-8 py-4">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                <div>
+                                  <p className="text-gray-500 font-medium mb-1">Personal Phone</p>
+                                  <p className="text-gray-900">{rep.personalPhone || 'Not provided'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 font-medium mb-1">Timezone</p>
+                                  <p className="text-gray-900">{rep.timezone || 'Not set'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 font-medium mb-1">Available Hours</p>
+                                  <p className="text-gray-900">{formatHoursSummary()}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 font-medium mb-1">Stripe Connect ID</p>
+                                  <p className="text-gray-900 font-mono text-xs">{rep.stripeConnectId || 'None'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 font-medium mb-1">Terms Agreed</p>
+                                  <p className="text-gray-900">
+                                    {rep.agreedToTermsAt
+                                      ? new Date(rep.agreedToTermsAt).toLocaleDateString()
+                                      : 'Not yet'}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 font-medium mb-1">Commission Rate</p>
+                                  <p className="text-gray-900">{rep.commissionRate ? `${(rep.commissionRate * 100).toFixed(0)}%` : 'Not set'}</p>
+                                </div>
+                              </div>
+                              {rep.onboardingComplete && (
+                                <div className="mt-4 pt-3 border-t border-gray-200">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50"
+                                    onClick={() => handleResetOnboarding(rep.id, rep.name)}
+                                  >
+                                    <RotateCcw size={14} />
+                                    Reset Onboarding
+                                  </Button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
                         )}
-                      </td>
-                      <td className="p-4">
-                        <Badge variant={rep.status === 'ACTIVE' ? 'default' : 'secondary'}>{rep.status}</Badge>
-                      </td>
-                      <td className="p-4 text-right space-x-2 flex justify-end">
-                        <Button variant="ghost" size="sm" onClick={() => toggleStatus(rep.id, rep.status)}>
-                          {rep.status === 'ACTIVE' ? <UserX size={16} /> : <UserCheck size={16} />}
-                          {rep.status === 'ACTIVE' ? ' Deactivate' : ' Activate'}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => handleDeleteRep(rep.id, rep.name)}
-                        >
-                          Delete
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
+                      </React.Fragment>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -639,7 +752,7 @@ function CommissionsSection() {
         // Initialize rates
         const initialRates: Record<string, number> = {}
         data.users?.forEach((rep: any) => {
-          initialRates[rep.id] = 0.5 // Default 50%
+          initialRates[rep.id] = rep.commissionRate ?? 0.5
         })
         setRates(initialRates)
       }

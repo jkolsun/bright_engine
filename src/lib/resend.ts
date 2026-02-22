@@ -491,6 +491,8 @@ const DAY_MS = 24 * 60 * 60 * 1000
 export async function triggerOnboardingSequence(clientId: string) {
   await addSequenceJob('onboarding-welcome-email', { clientId })
   await addSequenceJob('onboarding-nudge-email', { clientId }, DAY_MS)
+  // Advance to domain collection step 2 hours after payment
+  await addSequenceJob('onboarding-advance-to-domain', { clientId }, 2 * 60 * 60 * 1000)
 }
 
 export async function triggerPostLaunchSequence(clientId: string) {

@@ -1,8 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifySession } from '@/lib/session'
 
+// Platform domains — requests to these are handled as the admin app.
+// Custom domains (anything else) are rewritten to /site/[clientId].
+const PLATFORM_DOMAINS = (process.env.PLATFORM_DOMAINS || 'brightautomations.org,localhost').split(',').map(d => d.trim().toLowerCase())
+
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
+  const hostname = (request.headers.get('host') || '').toLowerCase()
+
+  // ── Multi-tenant domain routing ──
+  // If hostname is NOT a known platform domain, treat it as a client custom domain
+  const isPlatformDomain = PLATFORM_DOMAINS.some(d => hostname.includes(d))
+  const isInternalPath = pathname.startsWith('/api/') ||
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/site/') ||
+    pathname.includes('.')
+
+  if (!isPlatformDomain && !isInternalPath) {
+    // Custom domain — look up clientId via internal API
+    const lookupUrl = new URL('/api/domain-lookup', request.url)
+    lookupUrl.searchParams.set('domain', hostname)
+
+    try {
+      const res = await fetch(lookupUrl.toString())
+      if (res.ok) {
+        const { clientId } = await res.json()
+        if (clientId) {
+          const url = request.nextUrl.clone()
+          url.pathname = `/site/${clientId}`
+          return NextResponse.rewrite(url)
+        }
+      }
+    } catch (err) {
+      console.error('[Middleware] Domain lookup failed:', err)
+    }
+
+    // Domain not found — show "site not available"
+    const url = request.nextUrl.clone()
+    url.pathname = '/site/not-found'
+    return NextResponse.rewrite(url)
+  }
 
   // Clawdbot API uses API key auth, not cookies
   if (pathname.startsWith('/api/clawdbot/')) {
@@ -20,9 +58,11 @@ export async function middleware(request: NextRequest) {
     pathname === '/success' ||
     pathname === '/terms' ||
     pathname.startsWith('/preview/') ||
+    pathname.startsWith('/site/') ||
     pathname.startsWith('/onboard/') ||
     pathname.startsWith('/api/onboard/') ||
     pathname.startsWith('/api/preview/track') ||
+    pathname.startsWith('/api/domain-lookup') ||
     pathname.startsWith('/api/health') ||
     pathname.startsWith('/api/bootstrap/') ||
     pathname.startsWith('/api/auth/') ||

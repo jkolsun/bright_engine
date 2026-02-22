@@ -23,6 +23,8 @@ export interface SystemMessagesConfig {
   payment_link: SystemMessageTemplate
   welcome_after_payment: SystemMessageTemplate
   site_live: SystemMessageTemplate
+  onboarding_domain_question: SystemMessageTemplate
+  onboarding_dns_instructions: SystemMessageTemplate
 }
 
 export type SystemMessageKey = keyof SystemMessagesConfig
@@ -50,6 +52,14 @@ export const DEFAULT_SYSTEM_MESSAGES: SystemMessagesConfig = {
   },
   site_live: {
     text: "Hey {firstName}! Your site for {companyName} is officially live at {siteUrl} 🚀 Check it out and let us know if you want any changes!",
+    enabled: true,
+  },
+  onboarding_domain_question: {
+    text: "Hey {firstName}! Next up — your website domain. Do you already own a domain like {companyName}.com? Or would you like us to help you pick one out?",
+    enabled: true,
+  },
+  onboarding_dns_instructions: {
+    text: "Hey {firstName}! We've added {domain} to your site. Here's what you need to do:\n\n{dnsInstructions}\n\nOnce you update these, your site will be live within 24-48 hours. Text me if you need help!",
     enabled: true,
   },
 }
@@ -95,6 +105,18 @@ export const SYSTEM_MESSAGE_META: SystemMessageMeta[] = [
     label: 'Site Live Notification',
     description: 'Sent after domain is set up and site goes live.',
     variables: ['firstName', 'companyName', 'siteUrl'],
+  },
+  {
+    key: 'onboarding_domain_question',
+    label: 'Domain Collection Question',
+    description: 'Sent 2 hours after payment to ask about domain preference.',
+    variables: ['firstName', 'companyName'],
+  },
+  {
+    key: 'onboarding_dns_instructions',
+    label: 'DNS Setup Instructions',
+    description: 'Sent when domain is added to Vercel with DNS configuration steps.',
+    variables: ['firstName', 'domain', 'dnsInstructions'],
   },
 ]
 

@@ -52,11 +52,20 @@ function getHealthBadge(score: number) {
   return { label: 'At Risk', color: 'bg-red-100 text-red-700', icon: '🔴' }
 }
 
+const ONBOARDING_STEP_LABELS: Record<number, string> = {
+  0: 'Not Started', 1: 'Welcome', 2: 'Domain', 3: 'Content Review',
+  4: 'Domain Setup', 5: 'DNS Verify', 6: 'Go-Live', 7: 'Complete',
+}
+
 function getClientStage(client: any) {
   if (client.hostingStatus === 'DEACTIVATED') return { label: 'Deactivated', color: 'bg-orange-100 text-orange-700', icon: Clock }
   if (client.hostingStatus === 'CANCELLED') return { label: 'Cancelled', color: 'bg-gray-100 text-gray-700', icon: XCircle }
   if (client.hostingStatus === 'FAILED_PAYMENT') return { label: 'Payment Failed', color: 'bg-red-100 text-red-700', icon: AlertTriangle }
   if (client.hostingStatus === 'GRACE_PERIOD') return { label: 'Grace Period', color: 'bg-amber-100 text-amber-700', icon: Clock }
+  if (client.onboardingStep > 0 && client.onboardingStep < 7) {
+    const stepLabel = ONBOARDING_STEP_LABELS[client.onboardingStep] || 'Onboarding'
+    return { label: `Onboarding (${stepLabel}/${7})`, color: 'bg-blue-100 text-blue-700', icon: Clock }
+  }
   if (!client.siteUrl && !client.siteLiveDate) return { label: 'Onboarding', color: 'bg-blue-100 text-blue-700', icon: Clock }
   if (client.churnRiskScore >= 70) return { label: 'At Risk', color: 'bg-red-100 text-red-700', icon: AlertTriangle }
   if (client.siteLiveDate) {
@@ -273,7 +282,7 @@ export default function ClientsPage() {
       (statusFilter === 'CANCELLED' && client.hostingStatus === 'CANCELLED') ||
       (statusFilter === 'FAILED_PAYMENT' && (client.hostingStatus === 'FAILED_PAYMENT' || client.hostingStatus === 'GRACE_PERIOD')) ||
       (statusFilter === 'AT_RISK' && getHealthScore(client) < 50 && client.hostingStatus === 'ACTIVE') ||
-      (statusFilter === 'ONBOARDING' && !client.siteUrl && !client.siteLiveDate && client.hostingStatus === 'ACTIVE')
+      (statusFilter === 'ONBOARDING' && ((client.onboardingStep > 0 && client.onboardingStep < 7) || (!client.siteUrl && !client.siteLiveDate && client.hostingStatus === 'ACTIVE')))
 
     const matchesTag = !tagFilter || (client.tags || []).includes(tagFilter)
     return matchesSearch && matchesStatus && matchesTag
@@ -283,7 +292,7 @@ export default function ClientsPage() {
     total: clients.length,
     active: clients.filter(c => c.hostingStatus === 'ACTIVE').length,
     atRisk: clients.filter(c => getHealthScore(c) < 50 && c.hostingStatus === 'ACTIVE').length,
-    onboarding: clients.filter(c => !c.siteUrl && !c.siteLiveDate && c.hostingStatus === 'ACTIVE').length,
+    onboarding: clients.filter(c => (c.onboardingStep > 0 && c.onboardingStep < 7) || (!c.siteUrl && !c.siteLiveDate && c.hostingStatus === 'ACTIVE')).length,
     failedPayment: clients.filter(c => c.hostingStatus === 'FAILED_PAYMENT' || c.hostingStatus === 'GRACE_PERIOD').length,
     totalMRR: clients.filter(c => c.hostingStatus === 'ACTIVE').reduce((sum, c) => sum + (c.monthlyRevenue || 0), 0),
     deactivated: clients.filter(c => c.hostingStatus === 'DEACTIVATED').length,
@@ -298,6 +307,14 @@ export default function ClientsPage() {
       client={selectedClient}
       onBack={() => { setViewMode('list'); setSelectedClient(null) }}
       onUpdate={(data: any) => handleUpdateClient(selectedClient.id, data)}
+      onRefresh={async () => {
+        const res = await fetch(`/api/clients/${selectedClient.id}`)
+        if (res.ok) {
+          const data = await res.json()
+          setSelectedClient(data.client)
+        }
+        fetchClients()
+      }}
       onDelete={async () => {
         try {
           const res = await fetch(`/api/clients/${selectedClient.id}?hard=true`, { method: 'DELETE' })
@@ -436,6 +453,7 @@ export default function ClientsPage() {
         <StatCard label="Churn" value={`${overviewStats.stats?.churnRate || 0}%`} variant={overviewStats.stats?.churnRate > 5 ? 'danger' : 'default'} />
         <StatCard label="New This Month" value={overviewStats.stats?.newThisMonth || 0} variant="success" />
         <StatCard label="Net" value={`${(overviewStats.stats?.netNew || 0) >= 0 ? '+' : ''}${overviewStats.stats?.netNew || 0}`} variant={(overviewStats.stats?.netNew || 0) >= 0 ? 'success' : 'danger'} />
+        {stats.onboarding > 0 && <StatCard label="Onboarding" value={stats.onboarding} variant="primary" onClick={() => setStatusFilter('ONBOARDING')} active={statusFilter === 'ONBOARDING'} />}
       </div>
 
       {/* Needs Attention Alerts */}
@@ -697,7 +715,7 @@ export default function ClientsPage() {
 // ═══════════════════════════════════════════════
 // CLIENT PROFILE VIEW
 // ═══════════════════════════════════════════════
-function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, profileTab, setProfileTab }: any) {
+function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, onRefresh, profileTab, setProfileTab }: any) {
   const contact = client.contactName || (client.lead ? `${client.lead.firstName} ${client.lead.lastName || ''}`.trim() : '')
   const phone = client.phone || client.lead?.phone || ''
   const email = client.email || client.lead?.email || ''
@@ -812,6 +830,11 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, p
               </div>
             )}
           </Card>
+
+          {/* Onboarding Progress — only show for clients in onboarding */}
+          {client.onboardingStep > 0 && client.onboardingStep < 7 && (
+            <OnboardingCard client={client} onRefresh={onRefresh || (() => {})} />
+          )}
 
           {/* Tags */}
           <Card className="p-6">
@@ -1211,6 +1234,167 @@ function StatCard({ label, value, variant = 'default', onClick, active }: {
     <Card className={`p-4 cursor-pointer transition-all ${colors[variant]} ${active ? 'ring-2 ring-blue-500' : ''}`} onClick={onClick}>
       <div className="text-xs text-gray-600 mb-1">{label}</div>
       <div className="text-xl font-bold text-gray-900">{value}</div>
+    </Card>
+  )
+}
+
+
+// ═══════════════════════════════════════════════
+// ONBOARDING CARD
+// ═══════════════════════════════════════════════
+function OnboardingCard({ client, onRefresh }: { client: any; onRefresh: () => void }) {
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const step = client.onboardingStep || 0
+  const data = (client.onboardingData || {}) as Record<string, any>
+  const domain = data.domainPreference || client.customDomain || ''
+
+  const steps = [
+    { num: 1, label: 'Welcome' },
+    { num: 2, label: 'Domain' },
+    { num: 3, label: 'Content' },
+    { num: 4, label: 'Setup' },
+    { num: 5, label: 'DNS' },
+    { num: 6, label: 'Go-Live' },
+    { num: 7, label: 'Done' },
+  ]
+
+  const handleAction = async (action: string, extraData?: Record<string, any>) => {
+    setActionLoading(action)
+    try {
+      const res = await fetch(`/api/clients/${client.id}/domain-action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...extraData }),
+      })
+      if (res.ok) {
+        onRefresh()
+      } else {
+        const err = await res.json()
+        alert(`Action failed: ${err.error || 'Unknown error'}`)
+      }
+    } catch (err) {
+      console.error('Domain action failed:', err)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleAdvance = async () => {
+    setActionLoading('advance')
+    try {
+      const res = await fetch(`/api/clients/${client.id}/onboarding`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'advance' }),
+      })
+      if (res.ok) onRefresh()
+    } catch (err) {
+      console.error('Advance failed:', err)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  return (
+    <Card className="p-6 border-blue-200 bg-blue-50/30">
+      <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <Clock size={16} className="text-blue-500" />
+        Onboarding Progress
+      </h3>
+
+      {/* Progress bar */}
+      <div className="flex items-center gap-1 mb-4">
+        {steps.map((s) => (
+          <div key={s.num} className="flex-1 flex flex-col items-center">
+            <div className={`w-full h-2 rounded-full ${
+              s.num < step ? 'bg-green-500' :
+              s.num === step ? 'bg-blue-500' :
+              'bg-gray-200'
+            }`} />
+            <span className={`text-[10px] mt-1 ${
+              s.num === step ? 'text-blue-700 font-semibold' : 'text-gray-400'
+            }`}>{s.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Current step info */}
+      <div className="text-sm text-gray-600 mb-3">
+        Step {step}/7 — <span className="font-medium">{ONBOARDING_STEP_LABELS[step] || 'Unknown'}</span>
+      </div>
+
+      {/* Domain info */}
+      {domain && (
+        <div className="flex items-center gap-2 mb-3 text-sm">
+          <span className="text-gray-500">Domain:</span>
+          <span className="font-mono bg-white px-2 py-0.5 rounded border text-gray-800">{domain}</span>
+          {client.domainStatus && (
+            <Badge variant="outline" className="text-xs">
+              {client.domainStatus}
+            </Badge>
+          )}
+          {data.domainOwnership && (
+            <span className="text-xs text-gray-400">({data.domainOwnership === 'owns_domain' ? 'Client owns' : 'We register'})</span>
+          )}
+        </div>
+      )}
+
+      {/* Action buttons based on step */}
+      <div className="flex flex-wrap gap-2 mt-3">
+        {step === 4 && domain && (
+          <Button size="sm" variant="default"
+            onClick={() => handleAction('add_to_vercel', { domain })}
+            disabled={actionLoading === 'add_to_vercel'}
+          >
+            {actionLoading === 'add_to_vercel' ? 'Adding...' : 'Add to Vercel'}
+          </Button>
+        )}
+
+        {step === 4 && data.domainOwnership === 'needs_new' && (
+          <Button size="sm" variant="outline"
+            onClick={() => handleAction('mark_registered', { domain })}
+            disabled={actionLoading === 'mark_registered'}
+          >
+            {actionLoading === 'mark_registered' ? 'Marking...' : 'Mark Registered'}
+          </Button>
+        )}
+
+        {step === 5 && (
+          <>
+            <Button size="sm" variant="default"
+              onClick={() => handleAction('check_dns')}
+              disabled={actionLoading === 'check_dns'}
+            >
+              <RefreshCw size={14} className={`mr-1 ${actionLoading === 'check_dns' ? 'animate-spin' : ''}`} />
+              {actionLoading === 'check_dns' ? 'Checking...' : 'Check DNS'}
+            </Button>
+            <Button size="sm" variant="outline"
+              onClick={() => handleAction('resend_dns_instructions')}
+              disabled={actionLoading === 'resend_dns_instructions'}
+            >
+              {actionLoading === 'resend_dns_instructions' ? 'Sending...' : 'Resend DNS Instructions'}
+            </Button>
+          </>
+        )}
+
+        {step === 6 && (
+          <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700"
+            onClick={() => handleAction('force_go_live')}
+            disabled={actionLoading === 'force_go_live'}
+          >
+            {actionLoading === 'force_go_live' ? 'Going Live...' : 'Go Live Now'}
+          </Button>
+        )}
+
+        {step > 0 && step < 7 && (
+          <Button size="sm" variant="ghost"
+            onClick={handleAdvance}
+            disabled={actionLoading === 'advance'}
+          >
+            {actionLoading === 'advance' ? 'Advancing...' : 'Skip to Next Step'}
+          </Button>
+        )}
+      </div>
     </Card>
   )
 }

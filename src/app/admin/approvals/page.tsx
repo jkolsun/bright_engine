@@ -24,6 +24,10 @@ const GATE_CONFIG: Record<string, { label: string; icon: any; color: string; bad
   SUBSCRIPTION_CANCEL: { label: 'Cancel Sub', icon: XCircle, color: 'bg-red-100 text-red-700', badgeColor: 'bg-red-500 text-white' },
   HIGH_VALUE_SEND: { label: 'High Value', icon: AlertTriangle, color: 'bg-yellow-100 text-yellow-700', badgeColor: 'bg-yellow-500 text-white' },
   UPSELL_SEND: { label: 'Upsell', icon: Package, color: 'bg-violet-100 text-violet-700', badgeColor: 'bg-violet-500 text-white' },
+  DOMAIN_SETUP: { label: 'Domain Setup', icon: Globe, color: 'bg-cyan-100 text-cyan-700', badgeColor: 'bg-cyan-500 text-white' },
+  DOMAIN_REGISTRATION: { label: 'Domain Register', icon: Globe, color: 'bg-cyan-100 text-cyan-700', badgeColor: 'bg-cyan-600 text-white' },
+  SITE_EDIT: { label: 'Site Edit', icon: Eye, color: 'bg-amber-100 text-amber-700', badgeColor: 'bg-amber-500 text-white' },
+  SITE_PUBLICATION: { label: 'Site Publish', icon: Globe, color: 'bg-emerald-100 text-emerald-700', badgeColor: 'bg-emerald-500 text-white' },
 }
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string }> = {

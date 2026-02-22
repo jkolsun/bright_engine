@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
         status: true,
         portalType: true,
         dailyLeadCap: true,
+        onboardingComplete: true,
       },
     })
 

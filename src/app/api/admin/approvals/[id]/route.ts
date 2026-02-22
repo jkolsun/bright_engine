@@ -258,6 +258,93 @@ async function executeApprovedAction(approval: any) {
         }
         break
       }
+      case 'DOMAIN_SETUP': {
+        // Domain setup approved — add domain to Vercel, send DNS instructions, start verification polling
+        if (approval.clientId) {
+          const domain = (approval.metadata as any)?.domain
+          if (domain) {
+            try {
+              const { addDomainWithWww, getDnsInstructions } = await import('@/lib/vercel')
+              const { advanceOnboarding } = await import('@/lib/onboarding')
+              const { addSequenceJob } = await import('@/worker/queue')
+
+              await addDomainWithWww(domain)
+              await prisma.client.update({
+                where: { id: approval.clientId },
+                data: {
+                  customDomain: domain,
+                  domainStatus: 'PENDING_DNS',
+                },
+              })
+
+              // Send DNS instructions SMS
+              const phone = (approval.metadata as any)?.phone
+              if (phone) {
+                const { sendSMSViaProvider } = await import('@/lib/sms-provider')
+                const dnsInstructions = getDnsInstructions(domain)
+                await sendSMSViaProvider({
+                  to: phone,
+                  message: `Your domain ${domain} has been added! Here's what you need to do:\n\n${dnsInstructions}\n\nOnce you update these, your site will be live within 24-48 hours.`,
+                  clientId: approval.clientId,
+                  trigger: 'domain_setup_approved',
+                  aiGenerated: false,
+                  conversationType: 'post_client',
+                  sender: 'system',
+                })
+              }
+
+              // Record when DNS instructions were sent (for nudge timing in worker)
+              const { updateOnboarding } = await import('@/lib/onboarding')
+              await updateOnboarding(approval.clientId, { dnsInstructionsSentAt: new Date().toISOString() })
+
+              // Advance to DNS verification step
+              await advanceOnboarding(approval.clientId, 5)
+
+              // Queue DNS verification check (first check in 15 min)
+              await addSequenceJob('onboarding-dns-check', { clientId: approval.clientId }, 15 * 60 * 1000)
+
+              await prisma.notification.create({
+                data: {
+                  type: 'CLIENT_TEXT',
+                  title: 'Domain Added to Vercel',
+                  message: `${domain} added. DNS instructions sent. Verification polling started.`,
+                  metadata: { clientId: approval.clientId, domain },
+                },
+              })
+            } catch (domainErr) {
+              console.error('[Approvals] DOMAIN_SETUP failed:', domainErr)
+              await prisma.notification.create({
+                data: {
+                  type: 'DAILY_AUDIT',
+                  title: 'Domain Setup Failed',
+                  message: `Failed to add ${domain} to Vercel: ${domainErr instanceof Error ? domainErr.message : String(domainErr)}`,
+                  metadata: { clientId: approval.clientId, domain },
+                },
+              })
+            }
+          }
+        }
+        break
+      }
+      case 'DOMAIN_REGISTRATION': {
+        // Domain registration approved — notify admin to manually register the domain
+        const domain = (approval.metadata as any)?.domain
+        await prisma.notification.create({
+          data: {
+            type: 'CLIENT_TEXT',
+            title: 'Domain Registration Needed',
+            message: `Register domain "${domain}" for ${approval.clientId ? 'client' : 'lead'}. Then use "Mark Registered" in their onboarding card.`,
+            metadata: { clientId: approval.clientId, domain },
+          },
+        })
+        console.log(`[Approvals] Domain registration approved — admin needs to register ${domain}`)
+        break
+      }
+      case 'SITE_EDIT': {
+        // Site edit approved — just log (actual edit is manual)
+        console.log(`[Approvals] Site edit approved for ${approval.clientId || approval.leadId}`)
+        break
+      }
       case 'SEND_PREVIEW': {
         // Andrew approved the site preview — move lead to CLIENT_REVIEW and send preview SMS
         if (approval.leadId) {

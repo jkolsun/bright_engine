@@ -62,6 +62,30 @@ export async function POST(request: NextRequest) {
         await handleSubscriptionCancelled(event.data.object as Stripe.Subscription)
         break
 
+      case 'account.updated': {
+        // Stripe Connect — update rep's stripeConnectStatus
+        const account = event.data.object as Stripe.Account
+        const connectedUser = await prisma.user.findFirst({
+          where: { stripeConnectId: account.id },
+        })
+        if (connectedUser) {
+          let connectStatus = 'pending'
+          if (account.details_submitted && account.payouts_enabled) {
+            connectStatus = 'active'
+          } else if ((account.requirements?.errors?.length ?? 0) > 0) {
+            connectStatus = 'restricted'
+          }
+          if (connectStatus !== connectedUser.stripeConnectStatus) {
+            await prisma.user.update({
+              where: { id: connectedUser.id },
+              data: { stripeConnectStatus: connectStatus },
+            })
+            console.log(`[Stripe Connect] Updated ${connectedUser.name} status: ${connectedUser.stripeConnectStatus} → ${connectStatus}`)
+          }
+        }
+        break
+      }
+
       default:
         console.log(`Unhandled event type: ${event.type}`)
     }
@@ -165,6 +189,17 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   })
 
   console.log(`[Stripe Webhook] Client created: ${client.id} for ${lead.companyName}`)
+
+  // ── Step 3b: Initialize onboarding ──
+  await prisma.client.update({
+    where: { id: client.id },
+    data: {
+      onboardingStep: 1,
+      stagingUrl: lead.previewId
+        ? `${process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || ''}/preview/${lead.previewId}`
+        : null,
+    },
+  })
 
   // ── Step 4: Update Lead status to PAID ──
   await prisma.lead.update({

@@ -96,6 +96,7 @@ export async function PATCH(
         ...(data.portalType && { portalType: data.portalType }),
         ...(data.commissionRate !== undefined && { commissionRate: data.commissionRate }),
         ...(data.dailyLeadCap !== undefined && { dailyLeadCap: data.dailyLeadCap }),
+        ...(data.onboardingComplete !== undefined && { onboardingComplete: data.onboardingComplete }),
         ...(passwordHash && { passwordHash }),
       },
     })
