@@ -23,6 +23,8 @@ export async function POST(
 
     const { id } = await context.params
 
+    const body = await request.json().catch(() => ({}))
+
     const lead = await prisma.lead.findUnique({
       where: { id },
       select: {
@@ -32,11 +34,21 @@ export async function POST(
         state: true,
         buildStep: true,
         buildReadinessScore: true,
+        siteHtml: true,
       },
     })
 
     if (!lead) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
+    }
+
+    // Safeguard: if siteHtml has been manually edited, require explicit confirmation
+    if (lead.siteHtml && lead.siteHtml.length > 100 && !body.confirmOverwrite) {
+      return NextResponse.json({
+        error: 'This lead has edited site HTML. Rebuilding will ERASE all manual edits. Pass confirmOverwrite: true to proceed.',
+        hasEdits: true,
+        htmlSize: lead.siteHtml.length,
+      }, { status: 409 })
     }
 
     // Clear cached siteHtml and reset build timing

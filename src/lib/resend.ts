@@ -183,18 +183,22 @@ function wrapHtml(body: string): string {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 16px;">
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 16px;">
 <tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;">
-<tr><td style="background:#1e40af;padding:24px 32px;">
-<span style="color:#ffffff;font-size:20px;font-weight:600;">Bright Automations</span>
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+<!-- Header with gradient -->
+<tr><td style="background:linear-gradient(135deg,#0f172a 0%,#1a3a4a 50%,#2E7D8A 100%);padding:32px 40px;text-align:center;">
+<span style="color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Bright Automations</span>
+<br><span style="color:#94a3b8;font-size:12px;letter-spacing:1px;text-transform:uppercase;">Professional Websites for Local Business</span>
 </td></tr>
-<tr><td style="padding:32px;color:#18181b;font-size:15px;line-height:1.6;">
+<!-- Body -->
+<tr><td style="padding:36px 40px;color:#0f172a;font-size:15px;line-height:1.7;">
 ${body}
 </td></tr>
-<tr><td style="padding:16px 32px;background:#f4f4f5;color:#71717a;font-size:12px;text-align:center;">
-Bright Automations &bull; brightautomations.net
+<!-- Footer -->
+<tr><td style="padding:24px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+<span style="color:#64748b;font-size:12px;">Bright Automations &bull; <a href="https://brightautomations.org" style="color:#2E7D8A;text-decoration:none;">brightautomations.org</a></span>
 </td></tr>
 </table>
 </td></tr>
@@ -203,26 +207,104 @@ Bright Automations &bull; brightautomations.net
 </html>`
 }
 
+/**
+ * Professional email template for preview links with a CTA button.
+ */
+export function wrapPreviewHtml(options: {
+  recipientName: string
+  companyName: string
+  previewUrl: string
+  bodyText?: string
+}): string {
+  const { recipientName, companyName, previewUrl, bodyText } = options
+  const body = bodyText || `We've built a custom website preview for <strong>${companyName}</strong>. Take a look and let us know what you think — we can make any changes you'd like before going live.`
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 16px;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+<!-- Header -->
+<tr><td style="background:linear-gradient(135deg,#0f172a 0%,#1a3a4a 50%,#2E7D8A 100%);padding:32px 40px;text-align:center;">
+<span style="color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.3px;">Bright Automations</span>
+<br><span style="color:#94a3b8;font-size:12px;letter-spacing:1px;text-transform:uppercase;">Professional Websites for Local Business</span>
+</td></tr>
+<!-- Hero -->
+<tr><td style="padding:40px 40px 24px;text-align:center;">
+<h1 style="margin:0 0 8px;color:#0f172a;font-size:24px;font-weight:700;">Your Website Preview is Ready</h1>
+<p style="margin:0;color:#64748b;font-size:14px;">${companyName}</p>
+</td></tr>
+<!-- Body -->
+<tr><td style="padding:0 40px 32px;color:#0f172a;font-size:15px;line-height:1.7;">
+<p style="margin:0 0 16px;">Hey ${recipientName},</p>
+<p style="margin:0 0 28px;">${body}</p>
+<!-- CTA Button -->
+<table width="100%" cellpadding="0" cellspacing="0">
+<tr><td align="center">
+<a href="${previewUrl}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#2E7D8A,#4AABB8);color:#ffffff;font-size:16px;font-weight:600;padding:14px 40px;border-radius:8px;text-decoration:none;letter-spacing:0.3px;">View Your Preview &rarr;</a>
+</td></tr>
+</table>
+<p style="margin:20px 0 0;text-align:center;color:#94a3b8;font-size:12px;">or copy this link: <a href="${previewUrl}" style="color:#2E7D8A;text-decoration:underline;word-break:break-all;">${previewUrl}</a></p>
+</td></tr>
+<!-- Divider -->
+<tr><td style="padding:0 40px;"><hr style="border:none;border-top:1px solid #e2e8f0;margin:0;"></td></tr>
+<!-- What's next -->
+<tr><td style="padding:24px 40px 32px;color:#0f172a;font-size:14px;line-height:1.7;">
+<p style="margin:0 0 12px;font-weight:600;color:#0f172a;">What happens next?</p>
+<table cellpadding="0" cellspacing="0" style="width:100%;">
+<tr><td style="padding:6px 0;color:#0f172a;font-size:14px;"><span style="color:#2E7D8A;font-weight:600;">1.</span> &nbsp;Review your preview and share feedback</td></tr>
+<tr><td style="padding:6px 0;color:#0f172a;font-size:14px;"><span style="color:#2E7D8A;font-weight:600;">2.</span> &nbsp;We make any changes you want — free of charge</td></tr>
+<tr><td style="padding:6px 0;color:#0f172a;font-size:14px;"><span style="color:#2E7D8A;font-weight:600;">3.</span> &nbsp;Once you love it, we take it live on your domain</td></tr>
+</table>
+<p style="margin:16px 0 0;color:#64748b;font-size:13px;">Just reply to this email or text us anytime with questions.</p>
+</td></tr>
+<!-- Footer -->
+<tr><td style="padding:24px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+<span style="color:#64748b;font-size:12px;">Bright Automations &bull; <a href="https://brightautomations.org" style="color:#2E7D8A;text-decoration:none;">brightautomations.org</a></span>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`
+}
+
+/**
+ * Wraps a plain-text AI message in the branded email template.
+ * Used by Close Engine email fallback so emails look professional.
+ */
+export function wrapMessageHtml(message: string, senderName?: string): string {
+  const htmlMessage = message.replace(/\n/g, '<br>')
+  const signoff = senderName && senderName !== 'clawdbot'
+    ? `<p style="margin-top:24px;color:#64748b;">— ${senderName}<br>Bright Automations</p>`
+    : `<p style="margin-top:24px;color:#64748b;">— Bright Automations</p>`
+  return wrapHtml(`${htmlMessage}${signoff}`)
+}
+
 const DEFAULT_TEMPLATES: Record<string, { subject: string; body: string }> = {
   // ── Onboarding ──────────────────────────────────────
   onboarding_welcome: {
     subject: 'Welcome to Bright Automations, {first_name}!',
     body: wrapHtml(`
-      <p>Hey {first_name}!</p>
-      <p>This is Andrew from Bright Automations. We're excited to build your site for <strong>{company_name}</strong>!</p>
-      <p>To get started, I need a few things:</p>
-      <ol>
-        <li>Business name as you want it on the site</li>
-        <li>Phone, email, and address</li>
-        <li>Business hours</li>
-        <li>Services list</li>
-        <li>Logo</li>
-        <li>Photos of your work or team</li>
-        <li>Color/style preferences</li>
-      </ol>
-      <p>Once I have this, I'll have a draft ready in <strong>24-48 hours</strong>!</p>
-      <p>Just reply to this email or text me directly.</p>
-      <p style="margin-top:24px;">— Andrew<br>Bright Automations</p>
+      <p style="margin:0 0 16px;">Hey {first_name}!</p>
+      <p style="margin:0 0 20px;">This is Andrew from Bright Automations. We're excited to build your site for <strong>{company_name}</strong>!</p>
+      <p style="margin:0 0 12px;font-weight:600;color:#0f172a;">To get started, I need a few things:</p>
+      <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;width:100%;">
+        <tr><td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;color:#0f172a;font-size:14px;"><span style="display:inline-block;width:24px;height:24px;background:#2E7D8A;color:#fff;border-radius:50%;text-align:center;line-height:24px;font-size:12px;font-weight:600;margin-right:10px;">1</span>Business name as you want it on the site</td></tr>
+        <tr><td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;color:#0f172a;font-size:14px;"><span style="display:inline-block;width:24px;height:24px;background:#2E7D8A;color:#fff;border-radius:50%;text-align:center;line-height:24px;font-size:12px;font-weight:600;margin-right:10px;">2</span>Phone, email, and address</td></tr>
+        <tr><td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;color:#0f172a;font-size:14px;"><span style="display:inline-block;width:24px;height:24px;background:#2E7D8A;color:#fff;border-radius:50%;text-align:center;line-height:24px;font-size:12px;font-weight:600;margin-right:10px;">3</span>Business hours</td></tr>
+        <tr><td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;color:#0f172a;font-size:14px;"><span style="display:inline-block;width:24px;height:24px;background:#2E7D8A;color:#fff;border-radius:50%;text-align:center;line-height:24px;font-size:12px;font-weight:600;margin-right:10px;">4</span>Services list</td></tr>
+        <tr><td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;color:#0f172a;font-size:14px;"><span style="display:inline-block;width:24px;height:24px;background:#2E7D8A;color:#fff;border-radius:50%;text-align:center;line-height:24px;font-size:12px;font-weight:600;margin-right:10px;">5</span>Logo</td></tr>
+        <tr><td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;color:#0f172a;font-size:14px;"><span style="display:inline-block;width:24px;height:24px;background:#2E7D8A;color:#fff;border-radius:50%;text-align:center;line-height:24px;font-size:12px;font-weight:600;margin-right:10px;">6</span>Photos of your work or team</td></tr>
+        <tr><td style="padding:10px 16px;color:#0f172a;font-size:14px;"><span style="display:inline-block;width:24px;height:24px;background:#2E7D8A;color:#fff;border-radius:50%;text-align:center;line-height:24px;font-size:12px;font-weight:600;margin-right:10px;">7</span>Color/style preferences</td></tr>
+      </table>
+      <div style="background:#f0fdfa;border-left:4px solid #2E7D8A;padding:16px 20px;border-radius:0 8px 8px 0;margin:0 0 24px;">
+        <p style="margin:0;font-size:14px;color:#0f172a;">Once I have this, I'll have a draft ready in <strong>24-48 hours</strong>!</p>
+      </div>
+      <p style="margin:0 0 4px;color:#64748b;font-size:14px;">Just reply to this email or text me directly.</p>
+      <p style="margin:24px 0 0;color:#64748b;">— Andrew<br>Bright Automations</p>
     `),
   },
 

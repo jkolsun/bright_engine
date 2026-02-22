@@ -10,7 +10,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import type { Prisma } from '@prisma/client'
 import { prisma } from './db'
 import { sendSMSViaProvider } from './sms-provider'
-import { sendEmail } from './resend'
+import { sendEmail, wrapMessageHtml } from './resend'
 import {
   getConversationContext,
   transitionStage,
@@ -111,11 +111,11 @@ export async function sendCloseEngineMessage(options: CloseEngineMessageOptions)
     return { success: false, channel: 'NONE', fallbackUsed: false, error: `SMS failed (${smsResult.error}), no email for fallback` }
   }
 
-  // 3. Send via Resend email
+  // 3. Send via Resend email (branded template)
   const emailResult = await sendEmail({
     to: emailAddress,
     subject: emailSubject || 'Message from Bright Automations',
-    html: message.replace(/\n/g, '<br>'),
+    html: wrapMessageHtml(message, sender),
     leadId,
     sender,
     trigger: `${trigger}_email_fallback`,
@@ -451,7 +451,7 @@ export async function processCloseEngineInbound(
       if (extracted.colorPrefs || extracted.colors) { bsUpdate.colorPrefsCollected = true }
 
       if (Object.keys(bsUpdate).length > 0) {
-        // Inherit global auto-push for new records
+        // Check global auto-push setting (single source of truth — no per-lead toggle)
         let globalAutoPush = true
         try {
           const setting = await prisma.settings.findUnique({ where: { key: 'globalAutoPush' } })
@@ -466,8 +466,8 @@ export async function processCloseEngineInbound(
           update: bsUpdate,
         })
 
-        // Auto-push check: if autoPush is ON and services are collected, trigger build
-        if (updatedBS.autoPush && updatedBS.servicesCollected && updatedBS.status !== 'building') {
+        // Auto-push check: use GLOBAL setting (not per-lead) + services collected
+        if (globalAutoPush && updatedBS.servicesCollected && updatedBS.status !== 'building') {
           await prisma.buildStatus.update({
             where: { leadId: lead.id },
             data: { status: 'building', lastPushedAt: new Date() },

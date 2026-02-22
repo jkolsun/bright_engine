@@ -4,6 +4,9 @@ import PreviewTracker from '@/components/preview/PreviewTracker'
 import PreviewCTABanner from '@/components/preview/PreviewCTABanner'
 import { notFound } from 'next/navigation'
 
+// CRITICAL: Force dynamic rendering — client must always see the latest saved HTML
+export const dynamic = 'force-dynamic'
+
 export default async function PreviewPage({ params }: { params: { id: string } }) {
   const lead = await prisma.lead.findFirst({
     where: {

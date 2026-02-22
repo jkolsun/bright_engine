@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifySession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { sendSMSViaProvider } from '@/lib/sms-provider'
-import { sendEmail } from '@/lib/resend'
+import { sendEmail, wrapPreviewHtml } from '@/lib/resend'
 
 export const dynamic = 'force-dynamic'
 
@@ -83,7 +83,11 @@ export async function POST(request: NextRequest) {
         const emailResult = await sendEmail({
           to: lead.email,
           subject: `Your website preview — ${lead.companyName}`,
-          html: `<p>${message}</p>`,
+          html: wrapPreviewHtml({
+            recipientName: firstName,
+            companyName: lead.companyName,
+            previewUrl: lead.previewUrl,
+          }),
           text: message,
           leadId: lead.id,
           sender: repName,

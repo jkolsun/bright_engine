@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import {
   MessageSquare, AlertCircle, CheckCircle, Send, ArrowLeft,
-  Settings, AlertTriangle, RefreshCw, Search, Mail, Phone, Plus, Hammer
+  AlertTriangle, RefreshCw, Search, Mail, Phone, Plus, Hammer
 } from 'lucide-react'
 
 type ViewMode = 'inbox' | 'conversation' | 'settings'
@@ -119,11 +119,6 @@ function MessagesPageInner() {
   const [sendChannel, setSendChannel] = useState<'SMS' | 'EMAIL'>('SMS')
   const [refreshing, setRefreshing] = useState(false)
   const [expandedDecisionLog, setExpandedDecisionLog] = useState<string | null>(null)
-
-  // AI Settings
-  const [aiSettings, setAiSettings] = useState<any>(null)
-  const [aiSettingsLoading, setAiSettingsLoading] = useState(false)
-  const [savingSettings, setSavingSettings] = useState(false)
 
   // Build Status
   const [buildStatus, setBuildStatus] = useState<any>(null)
@@ -312,40 +307,6 @@ function MessagesPageInner() {
     }
   }
 
-  const loadAiSettings = useCallback(async () => {
-    setAiSettingsLoading(true)
-    try {
-      const res = await fetch('/api/ai-settings')
-      if (res.ok) {
-        const data = await res.json()
-        setAiSettings(data.settings)
-      }
-    } catch (error) {
-      console.error('Failed to load AI settings:', error)
-    } finally {
-      setAiSettingsLoading(false)
-    }
-  }, [])
-
-  const saveAiSettings = async () => {
-    setSavingSettings(true)
-    try {
-      await fetch('/api/ai-settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(aiSettings),
-      })
-    } catch (error) {
-      console.error('Failed to save AI settings:', error)
-    } finally {
-      setSavingSettings(false)
-    }
-  }
-
-  useEffect(() => {
-    if (viewMode === 'settings') loadAiSettings()
-  }, [viewMode, loadAiSettings])
-
   useEffect(() => {
     if (viewMode === 'conversation' && selectedCloseConv?.leadId) {
       loadBuildStatus(selectedCloseConv.leadId)
@@ -371,24 +332,6 @@ function MessagesPageInner() {
       console.error('Push to build failed:', err)
     } finally {
       setPushingBuild(false)
-    }
-  }
-
-  const handleToggleAutoPush = async (newValue?: boolean) => {
-    if (!selectedCloseConv?.leadId) return
-    const autoPush = typeof newValue === 'boolean' ? newValue : !buildStatus?.autoPush
-    try {
-      const res = await fetch(`/api/build-status/${selectedCloseConv.leadId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ autoPush }),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setBuildStatus(data)
-      }
-    } catch (err) {
-      console.error('Toggle auto-push failed:', err)
     }
   }
 
@@ -884,14 +827,6 @@ function MessagesPageInner() {
                 >
                   {pushingBuild ? 'Pushing...' : 'Push to Build'}
                 </Button>
-                <div className="flex items-center justify-between">
-                  <ToggleSwitch
-                    label="Auto-push when ready"
-                    size="sm"
-                    checked={buildStatus.autoPush || false}
-                    onChange={handleToggleAutoPush}
-                  />
-                </div>
               </div>
             </div>
           ) : (
@@ -1134,169 +1069,6 @@ function MessagesPageInner() {
     )
   }
 
-  // ─── Settings View ───
-  if (viewMode === 'settings') {
-    return (
-      <div className="p-8 space-y-6">
-        <button onClick={() => setViewMode('inbox')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800">
-          <ArrowLeft size={16} /> Back to Messages
-        </button>
-
-        <h1 className="text-3xl font-bold text-gray-900">AI Handler Settings</h1>
-
-        {aiSettingsLoading ? (
-          <Card className="p-12 text-center text-gray-500">Loading AI settings...</Card>
-        ) : aiSettings ? (
-          <div className="space-y-6">
-            {/* Toggles */}
-            <Card className="p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Toggles</h3>
-              <div className="space-y-4">
-                {[
-                  { key: 'globalAiAutoRespond', label: 'Global AI auto-respond' },
-                  { key: 'preClientAi', label: 'Pre-client AI (Sales)' },
-                  { key: 'postClientAi', label: 'Post-client AI (Support)' },
-                ].map(toggle => (
-                  <div key={toggle.key} className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{toggle.label}</span>
-                    <select
-                      value={aiSettings[toggle.key] ? 'on' : 'off'}
-                      onChange={(e) => setAiSettings({ ...aiSettings, [toggle.key]: e.target.value === 'on' })}
-                      className="px-3 py-1.5 border rounded text-sm"
-                    >
-                      <option value="on">ON</option>
-                      <option value="off">OFF</option>
-                    </select>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            {/* Humanizing */}
-            <Card className="p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Humanizing</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium">Response delay</div>
-                    <div className="text-xs text-gray-500">Random delay before AI responds</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      value={aiSettings.responseDelay?.min || 30}
-                      onChange={(e) => setAiSettings({ ...aiSettings, responseDelay: { ...aiSettings.responseDelay, min: parseInt(e.target.value) || 30 } })}
-                      className="w-16 text-sm"
-                    />
-                    <span className="text-sm text-gray-500">to</span>
-                    <Input
-                      type="number"
-                      value={aiSettings.responseDelay?.max || 90}
-                      onChange={(e) => setAiSettings({ ...aiSettings, responseDelay: { ...aiSettings.responseDelay, max: parseInt(e.target.value) || 90 } })}
-                      className="w-16 text-sm"
-                    />
-                    <span className="text-sm text-gray-500">sec</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Tone</span>
-                  <select value={aiSettings.tone || 'casual'} onChange={(e) => setAiSettings({ ...aiSettings, tone: e.target.value })} className="px-3 py-1.5 border rounded text-sm">
-                    <option value="casual">Casual, friendly, short sentences</option>
-                    <option value="professional">Professional but warm</option>
-                    <option value="formal">Formal</option>
-                  </select>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Max response length</span>
-                  <select value={aiSettings.maxResponseLength || 2} onChange={(e) => setAiSettings({ ...aiSettings, maxResponseLength: parseInt(e.target.value) })} className="px-3 py-1.5 border rounded text-sm">
-                    <option value={1}>1 sentence</option>
-                    <option value={2}>2 sentences (unless detail needed)</option>
-                    <option value={3}>3 sentences</option>
-                    <option value={5}>5 sentences max</option>
-                  </select>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Use emojis</span>
-                  <select value={aiSettings.useEmojis || 'sparingly'} onChange={(e) => setAiSettings({ ...aiSettings, useEmojis: e.target.value })} className="px-3 py-1.5 border rounded text-sm">
-                    <option value="never">Never</option>
-                    <option value="sparingly">Sparingly (thumbs up, check only)</option>
-                    <option value="moderate">Moderate</option>
-                  </select>
-                </div>
-              </div>
-            </Card>
-
-            {/* System Prompt */}
-            <Card className="p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Humanizing File (System Prompt)</h3>
-              <textarea
-                value={aiSettings.humanizingPrompt || ''}
-                onChange={(e) => setAiSettings({ ...aiSettings, humanizingPrompt: e.target.value })}
-                className="w-full px-3 py-2 border rounded-md text-sm min-h-[120px] font-mono"
-                placeholder="You are a team member at Bright Automations..."
-              />
-            </Card>
-
-            {/* Escalation Triggers */}
-            <Card className="p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Escalation Triggers</h3>
-              <div className="space-y-3">
-                {(aiSettings.escalationTriggers || []).map((trigger: any, i: number) => (
-                  <div key={trigger.id || i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={trigger.enabled}
-                        onChange={(e) => {
-                          const updated = [...aiSettings.escalationTriggers]
-                          updated[i] = { ...updated[i], enabled: e.target.checked }
-                          setAiSettings({ ...aiSettings, escalationTriggers: updated })
-                        }}
-                        className="rounded"
-                      />
-                      <span className="text-sm">{trigger.label}</span>
-                    </div>
-                    {trigger.threshold !== undefined && (
-                      <Input
-                        type="number"
-                        value={trigger.threshold}
-                        onChange={(e) => {
-                          const updated = [...aiSettings.escalationTriggers]
-                          updated[i] = { ...updated[i], threshold: parseInt(e.target.value) || 0 }
-                          setAiSettings({ ...aiSettings, escalationTriggers: updated })
-                        }}
-                        className="w-16 text-sm"
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">On escalation, AI sends:</h4>
-                <Input
-                  value={aiSettings.escalationMessage || ''}
-                  onChange={(e) => setAiSettings({ ...aiSettings, escalationMessage: e.target.value })}
-                  className="text-sm"
-                />
-              </div>
-            </Card>
-
-            {/* Save */}
-            <div className="flex gap-3">
-              <Button onClick={saveAiSettings} disabled={savingSettings}>
-                {savingSettings ? 'Saving...' : 'Save All Settings'}
-              </Button>
-              <Button variant="outline" onClick={loadAiSettings}>Reset</Button>
-            </div>
-          </div>
-        ) : (
-          <Card className="p-6 text-center text-gray-500">Failed to load AI settings.</Card>
-        )}
-      </div>
-    )
-  }
-
   // ─── Inbox View ───
   return (
     <div className="p-8 space-y-6">
@@ -1311,9 +1083,6 @@ function MessagesPageInner() {
           </Button>
           <Button variant="outline" size="sm" disabled={refreshing} onClick={async () => { setRefreshing(true); await Promise.all([loadMessages(), loadCloseConversations()]); setRefreshing(false) }}>
             <RefreshCw size={14} className={`mr-1 ${refreshing ? 'animate-spin' : ''}`} /> {refreshing ? 'Refreshing...' : 'Refresh'}
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setViewMode('settings')}>
-            <Settings size={14} className="mr-1" /> AI Settings
           </Button>
         </div>
       </div>

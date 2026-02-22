@@ -1,20 +1,23 @@
 'use client'
 
-import { Save, RotateCcw, ArrowLeft, Eye, EyeOff, MessageSquare, Loader2, Check, AlertCircle, RefreshCw } from 'lucide-react'
+import { Save, RotateCcw, ArrowLeft, Eye, EyeOff, MessageSquare, Loader2, Check, AlertCircle, RefreshCw, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 
 interface EditorToolbarProps {
   companyName: string
   buildStep: string
   saveStatus: 'saved' | 'unsaved' | 'saving' | 'error'
+  lastSavedAt?: string | null
   onSave: () => void
   onReset: () => void
   onRegenerate: () => void
   isRegenerating?: boolean
   onTogglePreview: () => void
   onToggleChat: () => void
+  onToggleImages: () => void
   showPreview: boolean
   showChat: boolean
+  showImages: boolean
 }
 
 const statusConfig = {
@@ -48,9 +51,14 @@ export default function EditorToolbar(props: EditorToolbarProps) {
       </div>
 
       {/* Center: Save status */}
-      <div className={`flex items-center gap-1.5 text-xs ${status.className}`}>
-        {status.icon}
-        <span>{status.text}</span>
+      <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-1.5 text-xs ${status.className}`}>
+          {status.icon}
+          <span>{status.text}</span>
+        </div>
+        {props.lastSavedAt && props.saveStatus === 'saved' && (
+          <span className="text-[10px] text-gray-500">at {props.lastSavedAt}</span>
+        )}
       </div>
 
       {/* Right: Actions */}
@@ -69,13 +77,24 @@ export default function EditorToolbar(props: EditorToolbarProps) {
         <button
           onClick={props.onToggleChat}
           className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-colors ${
-            props.showChat
+            props.showChat && !props.showImages
               ? 'bg-blue-600/20 text-blue-400'
               : 'text-gray-400 hover:text-white hover:bg-gray-600'
           }`}
         >
           <MessageSquare size={14} />
           AI Chat
+        </button>
+        <button
+          onClick={props.onToggleImages}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-colors ${
+            props.showImages
+              ? 'bg-purple-600/20 text-purple-400'
+              : 'text-gray-400 hover:text-white hover:bg-gray-600'
+          }`}
+        >
+          <ImageIcon size={14} />
+          Images
         </button>
         <div className="h-5 w-px bg-gray-600" />
         <button
@@ -97,7 +116,13 @@ export default function EditorToolbar(props: EditorToolbarProps) {
         </button>
         <button
           onClick={props.onSave}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          className={`flex items-center gap-1.5 px-4 py-1.5 text-xs rounded transition-colors font-medium ${
+            props.saveStatus === 'unsaved'
+              ? 'bg-blue-600 text-white hover:bg-blue-700 ring-1 ring-blue-400/50'
+              : props.saveStatus === 'error'
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
         >
           <Save size={14} />
           Save

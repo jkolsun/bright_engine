@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import EditorToolbar from './EditorToolbar'
 import PreviewPanel from './PreviewPanel'
 import AIChatPanel from './AIChatPanel'
+import ImageManager from './ImageManager'
 
 // Dynamic import Monaco — it cannot run server-side
 const MonacoEditorPanel = dynamic(() => import('./MonacoEditorPanel'), {
@@ -30,10 +31,17 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
   const [saveStatus, setSaveStatus] = useState<'saved' | 'unsaved' | 'saving' | 'error'>('saved')
   const [showPreview, setShowPreview] = useState(true)
   const [showChat, setShowChat] = useState(true)
+  const [showImages, setShowImages] = useState(false)
   const [snapshotError, setSnapshotError] = useState<string | null>(null)
   const [isRegenerating, setIsRegenerating] = useState(false)
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
 
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
+  const htmlRef = useRef(html)
+  const editHistoryRef = useRef<Array<{ instruction: string; summary: string }>>([])
+
+  // Keep ref in sync with state for use in closures
+  useEffect(() => { htmlRef.current = html }, [html])
 
   // Load HTML on mount (on-demand from API)
   useEffect(() => {
@@ -51,6 +59,20 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
   }, [saveStatus])
+
+  // Keyboard shortcut: Ctrl/Cmd+S to save
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+        saveHtml(htmlRef.current)
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const loadEditorHtml = async () => {
     setIsLoading(true)
@@ -97,6 +119,10 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
   }
 
   const saveHtml = useCallback(async (htmlToSave: string) => {
+    if (!htmlToSave || htmlToSave.length < 100) {
+      console.warn('[Save] Refusing to save empty/tiny HTML')
+      return
+    }
     setSaveStatus('saving')
     try {
       const res = await fetch(`/api/site-editor/${props.leadId}/save`, {
@@ -104,7 +130,32 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ html: htmlToSave }),
       })
-      setSaveStatus(res.ok ? 'saved' : 'error')
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setSaveStatus('saved')
+        setLastSavedAt(new Date().toLocaleTimeString())
+        console.log(`[Save] Confirmed: ${data.size} chars saved at ${data.savedAt}`)
+      } else {
+        setSaveStatus('error')
+        console.error('[Save] Failed:', data.error)
+        // Auto-retry once after 3 seconds
+        setTimeout(() => {
+          if (htmlRef.current === htmlToSave) {
+            console.log('[Save] Auto-retrying...')
+            setSaveStatus('saving')
+            fetch(`/api/site-editor/${props.leadId}/save`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ html: htmlToSave }),
+            }).then(r => r.json()).then(d => {
+              if (d.success) {
+                setSaveStatus('saved')
+                setLastSavedAt(new Date().toLocaleTimeString())
+              }
+            }).catch(() => {})
+          }
+        }, 3000)
+      }
     } catch {
       setSaveStatus('error')
     }
@@ -120,30 +171,48 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
 
   const handleManualSave = useCallback(() => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-    saveHtml(html)
-  }, [html, saveHtml])
+    // Use ref to always get the latest HTML — avoids stale closure after AI edit or image swap
+    saveHtml(htmlRef.current)
+  }, [saveHtml])
 
   const handleAIEdit = useCallback(async (instruction: string): Promise<{ success: boolean; message: string }> => {
     try {
       const res = await fetch(`/api/site-editor/${props.leadId}/ai-edit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html, instruction }),
+        body: JSON.stringify({
+          html: htmlRef.current,
+          instruction,
+          previousEdits: editHistoryRef.current,
+        }),
       })
       const data = await res.json()
       if (res.ok && data.html) {
         setHtml(data.html)
         setSaveStatus('unsaved')
-        // Trigger auto-save
+        // Track this edit in conversation history
+        editHistoryRef.current = [
+          ...editHistoryRef.current,
+          { instruction, summary: data.summary || 'Changes applied' },
+        ].slice(-10) // Keep last 10
+        // Auto-save after AI edit
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
         saveTimeoutRef.current = setTimeout(() => saveHtml(data.html), 1500)
         return { success: true, message: data.summary || 'Changes applied' }
       }
       return { success: false, message: data.error || 'AI edit failed' }
     } catch {
-      return { success: false, message: 'Network error' }
+      return { success: false, message: 'Network error — check your connection and try again' }
     }
-  }, [html, props.leadId, saveHtml])
+  }, [props.leadId, saveHtml])
+
+  // Image manager changes — treated like manual edits
+  const handleImageChange = useCallback((newHtml: string) => {
+    setHtml(newHtml)
+    setSaveStatus('unsaved')
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    saveTimeoutRef.current = setTimeout(() => saveHtml(newHtml), 1500)
+  }, [saveHtml])
 
   const handleRegenerate = useCallback(async () => {
     if (!confirm('Regenerate from template? This will replace the current HTML with a fresh snapshot.')) return
@@ -189,14 +258,17 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
         companyName={props.companyName}
         buildStep={props.buildStep}
         saveStatus={saveStatus}
+        lastSavedAt={lastSavedAt}
         onSave={handleManualSave}
         onReset={handleReset}
         onRegenerate={handleRegenerate}
         isRegenerating={isRegenerating}
         onTogglePreview={() => setShowPreview(p => !p)}
         onToggleChat={() => setShowChat(c => !c)}
+        onToggleImages={() => { setShowImages(i => !i); if (showChat) setShowChat(false) }}
         showPreview={showPreview}
         showChat={showChat}
+        showImages={showImages}
       />
 
       <div className="flex-1 flex overflow-hidden">
@@ -235,8 +307,15 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
           </div>
         )}
 
+        {/* Image Manager — toggleable (replaces chat when active) */}
+        {showImages && (
+          <div className="w-[320px] min-w-[280px] border-l border-gray-700">
+            <ImageManager html={html} onHtmlChange={handleImageChange} />
+          </div>
+        )}
+
         {/* AI Chat — toggleable */}
-        {showChat && (
+        {showChat && !showImages && (
           <div className="w-[320px] min-w-[280px] border-l border-gray-700">
             <AIChatPanel onSubmit={handleAIEdit} companyName={props.companyName} />
           </div>

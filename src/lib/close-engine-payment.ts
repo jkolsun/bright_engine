@@ -84,7 +84,21 @@ export async function sendPaymentLink(conversationId: string): Promise<{ success
     where: { isCore: true, active: true },
     select: { stripeLink: true },
   })
-  const paymentUrl = coreProduct?.stripeLink || ''
+  const rawPaymentUrl = coreProduct?.stripeLink || ''
+
+  // Append client_reference_id so the Stripe webhook can match payment to this lead
+  let paymentUrl = rawPaymentUrl
+  if (rawPaymentUrl && lead.id) {
+    try {
+      const urlObj = new URL(rawPaymentUrl)
+      urlObj.searchParams.set('client_reference_id', lead.id)
+      paymentUrl = urlObj.toString()
+    } catch {
+      // If URL parsing fails, append manually
+      const separator = rawPaymentUrl.includes('?') ? '&' : '?'
+      paymentUrl = `${rawPaymentUrl}${separator}client_reference_id=${lead.id}`
+    }
+  }
 
   // Use system message template for draft content (respects admin edits in Settings)
   let draftContent: string

@@ -233,12 +233,28 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
     }
   }
 
-  const handleRebuild = async () => {
+  const handleRebuild = async (confirmOverwrite = false) => {
     setRebuilding(true)
     try {
-      const res = await fetch(`/api/build-queue/${lead.id}/rebuild`, { method: 'POST' })
+      const res = await fetch(`/api/build-queue/${lead.id}/rebuild`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmOverwrite }),
+      })
+      const data = await res.json()
+
+      if (res.status === 409 && data.hasEdits) {
+        // Lead has manually edited HTML — confirm before wiping
+        if (confirm(`WARNING: This site has been manually edited in the Site Editor (${Math.round(data.htmlSize / 1024)}KB of HTML). Rebuilding will PERMANENTLY ERASE all manual edits.\n\nAre you sure you want to rebuild from scratch?`)) {
+          setRebuilding(false)
+          return handleRebuild(true)
+        }
+        setRebuilding(false)
+        return
+      }
+
       if (res.ok) {
-        setTimeout(onRefresh, 2000) // Refresh after 2s to show updated status
+        setTimeout(onRefresh, 2000)
       }
     } catch (err) {
       console.error('Rebuild failed:', err)
@@ -305,7 +321,7 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
           )}
           {showRebuild && (
             <button
-              onClick={handleRebuild}
+              onClick={() => handleRebuild()}
               disabled={rebuilding}
               className="px-3 py-1.5 text-sm text-amber-600 border border-amber-300 rounded-lg hover:bg-amber-50 disabled:opacity-50 flex items-center gap-1.5"
             >

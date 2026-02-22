@@ -125,11 +125,23 @@ async function executeApprovedAction(approval: any) {
     switch (approval.gate) {
       case 'PAYMENT_LINK': {
         // Use static Stripe link from metadata (admin may have edited it before approving)
-        const paymentUrl = (approval.metadata as any)?.paymentUrl || ''
+        let paymentUrl: string = (approval.metadata as any)?.paymentUrl || ''
         if (!paymentUrl) {
           console.error(`[Approvals] No payment URL for approval ${approval.id}`)
           break
         }
+        // Safety net: ensure client_reference_id is on the URL so the webhook can match
+        if (approval.leadId && paymentUrl && !paymentUrl.includes('client_reference_id')) {
+          try {
+            const urlObj = new URL(paymentUrl)
+            urlObj.searchParams.set('client_reference_id', approval.leadId)
+            paymentUrl = urlObj.toString()
+          } catch {
+            const sep = paymentUrl.includes('?') ? '&' : '?'
+            paymentUrl = `${paymentUrl}${sep}client_reference_id=${approval.leadId}`
+          }
+        }
+
         const { getPricingConfig } = await import('@/lib/pricing-config')
         const pricingConfig = await getPricingConfig()
 

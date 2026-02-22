@@ -80,16 +80,6 @@ export async function PUT(
       return NextResponse.json(buildStatus)
     }
 
-    // Handle toggle autoPush
-    if (body.autoPush !== undefined) {
-      const buildStatus = await prisma.buildStatus.upsert({
-        where: { leadId },
-        create: { leadId, autoPush: body.autoPush },
-        update: { autoPush: body.autoPush },
-      })
-      return NextResponse.json(buildStatus)
-    }
-
     // General field update
     const allowedFields = [
       'servicesCollected', 'servicesData', 'hoursCollected', 'hoursData',
@@ -122,8 +112,8 @@ export async function PUT(
       update: updateData,
     })
 
-    // Auto-push check: if autoPush is ON and services are collected, trigger build
-    if (buildStatus.autoPush && buildStatus.servicesCollected && buildStatus.status !== 'building') {
+    // Auto-push check: use GLOBAL setting (not per-lead) + services collected
+    if (globalAutoPush && buildStatus.servicesCollected && buildStatus.status !== 'building') {
       const lead = await prisma.lead.findUnique({
         where: { id: leadId },
         select: { buildStep: true, companyName: true },

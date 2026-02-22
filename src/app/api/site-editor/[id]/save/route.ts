@@ -98,15 +98,22 @@ export async function PUT(
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     }
 
-    await prisma.lead.update({
+    const updated = await prisma.lead.update({
       where: { id },
       data: {
         siteHtml: html,
         buildStep: lead.buildStep === 'QA_REVIEW' ? 'EDITING' : lead.buildStep,
       },
+      select: { id: true, siteHtml: true },
     })
 
-    return NextResponse.json({ success: true, savedAt: new Date().toISOString() })
+    // Verify the save actually committed — if siteHtml length doesn't match, something went wrong
+    if (!updated.siteHtml || (html.length > 0 && Math.abs(updated.siteHtml.length - html.length) > 10)) {
+      console.error(`[Save] Verification failed: sent ${html.length} chars, got back ${updated.siteHtml?.length ?? 0} chars`)
+      return NextResponse.json({ error: 'Save verification failed — please try again' }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true, savedAt: new Date().toISOString(), size: updated.siteHtml.length })
   } catch (error) {
     console.error('[Save] Error:', error)
     return NextResponse.json({ error: 'Failed to save' }, { status: 500 })

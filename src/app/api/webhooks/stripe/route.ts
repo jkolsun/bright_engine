@@ -102,6 +102,26 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
   }
 
+  // Phone fallback: match by customer phone number
+  if (!lead) {
+    const phone = session.customer_details?.phone
+    if (phone) {
+      const digits = phone.replace(/\D/g, '').slice(-10)
+      if (digits.length === 10) {
+        lead = await prisma.lead.findFirst({
+          where: {
+            phone: { endsWith: digits },
+            status: { notIn: ['PAID', 'CLOSED_LOST', 'DO_NOT_CONTACT'] },
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+        if (lead) {
+          console.log(`[Stripe Webhook] Matched lead by phone fallback: ${phone} → ${lead.id} (${lead.companyName})`)
+        }
+      }
+    }
+  }
+
   if (!lead) {
     console.warn(`[Stripe Webhook] No lead found for session ${session.id} — client_reference_id=${session.client_reference_id}, email=${session.customer_details?.email}`)
     // Still record the payment as a notification so it's not lost
