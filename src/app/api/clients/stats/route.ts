@@ -110,9 +110,12 @@ export async function GET(request: NextRequest) {
       ? Math.round((churnedThisMonth / Math.max(1, allClients.filter(c => c.hostingStatus !== 'CANCELLED').length)) * 100)
       : 0
 
-    // Edit requests ready for Jared
+    // Edit requests ready for Jared (awaiting approval or needs manual edit)
     const readyForReview = await prisma.editRequest.count({
-      where: { status: 'ready_for_review' }
+      where: {
+        status: 'ready_for_review',
+        editFlowState: { in: ['awaiting_approval', 'escalated', 'failed'] },
+      }
     })
 
     // Upsell replies needing follow-up

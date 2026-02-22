@@ -32,6 +32,8 @@ export async function GET(request: NextRequest) {
               companyName: true,
               contactName: true,
               siteUrl: true,
+              stagingUrl: true,
+              leadId: true,
             }
           }
         },

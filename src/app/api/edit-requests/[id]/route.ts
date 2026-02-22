@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
+import { pushEditToBuildQueue } from '@/lib/edit-request-handler'
 
 export const dynamic = 'force-dynamic'
 
-// PUT /api/edit-requests/[id] - Update edit request (approve, reject, etc.)
+/**
+ * PUT /api/edit-requests/[id] — Update edit request
+ *
+ * When status='approved': applies the edit + pushes to build queue + syncs everything
+ * When status='live': marks as pushed live
+ * When status='rejected': rejects and reverts HTML if needed
+ */
 export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -18,28 +25,75 @@ export async function PUT(
     }
 
     const data = await request.json()
-    const updateData: any = {}
 
+    // Load the current edit request
+    const editRequest = await prisma.editRequest.findUnique({
+      where: { id },
+      include: { client: { include: { lead: true } } },
+    })
+    if (!editRequest) {
+      return NextResponse.json({ error: 'Edit request not found' }, { status: 404 })
+    }
+
+    // ── APPROVE: push edit to build queue ──
+    if (data.status === 'approved') {
+      // Update the edit request
+      await prisma.editRequest.update({
+        where: { id },
+        data: {
+          status: 'approved',
+          editFlowState: 'confirmed',
+          approvedBy: session.email || 'admin',
+          approvedAt: new Date(),
+        },
+      })
+
+      // Push to build queue (updates site HTML, build step, notifies client)
+      await pushEditToBuildQueue(id)
+
+      const updated = await prisma.editRequest.findUnique({ where: { id } })
+      return NextResponse.json({ editRequest: updated })
+    }
+
+    // ── REJECT: revert HTML if AI had applied changes ──
+    if (data.status === 'rejected') {
+      // Revert site HTML if we have a pre-edit snapshot
+      if (editRequest.preEditHtml && editRequest.leadId) {
+        await prisma.lead.update({
+          where: { id: editRequest.leadId },
+          data: { siteHtml: editRequest.preEditHtml },
+        })
+      }
+
+      const updated = await prisma.editRequest.update({
+        where: { id },
+        data: {
+          status: 'rejected',
+          editFlowState: 'failed',
+        },
+      })
+
+      return NextResponse.json({ editRequest: updated })
+    }
+
+    // ── Generic field updates ──
+    const updateData: Record<string, unknown> = {}
     if (data.status) updateData.status = data.status
     if (data.aiInterpretation) updateData.aiInterpretation = data.aiInterpretation
     if (data.complexityTier) updateData.complexityTier = data.complexityTier
     if (data.stagingSnapshotUrl) updateData.stagingSnapshotUrl = data.stagingSnapshotUrl
 
-    if (data.status === 'approved') {
-      updateData.approvedBy = session.email || 'admin'
-      updateData.approvedAt = new Date()
-    }
-
     if (data.status === 'live') {
       updateData.pushedLiveAt = new Date()
+      updateData.editFlowState = 'confirmed'
     }
 
-    const editRequest = await prisma.editRequest.update({
+    const updated = await prisma.editRequest.update({
       where: { id },
       data: updateData,
     })
 
-    return NextResponse.json({ editRequest })
+    return NextResponse.json({ editRequest: updated })
   } catch (error) {
     console.error('Error updating edit request:', error)
     return NextResponse.json({ error: 'Failed to update edit request' }, { status: 500 })

@@ -1,10 +1,12 @@
 /**
  * Edit Request Handler
  *
- * Orchestrates the flow when a post-payment client requests a site edit via SMS.
- * - Simple edits (font, color, text): AI auto-applies, asks client for confirmation
- * - Complex edits (layout, new pages): Escalates to admin via approval + SMS
- * - High-maintenance detection: Alerts admin if 3+ requests in 7 days
+ * Three-tier edit flow:
+ * - Simple: AI auto-applies + auto-pushes to build queue (no admin review)
+ * - Medium: AI applies edit, awaits admin approval before pushing
+ * - Complex: Alerts admin to edit manually in site editor (AI still attempts)
+ *
+ * Both `status` (UI) and `editFlowState` (backend) are kept in sync.
  */
 
 import { prisma } from './db'
@@ -60,35 +62,39 @@ export async function handleEditRequest(params: {
   // ── Route based on complexity ──
   if (complexity === 'simple') {
     await handleSimpleEdit(client, lead, editRequestId, instruction)
+  } else if (complexity === 'medium') {
+    await handleMediumEdit(client, lead, editRequestId, instruction)
   } else {
-    await handleComplexEdit(client, lead, editRequestId, instruction, complexity)
+    await handleComplexEdit(client, lead, editRequestId, instruction)
   }
 }
 
-// ─── Simple Edit: AI auto-applies ─────────────────────────────────
-
-async function handleSimpleEdit(
-  client: { id: string; companyName: string; stagingUrl?: string | null },
-  lead: { id: string; phone: string; siteHtml?: string | null; companyName: string; firstName: string },
+/**
+ * Shared helper: apply AI edit to the site HTML.
+ * Used by simple and medium tiers. Returns the result or null if failed.
+ */
+async function applyEdit(
+  client: { id: string; companyName: string },
+  lead: { id: string; phone: string; siteHtml?: string | null; companyName: string },
   editRequestId: string,
   instruction: string,
-): Promise<void> {
+): Promise<{ html: string; summary: string } | null> {
   if (!lead.siteHtml) {
     console.error(`[EditHandler] No siteHtml for lead ${lead.id} — cannot auto-edit`)
     await escalateAsFailed(client, lead, editRequestId, 'No site HTML available for auto-editing')
-    return
+    return null
   }
 
-  // Mark as AI editing
+  // Mark as AI editing (both status fields synced)
   await prisma.editRequest.update({
     where: { id: editRequestId },
     data: {
       editFlowState: 'ai_editing',
+      status: 'ai_processing',
       preEditHtml: lead.siteHtml,
     },
   })
 
-  // Apply AI edit
   const result = await applyAiEdit({
     html: lead.siteHtml,
     instruction,
@@ -98,87 +104,199 @@ async function handleSimpleEdit(
   if ('error' in result) {
     console.error(`[EditHandler] AI edit failed for ${client.companyName}: ${result.error}`)
     await escalateAsFailed(client, lead, editRequestId, result.error)
-    return
+    return null
   }
 
-  // Save the edited HTML
+  return result
+}
+
+// ─── Simple Edit: AI auto-applies + auto-pushes ──────────────────
+
+async function handleSimpleEdit(
+  client: { id: string; companyName: string; stagingUrl?: string | null },
+  lead: { id: string; phone: string; siteHtml?: string | null; companyName: string; firstName: string },
+  editRequestId: string,
+  instruction: string,
+): Promise<void> {
+  const result = await applyEdit(client, lead, editRequestId, instruction)
+  if (!result) return
+
+  // Auto-push: update site HTML + mark as approved + push to build queue
   await prisma.editRequest.update({
     where: { id: editRequestId },
     data: {
-      editFlowState: 'awaiting_confirmation',
+      editFlowState: 'confirmed',
+      status: 'approved',
       postEditHtml: result.html,
       editSummary: result.summary,
+      approvedBy: 'ai_auto',
+      approvedAt: new Date(),
     },
   })
 
-  // Update the lead's siteHtml so the staging preview reflects the change
+  // Update lead's siteHtml
   await prisma.lead.update({
     where: { id: lead.id },
-    data: { siteHtml: result.html },
+    data: { siteHtml: result.html, buildStep: 'QA_REVIEW' },
   })
 
-  // Text the client asking for confirmation
-  const stagingUrl = client.stagingUrl || `https://preview.brightautomations.org/preview/${lead.id}`
+  // Notify client
   await sendSMSViaProvider({
     to: lead.phone,
-    message: `I made that change for you! Check it out here ${stagingUrl} and let me know if you want anything else tweaked before I push it live`,
+    message: `Done! I made that change and it's going live now`,
     clientId: client.id,
-    trigger: 'edit_auto_applied',
+    trigger: 'edit_simple_auto_pushed',
     aiGenerated: true,
     conversationType: 'post_client',
     sender: 'clawdbot',
   })
 
-  console.log(`[EditHandler] Simple edit applied for ${client.companyName}: ${result.summary}`)
+  // Dashboard notification
+  await prisma.notification.create({
+    data: {
+      type: 'CLIENT_TEXT',
+      title: `Simple Edit Auto-Applied — ${client.companyName}`,
+      message: `AI applied: "${result.summary}". Auto-pushed to build queue.`,
+      metadata: { clientId: client.id, editRequestId },
+    },
+  })
+
+  console.log(`[EditHandler] Simple edit auto-pushed for ${client.companyName}: ${result.summary}`)
 }
 
-// ─── Complex Edit: Escalate to admin ──────────────────────────────
+// ─── Medium Edit: AI applies, awaits admin approval ──────────────
 
-async function handleComplexEdit(
-  client: { id: string; companyName: string },
-  lead: { id: string; phone: string; firstName: string },
+async function handleMediumEdit(
+  client: { id: string; companyName: string; stagingUrl?: string | null },
+  lead: { id: string; phone: string; siteHtml?: string | null; companyName: string; firstName: string },
   editRequestId: string,
   instruction: string,
-  complexity: string,
 ): Promise<void> {
-  // Update flow state
+  const result = await applyEdit(client, lead, editRequestId, instruction)
+  if (!result) return
+
+  // Save AI edit but DON'T push — wait for admin approval
   await prisma.editRequest.update({
     where: { id: editRequestId },
-    data: { editFlowState: 'escalated' },
+    data: {
+      editFlowState: 'awaiting_approval',
+      status: 'ready_for_review',
+      postEditHtml: result.html,
+      editSummary: result.summary,
+    },
+  })
+
+  // Update lead's siteHtml so staging preview shows the change
+  await prisma.lead.update({
+    where: { id: lead.id },
+    data: { siteHtml: result.html },
+  })
+
+  // Notify admin
+  await notifyAdmin(
+    'edit_request',
+    'Medium Edit Ready for Review',
+    `${client.companyName}: AI applied "${result.summary}". Needs approval.`,
+  )
+  await prisma.notification.create({
+    data: {
+      type: 'CLIENT_TEXT',
+      title: `Edit Ready for Review — ${client.companyName}`,
+      message: `AI applied: "${result.summary}". Review and approve to push live.`,
+      metadata: { clientId: client.id, editRequestId, editSummary: result.summary },
+    },
+  })
+
+  // Text client that we're working on it
+  await sendSMSViaProvider({
+    to: lead.phone,
+    message: `Got it! Our team is reviewing that change now and will have it live for you shortly`,
+    clientId: client.id,
+    trigger: 'edit_medium_awaiting_approval',
+    aiGenerated: true,
+    conversationType: 'post_client',
+    sender: 'clawdbot',
+  })
+
+  console.log(`[EditHandler] Medium edit applied, awaiting approval for ${client.companyName}: ${result.summary}`)
+}
+
+// ─── Complex Edit: Alert admin, AI still attempts ────────────────
+
+async function handleComplexEdit(
+  client: { id: string; companyName: string; stagingUrl?: string | null },
+  lead: { id: string; phone: string; siteHtml?: string | null; companyName: string; firstName: string },
+  editRequestId: string,
+  instruction: string,
+): Promise<void> {
+  // Mark as escalated for admin
+  await prisma.editRequest.update({
+    where: { id: editRequestId },
+    data: {
+      editFlowState: 'escalated',
+      status: 'ready_for_review',
+    },
   })
 
   // Create approval for admin
   await prisma.approval.create({
     data: {
       gate: 'SITE_EDIT',
-      title: `Site Edit — ${client.companyName}`,
-      description: `Client requested: "${instruction}" (${complexity} complexity)`,
+      title: `Complex Edit — ${client.companyName}`,
+      description: `Client requested: "${instruction}" (complex — manual review recommended)`,
       draftContent: instruction,
       clientId: client.id,
       leadId: lead.id,
       requestedBy: 'system',
       status: 'PENDING',
-      priority: complexity === 'complex' ? 'HIGH' : 'MEDIUM',
-      metadata: { clientId: client.id, editRequestId, instruction, complexity, phone: lead.phone },
+      priority: 'HIGH',
+      metadata: { clientId: client.id, editRequestId, instruction, complexity: 'complex', phone: lead.phone },
     },
   })
 
-  // SMS alert to admin
+  // SMS alert + dashboard notification
   await notifyAdmin(
     'edit_request',
-    `${complexity === 'complex' ? 'Complex' : 'Medium'} Edit Request`,
+    'Complex Edit — Manual Review',
     `${client.companyName}: "${instruction.substring(0, 80)}"`,
   )
-
-  // Notify in admin dashboard
   await prisma.notification.create({
     data: {
       type: 'CLIENT_TEXT',
-      title: `Edit Request — ${client.companyName}`,
-      message: `${complexity} edit: "${instruction.substring(0, 120)}"`,
-      metadata: { clientId: client.id, editRequestId, complexity },
+      title: `Complex Edit — ${client.companyName}`,
+      message: `"${instruction.substring(0, 120)}". Open in site editor to handle.`,
+      metadata: { clientId: client.id, editRequestId, complexity: 'complex' },
     },
   })
+
+  // AI still attempts the edit in background (admin can use or discard)
+  if (lead.siteHtml) {
+    try {
+      await prisma.editRequest.update({
+        where: { id: editRequestId },
+        data: { preEditHtml: lead.siteHtml },
+      })
+
+      const result = await applyAiEdit({
+        html: lead.siteHtml,
+        instruction,
+        companyName: lead.companyName,
+      })
+
+      if (!('error' in result)) {
+        await prisma.editRequest.update({
+          where: { id: editRequestId },
+          data: {
+            postEditHtml: result.html,
+            editSummary: `[AI attempt] ${result.summary}`,
+          },
+        })
+        console.log(`[EditHandler] Complex edit: AI attempt succeeded for ${client.companyName}: ${result.summary}`)
+      }
+    } catch (err) {
+      console.error(`[EditHandler] Complex edit: AI attempt failed for ${client.companyName}:`, err)
+    }
+  }
 
   console.log(`[EditHandler] Complex edit escalated for ${client.companyName}: ${instruction.substring(0, 60)}`)
 }
@@ -193,7 +311,10 @@ async function escalateAsFailed(
 ): Promise<void> {
   await prisma.editRequest.update({
     where: { id: editRequestId },
-    data: { editFlowState: 'failed' },
+    data: {
+      editFlowState: 'failed',
+      status: 'ready_for_review', // Admin needs to handle manually
+    },
   })
 
   // Send fallback message to client
@@ -223,4 +344,62 @@ async function escalateAsFailed(
     'AI Edit Failed',
     `${client.companyName}: auto-edit failed. Manual edit needed.`,
   )
+}
+
+// ─── Public helper: push confirmed edit to build queue ────────────
+
+export async function pushEditToBuildQueue(editRequestId: string): Promise<void> {
+  const editRequest = await prisma.editRequest.findUnique({
+    where: { id: editRequestId },
+    include: { client: { include: { lead: true } } },
+  })
+  if (!editRequest || !editRequest.leadId) return
+
+  // Update site HTML if we have post-edit HTML
+  if (editRequest.postEditHtml) {
+    await prisma.lead.update({
+      where: { id: editRequest.leadId },
+      data: { siteHtml: editRequest.postEditHtml, buildStep: 'QA_REVIEW' },
+    })
+  } else {
+    await prisma.lead.update({
+      where: { id: editRequest.leadId },
+      data: { buildStep: 'QA_REVIEW' },
+    })
+  }
+
+  // Mark edit as pushed
+  await prisma.editRequest.update({
+    where: { id: editRequestId },
+    data: {
+      editFlowState: 'confirmed',
+      status: 'live',
+      pushedLiveAt: new Date(),
+    },
+  })
+
+  // Notify client
+  if (editRequest.client?.lead?.phone) {
+    await sendSMSViaProvider({
+      to: editRequest.client.lead.phone,
+      message: `Your changes have been made and are going live now!`,
+      clientId: editRequest.clientId,
+      trigger: 'edit_approved_pushed',
+      aiGenerated: true,
+      conversationType: 'post_client',
+      sender: 'clawdbot',
+    })
+  }
+
+  // Dashboard notification
+  await prisma.notification.create({
+    data: {
+      type: 'CLIENT_TEXT',
+      title: `Edit Pushed Live — ${editRequest.client?.companyName || 'Client'}`,
+      message: `Edit "${(editRequest.editSummary || editRequest.requestText).substring(0, 100)}" pushed to build queue.`,
+      metadata: { clientId: editRequest.clientId, editRequestId },
+    },
+  })
+
+  console.log(`[EditHandler] Edit pushed to build queue: ${editRequestId}`)
 }

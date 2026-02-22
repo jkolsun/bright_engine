@@ -209,7 +209,9 @@ export default function ClientsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: action })
       })
+      // Refresh both edit queue and overview stats to keep everything in sync
       fetchEditRequests()
+      fetchOverviewStats()
     } catch (error) {
       console.error('Error updating edit request:', error)
     }
@@ -1089,24 +1091,70 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
 // EDIT QUEUE VIEW
 // ═══════════════════════════════════════════════
 function EditQueueView({ editRequests, loading, onAction, onBatchApprove, onRefresh }: any) {
-  const readyForReview = editRequests.filter((r: any) => r.status === 'ready_for_review')
-  const aiProcessing = editRequests.filter((r: any) => r.status === 'ai_processing' || r.status === 'new')
-  const completed = editRequests.filter((r: any) => r.status === 'approved' || r.status === 'live')
-  const simpleEdits = readyForReview.filter((r: any) => r.complexityTier === 'simple')
-  const mediumEdits = readyForReview.filter((r: any) => r.complexityTier === 'medium')
-  const complexEdits = readyForReview.filter((r: any) => r.complexityTier === 'complex')
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set())
+  const router = useRouter()
 
+  // ── Categorize edits by their actual flow state ──
+  // New/unprocessed — need to be kicked off
+  const unprocessed = editRequests.filter((r: any) => r.status === 'new' && r.editFlowState === 'pending')
+  // AI is currently working
+  const aiProcessing = editRequests.filter((r: any) => r.status === 'ai_processing' || r.editFlowState === 'ai_editing')
+  // AI applied, awaiting admin approval (medium edits)
+  const awaitingApproval = editRequests.filter((r: any) =>
+    r.status === 'ready_for_review' && (r.editFlowState === 'awaiting_approval' || (r.editFlowState === 'escalated' && r.postEditHtml))
+  )
+  // Complex — needs manual editing (no AI result or escalated without AI attempt)
+  const needsManualEdit = editRequests.filter((r: any) =>
+    r.status === 'ready_for_review' && r.editFlowState === 'escalated' && !r.postEditHtml
+  )
+  // AI failed — needs manual intervention
+  const failed = editRequests.filter((r: any) => r.editFlowState === 'failed' && r.status !== 'rejected')
+  // Completed (approved + live)
+  const completed = editRequests.filter((r: any) => r.status === 'approved' || r.status === 'live' || r.status === 'rejected')
+  // Auto-applied by AI (simple edits that are done)
+  const autoApplied = completed.filter((r: any) => r.approvedBy === 'ai_auto')
+  const manuallyCompleted = completed.filter((r: any) => r.approvedBy !== 'ai_auto')
+
+  const actionableCount = awaitingApproval.length + needsManualEdit.length + failed.length
   const completedWithTime = completed.filter((r: any) => r.approvedAt && r.createdAt)
   const avgTurnaround = completedWithTime.length > 0
     ? Math.round(completedWithTime.reduce((sum: number, r: any) => sum + (new Date(r.approvedAt).getTime() - new Date(r.createdAt).getTime()) / (1000 * 60 * 60), 0) / completedWithTime.length * 10) / 10
     : 0
 
+  const handleProcess = async (id: string, complexity?: string) => {
+    setProcessingIds(prev => new Set(prev).add(id))
+    try {
+      await fetch(`/api/edit-requests/${id}/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(complexity ? { complexity } : {}),
+      })
+      onRefresh()
+    } catch (error) {
+      console.error('Error processing edit:', error)
+    } finally {
+      setProcessingIds(prev => { const n = new Set(prev); n.delete(id); return n })
+    }
+  }
+
+  const handleBatchProcess = async (ids: string[]) => {
+    await Promise.all(ids.map(id => handleProcess(id)))
+  }
+
+  const openInEditor = (leadId: string) => {
+    router.push(`/admin/build-queue?edit=${leadId}`)
+  }
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Edit Queue</h2>
-          <p className="text-sm text-gray-500">Avg turnaround: {avgTurnaround}hrs</p>
+          <p className="text-sm text-gray-500">
+            {actionableCount > 0 ? `${actionableCount} need attention` : 'All caught up'}
+            {avgTurnaround > 0 && ` · Avg turnaround: ${avgTurnaround}hrs`}
+          </p>
         </div>
         <Button variant="outline" size="sm" onClick={onRefresh}><RefreshCw size={14} className="mr-1" /> Refresh</Button>
       </div>
@@ -1121,66 +1169,195 @@ function EditQueueView({ editRequests, loading, onAction, onBatchApprove, onRefr
         </Card>
       ) : (
         <>
-          {simpleEdits.length > 0 && (
-            <Card className="p-4 border-green-200 bg-green-50/50">
+          {/* ── Unprocessed: New edits that haven't been kicked off ── */}
+          {unprocessed.length > 0 && (
+            <Card className="p-4 border-blue-200 bg-blue-50/50">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-green-800 flex items-center gap-2"><CheckCircle2 size={16} />Batch Approve — Simple Edits ({simpleEdits.length})</h3>
-                <Button size="sm" onClick={() => onBatchApprove(simpleEdits.map((r: any) => r.id))} className="bg-green-600 hover:bg-green-700">Approve All Simple</Button>
+                <h3 className="font-semibold text-blue-800 flex items-center gap-2">
+                  <Clock size={16} /> New Requests ({unprocessed.length})
+                </h3>
+                <Button size="sm" onClick={() => handleBatchProcess(unprocessed.map((r: any) => r.id))} className="bg-blue-600 hover:bg-blue-700">
+                  Process All
+                </Button>
               </div>
               <div className="space-y-2">
-                {simpleEdits.map((req: any) => (
-                  <div key={req.id} className="flex items-center justify-between bg-white rounded p-3 text-sm">
-                    <div><span className="font-medium">{req.client?.companyName}</span><span className="text-gray-500 ml-2">— {req.requestText}</span></div>
-                    <Button variant="outline" size="sm" onClick={() => onAction(req.id, 'approved')}>Approve</Button>
+                {unprocessed.map((req: any) => (
+                  <div key={req.id} className="bg-white rounded-lg p-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <span className="font-medium">{req.client?.companyName}</span>
+                        <span className="text-gray-500 ml-2">— {req.requestText}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="capitalize">{req.complexityTier}</Badge>
+                        <Button
+                          variant="outline" size="sm"
+                          disabled={processingIds.has(req.id)}
+                          onClick={() => handleProcess(req.id)}
+                        >
+                          {processingIds.has(req.id) ? 'Processing...' : 'Process'}
+                        </Button>
+                      </div>
+                    </div>
+                    {req.aiInterpretation && (
+                      <div className="text-xs text-blue-600 mt-1">AI: {req.aiInterpretation}</div>
+                    )}
                   </div>
                 ))}
               </div>
             </Card>
           )}
 
-          {mediumEdits.length > 0 && (
-            <Card className="p-4">
-              <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2"><Eye size={16} />Review — Medium Edits ({mediumEdits.length})</h3>
-              <div className="space-y-3">
-                {mediumEdits.map((req: any) => <EditRequestCard key={req.id} request={req} onAction={onAction} />)}
-              </div>
-            </Card>
-          )}
-
-          {complexEdits.length > 0 && (
-            <Card className="p-4 border-amber-200">
-              <h3 className="font-semibold text-amber-800 mb-3 flex items-center gap-2"><AlertTriangle size={16} />Complex — Full Review ({complexEdits.length})</h3>
-              <div className="space-y-3">
-                {complexEdits.map((req: any) => <EditRequestCard key={req.id} request={req} onAction={onAction} />)}
-              </div>
-            </Card>
-          )}
-
+          {/* ── AI Processing: Currently being edited by AI ── */}
           {aiProcessing.length > 0 && (
             <Card className="p-4 bg-yellow-50/50 border-yellow-200">
-              <h3 className="font-semibold text-yellow-800 mb-3">🟡 AI Processing ({aiProcessing.length})</h3>
+              <h3 className="font-semibold text-yellow-800 mb-3 flex items-center gap-2">
+                <RefreshCw size={16} className="animate-spin" /> AI Processing ({aiProcessing.length})
+              </h3>
               <div className="space-y-2">
                 {aiProcessing.map((req: any) => (
                   <div key={req.id} className="bg-white rounded p-3 text-sm flex items-center justify-between">
-                    <div><span className="font-medium">{req.client?.companyName}</span><span className="text-gray-500 ml-2">— {req.requestText}</span></div>
-                    <Badge variant="secondary">{req.status === 'new' ? 'Queued' : 'Processing'}</Badge>
+                    <div>
+                      <span className="font-medium">{req.client?.companyName}</span>
+                      <span className="text-gray-500 ml-2">— {req.requestText}</span>
+                    </div>
+                    <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">AI Working...</Badge>
                   </div>
                 ))}
               </div>
             </Card>
           )}
 
+          {/* ── Awaiting Approval: AI applied, needs admin sign-off (medium tier) ── */}
+          {awaitingApproval.length > 0 && (
+            <Card className="p-4 border-indigo-200 bg-indigo-50/30">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-indigo-800 flex items-center gap-2">
+                  <Eye size={16} /> Awaiting Approval ({awaitingApproval.length})
+                </h3>
+                {awaitingApproval.length > 1 && (
+                  <Button size="sm" onClick={() => onBatchApprove(awaitingApproval.map((r: any) => r.id))} className="bg-indigo-600 hover:bg-indigo-700">
+                    Approve All
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-3">
+                {awaitingApproval.map((req: any) => (
+                  <EditReviewCard key={req.id} request={req} onAction={onAction} onOpenEditor={openInEditor} />
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* ── Manual Edit Required: Complex edits, admin needs to edit in builder ── */}
+          {needsManualEdit.length > 0 && (
+            <Card className="p-4 border-amber-200 bg-amber-50/30">
+              <h3 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                <AlertTriangle size={16} /> Manual Edit Required ({needsManualEdit.length})
+              </h3>
+              <div className="space-y-3">
+                {needsManualEdit.map((req: any) => (
+                  <div key={req.id} className="bg-white border rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">{req.client?.companyName}</div>
+                        <div className="text-sm text-gray-600 mt-1">&quot;{req.requestText}&quot;</div>
+                        {req.aiInterpretation && (
+                          <div className="text-xs text-blue-600 mt-1">AI interpretation: {req.aiInterpretation}</div>
+                        )}
+                        <div className="text-xs text-gray-400 mt-1">
+                          {formatTimeSince(req.createdAt)} via {req.requestChannel}
+                        </div>
+                      </div>
+                      <Badge className="bg-amber-100 text-amber-800 border-amber-300">Complex</Badge>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      {req.client?.leadId && (
+                        <Button size="sm" onClick={() => openInEditor(req.client.leadId)}>
+                          <Edit3 size={14} className="mr-1" /> Open in Editor
+                        </Button>
+                      )}
+                      <Button variant="outline" size="sm" onClick={() => handleProcess(req.id, 'medium')} disabled={processingIds.has(req.id)}>
+                        {processingIds.has(req.id) ? 'Processing...' : 'Let AI Try'}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => onAction(req.id, 'rejected')}>
+                        <X size={14} className="mr-1" /> Dismiss
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* ── Failed: AI edit failed, needs manual intervention ── */}
+          {failed.length > 0 && (
+            <Card className="p-4 border-red-200 bg-red-50/30">
+              <h3 className="font-semibold text-red-800 mb-3 flex items-center gap-2">
+                <XCircle size={16} /> Failed — Needs Attention ({failed.length})
+              </h3>
+              <div className="space-y-3">
+                {failed.map((req: any) => (
+                  <div key={req.id} className="bg-white border rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="font-medium text-gray-900">{req.client?.companyName}</div>
+                        <div className="text-sm text-gray-600 mt-1">&quot;{req.requestText}&quot;</div>
+                        <div className="text-xs text-red-600 mt-1">AI edit failed — manual edit needed</div>
+                      </div>
+                      <Badge className="bg-red-100 text-red-800 border-red-300">Failed</Badge>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      {req.client?.leadId && (
+                        <Button size="sm" onClick={() => openInEditor(req.client.leadId)}>
+                          <Edit3 size={14} className="mr-1" /> Open in Editor
+                        </Button>
+                      )}
+                      <Button variant="outline" size="sm" onClick={() => handleProcess(req.id)} disabled={processingIds.has(req.id)}>
+                        {processingIds.has(req.id) ? 'Retrying...' : 'Retry AI'}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => onAction(req.id, 'rejected')}>
+                        <X size={14} className="mr-1" /> Dismiss
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* ── Completed ── */}
           {completed.length > 0 && (
             <Card className="p-4">
-              <h3 className="font-semibold text-gray-800 mb-3">🟢 Completed ({completed.length})</h3>
+              <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-green-500" /> Completed ({completed.length})
+              </h3>
               <div className="space-y-2 text-sm">
-                {completed.slice(0, 10).map((req: any) => (
+                {autoApplied.length > 0 && (
+                  <div className="text-xs text-gray-400 mb-2">{autoApplied.length} auto-applied by AI</div>
+                )}
+                {manuallyCompleted.slice(0, 10).map((req: any) => (
                   <div key={req.id} className="flex items-center justify-between py-1.5">
                     <div>
-                      <span className="text-gray-500">{req.approvedBy && `Approved by ${req.approvedBy}`}{req.approvedAt && ` ${new Date(req.approvedAt).toLocaleTimeString()}`}</span>
-                      <span className="ml-2">— &quot;{req.requestText}&quot;</span>
+                      <span className="font-medium text-gray-700">{req.client?.companyName}</span>
+                      <span className="text-gray-500 ml-2">— &quot;{req.requestText}&quot;</span>
                     </div>
-                    <span className="text-gray-400">{req.client?.companyName}</span>
+                    <div className="text-xs text-gray-400">
+                      {req.approvedBy === 'ai_auto' ? 'Auto' : req.approvedBy || 'System'}
+                      {req.approvedAt && ` · ${new Date(req.approvedAt).toLocaleDateString()}`}
+                    </div>
+                  </div>
+                ))}
+                {autoApplied.slice(0, 5).map((req: any) => (
+                  <div key={req.id} className="flex items-center justify-between py-1.5 opacity-60">
+                    <div>
+                      <Badge variant="secondary" className="text-xs mr-2">Auto</Badge>
+                      <span className="font-medium text-gray-700">{req.client?.companyName}</span>
+                      <span className="text-gray-500 ml-2">— {req.editSummary || req.requestText}</span>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {req.approvedAt && new Date(req.approvedAt).toLocaleDateString()}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1192,25 +1369,52 @@ function EditQueueView({ editRequests, loading, onAction, onBatchApprove, onRefr
   )
 }
 
-function EditRequestCard({ request, onAction }: any) {
-  const hoursSince = request.createdAt ? Math.round((Date.now() - new Date(request.createdAt).getTime()) / (1000 * 60 * 60) * 10) / 10 : 0
+function formatTimeSince(dateStr: string | null) {
+  if (!dateStr) return ''
+  const hours = Math.round((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60) * 10) / 10
+  if (hours < 1) return `${Math.round(hours * 60)}m ago`
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.round(hours / 24)}d ago`
+}
+
+function EditReviewCard({ request, onAction, onOpenEditor }: any) {
+  const previewUrl = request.client?.stagingUrl || (request.leadId ? `https://preview.brightautomations.org/preview/${request.leadId}` : null)
 
   return (
     <div className="bg-white border rounded-lg p-4">
       <div className="flex items-start justify-between">
-        <div>
+        <div className="flex-1">
           <div className="font-medium text-gray-900">{request.client?.companyName}</div>
           <div className="text-sm text-gray-600 mt-1">Request: &quot;{request.requestText}&quot;</div>
+          {request.editSummary && (
+            <div className="text-sm text-green-700 mt-1 bg-green-50 rounded px-2 py-1 inline-block">
+              AI applied: {request.editSummary.replace('[AI attempt] ', '')}
+            </div>
+          )}
           <div className="text-xs text-gray-400 mt-1">
-            Received {hoursSince}h ago via {request.requestChannel}
+            {formatTimeSince(request.createdAt)} via {request.requestChannel}
             {request.aiInterpretation && <span className="ml-2 text-blue-600">AI: {request.aiInterpretation}</span>}
           </div>
         </div>
         <Badge variant="secondary" className="capitalize">{request.complexityTier}</Badge>
       </div>
       <div className="flex gap-2 mt-3">
-        <Button size="sm" onClick={() => onAction(request.id, 'approved')} className="bg-green-600 hover:bg-green-700"><CheckCircle size={14} className="mr-1" /> Approve</Button>
-        <Button variant="outline" size="sm" onClick={() => onAction(request.id, 'rejected')}><X size={14} className="mr-1" /> Reject</Button>
+        <Button size="sm" onClick={() => onAction(request.id, 'approved')} className="bg-green-600 hover:bg-green-700">
+          <CheckCircle size={14} className="mr-1" /> Approve & Push
+        </Button>
+        {previewUrl && (
+          <Button variant="outline" size="sm" onClick={() => window.open(previewUrl, '_blank')}>
+            <ExternalLink size={14} className="mr-1" /> Preview
+          </Button>
+        )}
+        {request.client?.leadId && (
+          <Button variant="outline" size="sm" onClick={() => onOpenEditor(request.client.leadId)}>
+            <Edit3 size={14} className="mr-1" /> Edit More
+          </Button>
+        )}
+        <Button variant="outline" size="sm" onClick={() => onAction(request.id, 'rejected')}>
+          <X size={14} className="mr-1" /> Reject
+        </Button>
       </div>
     </div>
   )
