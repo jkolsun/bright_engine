@@ -1253,20 +1253,27 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   // ============================================
 
   useEffect(() => {
-    if ((callPhase === 'connected' || callPhase === 'on_hold') && currentLead?.id) {
+    // Poll preview status whenever we have an active lead on a call (any phase except idle)
+    if (callPhase !== 'idle' && currentLead?.id) {
       const poll = async () => {
         try {
           const res = await fetch(`/api/dialer/preview-status?leadId=${currentLead.id}`)
           if (res.ok) {
             const data = await res.json()
-            if (data.status) {
-              setPreviewStatus(prev => ({
-                sent: data.status.sent || prev.sent,
-                opened: data.status.opened || prev.opened,
-                viewDuration: data.status.viewDurationSeconds || prev.viewDuration,
-                ctaClicked: data.status.ctaClicked || prev.ctaClicked,
-              }))
-            }
+            setPreviewStatus(prev => {
+              // Show live toast when status changes
+              if (data.ctaClicked && !prev.ctaClicked) {
+                showToast(`${currentLead.firstName} clicked Get Started!`)
+              } else if (data.opened && !prev.opened) {
+                showToast(`${currentLead.firstName} is viewing the preview!`)
+              }
+              return {
+                sent: data.sent || prev.sent,
+                opened: data.opened || prev.opened,
+                viewDuration: data.viewDurationSeconds || prev.viewDuration,
+                ctaClicked: data.ctaClicked || prev.ctaClicked,
+              }
+            })
           }
         } catch { /* silent */ }
       }
@@ -1276,6 +1283,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
     return () => {
       if (previewPollRef.current) clearInterval(previewPollRef.current)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [callPhase, currentLead?.id])
 
   // ============================================
