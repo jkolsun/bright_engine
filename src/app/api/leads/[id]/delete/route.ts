@@ -28,7 +28,12 @@ export async function DELETE(
       )
     }
 
-    await prisma.lead.delete({ where: { id: leadId } })
+    // Use transaction: clean up non-FK orphan tables, then delete lead (cascades the rest)
+    await prisma.$transaction([
+      prisma.approval.deleteMany({ where: { leadId } }),
+      prisma.channelDecision.deleteMany({ where: { leadId } }),
+      prisma.lead.delete({ where: { id: leadId } }),
+    ])
 
     return NextResponse.json({
       success: true,

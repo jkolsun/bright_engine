@@ -112,7 +112,7 @@ export async function PUT(
   }
 }
 
-// DELETE /api/leads/[id] - Hard delete
+// DELETE /api/leads/[id] - Hard delete (cascades to ALL related data)
 export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -130,7 +130,12 @@ export async function DELETE(
       )
     }
 
-    await prisma.lead.delete({ where: { id } })
+    // Use transaction: clean up non-FK orphan tables, then delete lead (cascades the rest)
+    await prisma.$transaction([
+      prisma.approval.deleteMany({ where: { leadId: id } }),
+      prisma.channelDecision.deleteMany({ where: { leadId: id } }),
+      prisma.lead.delete({ where: { id } }),
+    ])
 
     return NextResponse.json({
       success: true,

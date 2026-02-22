@@ -38,7 +38,17 @@ export async function POST(request: NextRequest) {
       where = { status }
     }
 
-    const result = await prisma.lead.deleteMany({ where })
+    // Find the lead IDs that will be deleted (needed for orphan cleanup)
+    const leadsToDelete = await prisma.lead.findMany({ where, select: { id: true } })
+    const idsToDelete = leadsToDelete.map(l => l.id)
+
+    // Transaction: clean up non-FK orphan tables, then delete leads (cascades the rest)
+    const orphanWhere = idsToDelete.length > 0 ? { leadId: { in: idsToDelete } } : {}
+    const [,, result] = await prisma.$transaction([
+      prisma.approval.deleteMany({ where: orphanWhere }),
+      prisma.channelDecision.deleteMany({ where: orphanWhere }),
+      prisma.lead.deleteMany({ where }),
+    ])
 
     return NextResponse.json({
       message: 'Leads permanently deleted',
@@ -76,7 +86,12 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    await prisma.lead.delete({ where: { id: leadId } })
+    // Transaction: clean up non-FK orphan tables, then delete lead (cascades the rest)
+    await prisma.$transaction([
+      prisma.approval.deleteMany({ where: { leadId } }),
+      prisma.channelDecision.deleteMany({ where: { leadId } }),
+      prisma.lead.delete({ where: { id: leadId } }),
+    ])
 
     return NextResponse.json({
       message: 'Lead permanently deleted',

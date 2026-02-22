@@ -122,8 +122,13 @@ export async function DELETE(
     }
 
     if (hard) {
-      // Hard delete: remove from database entirely
-      await prisma.client.delete({ where: { id: clientId } })
+      // Hard delete: clean up non-FK orphan tables, then delete client (cascades the rest)
+      await prisma.$transaction([
+        prisma.approval.deleteMany({ where: { clientId } }),
+        prisma.channelDecision.deleteMany({ where: { clientId } }),
+        prisma.upsellPitch.deleteMany({ where: { clientId } }),
+        prisma.client.delete({ where: { id: clientId } }),
+      ])
 
       return NextResponse.json({
         success: true,
@@ -131,16 +136,30 @@ export async function DELETE(
       })
     }
 
-    // Soft delete: set deletedAt timestamp
-    const updated = await prisma.client.update({
-      where: { id: clientId },
-      data: { deletedAt: new Date() }
-    })
+    // Soft delete: set deletedAt timestamp + clean up non-FK orphan data
+    await prisma.$transaction([
+      prisma.approval.deleteMany({ where: { clientId } }),
+      prisma.channelDecision.deleteMany({ where: { clientId } }),
+      prisma.upsellPitch.deleteMany({ where: { clientId } }),
+      // Cascade-delete all FK-linked records so stats are cleared
+      prisma.message.deleteMany({ where: { clientId } }),
+      prisma.commission.deleteMany({ where: { clientId } }),
+      prisma.revenue.deleteMany({ where: { clientId } }),
+      prisma.siteAnalytic.deleteMany({ where: { clientId } }),
+      prisma.sequenceProgress.deleteMany({ where: { clientId } }),
+      prisma.referral.deleteMany({ where: { referrerClientId: clientId } }),
+      prisma.clientAnalytics.deleteMany({ where: { clientId } }),
+      prisma.editRequest.deleteMany({ where: { clientId } }),
+      prisma.clawdbotActivity.deleteMany({ where: { clientId } }),
+      prisma.client.update({
+        where: { id: clientId },
+        data: { deletedAt: new Date() }
+      }),
+    ])
 
     return NextResponse.json({
       success: true,
-      message: 'Client deleted successfully',
-      client: updated
+      message: 'Client deleted successfully — all related data removed',
     })
   } catch (error) {
     console.error('Error deleting client:', error)

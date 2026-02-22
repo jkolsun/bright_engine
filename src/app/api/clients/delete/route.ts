@@ -29,14 +29,21 @@ export async function POST(request: NextRequest) {
 
     const where = all ? {} : { id: { in: clientIds } }
 
-    // Hard delete for now (no soft delete field on Client model)
-    // TODO: Add deletedAt field to Client model for audit trail
-    const result = await prisma.client.deleteMany({
-      where
-    })
+    // Find client IDs to be deleted (needed for orphan cleanup)
+    const clientsToDelete = await prisma.client.findMany({ where, select: { id: true } })
+    const idsToDelete = clientsToDelete.map(c => c.id)
+
+    // Transaction: clean up non-FK orphan tables, then delete clients (cascades the rest)
+    const orphanWhere = idsToDelete.length > 0 ? { clientId: { in: idsToDelete } } : {}
+    const [,,, result] = await prisma.$transaction([
+      prisma.approval.deleteMany({ where: orphanWhere }),
+      prisma.channelDecision.deleteMany({ where: orphanWhere }),
+      prisma.upsellPitch.deleteMany({ where: orphanWhere }),
+      prisma.client.deleteMany({ where }),
+    ])
 
     return NextResponse.json({
-      message: 'Clients deleted successfully',
+      message: 'Clients permanently deleted — all related data removed',
       deletedCount: result.count,
       clientIds
     })
@@ -67,13 +74,16 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Hard delete for now
-    await prisma.client.delete({
-      where: { id: clientId }
-    })
+    // Transaction: clean up non-FK orphan tables, then delete client (cascades the rest)
+    await prisma.$transaction([
+      prisma.approval.deleteMany({ where: { clientId } }),
+      prisma.channelDecision.deleteMany({ where: { clientId } }),
+      prisma.upsellPitch.deleteMany({ where: { clientId } }),
+      prisma.client.delete({ where: { id: clientId } }),
+    ])
 
     return NextResponse.json({
-      message: 'Client deleted successfully',
+      message: 'Client permanently deleted — all related data removed',
       clientId
     })
   } catch (error) {

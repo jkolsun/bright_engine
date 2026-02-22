@@ -452,8 +452,8 @@ model ClawdbotActivity {
   metadata    Json?
   tokenCost   Float?             @map("token_cost")
   createdAt   DateTime           @default(now()) @map("created_at")
-  client      Client?            @relation(fields: [clientId], references: [id])
-  lead        Lead?              @relation(fields: [leadId], references: [id])
+  client      Client?            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  lead        Lead?              @relation(fields: [leadId], references: [id], onDelete: Cascade)
   rep         User?              @relation(fields: [repId], references: [id])
 
   @@index([actionType])
@@ -736,7 +736,7 @@ model EditRequest {
   pushedLiveAt       DateTime? @map("pushed_live_at")
   createdAt          DateTime  @default(now()) @map("created_at")
   client             Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  lead               Lead?     @relation(fields: [leadId], references: [id])
+  lead               Lead?     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([clientId])
   @@index([leadId])
