@@ -231,6 +231,116 @@ async function startWorkers() {
       }
     })
 
+    // Import processing worker (processes leads in background after CSV upload)
+    const importWorker = new Worker(
+      'import',
+      async (job) => {
+        const { jobId, leadIds, options } = job.data as {
+          jobId: string
+          leadIds: string[]
+          options: { enrichment: boolean; preview: boolean; personalization: boolean }
+        }
+        console.log(`[IMPORT] Processing ${leadIds.length} leads for job ${jobId}`)
+
+        const redisConn = getSharedConnection()
+        const progress = {
+          status: 'processing',
+          processed: 0,
+          total: leadIds.length,
+          failed: 0,
+          errors: [] as string[],
+          results: {} as Record<string, { enrichment?: boolean; preview?: boolean; personalization?: boolean }>,
+        }
+
+        const updateProgress = async () => {
+          if (redisConn) {
+            await redisConn.set(`import:${jobId}`, JSON.stringify(progress), 'EX', 3600).catch(() => {})
+          }
+        }
+
+        for (let i = 0; i < leadIds.length; i++) {
+          const leadId = leadIds[i]
+          const leadResult: { enrichment?: boolean; preview?: boolean; personalization?: boolean } = {}
+
+          try {
+            const lead = await prisma.lead.findUnique({ where: { id: leadId } })
+            if (!lead) {
+              progress.failed++
+              progress.errors.push(`Lead ${leadId} not found`)
+              progress.processed++
+              await updateProgress()
+              continue
+            }
+
+            // Enrichment
+            if (options.enrichment) {
+              try {
+                await enrichLead(leadId)
+                leadResult.enrichment = true
+              } catch (err) {
+                leadResult.enrichment = false
+                console.warn(`[IMPORT] Enrichment failed for ${leadId}:`, err)
+              }
+            }
+
+            // Preview generation
+            if (options.preview) {
+              try {
+                await generatePreview({ leadId })
+                leadResult.preview = true
+              } catch (err) {
+                leadResult.preview = false
+                console.warn(`[IMPORT] Preview failed for ${leadId}:`, err)
+              }
+            }
+
+            // Personalization
+            if (options.personalization) {
+              try {
+                try { await fetchSerperResearch(leadId) } catch { /* non-fatal */ }
+                const result = await generatePersonalization(leadId)
+                leadResult.personalization = !!result
+              } catch (err) {
+                leadResult.personalization = false
+                console.warn(`[IMPORT] Personalization failed for ${leadId}:`, err)
+              }
+            }
+
+            progress.results[leadId] = leadResult
+          } catch (err) {
+            progress.failed++
+            progress.errors.push(`Lead ${leadId}: ${err instanceof Error ? err.message : String(err)}`)
+          }
+
+          progress.processed++
+          await updateProgress()
+        }
+
+        // Mark complete
+        progress.status = 'completed'
+        await updateProgress()
+
+        // Create notification
+        await prisma.notification.create({
+          data: {
+            type: 'DAILY_AUDIT',
+            title: 'Import Processing Complete',
+            message: `Processed ${progress.processed} leads: ${progress.processed - progress.failed} succeeded, ${progress.failed} failed`,
+            metadata: { jobId, total: progress.total, failed: progress.failed },
+          },
+        }).catch(() => {})
+
+        console.log(`[IMPORT] Job ${jobId} complete: ${progress.processed}/${progress.total}, ${progress.failed} failed`)
+        return { success: true }
+      },
+      // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+      { connection, concurrency: 1 }
+    )
+
+    importWorker.on('failed', (job, err) => {
+      console.error(`[IMPORT] Job ${job?.id} failed:`, err)
+    })
+
     // Sequence worker (handles all automated messages)
     const sequenceWorker = new Worker(
       'sequence',
@@ -941,14 +1051,23 @@ async function checkHotLeads() {
 
     // Only create if not already notified recently
     if (!existing) {
+      const hotMsg = `${event.lead.firstName} at ${event.lead.companyName} just ${event.eventType.toLowerCase()} their preview`
       await prisma.notification.create({
         data: {
           type: 'HOT_LEAD',
           title: 'Hot Lead Alert',
-          message: `${event.lead.firstName} at ${event.lead.companyName} just ${event.eventType.toLowerCase()} their preview`,
+          message: hotMsg,
           metadata: { leadId: event.leadId, eventType: event.eventType, timestamp: Date.now() },
         },
       })
+
+      // SMS alert to admin phone
+      try {
+        const { notifyAdmin } = await import('@/lib/notifications')
+        await notifyAdmin('hot_lead', 'Hot Lead', `${event.lead.companyName} is engaging with their preview`)
+      } catch (err) {
+        console.error('[Worker] Admin SMS notification failed:', err)
+      }
     }
   }
 }

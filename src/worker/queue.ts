@@ -90,6 +90,7 @@ let personalizationQueue: Queue | null = null
 let scriptQueue: Queue | null = null
 let distributionQueue: Queue | null = null
 let sequenceQueue: Queue | null = null
+let importQueue: Queue | null = null
 let monitoringQueue: Queue | null = null
 
 let enrichmentEvents: QueueEvents | null = null
@@ -151,6 +152,10 @@ async function getQueues() {
     // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
     sequenceEvents = new QueueEvents('sequence', { connection })
   }
+  if (!importQueue && connection) {
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    importQueue = new Queue('import', { connection })
+  }
   if (!monitoringQueue && connection) {
     // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
     monitoringQueue = new Queue('monitoring', { connection })
@@ -188,6 +193,11 @@ export function getDistributionQueue() {
 export function getSequenceQueue() {
   getQueues()
   return sequenceQueue
+}
+
+export function getImportQueue() {
+  getQueues()
+  return importQueue
 }
 
 export function getMonitoringQueue() {
@@ -513,6 +523,32 @@ export async function scheduleCloseEngineExpireStalled() {
     )
   } catch (err) {
     console.warn('Failed to schedule close engine expire stalled:', err)
+    return null
+  }
+}
+
+export async function addImportProcessingJob(data: {
+  jobId: string
+  leadIds: string[]
+  options: { enrichment: boolean; preview: boolean; personalization: boolean }
+}) {
+  const queue = getImportQueue()
+  if (!queue) {
+    console.warn('Import queue unavailable, cannot process import')
+    return null
+  }
+
+  try {
+    return await queue.add(
+      'process-import',
+      data,
+      {
+        attempts: 1,
+        removeOnComplete: true,
+      }
+    )
+  } catch (err) {
+    console.warn('Failed to add import processing job:', err)
     return null
   }
 }

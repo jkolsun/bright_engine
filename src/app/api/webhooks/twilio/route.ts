@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Check for escalation triggers
-    const shouldEscalate = checkForEscalation(body)
+    const shouldEscalate = await checkForEscalation(body)
 
     if (shouldEscalate) {
       await prisma.message.updateMany({
@@ -271,14 +271,24 @@ export async function POST(request: NextRequest) {
       })
 
       // Create notification
+      const escalationMsg = `From: ${lead?.firstName || client?.lead?.firstName} - ${body.substring(0, 50)}...`
       await prisma.notification.create({
         data: {
           type: 'CLIENT_TEXT',
           title: 'Message Needs Attention',
-          message: `From: ${lead?.firstName || client?.lead?.firstName} - ${body.substring(0, 50)}...`,
+          message: escalationMsg,
           metadata: { leadId: lead?.id, clientId: client?.id, from, body }
         }
       })
+
+      // SMS alert to admin phone
+      try {
+        const { notifyAdmin } = await import('@/lib/notifications')
+        const name = lead?.firstName || client?.lead?.firstName || 'Unknown'
+        await notifyAdmin('escalation', 'Escalation', `${name} triggered escalation: ${body.substring(0, 80)}`)
+      } catch (err) {
+        console.error('[Twilio] Admin SMS notification failed:', err)
+      }
     }
 
     // ── AI VISION: classify MMS images ──
@@ -492,23 +502,55 @@ function checkInterestSignal(message: string): boolean {
   return positiveKeywords.some(keyword => lowerMessage.includes(keyword))
 }
 
-function checkForEscalation(message: string): boolean {
-  const triggers = [
-    'refund',
-    'cancel',
-    'lawyer',
-    'attorney',
-    'sue',
-    'scam',
-    'fraud',
-    'worst',
-    'unacceptable',
-    'bbb',
-    'complaint',
-    'angry',
-    'disappointed'
-  ]
+// Keyword map for each configurable escalation trigger ID
+const ESCALATION_KEYWORDS: Record<string, string[]> = {
+  negative_sentiment: ['angry', 'furious', 'worst', 'terrible', 'horrible', 'disgusting', 'unacceptable', 'disappointed', 'pissed', 'fed up', 'hate'],
+  custom_package: ['custom package', 'bigger package', 'enterprise', 'custom plan', 'more features', 'upgrade'],
+  cancel_request: ['cancel', 'cancellation', 'end my', 'stop my', 'terminate'],
+  refund_request: ['refund', 'money back', 'charge back', 'chargeback', 'get my money'],
+  competitor_mention: ['wix', 'squarespace', 'godaddy', 'wordpress', 'shopify', 'webflow', 'another company', 'someone else'],
+  human_request: ['speak to a person', 'talk to someone', 'real person', 'human', 'manager', 'supervisor', 'speak to a human', 'talk to a manager'],
+  legal_threat: ['lawyer', 'attorney', 'sue', 'lawsuit', 'legal action', 'court', 'bbb', 'better business bureau', 'scam', 'fraud', 'report you'],
+  unparseable: [], // Handled by AI, not keyword matching
+  back_and_forth: [], // Handled by message count logic, not keywords
+  billing_dispute: ['billing', 'charged', 'overcharged', 'invoice', 'payment issue', 'didn\'t authorize', 'unauthorized charge', 'dispute'],
+  out_of_scope: [], // Handled by AI, not keyword matching
+  message_flood: [], // Handled by message count logic, not keywords
+}
 
+async function checkForEscalation(message: string): Promise<boolean> {
   const lowerMessage = message.toLowerCase()
-  return triggers.some(trigger => lowerMessage.includes(trigger))
+
+  try {
+    // Read escalation triggers from ai_handler settings
+    const aiHandlerSetting = await prisma.settings.findUnique({
+      where: { key: 'ai_handler' },
+    })
+
+    const aiHandler = aiHandlerSetting?.value as Record<string, any> | null
+    const triggers = aiHandler?.escalationTriggers as Array<{ id: string; enabled: boolean }> | undefined
+
+    if (!triggers || triggers.length === 0) {
+      // Fallback to basic keyword check if settings not configured
+      const fallbackTriggers = ['refund', 'cancel', 'lawyer', 'attorney', 'sue', 'scam', 'fraud', 'bbb', 'angry']
+      return fallbackTriggers.some(t => lowerMessage.includes(t))
+    }
+
+    // Check only enabled triggers
+    for (const trigger of triggers) {
+      if (!trigger.enabled) continue
+      const keywords = ESCALATION_KEYWORDS[trigger.id]
+      if (!keywords || keywords.length === 0) continue
+      if (keywords.some(keyword => lowerMessage.includes(keyword))) {
+        return true
+      }
+    }
+
+    return false
+  } catch (err) {
+    console.error('[Twilio Webhook] Failed to load escalation triggers from settings:', err)
+    // Fallback to basic check on error
+    const fallbackTriggers = ['refund', 'cancel', 'lawyer', 'attorney', 'sue', 'scam', 'fraud', 'bbb', 'angry']
+    return fallbackTriggers.some(t => lowerMessage.includes(t))
+  }
 }

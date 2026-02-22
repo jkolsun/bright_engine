@@ -290,7 +290,7 @@ export default function RepsPage() {
         <StatCard icon={<Users size={20} />} iconBg="bg-teal-50" iconColor="text-teal-600" label="Assigned Leads" value={assignedLeads.length} />
         <StatCard icon={<Target size={20} />} iconBg="bg-red-50" iconColor="text-red-500" label="Hot Leads" value={hotLeads.length} />
         <StatCard icon={<CheckCircle size={20} />} iconBg="bg-emerald-50" iconColor="text-emerald-600" label="Qualified" value={qualifiedLeads.length} />
-        <StatCard icon={<DollarSign size={20} />} iconBg="bg-amber-50" iconColor="text-amber-600" label="Potential Revenue" value={formatCurrency(assignedLeads.length * productPrice)} />
+        <StatCard icon={<DollarSign size={20} />} iconBg="bg-amber-50" iconColor="text-amber-600" label="Pipeline Value" value={formatCurrency((qualifiedLeads.length + hotLeads.length) * productPrice)} />
       </div>
 
       {/* Queue + Callbacks Row */}

@@ -65,6 +65,10 @@ export default function ImportPage() {
   const feedRef = useRef<HTMLDivElement>(null)
   const processingRef = useRef(false)
 
+  // Background processing state
+  const [importJobId, setImportJobId] = useState<string | null>(null)
+  const pollingRef = useRef<NodeJS.Timeout | null>(null)
+
   // Folder state
   const [folders, setFolders] = useState<any[]>([])
   const [folderDialogOpen, setFolderDialogOpen] = useState(false)
@@ -200,66 +204,81 @@ export default function ImportPage() {
     URL.revokeObjectURL(url)
   }
 
-  // Process leads one by one in the live feed
-  const processNextLead = useCallback(async (leads: LeadEntry[], index: number, options: ProcessOptions) => {
-    if (index >= leads.length) {
-      setFeedDone(true)
-      processingRef.current = false
-      return
-    }
+  // Poll for background import progress
+  const pollImportProgress = useCallback((jobId: string, leads: LeadEntry[]) => {
+    if (pollingRef.current) clearInterval(pollingRef.current)
 
-    processingRef.current = true
-    const lead = leads[index]
-
-    setFeedLeads(prev => prev.map((l, i) => i === index ? { ...l, status: 'processing' } : l))
-
-    setTimeout(() => {
-      feedRef.current?.querySelector(`[data-lead-index="${index}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-    }, 100)
-
-    try {
-      const anyEnabled = options.enrichment || options.preview || options.personalization
-      if (!anyEnabled) {
-        setFeedLeads(prev => prev.map((l, i) => i === index ? { ...l, status: 'done' } : l))
-      } else {
-        const res = await fetch(`/api/leads/${lead.id}/process`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(options),
-        })
+    pollingRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/leads/import/status?jobId=${jobId}`)
+        if (!res.ok) return
 
         const data = await res.json()
+        const processed = data.processed || 0
+        const results = data.results || {}
 
-        if (res.ok) {
-          setFeedLeads(prev => prev.map((l, i) => i === index ? {
-            ...l,
-            status: 'done',
-            enrichment: data.results?.enrichment ?? null,
-            preview: data.results?.preview ?? null,
-            personalization: data.results?.personalization ?? null,
-          } : l))
+        // Update feed leads based on server progress
+        setFeedLeads(prev => prev.map((lead, idx) => {
+          if (idx < processed) {
+            const result = results[lead.id]
+            if (result) {
+              return {
+                ...lead,
+                status: 'done' as const,
+                enrichment: result.enrichment !== undefined ? { success: result.enrichment } : null,
+                preview: result.preview !== undefined ? { success: result.preview } : null,
+                personalization: result.personalization !== undefined ? { success: result.personalization } : null,
+              }
+            }
+            return { ...lead, status: 'done' as const }
+          } else if (idx === processed) {
+            return { ...lead, status: 'processing' as const }
+          }
+          return lead
+        }))
 
-          setFeedStats(prev => ({
-            enriched: prev.enriched + (data.results?.enrichment?.success ? 1 : 0),
-            previews: prev.previews + (data.results?.preview?.success ? 1 : 0),
-            personalized: prev.personalized + (data.results?.personalization?.success ? 1 : 0),
-            errors: prev.errors + (
-              (data.results?.enrichment?.success === false ? 1 : 0) +
-              (data.results?.preview?.success === false ? 1 : 0) +
-              (data.results?.personalization?.success === false ? 1 : 0)
-            ),
-          }))
-        } else {
-          setFeedLeads(prev => prev.map((l, i) => i === index ? { ...l, status: 'error' } : l))
-          setFeedStats(prev => ({ ...prev, errors: prev.errors + 1 }))
+        // Update stats
+        let enriched = 0, previews = 0, personalized = 0, errors = 0
+        for (const r of Object.values(results) as any[]) {
+          if (r.enrichment === true) enriched++
+          if (r.enrichment === false) errors++
+          if (r.preview === true) previews++
+          if (r.preview === false) errors++
+          if (r.personalization === true) personalized++
+          if (r.personalization === false) errors++
         }
-      }
-    } catch {
-      setFeedLeads(prev => prev.map((l, i) => i === index ? { ...l, status: 'error' } : l))
-      setFeedStats(prev => ({ ...prev, errors: prev.errors + 1 }))
-    }
+        errors += data.failed || 0
+        setFeedStats({ enriched, previews, personalized, errors })
 
-    processNextLead(leads, index + 1, options)
+        // Auto-scroll to current item
+        const currentIdx = processed < leads.length ? processed : leads.length - 1
+        setTimeout(() => {
+          feedRef.current?.querySelector(`[data-lead-index="${currentIdx}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        }, 100)
+
+        // Check if done
+        if (data.status === 'completed') {
+          setFeedDone(true)
+          processingRef.current = false
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current)
+            pollingRef.current = null
+          }
+        }
+      } catch {
+        // Network error, keep polling
+      }
+    }, 2000)
+  }, [])
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
+        pollingRef.current = null
+      }
+    }
   }, [])
 
   const handleFileUpload = async (file: File) => {
@@ -306,14 +325,40 @@ export default function ImportPage() {
     }
   }
 
-  const startProcessing = () => {
+  const startProcessing = async () => {
     const anyProcessing = processOptions.enrichment || processOptions.preview || processOptions.personalization
     if (!anyProcessing) {
       setFeedDone(true)
+      setStep('feed')
+      return
     }
+
     setStep('feed')
-    if (anyProcessing) {
-      processNextLead(feedLeads, 0, processOptions)
+    processingRef.current = true
+
+    try {
+      const res = await fetch('/api/leads/import/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadIds: feedLeads.map(l => l.id),
+          options: processOptions,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (res.ok && data.jobId) {
+        setImportJobId(data.jobId)
+        pollImportProgress(data.jobId, feedLeads)
+      } else {
+        alert(`Failed to start processing: ${data.error || 'Unknown error'}`)
+        processingRef.current = false
+      }
+    } catch (err) {
+      console.error('Failed to start import processing:', err)
+      alert('Failed to start processing. Please try again.')
+      processingRef.current = false
     }
   }
 

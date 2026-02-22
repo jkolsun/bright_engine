@@ -186,6 +186,30 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     },
   })
 
+  // ── Step 5b: Increment rep's daily close counter ──
+  if (lead.assignedToId) {
+    try {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      await prisma.repActivity.upsert({
+        where: { repId_date: { repId: lead.assignedToId, date: today } },
+        create: {
+          repId: lead.assignedToId,
+          date: today,
+          closes: 1,
+          paymentsClosed: 1,
+        },
+        update: {
+          closes: { increment: 1 },
+          paymentsClosed: { increment: 1 },
+        },
+      })
+      console.log(`[Stripe Webhook] RepActivity close incremented for rep ${lead.assignedToId}`)
+    } catch (err) {
+      console.error('[Stripe Webhook] RepActivity update failed:', err)
+    }
+  }
+
   // ── Step 6: Create Revenue records ──
   let revenue
   if (amountDollars >= webhookConfig.firstMonthTotal * 0.9) {
@@ -222,6 +246,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       },
     },
   })
+
+  // SMS alert to admin phone
+  try {
+    const { notifyAdmin } = await import('@/lib/notifications')
+    await notifyAdmin('payment', 'Payment', `${lead.companyName} paid $${amountDollars}`)
+  } catch (err) {
+    console.error('[Stripe] Admin SMS notification failed:', err)
+  }
 
   // ── Step 9: Dispatch webhook to Clawdbot ──
   try {
