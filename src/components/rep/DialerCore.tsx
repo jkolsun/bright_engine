@@ -44,9 +44,29 @@ import {
   MousePointerClick,
   RotateCcw,
   PhoneOff,
+  Plus,
+  UserPlus,
+  ChevronDown,
+  ChevronUp,
+  X,
+  Wifi,
+  WifiOff,
+  Calendar,
+  Tag,
+  FileText,
+  DollarSign,
+  Ban,
+  Users,
+  PauseCircle,
+  PlayCircle,
+  Hash,
+  Volume2,
+  Smartphone,
+  Package,
+  Info,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 // ============================================
 // TYPES
@@ -291,7 +311,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
   // Preview dialog
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
-  const [previewMethod, setPreviewMethod] = useState<'sms' | 'email'>('sms')
+  const [previewMethod, setPreviewMethod] = useState<'sms' | 'email' | 'both'>('sms')
   const [previewMessage, setPreviewMessage] = useState('')
 
   // Preview status polling (during active call)
@@ -300,6 +320,67 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   }>({ sent: false, opened: false, viewDurationSeconds: 0, ctaClicked: false, lastEventAt: null })
   const [previewSentThisCall, setPreviewSentThisCall] = useState(false)
   const previewPollRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Alternate contacts
+  const [alternateContacts, setAlternateContacts] = useState<any[]>([])
+  const [expandContacts, setExpandContacts] = useState(false)
+  const [showAddContact, setShowAddContact] = useState(false)
+  const [addContactType, setAddContactType] = useState<'PHONE' | 'EMAIL'>('PHONE')
+  const [addContactValue, setAddContactValue] = useState('')
+  const [addContactLabel, setAddContactLabel] = useState('Other')
+  const [addingContact, setAddingContact] = useState(false)
+
+  // Disposition panel (Part 2)
+  const [showDisposition, setShowDisposition] = useState(false)
+  const [dispositionLevel, setDispositionLevel] = useState<'first' | 'interested' | 'callback' | 'custom'>('first')
+  const [customRequestText, setCustomRequestText] = useState('')
+  const [interestedSubNote, setInterestedSubNote] = useState('')
+
+  // Script tabs (Part 3)
+  const [scriptTab, setScriptTab] = useState<'script' | 'product' | 'upsells'>('script')
+  const [upsellProducts, setUpsellProducts] = useState<any[]>([])
+  const [loadingUpsells, setLoadingUpsells] = useState(false)
+  const [productInfo, setProductInfo] = useState<{ postPaymentExplainer: string; competitiveAdvantages: string }>({ postPaymentExplainer: '', competitiveAdvantages: '' })
+  const [sendingUpsell, setSendingUpsell] = useState<string | null>(null)
+
+  // Auto-dial & skip (Part 4)
+  const [autoDialEnabled, setAutoDialEnabled] = useState(!isPartTime)
+  const [autoDialCountdown, setAutoDialCountdown] = useState<number | null>(null)
+  const [autoDialPaused, setAutoDialPaused] = useState(false)
+  const [autoDialDelay, setAutoDialDelay] = useState(5)
+  const [minAutoDialDelay, setMinAutoDialDelay] = useState(3)
+  const [connectionQuality, setConnectionQuality] = useState<'good' | 'moderate' | 'poor'>('good')
+  const [skipProcessing, setSkipProcessing] = useState(false)
+  const autoDialRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Manual dial (Part 6)
+  const [showManualDial, setShowManualDial] = useState(false)
+  const [manualDialNumber, setManualDialNumber] = useState('')
+  const [linkToLead, setLinkToLead] = useState(true)
+
+  // Handoff confirmation (Part 5)
+  const [showHandoffConfirm, setShowHandoffConfirm] = useState(false)
+  const [handoffNotes, setHandoffNotes] = useState('')
+
+  // Notes expansion
+  const [expandNotes, setExpandNotes] = useState(false)
+
+  // Auto-SMS after VM/No Answer (Task 3)
+  const [autoSmsCountdown, setAutoSmsCountdown] = useState<number | null>(null)
+  const [autoSmsMessage, setAutoSmsMessage] = useState('')
+  const [autoSmsCancelled, setAutoSmsCancelled] = useState(false)
+  const [autoSmsLeadId, setAutoSmsLeadId] = useState<string | null>(null)
+  const autoSmsRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Inbound reply notifications (Task 3)
+  const [inboundNotification, setInboundNotification] = useState<{ leadId: string; companyName: string; message: string } | null>(null)
+  const [showMessagePanel, setShowMessagePanel] = useState(false)
+  const [messagePanelMessages, setMessagePanelMessages] = useState<any[]>([])
+  const [replyText, setReplyText] = useState('')
+  const [sendingReply, setSendingReply] = useState(false)
+
+  // Toast messages
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'warning' } | null>(null)
 
   // Dynamic pricing from DB
   const [pricing, setPricing] = useState<{ siteBuildFee: number; monthlyHosting: number; firstMonthTotal: number }>({ siteBuildFee: 149, monthlyHosting: 39, firstMonthTotal: 188 })
@@ -319,7 +400,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   // ============================================
   // LOAD QUEUE (Smart priority ordering)
   // ============================================
-  useEffect(() => { loadQueue(); loadPricing(); loadRepConfig() }, [])
+  useEffect(() => { loadQueue(); loadPricing(); loadRepConfig(); loadProductSettings(); loadUpsellProducts() }, [])
 
   const loadPricing = async () => {
     try {
@@ -340,6 +421,43 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         if (data.defaultCallScript) setAdminCallScript(data.defaultCallScript)
       }
     } catch { /* use defaults */ }
+  }
+
+  const loadProductSettings = async () => {
+    try {
+      const res = await fetch('/api/settings/pricing')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.postPaymentExplainer || data.competitiveAdvantages) {
+          setProductInfo({
+            postPaymentExplainer: data.postPaymentExplainer || '',
+            competitiveAdvantages: data.competitiveAdvantages || '',
+          })
+        }
+      }
+    } catch { /* use defaults */ }
+  }
+
+  const loadUpsellProducts = async () => {
+    setLoadingUpsells(true)
+    try {
+      const res = await fetch('/api/upsell-products')
+      if (res.ok) {
+        const data = await res.json()
+        setUpsellProducts((data.products || []).filter((p: any) => p.active))
+      }
+    } catch { /* ignore */ }
+    finally { setLoadingUpsells(false) }
+  }
+
+  const loadAlternateContacts = async (leadId: string) => {
+    try {
+      const res = await fetch(`/api/admin/lead-contacts/${leadId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setAlternateContacts(data.contacts || [])
+      }
+    } catch { /* ignore */ }
   }
 
   const loadQueue = async () => {
@@ -375,7 +493,10 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   useEffect(() => {
     if (currentLead?.id) {
       loadLeadHistory(currentLead.id)
+      loadAlternateContacts(currentLead.id)
       setAiHandoffSent(false)
+      setExpandContacts(false)
+      setExpandNotes(false)
     }
   }, [currentLead?.id])
 
@@ -441,32 +562,51 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   // ============================================
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!callActive || processing) return
       const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        // Pause auto-dial when typing
+        if (autoDialCountdown !== null && !autoDialPaused) setAutoDialPaused(true)
+        return
+      }
+      if (processing) return
 
-      switch (e.key) {
-        case '1': e.preventDefault(); handleOutcome(previewStatus.opened ? 'interested_saw_preview' : 'interested_no_preview'); break
-        case '2': e.preventDefault(); handleOutcome('not_interested'); break
-        case '3': e.preventDefault(); setShowCallbackDialog(true); break
-        case '4': e.preventDefault(); handleOutcome('callback_reviewing'); break
-        case '5': e.preventDefault(); handleOutcome('payment_link_sent'); break
-        case '6': e.preventDefault(); handleOutcome('closed_paid'); break
-        case '7': e.preventDefault(); handleOutcome('wants_changes'); break
-        case '8': e.preventDefault(); handleOutcome('wrong_number'); break
-        case '9': e.preventDefault(); handleOutcome('dnc'); break
-        case 'p': case 'P': e.preventDefault(); if (currentLead?.previewUrl) { openPreviewDialog('sms'); setPreviewSentThisCall(true) }; break
-        case 't': case 'T': e.preventDefault(); handleAutoText(); break
-        case 'n': case 'N': e.preventDefault(); setShowNoteDialog(true); break
-        case 'a': case 'A': e.preventDefault(); handleAIHandoff(); break
-        case 'h': case 'H': e.preventDefault(); handleHold(); break
-        case 'x': case 'X': e.preventDefault(); handleHangup(); break
+      // Disposition panel shortcuts (work when panel is open)
+      if (showDisposition && dispositionLevel === 'first') {
+        switch (e.key) {
+          case '1': e.preventDefault(); setDispositionLevel('interested'); return
+          case '2': e.preventDefault(); handleOutcome('not_interested'); return
+          case '3': e.preventDefault(); setDispositionLevel('callback'); return
+          case '4': e.preventDefault(); handleOutcome('no_answer'); return
+          case '5': e.preventDefault(); handleOutcome('voicemail_left'); return
+          case '6': e.preventDefault(); handleOutcome('wrong_number'); return
+          case '7': e.preventDefault(); handleOutcome('dnc'); return
+          case '8': e.preventDefault(); setDispositionLevel('custom'); return
+        }
+      }
+
+      // Active call shortcuts
+      if (callActive) {
+        switch (e.key) {
+          case 'p': case 'P': e.preventDefault(); if (currentLead?.previewUrl) { openPreviewDialog('sms'); setPreviewSentThisCall(true) }; break
+          case 't': case 'T': e.preventDefault(); handleAutoText(); break
+          case 'n': case 'N': e.preventDefault(); setShowNoteDialog(true); break
+          case 'a': case 'A': e.preventDefault(); setShowHandoffConfirm(true); break
+          case 'h': case 'H': e.preventDefault(); handleHold(); break
+          case 'x': case 'X': e.preventDefault(); handleHangup(); break
+        }
+      }
+
+      // Skip shortcut (when idle with a lead loaded)
+      if (!callActive && !showDisposition && currentLead) {
+        switch (e.key) {
+          case 's': case 'S': e.preventDefault(); handleSkip(); break
+        }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [callActive, processing, currentLead, previewStatus.opened, aiHandoffSent])
+  }, [callActive, processing, currentLead, previewStatus.opened, aiHandoffSent, showDisposition, dispositionLevel, autoDialCountdown, autoDialPaused])
 
   // ============================================
   // DIALING ACTIONS
@@ -529,6 +669,12 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       }
     }
 
+    // Create CALL_ATTEMPTED event
+    createLeadEvent(currentLead.id, 'CALL_ATTEMPTED', {
+      repId: userId, repName: userName, timestamp: new Date().toISOString(),
+      dialMode: isPartTime ? 'single' : dialerMode,
+    })
+
     // Update parallel line display
     const lines = leadIds.map((id: string, idx: number) => ({
       leadId: id,
@@ -546,6 +692,12 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         ? { ...line, status: 'connected' }
         : { ...line, status: 'dropped' }
     ))
+    // Create CALL_CONNECTED event
+    if (currentLead) {
+      createLeadEvent(currentLead.id, 'CALL_CONNECTED', {
+        repId: userId, repName: userName, timestamp: new Date().toISOString(), durationSeconds: 0,
+      })
+    }
   }
 
   const handleHold = async () => {
@@ -585,11 +737,14 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         line.callId === callId ? { ...line, status: 'dropped' } : line
       ))
     } else {
-      // Hanging up the active call — reset to idle so rep can log outcome
+      // Hanging up the active call — show disposition panel
       setCallPhase('idle')
       setCallActive(false)
       setParallelLines([])
       setCallStartTime(null)
+      // Show disposition panel for outcome logging
+      setShowDisposition(true)
+      setDispositionLevel('first')
     }
   }
 
@@ -681,6 +836,24 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       closes: closeOutcomes.includes(outcome) ? prev.closes + 1 : prev.closes,
     }))
 
+    // Create CALL_ENDED event and CALL_SUMMARY
+    createLeadEvent(currentLead.id, 'CALL_ENDED', {
+      repId: userId, repName: userName, durationSeconds: duration, outcome,
+    })
+    const summary = generateCallSummary(outcome, duration)
+    createLeadEvent(currentLead.id, 'CALL_SUMMARY', {
+      repId: userId, repName: userName, summary, timestamp: new Date().toISOString(),
+    })
+
+    // Save call notes as REP_NOTE if present
+    if (notes) {
+      fetch('/api/dialer/note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId: currentLead.id, text: notes }),
+      }).catch(() => {})
+    }
+
     // Reset call state
     setCallActive(false)
     setCallPhase('idle')
@@ -703,11 +876,21 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       }
     }
 
+    // Close disposition panel
+    setShowDisposition(false)
+    setDispositionLevel('first')
     setProcessing(false)
 
-    // Auto-advance in power dial mode (full-time only)
-    if (!isPartTime && dialerMode === 'power' && sessionActive && queue.length > 1) {
-      setTimeout(() => {}, 2000)
+    // Auto-SMS after No Answer or Voicemail (if lead has preview URL)
+    const vmOutcomes = ['no_answer', 'voicemail_left', 'voicemail_skipped', 'voicemail_preview_sent']
+    if (vmOutcomes.includes(outcome) && currentLead?.previewUrl) {
+      triggerAutoSms(currentLead.id, currentLead.firstName || '', currentLead.companyName || '', currentLead.previewUrl)
+    }
+
+    // Auto-dial countdown after disposition
+    if (autoDialEnabled && sessionActive && queue.length > 1) {
+      setAutoDialCountdown(Math.max(autoDialDelay, minAutoDialDelay))
+      setAutoDialPaused(false)
     }
   }
 
@@ -729,6 +912,14 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       } catch (e) { console.error(e) }
     }
 
+    // Create CALLBACK_SCHEDULED event
+    if (currentLead) {
+      createLeadEvent(currentLead.id, 'CALLBACK_SCHEDULED', {
+        repId: userId, repName: userName, callbackDate, callbackTime,
+        notes: callNotes || undefined, timestamp: new Date().toISOString(),
+      })
+    }
+
     setShowCallbackDialog(false)
     setCallbackDate('')
     setCallbackTime('')
@@ -748,12 +939,30 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       } catch (e) { console.error(e) }
     }
 
-    const message = encodeURIComponent(
-      `Hey ${currentLead.firstName}, just left you a voicemail. Here's the preview for ${currentLead.companyName}: ${currentLead.previewUrl}`
-    )
-    window.open(`sms:${currentLead.phone}?body=${message}`)
+    // Send via API instead of native SMS
+    try {
+      const res = await fetch('/api/dialer/send-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: currentLead.id,
+          channel: 'sms',
+          message: `Hey ${currentLead.firstName}, just left you a voicemail. Here's the preview for ${currentLead.companyName}: ${currentLead.previewUrl}`,
+        }),
+      })
+      if (res.ok) {
+        showToast('Preview sent via SMS', 'success')
+      }
+    } catch (e) { console.error('Auto text failed:', e) }
 
     setSessionStats(prev => ({ ...prev, previewLinksSent: prev.previewLinksSent + 1 }))
+    setPreviewSentThisCall(true)
+  }
+
+  // Toast helper
+  const showToast = (message: string, type: 'success' | 'info' | 'warning' = 'info') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
   }
 
   const handleAIHandoff = async () => {
@@ -782,18 +991,458 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
   const handleSaveNote = async () => {
     if (!noteText || !currentLead) return
+    // Save via API
+    try {
+      await fetch('/api/dialer/note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId: currentLead.id, text: noteText }),
+      })
+      showToast('Note saved', 'success')
+    } catch { /* non-critical */ }
     setCallNotes(prev => prev ? `${prev}\n${noteText}` : noteText)
     setShowNoteDialog(false)
     setNoteText('')
   }
 
   // ============================================
+  // SKIP LEAD
+  // ============================================
+  const handleSkip = async () => {
+    if (!currentLead || skipProcessing) return
+    setSkipProcessing(true)
+    try {
+      await fetch('/api/dialer/skip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId: currentLead.id }),
+      })
+    } catch (e) { console.error('Skip failed:', e) }
+    // Move to next lead without removing from queue
+    if (currentIndex < queue.length - 1) {
+      setCurrentIndex(currentIndex + 1)
+    }
+    setSkipProcessing(false)
+  }
+
+  // ============================================
+  // ADD ALTERNATE CONTACT
+  // ============================================
+  const handleAddContact = async () => {
+    if (!currentLead || !addContactValue || addingContact) return
+    setAddingContact(true)
+    try {
+      const res = await fetch('/api/dialer/add-contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: currentLead.id,
+          type: addContactType,
+          value: addContactValue,
+          label: addContactLabel,
+        }),
+      })
+      if (res.ok) {
+        setShowAddContact(false)
+        setAddContactValue('')
+        setAddContactLabel('Other')
+        loadAlternateContacts(currentLead.id)
+      }
+    } catch (e) { console.error('Add contact failed:', e) }
+    finally { setAddingContact(false) }
+  }
+
+  // ============================================
+  // SEND UPSELL LINK
+  // ============================================
+  const handleSendUpsell = async (productId: string) => {
+    if (!currentLead || sendingUpsell) return
+    setSendingUpsell(productId)
+    try {
+      const res = await fetch('/api/dialer/send-upsell', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId: currentLead.id, productId }),
+      })
+      if (res.ok) {
+        // Brief success feedback
+        setTimeout(() => setSendingUpsell(null), 2000)
+      } else {
+        setSendingUpsell(null)
+      }
+    } catch (e) {
+      console.error('Send upsell failed:', e)
+      setSendingUpsell(null)
+    }
+  }
+
+  // ============================================
+  // CUSTOM REQUEST
+  // ============================================
+  const handleCustomRequest = async () => {
+    if (!currentLead || !customRequestText) return
+    try {
+      await fetch('/api/dialer/note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: currentLead.id,
+          text: `CUSTOM REQUEST: ${customRequestText}`,
+        }),
+      })
+    } catch (e) { console.error('Custom request failed:', e) }
+    setCustomRequestText('')
+    setDispositionLevel('first')
+    setShowDisposition(false)
+    await handleOutcome('wants_changes')
+  }
+
+  // ============================================
+  // AI HANDOFF WITH CONFIRMATION
+  // ============================================
+  const handleHandoffConfirm = async () => {
+    if (!currentLead || aiHandoffSent) return
+    setAiHandoffSent(true)
+    setShowHandoffConfirm(false)
+
+    // Build context from current call data
+    const events = currentLead.events || []
+    const upsellsPitched = events
+      .filter((e: any) => e.eventType === 'UPSELL_PITCHED')
+      .map((e: any) => {
+        try {
+          const meta = typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata
+          return meta?.productName || 'Unknown'
+        } catch { return 'Unknown' }
+      })
+
+    const context = {
+      repName: userName,
+      discussed: [
+        ...(previewSentThisCall ? ['Preview sent'] : []),
+        ...(previewStatus.opened ? ['Preview viewed'] : []),
+        ...(callTimer > 60 ? ['Extended conversation'] : []),
+      ],
+      interestedIn: 'core_product',
+      objections: handoffNotes || undefined,
+      previewStatus: previewStatus.opened ? 'opened' : previewSentThisCall ? 'sent' : 'not_sent',
+      upsellsPitched,
+    }
+
+    try {
+      const res = await fetch('/api/dialer/handoff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: currentLead.id,
+          notes: handoffNotes || callNotes || undefined,
+          context,
+        }),
+      })
+
+      if (!res.ok) {
+        setAiHandoffSent(false)
+        return
+      }
+    } catch (e) {
+      console.error('AI Handoff failed:', e)
+      setAiHandoffSent(false)
+      return
+    }
+
+    // Also trigger close engine
+    try {
+      await fetch('/api/close-engine/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: currentLead.id,
+          entryPoint: 'REP_CLOSE',
+          repId: userId,
+        }),
+      })
+    } catch { /* non-critical */ }
+
+    setHandoffNotes('')
+    setShowDisposition(false)
+    // Remove lead from queue and advance
+    const newQueue = queue.filter((_: any, i: number) => i !== currentIndex)
+    setQueue(newQueue)
+    if (currentIndex >= newQueue.length && newQueue.length > 0) {
+      setCurrentIndex(newQueue.length - 1)
+    }
+    setCallActive(false)
+    setCallPhase('idle')
+  }
+
+  // ============================================
+  // AUTO-DIAL COUNTDOWN
+  // ============================================
+  useEffect(() => {
+    if (autoDialCountdown !== null && autoDialCountdown > 0 && !autoDialPaused) {
+      autoDialRef.current = setTimeout(() => {
+        setAutoDialCountdown(prev => prev !== null ? prev - 1 : null)
+      }, 1000)
+    } else if (autoDialCountdown === 0 && !autoDialPaused) {
+      setAutoDialCountdown(null)
+      if (currentLead && sessionActive) {
+        handleDial()
+      }
+    }
+    return () => { if (autoDialRef.current) clearTimeout(autoDialRef.current) }
+  }, [autoDialCountdown, autoDialPaused])
+
+  // ============================================
+  // AUTO-SMS COUNTDOWN (after VM / No Answer)
+  // ============================================
+  useEffect(() => {
+    if (autoSmsCountdown !== null && autoSmsCountdown > 0 && !autoSmsCancelled) {
+      autoSmsRef.current = setTimeout(() => {
+        setAutoSmsCountdown(prev => prev !== null ? prev - 1 : null)
+      }, 1000)
+    } else if (autoSmsCountdown === 0 && !autoSmsCancelled && autoSmsLeadId) {
+      // Send the auto-SMS
+      setAutoSmsCountdown(null)
+      fetch('/api/dialer/send-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId: autoSmsLeadId, channel: 'sms', message: autoSmsMessage }),
+      }).then(() => {
+        showToast('Auto-SMS sent', 'success')
+      }).catch(() => {
+        showToast('Auto-SMS failed', 'warning')
+      })
+      setAutoSmsLeadId(null)
+      setAutoSmsMessage('')
+    }
+    return () => { if (autoSmsRef.current) clearTimeout(autoSmsRef.current) }
+  }, [autoSmsCountdown, autoSmsCancelled])
+
+  const triggerAutoSms = (leadId: string, firstName: string, companyName: string, previewUrl: string) => {
+    const msg = `Hey ${firstName}, just tried to reach you about ${companyName}. Check out the site I built for you: ${previewUrl}`
+    setAutoSmsMessage(msg)
+    setAutoSmsLeadId(leadId)
+    setAutoSmsCancelled(false)
+    setAutoSmsCountdown(3)
+  }
+
+  const cancelAutoSms = () => {
+    setAutoSmsCancelled(true)
+    setAutoSmsCountdown(null)
+    setAutoSmsLeadId(null)
+    setAutoSmsMessage('')
+    showToast('Auto-SMS cancelled', 'info')
+  }
+
+  // ============================================
+  // INBOUND REPLY POLLING (every 15 sec during session)
+  // ============================================
+  useEffect(() => {
+    if (!sessionActive || !userId) return
+    const pollReplies = async () => {
+      try {
+        const res = await fetch('/api/dialer/queue?inboundReplies=true')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.replies && data.replies.length > 0) {
+            const reply = data.replies[0]
+            // Only show if not already shown and lead is not handed off to AI
+            if (!reply.aiFollowup) {
+              setInboundNotification({
+                leadId: reply.leadId,
+                companyName: reply.companyName || 'Unknown',
+                message: reply.content?.slice(0, 50) || 'New reply',
+              })
+              // Auto-dismiss after 10 seconds
+              setTimeout(() => setInboundNotification(null), 10000)
+            }
+          }
+        }
+      } catch { /* ignore polling errors */ }
+    }
+    const interval = setInterval(pollReplies, 15000)
+    return () => clearInterval(interval)
+  }, [sessionActive, userId])
+
+  // ============================================
+  // CONNECTION QUALITY CHECK
+  // ============================================
+  useEffect(() => {
+    if (!sessionActive) return
+    const checkQuality = () => {
+      // Simple RTT-based quality check via fetch timing
+      const start = performance.now()
+      fetch('/api/auth/me', { method: 'HEAD' }).then(() => {
+        const rtt = performance.now() - start
+        if (rtt > 2000) setConnectionQuality('poor')
+        else if (rtt > 800) setConnectionQuality('moderate')
+        else setConnectionQuality('good')
+      }).catch(() => setConnectionQuality('poor'))
+    }
+    checkQuality()
+    const interval = setInterval(checkQuality, 30000)
+    return () => clearInterval(interval)
+  }, [sessionActive])
+
+  // Auto-switch to single line on poor connection
+  useEffect(() => {
+    if (connectionQuality === 'poor' && dialerMode === 'power') {
+      setDialerMode('single')
+    }
+  }, [connectionQuality])
+
+  // ============================================
+  // MANUAL DIAL
+  // ============================================
+  const handleManualDial = async () => {
+    if (!manualDialNumber) return
+    setShowManualDial(false)
+
+    const cleanNumber = manualDialNumber.replace(/\D/g, '')
+    if (cleanNumber.length < 10) return
+
+    setCallActive(true)
+    setCallPhase('dialing')
+    setCallStartTime(Date.now())
+
+    if (isPartTime) {
+      window.open(`tel:${cleanNumber}`)
+    } else {
+      try {
+        const body: any = { phone: cleanNumber, sessionId }
+        if (linkToLead && currentLead) body.leadId = currentLead.id
+        const res = await fetch('/api/dialer/dial', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setActiveCallId(data.calls?.[0]?.callId || null)
+          if (!data.configured) window.open(`tel:${cleanNumber}`)
+        }
+      } catch {
+        window.open(`tel:${cleanNumber}`)
+      }
+    }
+    setManualDialNumber('')
+  }
+
+  // Format phone for display
+  const formatPhone = (phone: string) => {
+    if (!phone) return ''
+    const clean = phone.replace(/\D/g, '')
+    if (clean.length === 10) return `(${clean.slice(0, 3)}) ${clean.slice(3, 6)}-${clean.slice(6)}`
+    if (clean.length === 11 && clean[0] === '1') return `+1 (${clean.slice(1, 4)}) ${clean.slice(4, 7)}-${clean.slice(7)}`
+    return phone
+  }
+
+  // Get call attempt info from lead history
+  const getCallAttemptInfo = () => {
+    if (!leadHistory || leadHistory.length === 0) return null
+    const callEvents = leadHistory.filter((h: any) => h.type === 'call' || h.type === 'activity')
+    if (callEvents.length === 0) return null
+    const last = callEvents[0]
+    return { count: callEvents.length, lastDate: last.timestamp, lastOutcome: last.description }
+  }
+
+  // Get previous rep info
+  const getPreviousRepInfo = () => {
+    if (!leadHistory || leadHistory.length === 0) return null
+    for (const h of leadHistory) {
+      if (h.repName && h.repId && h.repId !== userId) {
+        return h.repName
+      }
+    }
+    return null
+  }
+
+  // Get recent notes from history
+  const getRecentNotes = () => {
+    return leadHistory
+      .filter((h: any) => h.type === 'activity' && h.notes)
+      .slice(0, 5)
+      .map((h: any) => ({ text: h.notes, date: h.timestamp, rep: h.repName || 'Unknown' }))
+  }
+
+  // Get structured tags from events
+  const getLeadTags = () => {
+    if (!currentLead?.events) return []
+    const tags: { label: string; color: string }[] = []
+    const events = currentLead.events || []
+    for (const e of events) {
+      const meta = typeof e.metadata === 'string' ? (() => { try { return JSON.parse(e.metadata) } catch { return {} } })() : (e.metadata || {})
+      if (e.eventType === 'UPSELL_PITCHED') tags.push({ label: `Upsell: ${meta.productName || 'Unknown'}`, color: 'bg-purple-100 text-purple-700' })
+      if (e.eventType === 'WANTS_CHANGES') tags.push({ label: 'Wants changes', color: 'bg-blue-100 text-blue-700' })
+      if (e.eventType === 'CALLBACK_SCHEDULED') tags.push({ label: `Callback ${meta.date ? new Date(meta.date).toLocaleDateString() : ''}`, color: 'bg-amber-100 text-amber-700' })
+      if (e.eventType === 'PAYMENT_LINK_SENT_REP') tags.push({ label: 'Payment link sent', color: 'bg-green-100 text-green-700' })
+      if (e.eventType === 'AI_HANDOFF') tags.push({ label: 'AI handoff', color: 'bg-teal-100 text-teal-700' })
+      if (e.eventType === 'CUSTOM_REQUEST') tags.push({ label: `Request: ${meta.text?.slice(0, 30) || ''}`, color: 'bg-blue-100 text-blue-700' })
+    }
+    return tags.slice(0, 6) // max 6 tags
+  }
+
+  // ============================================
+  // LEAD EVENT CREATION HELPER
+  // ============================================
+  const createLeadEvent = async (leadId: string, eventType: string, metadata: any) => {
+    try {
+      await fetch('/api/dialer/note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId, eventType, metadata: JSON.stringify(metadata) }),
+      })
+    } catch { /* non-critical */ }
+  }
+
+  // ============================================
+  // CALL SUMMARY GENERATOR
+  // ============================================
+  const generateCallSummary = (outcome: string, duration: number): string => {
+    const now = new Date()
+    const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    const parts: string[] = [`${dateStr}, ${timeStr} — Rep ${userName}`]
+
+    // Call result
+    if (duration > 0) {
+      const mins = Math.floor(duration / 60)
+      const secs = duration % 60
+      parts.push(`Connected (${mins}m ${secs.toString().padStart(2, '0')}s)`)
+    } else if (['no_answer'].includes(outcome)) {
+      parts.push('No Answer')
+    } else if (['voicemail_left', 'voicemail_skipped', 'voicemail_preview_sent'].includes(outcome)) {
+      parts.push('Voicemail')
+    }
+
+    // Actions during call
+    if (previewSentThisCall) parts.push('Preview sent')
+    if (previewStatus.opened) parts.push('Preview opened')
+
+    // Outcome
+    const outcomeLabels: Record<string, string> = {
+      interested: 'Interested', interested_saw_preview: 'Interested (saw preview)',
+      interested_no_preview: 'Interested', not_interested: 'Not Interested',
+      callback: 'Callback scheduled', callback_reviewing: 'Reviewing',
+      no_answer: '', voicemail_left: 'VM dropped',
+      voicemail_skipped: 'VM skipped', voicemail_preview_sent: 'VM + preview sent',
+      wrong_number: 'Wrong number', dnc: 'DNC',
+      payment_link_sent: 'Payment link sent', closed_paid: 'PAID',
+      wants_changes: 'Wants changes',
+    }
+    const label = outcomeLabels[outcome]
+    if (label) parts.push(label)
+
+    return parts.join(' → ')
+  }
+
+  // ============================================
   // PREVIEW ACTIONS
   // ============================================
-  const openPreviewDialog = (method: 'sms' | 'email') => {
+  const openPreviewDialog = (method: 'sms' | 'email' | 'both') => {
     if (!currentLead) return
-    setPreviewMethod(method)
-    const msg = method === 'sms'
+    setPreviewMethod(method as any)
+    const msg = (method === 'sms' || method === 'both')
       ? `Hey ${currentLead.firstName}, this is ${userName} with Bright Automations. I already built a new website for ${currentLead.companyName} — check it out: ${currentLead.previewUrl}\n\nIf you like it we can have it live today. Just text me back!`
       : `Hi ${currentLead.firstName},\n\nI already built a new website for ${currentLead.companyName}.\n\n${currentLead.previewUrl}\n\nIt's mobile-friendly, loads fast, and designed specifically for ${currentLead.industry?.toLowerCase().replace(/_/g, ' ')}.\n\nIf you like what you see, reply and we'll get it live for you.\n\nBest,\n${userName}\nBright Automations`
     setPreviewMessage(msg)
@@ -802,17 +1451,30 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
   const handleSendPreview = async () => {
     if (!currentLead?.previewUrl) return
-    if (previewMethod === 'sms') {
-      window.open(`sms:${currentLead.phone}?body=${encodeURIComponent(previewMessage)}`)
-    } else {
-      const subject = encodeURIComponent(`Website preview for ${currentLead.companyName}`)
-      window.open(`mailto:${currentLead.email || ''}?subject=${subject}&body=${encodeURIComponent(previewMessage)}`)
+
+    // Determine effective channel
+    let channel = previewMethod as string
+    if ((previewMethod === 'email' || previewMethod === 'both') && !currentLead.email) {
+      channel = 'sms'
+      showToast('No email on file — SMS only', 'warning')
     }
-    await fetch('/api/activity', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ leadId: currentLead.id, activityType: 'PREVIEW_SENT', notes: `Preview sent via ${previewMethod}` }),
-    }).catch(() => {})
+
+    try {
+      const res = await fetch('/api/dialer/send-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: currentLead.id,
+          channel,
+          message: previewMessage,
+        }),
+      })
+      if (res.ok) {
+        const channelLabel = channel === 'both' ? 'SMS + Email' : channel === 'sms' ? 'SMS' : 'Email'
+        showToast(`Preview sent via ${channelLabel}`, 'success')
+      }
+    } catch (e) { console.error('Send preview failed:', e) }
+
     setSessionStats(prev => ({ ...prev, previewLinksSent: prev.previewLinksSent + 1 }))
     setPreviewSentThisCall(true)
     setPreviewDialogOpen(false)
@@ -841,6 +1503,23 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       }
     } catch (e) {
       console.error('Failed to get pay link:', e)
+    }
+  }
+
+  // Send payment link via SMS (Task 3)
+  const handleSendPaymentLink = async () => {
+    if (!currentLead) return
+    try {
+      const res = await fetch('/api/dialer/send-payment-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId: currentLead.id }),
+      })
+      if (res.ok) {
+        showToast(`Payment link sent to ${currentLead.phone}`, 'success')
+      }
+    } catch (e) {
+      console.error('Send payment link failed:', e)
     }
   }
 
@@ -998,6 +1677,41 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
   return (
     <div className="p-4 lg:p-6 space-y-4 max-w-[1600px] mx-auto">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-[60] px-4 py-2.5 rounded-xl shadow-lg text-sm font-medium animate-in slide-in-from-right duration-300 ${
+          toast.type === 'success' ? 'bg-green-600 text-white' :
+          toast.type === 'warning' ? 'bg-amber-500 text-white' :
+          'bg-gray-800 text-white'
+        }`}>
+          {toast.message}
+        </div>
+      )}
+
+      {/* Auto-SMS Countdown Banner */}
+      {autoSmsCountdown !== null && !autoSmsCancelled && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] bg-teal-700 text-white px-4 py-2.5 rounded-xl shadow-lg text-sm font-medium flex items-center gap-3 animate-in slide-in-from-top duration-300">
+          <span>Auto-SMS in {autoSmsCountdown}s: &ldquo;{autoSmsMessage.slice(0, 60)}...&rdquo;</span>
+          <Button size="sm" variant="outline" className="h-7 rounded-lg text-xs border-white/30 text-white hover:bg-white/20" onClick={cancelAutoSms}>
+            Cancel
+          </Button>
+        </div>
+      )}
+
+      {/* Inbound Reply Notification Banner */}
+      {inboundNotification && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] bg-blue-600 text-white px-4 py-2.5 rounded-xl shadow-lg text-sm font-medium flex items-center gap-3 animate-in slide-in-from-top duration-300">
+          <span>💬 {inboundNotification.companyName} replied: &ldquo;{inboundNotification.message}&rdquo;</span>
+          <Button size="sm" variant="outline" className="h-7 rounded-lg text-xs border-white/30 text-white hover:bg-white/20"
+            onClick={() => { setShowMessagePanel(true); setInboundNotification(null) }}>
+            View
+          </Button>
+          <button onClick={() => setInboundNotification(null)} className="text-white/60 hover:text-white">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Header Bar */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
@@ -1011,14 +1725,26 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
               <h1 className="text-2xl font-bold text-gray-900 font-[family-name:var(--font-space-grotesk),_'Space_Grotesk',_sans-serif]">
                 {isPartTime ? 'Dialer' : 'Power Dialer'}
               </h1>
+              {/* Call Timer — large and prominent */}
               {callPhase === 'connected' && (
-                <Badge className="bg-red-500 text-white animate-pulse">LIVE {formatTime(callTimer)}</Badge>
+                <Badge className="bg-red-500 text-white animate-pulse text-lg px-3 py-1">LIVE {formatTime(callTimer)}</Badge>
               )}
               {callPhase === 'on_hold' && (
-                <Badge className="bg-yellow-500 text-white">ON HOLD {formatTime(callTimer)}</Badge>
+                <Badge className="bg-yellow-500 text-white text-lg px-3 py-1">ON HOLD {formatTime(callTimer)}</Badge>
               )}
               {callPhase === 'dialing' && (
                 <Badge className="gradient-primary text-white animate-pulse">DIALING...</Badge>
+              )}
+              {/* Connection Quality Indicator */}
+              {sessionActive && (
+                <span title={`Connection: ${connectionQuality}`} className="flex items-center gap-1">
+                  <span className={`w-2.5 h-2.5 rounded-full ${
+                    connectionQuality === 'good' ? 'bg-green-500' :
+                    connectionQuality === 'moderate' ? 'bg-yellow-500' :
+                    'bg-red-500'
+                  }`} />
+                  {connectionQuality === 'poor' && <span className="text-xs text-red-600 font-medium">Unstable</span>}
+                </span>
               )}
             </div>
             <p className="text-sm text-gray-500">
@@ -1029,36 +1755,52 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
             </p>
           </div>
         </div>
-        {/* Mode selector — hide for part-time */}
-        {!isPartTime && (
-          <div className="flex items-center gap-2">
-            <div className="flex border rounded-xl overflow-hidden">
-              <button
-                className={`px-3 py-1.5 text-xs font-medium ${dialerMode === 'power' ? 'gradient-primary text-white' : 'bg-white text-gray-600 hover:bg-teal-50/30'}`}
-                onClick={() => setDialerMode('power')}
-              >
-                <Zap size={12} className="inline mr-1" /> Power ({linesPerDial})
-              </button>
-              <button
-                className={`px-3 py-1.5 text-xs font-medium ${dialerMode === 'single' ? 'bg-[#2E7D8A] text-white' : 'bg-white text-gray-600 hover:bg-teal-50/30'}`}
-                onClick={() => setDialerMode('single')}
-              >
-                <PhoneCall size={12} className="inline mr-1" /> Single
-              </button>
-            </div>
-            {dialerMode === 'power' && (
-              <select
-                className="text-xs border rounded-xl px-2 py-1.5 bg-white focus:ring-teal-500 focus:ring-2 focus:outline-none"
-                value={linesPerDial}
-                onChange={(e) => setLinesPerDial(Number(e.target.value))}
-              >
-                <option value={1}>1 line</option>
-                <option value={2}>2 lines</option>
-                <option value={3}>3 lines</option>
-              </select>
-            )}
-          </div>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Auto-Dial Toggle */}
+          {sessionActive && (
+            <button
+              onClick={() => { setAutoDialEnabled(!autoDialEnabled); if (autoDialCountdown !== null) { setAutoDialCountdown(null); setAutoDialPaused(false) } }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-xl border transition-colors ${
+                autoDialEnabled ? 'bg-teal-50 border-teal-300 text-teal-700' : 'bg-gray-50 border-gray-200 text-gray-500'
+              }`}
+            >
+              {autoDialEnabled ? <PlayCircle size={14} /> : <PauseCircle size={14} />}
+              Auto-Dial: {autoDialEnabled ? 'ON' : 'OFF'}
+            </button>
+          )}
+          {/* Manual Dial Button */}
+          <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setShowManualDial(true)}>
+            <Hash size={14} className="mr-1" /> Dial Number
+          </Button>
+          {/* Mode selector — hide for part-time */}
+          {!isPartTime && (
+            <>
+              <div className="flex border rounded-xl overflow-hidden">
+                <button
+                  className={`px-3 py-1.5 text-xs font-medium ${dialerMode === 'power' ? 'gradient-primary text-white' : 'bg-white text-gray-600 hover:bg-teal-50/30'}`}
+                  onClick={() => setDialerMode('power')}
+                >
+                  <Zap size={12} className="inline mr-1" /> Power ({linesPerDial})
+                </button>
+                <button
+                  className={`px-3 py-1.5 text-xs font-medium ${dialerMode === 'single' ? 'bg-[#2E7D8A] text-white' : 'bg-white text-gray-600 hover:bg-teal-50/30'}`}
+                  onClick={() => setDialerMode('single')}
+                >
+                  <PhoneCall size={12} className="inline mr-1" /> Single
+                </button>
+              </div>
+              {dialerMode === 'power' && (
+                <select
+                  className="text-xs border rounded-xl px-2 py-1.5 bg-white focus:ring-teal-500 focus:ring-2 focus:outline-none"
+                  value={linesPerDial}
+                  onChange={(e) => setLinesPerDial(Number(e.target.value))}
+                >
+                  {[2, 3, 4, 5].map(n => <option key={n} value={n}>{n} lines</option>)}
+                </select>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Session Stats Bar */}
@@ -1087,76 +1829,171 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* LEFT: Lead Info + Actions (5 cols) */}
           <div className="lg:col-span-5 space-y-4">
-            {/* Lead Card */}
+            {/* Lead Card — Baseball Card Layout */}
             <Card className="p-5 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">{currentLead.companyName}</h2>
-                  <p className="text-gray-600">{currentLead.firstName} {currentLead.lastName}</p>
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    {/* Lead Temperature Badge */}
-                    <Badge variant="outline" className={tempBadge.className}>
-                      {tempBadge.emoji} {tempBadge.text}
-                    </Badge>
-                    {currentLead.queueCategory && (
-                      <Badge variant="outline" className={getCategoryBadgeClass(currentLead.queueCategory)}>
-                        {getCategoryLabel(currentLead.queueCategory)}
-                      </Badge>
-                    )}
-                    <Badge variant={currentLead.status === 'HOT_LEAD' ? 'destructive' : 'default'}>
-                      {currentLead.status}
-                    </Badge>
-                  </div>
+              {/* TOP ROW: Company name, contact, industry, temperature */}
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl font-bold text-gray-900 truncate">{currentLead.companyName}</h2>
+                  <p className="text-sm text-gray-600">{currentLead.firstName} {currentLead.lastName}</p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={openEditDialog}>
-                  <Edit3 size={14} className="mr-1" /> Edit
-                </Button>
+                <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
+                  {currentLead.industry && (
+                    <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200 text-[10px]">
+                      {currentLead.industry.replace(/_/g, ' ')}
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className={tempBadge.className}>
+                    {tempBadge.emoji} {tempBadge.text}
+                  </Badge>
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={openEditDialog}>
+                    <Edit3 size={13} />
+                  </Button>
+                </div>
               </div>
 
-              {/* Company Summary */}
-              <div className="bg-gray-50/70 rounded-xl p-3 mb-3 space-y-1">
-                <div className="flex items-center gap-3 text-sm text-gray-700 flex-wrap">
-                  <span className="flex items-center gap-1">
-                    <Building size={13} className="text-gray-400" />
-                    {currentLead.industry?.replace(/_/g, ' ') || 'Unknown'}
-                  </span>
-                  {(currentLead.city || currentLead.state) && (
-                    <span className="flex items-center gap-1">
-                      <MapPin size={13} className="text-gray-400" />
-                      {[currentLead.city, currentLead.state].filter(Boolean).join(', ')}
+              {/* CONTACT ROW: Phone, email, alternate contacts */}
+              <div className="bg-gray-50/70 rounded-xl p-3 mb-2 space-y-1.5">
+                <div className="flex items-center gap-3 flex-wrap">
+                  {isPartTime ? (
+                    <a href={`tel:${currentLead.phone}`} className="flex items-center gap-1.5 text-sm font-semibold text-teal-600 hover:underline">
+                      <Phone size={13} /> {formatPhone(currentLead.phone)}
+                    </a>
+                  ) : (
+                    <span className="flex items-center gap-1.5 text-sm font-semibold text-teal-600">
+                      <Phone size={13} /> {formatPhone(currentLead.phone)}
                     </span>
                   )}
-                  {currentLead.enrichedRating && (
-                    <span className="flex items-center gap-1">
-                      <Star size={13} className="text-amber-400 fill-amber-400" />
-                      {currentLead.enrichedRating}{currentLead.enrichedReviews ? ` (${currentLead.enrichedReviews})` : ''}
+                  {currentLead.email && (
+                    <span className="flex items-center gap-1.5 text-sm text-gray-600">
+                      <Mail size={13} className="text-gray-400" /> {currentLead.email}
                     </span>
                   )}
+                  {alternateContacts.length > 0 && (
+                    <button
+                      onClick={() => setExpandContacts(!expandContacts)}
+                      className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-700 font-medium"
+                    >
+                      <Users size={12} /> +{alternateContacts.length} more
+                      {expandContacts ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowAddContact(true)}
+                    className="w-5 h-5 rounded-full bg-teal-100 text-teal-600 hover:bg-teal-200 flex items-center justify-center"
+                    title="Add contact"
+                  >
+                    <Plus size={11} />
+                  </button>
                 </div>
-                {currentLead.website && (
+                {/* Expanded alternate contacts */}
+                {expandContacts && alternateContacts.length > 0 && (
+                  <div className="pt-1.5 border-t border-gray-200 space-y-1">
+                    {alternateContacts.map((c: any) => (
+                      <div key={c.id} className="flex items-center gap-2 text-xs text-gray-600">
+                        {c.type === 'PHONE' ? <Phone size={11} className="text-gray-400" /> : <Mail size={11} className="text-gray-400" />}
+                        <span className="font-medium">{c.value}</span>
+                        <Badge variant="outline" className="text-[9px] px-1 py-0">{c.label}</Badge>
+                        {c.addedByName && <span className="text-gray-400">by {c.addedByName}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* CONTEXT ROW: Website, call attempts, preview status */}
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mb-2 px-1">
+                {currentLead.website ? (
                   <a href={currentLead.website.startsWith('http') ? currentLead.website : `https://${currentLead.website}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-sm text-teal-600 hover:underline">
-                    <Globe size={13} /> {currentLead.website.replace(/^https?:\/\//, '')}
+                    className="flex items-center gap-1 text-teal-600 hover:underline">
+                    <Globe size={11} /> {currentLead.website.replace(/^https?:\/\//, '').slice(0, 30)}
                   </a>
+                ) : (
+                  <span className="flex items-center gap-1 text-gray-400">
+                    <Globe size={11} /> No website
+                  </span>
                 )}
-                {!currentLead.website && (
-                  <p className="text-xs text-gray-400">No website — great pitch angle</p>
-                )}
+                {(() => {
+                  const info = getCallAttemptInfo()
+                  if (!info) return <span className="flex items-center gap-1"><Phone size={11} /> First contact</span>
+                  return <span className="flex items-center gap-1"><Phone size={11} /> Attempt #{info.count} — {formatRelative(info.lastDate)}</span>
+                })()}
+                {(() => {
+                  const events = currentLead.events || []
+                  const previewSent = events.find((e: any) => e.eventType === 'PREVIEW_SENT_SMS' || e.eventType === 'PREVIEW_SENT_EMAIL')
+                  const previewViewed = events.find((e: any) => e.eventType === 'PREVIEW_VIEWED')
+                  if (previewViewed) {
+                    const meta = typeof previewViewed.metadata === 'string' ? (() => { try { return JSON.parse(previewViewed.metadata) } catch { return {} } })() : (previewViewed.metadata || {})
+                    return <span className="flex items-center gap-1 text-purple-600"><Eye size={11} /> Opened{meta.duration ? `, ${Math.round(meta.duration)}s` : ''}</span>
+                  }
+                  if (previewSent) return <span className="flex items-center gap-1 text-yellow-600"><Send size={11} /> Sent — not opened</span>
+                  return <span className="flex items-center gap-1"><Eye size={11} /> Not sent</span>
+                })()}
               </div>
 
-              {/* Phone — tel: link for part-time */}
-              {isPartTime ? (
-                <a href={`tel:${currentLead.phone}`} className="block text-2xl font-bold text-teal-600 font-mono mb-3 hover:underline">
-                  {currentLead.phone}
-                </a>
-              ) : (
-                <div className="text-2xl font-bold text-teal-600 font-mono mb-3">{currentLead.phone}</div>
-              )}
+              {/* NOTES ROW: Previous call summaries, notes, "previously worked by" */}
+              {(() => {
+                const prevRep = getPreviousRepInfo()
+                const notes = getRecentNotes()
+                if (!prevRep && notes.length === 0) return null
+                return (
+                  <div className="mb-2 space-y-1">
+                    {prevRep && (
+                      <div className="bg-blue-50 text-blue-700 text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                        <Info size={11} /> Previously worked by {prevRep}
+                      </div>
+                    )}
+                    {notes.slice(0, expandNotes ? 5 : 2).map((n, idx) => (
+                      <div key={idx} className="text-xs text-gray-500 px-1 truncate">
+                        <span className="font-medium text-gray-600">{n.rep}:</span> {n.text}
+                      </div>
+                    ))}
+                    {notes.length > 2 && (
+                      <button onClick={() => setExpandNotes(!expandNotes)} className="text-[10px] text-teal-600 hover:underline px-1">
+                        {expandNotes ? 'Show less' : `Show all ${notes.length} notes`}
+                      </button>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {/* TAGS ROW: Structured tags from events */}
+              {(() => {
+                const tags = getLeadTags()
+                if (tags.length === 0) return null
+                return (
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {tags.map((tag, idx) => (
+                      <Badge key={idx} variant="outline" className={`text-[10px] px-1.5 py-0 ${tag.color}`}>
+                        {tag.label}
+                      </Badge>
+                    ))}
+                  </div>
+                )
+              })()}
 
               {/* Action Buttons */}
               {callPhase === 'idle' ? (
                 <div className="space-y-2">
+                  {/* Auto-dial countdown */}
+                  {autoDialCountdown !== null && (
+                    <div className="bg-teal-50 border border-teal-200 rounded-xl px-3 py-2 flex items-center justify-between">
+                      <span className="text-sm font-medium text-teal-700">
+                        Next call in {autoDialCountdown}...
+                      </span>
+                      <div className="flex gap-1.5">
+                        <Button size="sm" variant="outline" className="h-7 rounded-lg text-xs"
+                          onClick={() => setAutoDialPaused(!autoDialPaused)}>
+                          {autoDialPaused ? <><PlayCircle size={12} className="mr-1" /> Resume</> : <><PauseCircle size={12} className="mr-1" /> Pause</>}
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 rounded-lg text-xs"
+                          onClick={() => { setAutoDialCountdown(null); setAutoDialPaused(false) }}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))} disabled={currentIndex <= 0}>
                       <ArrowLeft size={16} />
@@ -1165,12 +2002,13 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                       {!isPartTime && dialerMode === 'power' ? <Zap size={18} className="mr-2" /> : <Phone size={18} className="mr-2" />}
                       {sessionActive ? 'Dial' : isPartTime ? 'Start Calling' : `Start ${dialerMode === 'power' ? 'Power' : 'Single'} Dial`}
                     </Button>
-                    <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setCurrentIndex(Math.min(queue.length - 1, currentIndex + 1))} disabled={currentIndex >= queue.length - 1}>
+                    {/* Skip Button */}
+                    <Button variant="outline" size="sm" className="rounded-xl text-gray-500 hover:text-teal-600" onClick={handleSkip} disabled={skipProcessing} title="Skip [S]">
                       <SkipForward size={16} />
                     </Button>
                   </div>
                   <Button
-                    onClick={handleAIHandoff}
+                    onClick={() => setShowHandoffConfirm(true)}
                     disabled={aiHandoffSent}
                     variant="outline"
                     className="w-full rounded-xl border-[#0D7377] text-[#0D7377] hover:bg-[#0D7377] hover:text-white disabled:opacity-60"
@@ -1256,7 +2094,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
                   {/* AI Handoff Button */}
                   <Button
-                    onClick={handleAIHandoff}
+                    onClick={() => setShowHandoffConfirm(true)}
                     disabled={aiHandoffSent}
                     className="w-full bg-[#0D7377] hover:bg-[#0a5c5f] text-white rounded-xl text-sm font-bold disabled:opacity-60"
                   >
@@ -1264,20 +2102,21 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                     {aiHandoffSent ? 'Handed to AI Close Engine' : '[A] Close \u2192 AI Handoff'}
                   </Button>
 
-                  {/* Outcome logging — keyboard shortcut bar */}
-                  <div className="bg-gray-900 rounded-xl p-2.5 text-xs font-mono text-gray-300 grid grid-cols-4 gap-1">
-                    <button onClick={() => handleOutcome(previewStatus.opened ? 'interested_saw_preview' : 'interested_no_preview')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-green-400">[1] Interest</button>
-                    <button onClick={() => handleOutcome('not_interested')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-red-400">[2] No</button>
-                    <button onClick={() => setShowCallbackDialog(true)} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-teal-400">[3] Callback</button>
-                    <button onClick={() => handleOutcome('callback_reviewing')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-cyan-400">[4] Reviewing</button>
-                    <button onClick={() => handleOutcome('payment_link_sent')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-emerald-400">[5] PaySent</button>
-                    <button onClick={() => handleOutcome('closed_paid')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-yellow-400 font-bold">[6] PAID</button>
-                    <button onClick={() => handleOutcome('wants_changes')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-purple-400">[7] Changes</button>
-                    <button onClick={() => handleOutcome('wrong_number')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-orange-400">[8] Wrong#</button>
-                    <button onClick={() => handleOutcome('dnc')} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-red-500">[9] DNC</button>
-                    <button onClick={handleHold} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-cyan-400">[H] Hold</button>
-                    <button onClick={() => handleHangup()} className="hover:bg-gray-700 rounded-lg px-1.5 py-1 text-red-500 font-bold">[X] Hangup</button>
+                  {/* Call Controls */}
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="rounded-xl flex-1" onClick={handleHold}>
+                      {callPhase === 'on_hold' ? <><PlayCircle size={14} className="mr-1" /> Resume</> : <><PauseCircle size={14} className="mr-1" /> [H] Hold</>}
+                    </Button>
+                    <Button size="sm" className="rounded-xl flex-1 bg-red-600 hover:bg-red-700 text-white" onClick={() => handleHangup()}>
+                      <PhoneOff size={14} className="mr-1" /> [X] Hang Up
+                    </Button>
                   </div>
+
+                  {/* Log Outcome button (opens disposition panel) */}
+                  <Button size="sm" variant="outline" className="w-full rounded-xl text-gray-600"
+                    onClick={() => { setShowDisposition(true); setDispositionLevel('first') }}>
+                    <FileText size={14} className="mr-1" /> Log Outcome
+                  </Button>
                 </div>
               )}
 
@@ -1346,31 +2185,13 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
               </Card>
             )}
 
-            {/* Preview & Website Actions */}
-            <Card className="p-4 space-y-3 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
-              {currentLead.website && (
-                <div>
-                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Their Website</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    <a href={currentLead.website.startsWith('http') ? currentLead.website : `https://${currentLead.website}`}
-                      target="_blank" rel="noopener noreferrer" className="text-sm text-teal-600 hover:underline truncate flex-1">
-                      {currentLead.website.replace(/^https?:\/\//, '')}
-                    </a>
-                    <Button size="sm" variant="outline" className="rounded-xl" onClick={() => window.open(currentLead.website.startsWith('http') ? currentLead.website : `https://${currentLead.website}`, '_blank')}>
-                      <ExternalLink size={14} className="mr-1" /> View
-                    </Button>
-                  </div>
-                </div>
-              )}
-              {currentLead.previewUrl && (
-                <div className={currentLead.website ? 'border-t pt-3' : ''}>
-                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Our Preview</span>
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            {/* Quick Actions Card */}
+            <Card className="p-4 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
+              <div className="flex items-center gap-2 flex-wrap">
+                {currentLead.previewUrl && (
+                  <>
                     <Button size="sm" variant="outline" className="rounded-xl" onClick={() => window.open(currentLead.previewUrl, '_blank')}>
-                      <Eye size={14} className="mr-1" /> View
-                    </Button>
-                    <Button size="sm" variant="outline" className="rounded-xl" onClick={handleCopyPreview}>
-                      {copiedPreview ? <><CheckCircle size={14} className="mr-1 text-green-600" /> Copied!</> : <><Copy size={14} className="mr-1" /> Copy</>}
+                      <Eye size={14} className="mr-1" /> Preview
                     </Button>
                     <Button size="sm" onClick={() => openPreviewDialog('sms')} className="bg-[#2E7D8A] hover:bg-[#236571] text-white rounded-xl">
                       <MessageSquare size={14} className="mr-1" /> Text
@@ -1378,20 +2199,22 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                     <Button size="sm" onClick={() => openPreviewDialog('email')} className="bg-[#4AABB8] hover:bg-[#3a9aa7] text-white rounded-xl">
                       <Mail size={14} className="mr-1" /> Email
                     </Button>
-                  </div>
-                </div>
-              )}
-              {/* Send Pay Link */}
-              <div className={currentLead.previewUrl || currentLead.website ? 'border-t pt-3' : ''}>
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Payment</span>
-                <div className="flex items-center gap-2 mt-1.5">
-                  <Button size="sm" variant="outline" onClick={handleCopyPayLink}
-                    className={`rounded-xl ${copiedPayLink ? 'border-green-300 text-green-600' : ''}`}>
-                    {copiedPayLink
-                      ? <><CheckCircle size={14} className="mr-1" /> Pay Link Copied!</>
-                      : <><CreditCard size={14} className="mr-1" /> Copy Pay Link (${pricing.firstMonthTotal})</>}
+                    <Button size="sm" variant="outline" className="rounded-xl" onClick={handleCopyPreview}>
+                      {copiedPreview ? <><CheckCircle size={14} className="mr-1 text-green-600" /> Copied</> : <><Copy size={14} className="mr-1" /> Copy</>}
+                    </Button>
+                  </>
+                )}
+                <Button size="sm" variant="outline" onClick={handleCopyPayLink}
+                  className={`rounded-xl ${copiedPayLink ? 'border-green-300 text-green-600' : ''}`}>
+                  {copiedPayLink
+                    ? <><CheckCircle size={14} className="mr-1" /> Copied</>
+                    : <><CreditCard size={14} className="mr-1" /> Pay Link</>}
+                </Button>
+                {currentLead.website && (
+                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => window.open(currentLead.website.startsWith('http') ? currentLead.website : `https://${currentLead.website}`, '_blank')}>
+                    <ExternalLink size={14} className="mr-1" /> Site
                   </Button>
-                </div>
+                )}
               </div>
             </Card>
 
@@ -1454,29 +2277,329 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
               </div>
             )}
 
-            {/* Call Script */}
-            <Card className="p-5 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <AlertCircle size={16} className="text-teal-600" />
-                Call Script
-              </h3>
-              <div className="bg-teal-50/60 p-4 rounded-xl text-sm text-gray-700 whitespace-pre-wrap leading-relaxed max-h-[400px] overflow-y-auto">
-                {getScript()}
+            {/* Tabbed Script Panel */}
+            <Card className="rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm overflow-hidden">
+              {/* Tab Bar */}
+              <div className="flex border-b">
+                {[
+                  { key: 'script' as const, label: 'Script', icon: <AlertCircle size={14} /> },
+                  { key: 'product' as const, label: 'Product Info', icon: <Package size={14} /> },
+                  { key: 'upsells' as const, label: 'Upsells', icon: <DollarSign size={14} /> },
+                ].map(tab => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setScriptTab(tab.key)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-semibold transition-colors ${
+                      scriptTab === tab.key
+                        ? 'text-teal-700 border-b-2 border-teal-600 bg-teal-50/50'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {tab.icon} {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="p-5">
+                {/* Tab 1: Script */}
+                {scriptTab === 'script' && (
+                  <div className="space-y-4">
+                    <div className="bg-teal-50/60 p-4 rounded-xl text-sm text-gray-700 whitespace-pre-wrap leading-relaxed max-h-[400px] overflow-y-auto">
+                      {getScript()}
+                    </div>
+                    {/* VM Script (shown during call) */}
+                    {callActive && (
+                      <div>
+                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                          <Mic size={12} className="text-emerald-600" /> Voicemail Script (15 sec)
+                        </h4>
+                        <div className="bg-emerald-50 p-4 rounded-xl text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+                          {getVMScript()}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2">After leaving VM, press [T] to auto-text the preview link</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab 2: Product Info */}
+                {scriptTab === 'product' && (
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">What&apos;s Included</h4>
+                      <ul className="text-sm text-gray-700 space-y-1.5">
+                        <li className="flex items-start gap-2"><CheckCircle size={14} className="text-green-500 mt-0.5 flex-shrink-0" /> Mobile-friendly responsive design</li>
+                        <li className="flex items-start gap-2"><CheckCircle size={14} className="text-green-500 mt-0.5 flex-shrink-0" /> Google-optimized for local search</li>
+                        <li className="flex items-start gap-2"><CheckCircle size={14} className="text-green-500 mt-0.5 flex-shrink-0" /> Services page, reviews section, contact form</li>
+                        <li className="flex items-start gap-2"><CheckCircle size={14} className="text-green-500 mt-0.5 flex-shrink-0" /> Click-to-call buttons, business hours, photo gallery</li>
+                        <li className="flex items-start gap-2"><CheckCircle size={14} className="text-green-500 mt-0.5 flex-shrink-0" /> Custom domain</li>
+                      </ul>
+                    </div>
+                    <div className="border-t pt-3">
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Pricing</h4>
+                      <div className="bg-gray-50 rounded-xl p-3 space-y-1 text-sm">
+                        <p className="font-semibold text-gray-900">${pricing.siteBuildFee} one-time setup</p>
+                        <p className="text-gray-600">${pricing.monthlyHosting}/mo hosting (first month free)</p>
+                        <p className="text-gray-600">${pricing.monthlyHosting * 12 - 119}/yr annual (save $119)</p>
+                      </div>
+                    </div>
+                    {productInfo.postPaymentExplainer && (
+                      <div className="border-t pt-3">
+                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">After They Pay</h4>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{productInfo.postPaymentExplainer}</p>
+                      </div>
+                    )}
+                    {productInfo.competitiveAdvantages && (
+                      <div className="border-t pt-3">
+                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Why Us</h4>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{productInfo.competitiveAdvantages}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab 3: Upsells */}
+                {scriptTab === 'upsells' && (
+                  <div className="space-y-3">
+                    {loadingUpsells ? (
+                      <p className="text-sm text-gray-400">Loading upsell products...</p>
+                    ) : upsellProducts.length === 0 ? (
+                      <p className="text-sm text-gray-400">No upsell products available. Admin can add them in Settings.</p>
+                    ) : (
+                      upsellProducts.map((product: any) => (
+                        <div key={product.id} className="border rounded-xl p-3 space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="font-semibold text-gray-900">{product.name}</p>
+                              <p className="text-sm text-teal-600 font-medium">
+                                ${product.price}{product.billingType === 'RECURRING' ? '/mo' : ''}
+                              </p>
+                            </div>
+                            <Button size="sm" className="rounded-xl bg-teal-600 hover:bg-teal-700 text-white"
+                              onClick={() => handleSendUpsell(product.id)}
+                              disabled={sendingUpsell !== null}>
+                              {sendingUpsell === product.id ? (
+                                <><CheckCircle size={14} className="mr-1" /> Sent!</>
+                              ) : (
+                                <><Send size={14} className="mr-1" /> Send Link</>
+                              )}
+                            </Button>
+                          </div>
+                          {product.repPitch && (
+                            <p className="text-xs text-gray-600 bg-gray-50 rounded-lg px-2.5 py-1.5 italic">
+                              &quot;{product.repPitch}&quot;
+                            </p>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             </Card>
+          </div>
+        </div>
+      )}
 
-            {/* VM Script (shown during call) */}
-            {callActive && (
-              <Card className="p-5 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <Mic size={16} className="text-emerald-600" />
-                  Voicemail Script (15 sec)
-                </h3>
-                <div className="bg-emerald-50 p-4 rounded-xl text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                  {getVMScript()}
+      {/* ============================================ */}
+      {/* DISPOSITION PANEL — Slide-up from bottom      */}
+      {/* ============================================ */}
+      {showDisposition && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/20 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) { setShowDisposition(false); setDispositionLevel('first') } }}>
+          <div className="w-full max-w-2xl bg-white rounded-t-2xl shadow-2xl p-6 animate-in slide-in-from-bottom duration-300">
+            {dispositionLevel === 'first' && (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-900">Log Outcome</h3>
+                  <button onClick={() => { setShowDisposition(false); setDispositionLevel('first') }} className="text-gray-400 hover:text-gray-600">
+                    <X size={20} />
+                  </button>
                 </div>
-                <p className="text-xs text-gray-400 mt-2">After leaving VM, press [T] to auto-text the preview link</p>
-              </Card>
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={() => setDispositionLevel('interested')}
+                    className="flex items-center gap-3 p-4 rounded-xl border-2 border-green-200 bg-green-50 hover:bg-green-100 transition-colors text-left">
+                    <CheckCircle size={20} className="text-green-600" />
+                    <div>
+                      <p className="font-semibold text-green-800">Interested</p>
+                      <p className="text-xs text-green-600">Sub-options available</p>
+                    </div>
+                    <span className="ml-auto text-xs font-mono bg-green-200 text-green-700 px-1.5 py-0.5 rounded">1</span>
+                  </button>
+                  <button onClick={() => handleOutcome('not_interested')}
+                    className="flex items-center gap-3 p-4 rounded-xl border-2 border-red-200 bg-red-50 hover:bg-red-100 transition-colors text-left" disabled={processing}>
+                    <PhoneMissed size={20} className="text-red-600" />
+                    <div>
+                      <p className="font-semibold text-red-800">Not Interested</p>
+                      <p className="text-xs text-red-600">Removes from queue</p>
+                    </div>
+                    <span className="ml-auto text-xs font-mono bg-red-200 text-red-700 px-1.5 py-0.5 rounded">2</span>
+                  </button>
+                  <button onClick={() => setDispositionLevel('callback')}
+                    className="flex items-center gap-3 p-4 rounded-xl border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors text-left">
+                    <Calendar size={20} className="text-amber-600" />
+                    <div>
+                      <p className="font-semibold text-amber-800">Callback</p>
+                      <p className="text-xs text-amber-600">Schedule follow-up</p>
+                    </div>
+                    <span className="ml-auto text-xs font-mono bg-amber-200 text-amber-700 px-1.5 py-0.5 rounded">3</span>
+                  </button>
+                  <button onClick={() => handleOutcome('no_answer')}
+                    className="flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors text-left" disabled={processing}>
+                    <PhoneMissed size={20} className="text-gray-500" />
+                    <div>
+                      <p className="font-semibold text-gray-700">No Answer</p>
+                      <p className="text-xs text-gray-500">Auto VM drop</p>
+                    </div>
+                    <span className="ml-auto text-xs font-mono bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">4</span>
+                  </button>
+                  <button onClick={() => handleOutcome('voicemail_left')}
+                    className="flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors text-left" disabled={processing}>
+                    <Volume2 size={20} className="text-gray-500" />
+                    <div>
+                      <p className="font-semibold text-gray-700">Voicemail</p>
+                      <p className="text-xs text-gray-500">Left message</p>
+                    </div>
+                    <span className="ml-auto text-xs font-mono bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">5</span>
+                  </button>
+                  <button onClick={() => handleOutcome('wrong_number')}
+                    className="flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors text-left" disabled={processing}>
+                    <AlertCircle size={20} className="text-gray-500" />
+                    <div>
+                      <p className="font-semibold text-gray-700">Bad Number</p>
+                      <p className="text-xs text-gray-500">Removes from queue</p>
+                    </div>
+                    <span className="ml-auto text-xs font-mono bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">6</span>
+                  </button>
+                  <button onClick={() => handleOutcome('dnc')}
+                    className="flex items-center gap-3 p-4 rounded-xl border-2 border-gray-900 bg-gray-900 hover:bg-gray-800 transition-colors text-left" disabled={processing}>
+                    <Ban size={20} className="text-gray-300" />
+                    <div>
+                      <p className="font-semibold text-white">DNC</p>
+                      <p className="text-xs text-gray-400">Do not contact</p>
+                    </div>
+                    <span className="ml-auto text-xs font-mono bg-gray-700 text-gray-300 px-1.5 py-0.5 rounded">7</span>
+                  </button>
+                  <button onClick={() => setDispositionLevel('custom')}
+                    className="flex items-center gap-3 p-4 rounded-xl border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors text-left">
+                    <FileText size={20} className="text-blue-600" />
+                    <div>
+                      <p className="font-semibold text-blue-800">Custom Request</p>
+                      <p className="text-xs text-blue-600">Prospect wants something</p>
+                    </div>
+                    <span className="ml-auto text-xs font-mono bg-blue-200 text-blue-700 px-1.5 py-0.5 rounded">8</span>
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Interested Sub-Panel */}
+            {dispositionLevel === 'interested' && (
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <button onClick={() => setDispositionLevel('first')} className="text-gray-400 hover:text-gray-600">
+                    <ArrowLeft size={20} />
+                  </button>
+                  <h3 className="text-lg font-bold text-green-800">Interested — What happened?</h3>
+                </div>
+                <div className="space-y-2">
+                  <button onClick={async () => {
+                    setShowDisposition(false); setDispositionLevel('first')
+                    await handleSendPaymentLink()
+                    await handleOutcome('interested_saw_preview')
+                  }}
+                    className="w-full p-4 rounded-xl border-2 border-green-200 bg-green-50 hover:bg-green-100 text-left flex items-center gap-3" disabled={processing}>
+                    <CreditCard size={20} className="text-green-600" />
+                    <div>
+                      <p className="font-semibold text-green-800">Saw Preview — Wants to Pay</p>
+                      <p className="text-xs text-green-600">Sends payment link automatically</p>
+                    </div>
+                  </button>
+                  <button onClick={() => { setShowDisposition(false); setDispositionLevel('first'); handleOutcome('wants_changes') }}
+                    className="w-full p-4 rounded-xl border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 text-left flex items-center gap-3" disabled={processing}>
+                    <Edit3 size={20} className="text-blue-600" />
+                    <div>
+                      <p className="font-semibold text-blue-800">Saw Preview — Wants Changes</p>
+                      <p className="text-xs text-blue-600">Log what they want changed</p>
+                    </div>
+                  </button>
+                  <button onClick={() => { setShowDisposition(false); setDispositionLevel('first'); handleOutcome('interested_no_preview') }}
+                    className="w-full p-4 rounded-xl border-2 border-teal-200 bg-teal-50 hover:bg-teal-100 text-left flex items-center gap-3" disabled={processing}>
+                    <Send size={20} className="text-teal-600" />
+                    <div>
+                      <p className="font-semibold text-teal-800">Preview Sent — Following Up</p>
+                      <p className="text-xs text-teal-600">They'll review and get back</p>
+                    </div>
+                  </button>
+                  <button onClick={() => { setShowDisposition(false); setDispositionLevel('first'); setShowHandoffConfirm(true) }}
+                    className="w-full p-4 rounded-xl border-2 border-[#0D7377]/30 bg-teal-50 hover:bg-teal-100 text-left flex items-center gap-3">
+                    <Zap size={20} className="text-[#0D7377]" />
+                    <div>
+                      <p className="font-semibold text-[#0D7377]">Hand Off to AI</p>
+                      <p className="text-xs text-teal-600">AI continues via SMS</p>
+                    </div>
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Callback Sub-Panel */}
+            {dispositionLevel === 'callback' && (
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <button onClick={() => setDispositionLevel('first')} className="text-gray-400 hover:text-gray-600">
+                    <ArrowLeft size={20} />
+                  </button>
+                  <h3 className="text-lg font-bold text-amber-800">Schedule Callback</h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-1">Date</label>
+                      <Input className="rounded-xl" type="date" value={callbackDate}
+                        onChange={(e) => setCallbackDate(e.target.value)}
+                        min={new Date().toISOString().split('T')[0]} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider block mb-1">Time</label>
+                      <Input className="rounded-xl" type="time" value={callbackTime} onChange={(e) => setCallbackTime(e.target.value)} />
+                    </div>
+                  </div>
+                  <textarea
+                    value={callNotes}
+                    onChange={(e) => setCallNotes(e.target.value)}
+                    placeholder="Optional notes..."
+                    className="w-full h-16 px-3 py-2 text-sm border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <Button className="w-full rounded-xl bg-amber-500 hover:bg-amber-600 text-white" onClick={handleCallback} disabled={!callbackDate || !callbackTime}>
+                    <Calendar size={16} className="mr-2" /> Schedule Callback
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {/* Custom Request Sub-Panel */}
+            {dispositionLevel === 'custom' && (
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <button onClick={() => setDispositionLevel('first')} className="text-gray-400 hover:text-gray-600">
+                    <ArrowLeft size={20} />
+                  </button>
+                  <h3 className="text-lg font-bold text-blue-800">Custom Request</h3>
+                </div>
+                <div className="space-y-3">
+                  <textarea
+                    value={customRequestText}
+                    onChange={(e) => setCustomRequestText(e.target.value)}
+                    placeholder="What does the prospect want?"
+                    className="w-full h-24 px-3 py-2 text-sm border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                  />
+                  <Button className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCustomRequest} disabled={!customRequestText}>
+                    <Send size={16} className="mr-2" /> Submit Request
+                  </Button>
+                  <p className="text-xs text-gray-500 text-center">Admin will be notified and follow up</p>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -1529,31 +2652,177 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Preview Send Dialog */}
+      {/* Preview Send Dialog — with SMS/Email/Both channel chips */}
       <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
         <DialogContent className="sm:max-w-[500px] rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {previewMethod === 'sms' ? <><MessageSquare size={18} className="text-teal-600" /> Text Preview</> : <><Mail size={18} className="text-purple-600" /> Email Preview</>}
+              <Send size={18} className="text-teal-600" /> Send Preview
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
+            {/* Channel Selection */}
+            <div className="flex gap-2">
+              {(['sms', 'email', 'both'] as const).map(ch => (
+                <button
+                  key={ch}
+                  onClick={() => setPreviewMethod(ch)}
+                  className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
+                    previewMethod === ch
+                      ? ch === 'sms' ? 'bg-teal-50 border-teal-300 text-teal-700' :
+                        ch === 'email' ? 'bg-purple-50 border-purple-300 text-purple-700' :
+                        'bg-blue-50 border-blue-300 text-blue-700'
+                      : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  {ch === 'sms' ? <><MessageSquare size={14} className="inline mr-1" /> SMS</> :
+                   ch === 'email' ? <><Mail size={14} className="inline mr-1" /> Email</> :
+                   <><Send size={14} className="inline mr-1" /> Both</>}
+                </button>
+              ))}
+            </div>
+            {/* No email warning */}
+            {(previewMethod === 'email' || previewMethod === 'both') && !currentLead?.email && (
+              <p className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">No email on file — SMS only</p>
+            )}
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <span className="font-semibold">To:</span>
-              <span>{previewMethod === 'sms' ? currentLead?.phone : currentLead?.email || 'No email'}</span>
+              <span>
+                {previewMethod === 'sms' ? currentLead?.phone :
+                 previewMethod === 'email' ? (currentLead?.email || 'No email') :
+                 `${currentLead?.phone}${currentLead?.email ? ` + ${currentLead.email}` : ''}`}
+              </span>
             </div>
             <textarea
               value={previewMessage}
               onChange={(e) => setPreviewMessage(e.target.value)}
-              className="w-full h-36 px-3 py-2 text-sm border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="w-full h-28 px-3 py-2 text-sm border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
           </div>
           <DialogFooter>
             <Button variant="outline" className="rounded-xl" onClick={() => setPreviewDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSendPreview}
-              className={previewMethod === 'sms' ? 'bg-[#2E7D8A] hover:bg-[#236571] text-white rounded-xl' : 'bg-purple-600 hover:bg-purple-700 text-white rounded-xl'}
-              disabled={previewMethod === 'email' && !currentLead?.email}>
+              className="bg-[#2E7D8A] hover:bg-[#236571] text-white rounded-xl">
               <Send size={14} className="mr-1" /> Send
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Contact Dialog */}
+      <Dialog open={showAddContact} onOpenChange={setShowAddContact}>
+        <DialogContent className="sm:max-w-[400px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus size={18} className="text-teal-600" /> Add Contact
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="flex gap-2">
+              <button
+                className={`flex-1 py-2 rounded-xl text-sm font-medium border ${addContactType === 'PHONE' ? 'bg-teal-50 border-teal-300 text-teal-700' : 'border-gray-200 text-gray-500'}`}
+                onClick={() => setAddContactType('PHONE')}
+              >
+                <Phone size={14} className="inline mr-1" /> Phone
+              </button>
+              <button
+                className={`flex-1 py-2 rounded-xl text-sm font-medium border ${addContactType === 'EMAIL' ? 'bg-teal-50 border-teal-300 text-teal-700' : 'border-gray-200 text-gray-500'}`}
+                onClick={() => setAddContactType('EMAIL')}
+              >
+                <Mail size={14} className="inline mr-1" /> Email
+              </button>
+            </div>
+            <Input
+              className="rounded-xl"
+              placeholder={addContactType === 'PHONE' ? '(555) 123-4567' : 'email@example.com'}
+              value={addContactValue}
+              onChange={(e) => setAddContactValue(e.target.value)}
+            />
+            <select
+              className="w-full text-sm border rounded-xl px-3 py-2 bg-white focus:ring-teal-500 focus:ring-2 focus:outline-none"
+              value={addContactLabel}
+              onChange={(e) => setAddContactLabel(e.target.value)}
+            >
+              <option value="Owner Cell">Owner Cell</option>
+              <option value="Business Partner">Business Partner</option>
+              <option value="Spouse">Spouse</option>
+              <option value="Office">Office</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="rounded-xl" onClick={() => setShowAddContact(false)}>Cancel</Button>
+            <Button className="rounded-xl gradient-primary text-white border-0" onClick={handleAddContact} disabled={!addContactValue || addingContact}>
+              {addingContact ? 'Adding...' : 'Add Contact'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Handoff Confirmation Dialog */}
+      <Dialog open={showHandoffConfirm} onOpenChange={setShowHandoffConfirm}>
+        <DialogContent className="sm:max-w-[450px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap size={18} className="text-[#0D7377]" /> Hand Off to AI
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-gray-600">
+              Hand off <span className="font-semibold text-gray-900">{currentLead?.companyName}</span> to AI?
+              The AI will continue the conversation via SMS using your call notes as context.
+            </p>
+            <textarea
+              value={handoffNotes}
+              onChange={(e) => setHandoffNotes(e.target.value)}
+              placeholder="Add context for the AI (objections, what was discussed, what they're interested in)..."
+              className="w-full h-20 px-3 py-2 text-sm border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="rounded-xl" onClick={() => setShowHandoffConfirm(false)}>Cancel</Button>
+            <Button className="rounded-xl bg-[#0D7377] hover:bg-[#0a5c5f] text-white" onClick={handleHandoffConfirm} disabled={aiHandoffSent}>
+              <Zap size={16} className="mr-1" /> Confirm Handoff
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Dial Pad Dialog */}
+      <Dialog open={showManualDial} onOpenChange={setShowManualDial}>
+        <DialogContent className="sm:max-w-[400px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Hash size={18} className="text-teal-600" /> Dial Number
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Input
+              className="rounded-xl text-lg font-mono text-center"
+              placeholder="(555) 123-4567"
+              value={manualDialNumber}
+              onChange={(e) => setManualDialNumber(e.target.value)}
+              autoFocus
+            />
+            {currentLead && (
+              <div className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  id="linkToLead"
+                  checked={linkToLead}
+                  onChange={(e) => setLinkToLead(e.target.checked)}
+                  className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                />
+                <label htmlFor="linkToLead" className="text-gray-600">
+                  Link to current lead ({currentLead.companyName})
+                </label>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="rounded-xl" onClick={() => setShowManualDial(false)}>Cancel</Button>
+            <Button className="rounded-xl gradient-primary text-white border-0" onClick={handleManualDial} disabled={!manualDialNumber}>
+              <Phone size={16} className="mr-1" /> Call
             </Button>
           </DialogFooter>
         </DialogContent>

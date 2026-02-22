@@ -80,26 +80,59 @@ export async function calculateCommission(params: {
 
 export async function createCommission(calculation: CommissionCalculation) {
   try {
+    // Map revenue type to Commission enum
+    let commType: 'SITE_BUILD' | 'MONTHLY_RESIDUAL' | 'BONUS' = 'SITE_BUILD'
+    if (calculation.revenueType === 'HOSTING_MONTHLY') commType = 'MONTHLY_RESIDUAL'
+    else if (calculation.revenueType === 'BONUS') commType = 'BONUS'
+
     const commission = await prisma.commission.create({
       data: {
         repId: calculation.repId,
         clientId: calculation.clientId,
-        type: 'SITE_BUILD', // Use existing enum value
+        type: commType,
         amount: calculation.commissionAmount,
-        status: 'PENDING'
+        status: 'PENDING',
+        notes: JSON.stringify({
+          dealAmount: calculation.baseAmount,
+          commissionRate: calculation.commissionRate,
+          tier: calculation.tier,
+        }),
       }
     })
 
-    // Create notification for rep
+    // Get rep and client names for notifications
+    const [rep, client] = await Promise.all([
+      prisma.user.findUnique({ where: { id: calculation.repId }, select: { name: true } }),
+      prisma.client.findUnique({ where: { id: calculation.clientId }, select: { companyName: true } }),
+    ])
+
+    const repName = rep?.name || 'Unknown Rep'
+    const companyName = client?.companyName || 'Unknown Company'
+
+    // Notify rep
     await prisma.notification.create({
       data: {
-        type: 'PAYMENT_RECEIVED', // Use existing type
+        type: 'PAYMENT_RECEIVED',
         title: 'Commission Earned',
-        message: `You earned $${calculation.commissionAmount} commission (${Math.round(calculation.commissionRate * 100)}%)`,
+        message: `You earned $${calculation.commissionAmount} on ${companyName} (${Math.round(calculation.commissionRate * 100)}%)`,
         metadata: {
           commissionId: commission.id,
           amount: calculation.commissionAmount,
-          tier: calculation.tier
+          tier: calculation.tier,
+        }
+      }
+    })
+
+    // Notify admin
+    await prisma.notification.create({
+      data: {
+        type: 'PAYMENT_RECEIVED',
+        title: 'Commission Created',
+        message: `$${calculation.commissionAmount} commission to ${repName} for ${companyName}`,
+        metadata: {
+          commissionId: commission.id,
+          repId: calculation.repId,
+          amount: calculation.commissionAmount,
         }
       }
     })
@@ -128,7 +161,42 @@ export async function processRevenueCommission(revenueId: string) {
       }
     })
 
-    if (!revenue?.client?.lead?.assignedTo) {
+    if (!revenue) return null
+
+    // Handle unassigned leads — cannot create Commission with null repId
+    if (!revenue.client?.lead?.assignedTo) {
+      const companyName = revenue.client?.companyName || 'Unknown Company'
+      console.warn(`[Commission] No rep assigned for revenue ${revenueId} (${companyName}) — skipping commission`)
+
+      // Notify admin so they can retroactively assign credit
+      await prisma.notification.create({
+        data: {
+          type: 'PAYMENT_RECEIVED',
+          title: 'Payment — No Rep Assigned',
+          message: `Payment of $${revenue.amount} received for ${companyName} — no rep assigned, no commission owed.`,
+          metadata: {
+            revenueId,
+            clientId: revenue.clientId,
+            amount: revenue.amount,
+          },
+        },
+      })
+
+      // Log event on the lead if available
+      if (revenue.client?.lead?.id) {
+        await prisma.leadEvent.create({
+          data: {
+            leadId: revenue.client.lead.id,
+            eventType: 'PAYMENT_RECEIVED',
+            metadata: {
+              revenueId,
+              amount: revenue.amount,
+              noRepAssigned: true,
+            },
+          },
+        })
+      }
+
       return null
     }
 

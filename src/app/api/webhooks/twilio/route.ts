@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const justNumber = digits.startsWith('1') ? digits.slice(1) : digits
 
     // Find lead or client by phone (try multiple formats)
-    const lead = await prisma.lead.findFirst({
+    let lead = await prisma.lead.findFirst({
       where: {
         OR: [
           { phone: from },
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const client = await prisma.client.findFirst({
+    let client = await prisma.client.findFirst({
       where: {
         lead: {
           OR: [
@@ -60,6 +60,79 @@ export async function POST(request: NextRequest) {
       },
       include: { lead: true }
     })
+
+    // If no match on primary phone, check LeadContact table for alternate contacts
+    if (!lead && !client) {
+      try {
+        const alternateContact = await prisma.leadContact.findFirst({
+          where: {
+            type: 'PHONE',
+            value: { in: [from, withPlus, withoutPlus, justNumber, digits] },
+          },
+          select: { leadId: true },
+        })
+
+        if (alternateContact) {
+          lead = await prisma.lead.findUnique({
+            where: { id: alternateContact.leadId },
+          })
+          if (lead) {
+            console.log(`[Twilio] Matched inbound from ${from} via alternate contact to lead ${lead.id}`)
+
+            // Also check if this lead has become a client
+            client = await prisma.client.findFirst({
+              where: { leadId: lead.id },
+              include: { lead: true },
+            })
+          }
+        }
+      } catch (err) {
+        console.error('[Twilio] LeadContact lookup failed:', err)
+      }
+    }
+
+    // If still no match, trigger AI auto-identification for unknown inbound
+    if (!lead && !client) {
+      console.log(`[Twilio] Unknown inbound from ${from}: "${body.substring(0, 50)}"`)
+
+      // Log the message with no lead/client for admin visibility
+      await logInboundSMSViaProvider({
+        from,
+        body,
+        sid,
+        mediaUrls,
+        mediaTypes,
+      })
+
+      // Send AI identification response
+      try {
+        const { sendSMSViaProvider } = await import('@/lib/sms-provider')
+        await sendSMSViaProvider({
+          to: from,
+          message: "Hey! Thanks for reaching out to Bright Automations. I want to make sure I connect you with the right person — what's your name and business name?",
+          sender: 'clawdbot',
+          trigger: 'unknown_inbound_identification',
+          aiGenerated: true,
+        })
+      } catch (err) {
+        console.error('[Twilio] Unknown inbound auto-reply failed:', err)
+      }
+
+      // Create admin notification
+      await prisma.notification.create({
+        data: {
+          type: 'CLIENT_TEXT',
+          title: 'Unknown Inbound Message',
+          message: `Unknown number ${from}: "${body.substring(0, 100)}"`,
+          metadata: { from, body, sid },
+        },
+      })
+
+      return new NextResponse(
+        '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+        { headers: { 'Content-Type': 'text/xml' } }
+      )
+    }
 
     // ── iMessage Reaction Detection ──
     const reaction = parseReaction(body)

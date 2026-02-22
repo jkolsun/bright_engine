@@ -40,6 +40,11 @@ model User {
   totalCloses    Int     @default(0)
   commissionRate Float   @default(0.5) @map("commission_rate")
 
+  // Dialer preferences
+  voicemailUrl   String?  @map("voicemail_url")    // URL of rep's pre-recorded voicemail audio file
+  autoDialDelay  Int?     @default(5) @map("auto_dial_delay")  // Rep's preferred auto-dial delay in seconds
+  dialerMode     String?  @default("single") @map("dialer_mode")  // "single" or "power"
+
   // Relations
   assignedLeads      Lead[]              @relation("AssignedLeads")
   activities         Activity[]
@@ -157,6 +162,10 @@ model Lead {
   notes            String?      @db.Text
   callScript       String?      @db.Text @map("call_script")
   churnRiskScore   Int          @default(0) @map("churn_risk_score")
+
+  // AI handoff fields
+  aiFollowup       Boolean      @default(false) @map("ai_followup")  // True when rep hands off to AI
+  handoffContext   Json?        @map("handoff_context")  // Context object built during AI handoff
   
   // Close Engine fields
   autonomyLevel     String   @default("FULL_AUTO") @map("autonomy_level") // FULL_AUTO, SEMI_AUTO, MANUAL
@@ -202,6 +211,7 @@ model Lead {
   pendingActions     PendingAction[]
   conversationOutcomes ConversationOutcome[]
   buildStatus          BuildStatus?
+  alternateContacts  LeadContact[]
 
   @@index([status])
   @@index([assignedToId])
@@ -219,6 +229,24 @@ model Lead {
   @@index([previewUrl])
   @@index([buildStep])
   @@map("leads")
+}
+
+// ============================================
+// LEAD CONTACT MODEL (Alternate contacts for leads)
+// ============================================
+model LeadContact {
+  id        String   @id @default(cuid())
+  leadId    String   @map("lead_id")
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type      String   // "PHONE" or "EMAIL"
+  value     String   // The phone number or email address
+  label     String   // "Owner Cell", "Business Partner", "Spouse", "Office", "Other"
+  addedBy   String?  @map("added_by") // User ID of the rep who added it
+  addedAt   DateTime @default(now()) @map("added_at")
+
+  @@index([value])
+  @@index([leadId])
+  @@map("lead_contacts")
 }
 
 // ============================================
@@ -245,6 +273,26 @@ enum EventType {
   CLOSE_ENGINE_COMPLETED
   POSITIVE_FEEDBACK
   SMS_FALLBACK_EMAIL
+
+  // Rep dialer events
+  CALL_ATTEMPTED
+  CALL_CONNECTED
+  CALL_ENDED
+  PREVIEW_SENT_SMS
+  PREVIEW_SENT_EMAIL
+  UPSELL_PITCHED
+  UPSELL_LINK_SENT
+  PAYMENT_LINK_SENT_REP
+  CALLBACK_SCHEDULED
+  AI_HANDOFF
+  CUSTOM_REQUEST
+  WANTS_CHANGES
+  ALTERNATE_CONTACT_ADDED
+  SKIPPED
+  REASSIGNED
+  REP_NOTE
+  AUTO_SMS_SENT
+  CALL_SUMMARY
 }
 
 model LeadEvent {
@@ -1139,6 +1187,9 @@ model UpsellProduct {
   pitchOneLiner       String?  @map("pitch_one_liner")    // "$188 to go live, $39/mo after that"
   previewBannerText   String?  @map("preview_banner_text") // "$188 to get started"
   repCloseScript      String?  @db.Text @map("rep_close_script") // Full close script for reps
+
+  // Rep pitch field
+  repPitch            String?  @map("rep_pitch")  // One-liner pitch for reps to read during calls
 
   // AI awareness fields
   description         String?  @db.Text                            // Admin reference

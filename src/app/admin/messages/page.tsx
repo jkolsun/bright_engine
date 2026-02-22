@@ -135,6 +135,7 @@ function MessagesPageInner() {
 
   // Search
   const [searchTerm, setSearchTerm] = useState('')
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'rep' | 'ai' | 'admin'>('all')
 
   // New Chat
   const [newChatOpen, setNewChatOpen] = useState(false)
@@ -543,24 +544,37 @@ function MessagesPageInner() {
     return conv.isClient && hoursSince < 24
   }
 
+  // Source filter helper — checks if any message in a conversation matches the source
+  const matchesSource = (conv: any): boolean => {
+    if (sourceFilter === 'all') return true
+    const msgs = conv.messages || conv.recentMessages || []
+    if (sourceFilter === 'rep') return msgs.some((m: any) => m.senderType === 'REP')
+    if (sourceFilter === 'ai') return msgs.some((m: any) => m.aiGenerated || m.senderType === 'AI' || m.senderType === 'CLAWDBOT')
+    if (sourceFilter === 'admin') return msgs.some((m: any) => m.senderType === 'ADMIN')
+    return true
+  }
+
   // Filtered conversations
   const getFilteredConvs = () => {
     if (inboxTab === 'pre_client') {
       return closeConversations.filter(c =>
-        !searchTerm ||
+        (!searchTerm ||
         c.lead?.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.lead?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.lead?.phone?.includes(searchTerm)
+        c.lead?.phone?.includes(searchTerm)) &&
+        matchesSource(c)
       )
     }
     if (inboxTab === 'post_client') {
       return postClientConvs.filter(c =>
-        !searchTerm || c.name.toLowerCase().includes(searchTerm.toLowerCase()) || (c.phone && c.phone.includes(searchTerm))
+        (!searchTerm || c.name.toLowerCase().includes(searchTerm.toLowerCase()) || (c.phone && c.phone.includes(searchTerm))) &&
+        matchesSource(c)
       )
     }
     // All tab
     return groupedConversations.filter(c =>
-      !searchTerm || c.name.toLowerCase().includes(searchTerm.toLowerCase()) || (c.phone && c.phone.includes(searchTerm))
+      (!searchTerm || c.name.toLowerCase().includes(searchTerm.toLowerCase()) || (c.phone && c.phone.includes(searchTerm))) &&
+      matchesSource(c)
     )
   }
 
@@ -693,7 +707,13 @@ function MessagesPageInner() {
                           <span className="text-[10px] font-medium text-green-600 bg-green-50 px-1.5 py-0.5 rounded">💬</span>
                         )}
                         <span className="text-xs font-medium text-gray-700">
-                          {isOutbound ? (isAi ? '🤖 AI' : 'You') : selectedCloseConv.lead?.firstName || 'Lead'}
+                          {isOutbound ? (
+                          isAi ? '🤖 AI' :
+                          msg.senderType === 'REP' ? `Rep ${msg.senderName || ''}` :
+                          msg.senderType === 'ADMIN' ? 'Admin' :
+                          msg.trigger === 'auto_sms' ? 'Auto-SMS' :
+                          'Team'
+                        ) : selectedCloseConv.lead?.firstName || 'Lead'}
                         </span>
                         <span className="text-xs text-gray-400">
                           {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -997,7 +1017,13 @@ function MessagesPageInner() {
                           <span className="text-[10px] font-medium text-green-600 bg-green-50 px-1.5 py-0.5 rounded">💬</span>
                         )}
                         <span className="text-xs font-medium text-gray-700">
-                          {isOutbound ? (isAi ? '🤖 AI' : 'You') : selectedConversation.name.split(' ')[0]}
+                          {isOutbound ? (
+                          isAi ? '🤖 AI' :
+                          msg.senderType === 'REP' ? `Rep ${msg.senderName || ''}` :
+                          msg.senderType === 'ADMIN' ? 'Admin' :
+                          msg.trigger === 'auto_sms' ? 'Auto-SMS' :
+                          'Team'
+                        ) : selectedConversation.name.split(' ')[0]}
                         </span>
                         <span className="text-xs text-gray-400">
                           {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1323,12 +1349,22 @@ function MessagesPageInner() {
         ))}
       </div>
 
-      {/* Search + Global Auto-Push */}
+      {/* Search + Source Filter + Global Auto-Push */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <Input className="pl-10" placeholder="Search conversations..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
+        <select
+          value={sourceFilter}
+          onChange={(e) => setSourceFilter(e.target.value as any)}
+          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 flex-shrink-0"
+        >
+          <option value="all">All Sources</option>
+          <option value="rep">Rep</option>
+          <option value="ai">AI</option>
+          <option value="admin">Admin</option>
+        </select>
         {inboxTab === 'pre_client' && globalAutoPushLoaded && (
           <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg flex-shrink-0">
             <Hammer size={13} className="text-teal-600" />

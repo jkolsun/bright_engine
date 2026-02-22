@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useState, useEffect } from 'react'
-import { Users, UserPlus, Edit, Trash2, ArrowLeft } from 'lucide-react'
+import { Users, UserPlus, Edit, Trash2, ArrowLeft, AlertTriangle } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
 type ViewMode = 'list' | 'edit' | 'create'
@@ -19,6 +19,10 @@ export default function RepsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [selectedRep, setSelectedRep] = useState<any>(null)
   const [filter, setFilter] = useState<FilterType>('all')
+  // Deactivation dialog
+  const [deactivateRep, setDeactivateRep] = useState<any>(null)
+  const [reassignTo, setReassignTo] = useState<string>('')
+  const [deactivating, setDeactivating] = useState(false)
 
   useEffect(() => { loadData() }, [])
 
@@ -82,16 +86,43 @@ export default function RepsPage() {
     } catch (e) { console.error(e) }
   }
 
-  const handleDeleteRep = async (repId: string, repName: string) => {
-    if (!confirm(`Deactivate ${repName}? Their leads will be unassigned.`)) return
+  const handleDeleteRep = (repId: string, _repName: string) => {
+    const rep = reps.find(r => r.id === repId)
+    if (rep) {
+      setDeactivateRep(rep)
+      setReassignTo('')
+    }
+  }
+
+  const confirmDeactivate = async () => {
+    if (!deactivateRep) return
+    setDeactivating(true)
     try {
-      await fetch(`/api/users/${repId}`, {
+      // Deactivate rep
+      await fetch(`/api/users/${deactivateRep.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'INACTIVE' }),
       })
+
+      // Reassign leads if a target rep is selected
+      if (reassignTo) {
+        const repLeads = leads.filter(l => l.assignedToId === deactivateRep.id && l.status !== 'PAID' && l.status !== 'CLOSED_LOST')
+        for (const lead of repLeads) {
+          try {
+            await fetch(`/api/admin/leads/${lead.id}/reassign`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ newRepId: reassignTo, reason: `Rep ${deactivateRep.name} deactivated` }),
+            })
+          } catch { /* continue with other leads */ }
+        }
+      }
+
       await loadData()
+      setDeactivateRep(null)
     } catch (e) { console.error(e) }
+    finally { setDeactivating(false) }
   }
 
   if (loading) {
@@ -220,6 +251,65 @@ export default function RepsPage() {
           </tbody>
         </table>
       </Card>
+
+      {/* Deactivation Dialog */}
+      {deactivateRep && (() => {
+        const repLeads = leads.filter(l => l.assignedToId === deactivateRep.id && l.status !== 'PAID' && l.status !== 'CLOSED_LOST')
+        const repClients = leads.filter(l => l.assignedToId === deactivateRep.id && l.status === 'PAID')
+        const repComm = commissions.filter(c => c.repId === deactivateRep.id || c.rep?.id === deactivateRep.id)
+        const pendingComm = repComm.filter(c => c.status === 'PENDING').reduce((s: number, c: any) => s + (c.amount || 0), 0)
+        const otherActiveReps = reps.filter(r => r.status === 'ACTIVE' && r.id !== deactivateRep.id)
+
+        return (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <AlertTriangle size={20} className="text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Deactivate {deactivateRep.name}?</h3>
+                  <p className="text-sm text-gray-500">This rep will no longer be able to log in or receive leads.</p>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-1 text-sm">
+                <p className="text-gray-700">This rep currently has:</p>
+                <p className="font-medium text-gray-900">{repLeads.length} assigned leads</p>
+                <p className="font-medium text-gray-900">{repClients.length} active client{repClients.length !== 1 ? 's' : ''}</p>
+                {pendingComm > 0 && (
+                  <p className="font-medium text-amber-600">{formatCurrency(pendingComm)} in pending commissions</p>
+                )}
+              </div>
+
+              {repLeads.length > 0 && (
+                <div className="mb-4">
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Reassign {repLeads.length} leads to:</label>
+                  <select
+                    value={reassignTo}
+                    onChange={(e) => setReassignTo(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">Leave unassigned</option>
+                    {otherActiveReps.map(r => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <p className="text-xs text-gray-400 mb-4">Existing commission records will remain. Unreleased payouts can still be managed from the Payouts page.</p>
+
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" size="sm" onClick={() => setDeactivateRep(null)} disabled={deactivating}>Cancel</Button>
+                <Button size="sm" onClick={confirmDeactivate} disabled={deactivating} className="bg-red-600 hover:bg-red-700 text-white">
+                  {deactivating ? 'Deactivating...' : `Deactivate ${deactivateRep.name}`}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

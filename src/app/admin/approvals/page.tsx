@@ -8,7 +8,7 @@ import Link from 'next/link'
 import {
   ShieldCheck, ShieldX, Clock, AlertTriangle, CheckCircle, XCircle,
   DollarSign, Globe, MessageSquare, Eye, Trash2, Users, Bot, CreditCard,
-  ArrowLeft, RefreshCw, ExternalLink, Filter
+  ArrowLeft, RefreshCw, ExternalLink, Filter, Package
 } from 'lucide-react'
 
 const GATE_CONFIG: Record<string, { label: string; icon: any; color: string; badgeColor: string }> = {
@@ -23,6 +23,7 @@ const GATE_CONFIG: Record<string, { label: string; icon: any; color: string; bad
   AI_RESPONSE: { label: 'AI Response', icon: Bot, color: 'bg-indigo-100 text-indigo-700', badgeColor: 'bg-indigo-500 text-white' },
   SUBSCRIPTION_CANCEL: { label: 'Cancel Sub', icon: XCircle, color: 'bg-red-100 text-red-700', badgeColor: 'bg-red-500 text-white' },
   HIGH_VALUE_SEND: { label: 'High Value', icon: AlertTriangle, color: 'bg-yellow-100 text-yellow-700', badgeColor: 'bg-yellow-500 text-white' },
+  UPSELL_SEND: { label: 'Upsell', icon: Package, color: 'bg-violet-100 text-violet-700', badgeColor: 'bg-violet-500 text-white' },
 }
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string }> = {
@@ -194,6 +195,7 @@ export default function ApprovalsPage() {
                 <option value="SEND_MESSAGE">Messages</option>
                 <option value="SITE_PUBLISH">Site Publish</option>
                 <option value="REFUND">Refunds</option>
+                <option value="UPSELL_SEND">Upsell</option>
               </select>
             </div>
           </div>
@@ -306,6 +308,27 @@ export default function ApprovalsPage() {
                       Preview Site
                       <ExternalLink size={12} />
                     </a>
+                  )}
+
+                  {/* Upsell details */}
+                  {approval.gate === 'UPSELL_SEND' && meta && (
+                    <div className="mt-2 p-3 bg-violet-50 rounded-lg border border-violet-200">
+                      <div className="flex items-center gap-3 text-sm">
+                        <span className="font-medium text-violet-700">{String(meta.productName || 'Upsell Product')}</span>
+                        {!!meta.productPrice && (
+                          <span className="text-violet-600 font-semibold">${String(meta.productPrice)}</span>
+                        )}
+                      </div>
+                      {!!meta.repName && (
+                        <p className="text-xs text-violet-600 mt-1">Pitched by {String(meta.repName)}</p>
+                      )}
+                      {!!meta.paymentUrl && (
+                        <a href={String(meta.paymentUrl)} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-violet-700 underline mt-1 hover:text-violet-900">
+                          Payment Link <ExternalLink size={10} />
+                        </a>
+                      )}
+                    </div>
                   )}
 
                   {/* Stripe link visible + editable for payment approvals */}

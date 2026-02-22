@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { formatPhone, formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
-import { 
+import {
   ArrowLeft, Phone, Mail, MapPin, Calendar, TrendingUp, Eye, MousePointer,
-  MessageSquare, Clock, CheckCircle, Send, ExternalLink, DollarSign, User
+  MessageSquare, Clock, CheckCircle, Send, ExternalLink, DollarSign, User,
+  Plus, Trash2, UserCheck, Package, RefreshCw
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
@@ -23,6 +24,19 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
   const [error, setError] = useState<string | null>(null)
   const [smsText, setSmsText] = useState('')
   const [sendingSms, setSendingSms] = useState(false)
+  // Alternate contacts
+  const [alternateContacts, setAlternateContacts] = useState<any[]>([])
+  const [showAddContact, setShowAddContact] = useState(false)
+  const [addContactType, setAddContactType] = useState<'PHONE' | 'EMAIL'>('PHONE')
+  const [addContactValue, setAddContactValue] = useState('')
+  const [addContactLabel, setAddContactLabel] = useState('Other')
+  // Reassignment
+  const [showReassign, setShowReassign] = useState(false)
+  const [reps, setReps] = useState<any[]>([])
+  const [reassignRepId, setReassignRepId] = useState('')
+  const [reassignReason, setReassignReason] = useState('')
+  // Commissions
+  const [commissions, setCommissions] = useState<any[]>([])
 
   useEffect(() => {
     const fetchLead = async () => {
@@ -47,6 +61,78 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
 
     fetchLead()
   }, [id])
+
+  // Load alternate contacts, reps, and commissions
+  useEffect(() => {
+    const loadExtras = async () => {
+      try {
+        const [contactsRes, repsRes] = await Promise.all([
+          fetch(`/api/admin/lead-contacts/${id}`),
+          fetch('/api/reps'),
+        ])
+        if (contactsRes.ok) {
+          const data = await contactsRes.json()
+          setAlternateContacts(data.contacts || [])
+        }
+        if (repsRes.ok) {
+          const data = await repsRes.json()
+          setReps((data.reps || data).filter((r: any) => r.status === 'ACTIVE'))
+        }
+      } catch { /* supplemental data */ }
+    }
+    loadExtras()
+  }, [id])
+
+  useEffect(() => {
+    if (!lead?.client?.id) return
+    fetch(`/api/commissions?clientId=${lead.client.id}`)
+      .then(r => r.ok ? r.json() : { commissions: [] })
+      .then(d => setCommissions(d.commissions || []))
+      .catch(() => {})
+  }, [lead?.client?.id])
+
+  const handleAddContact = async () => {
+    if (!addContactValue.trim()) return
+    try {
+      const res = await fetch('/api/admin/lead-contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId: id, type: addContactType, value: addContactValue.trim(), label: addContactLabel }),
+      })
+      if (res.ok) {
+        const refreshRes = await fetch(`/api/admin/lead-contacts/${id}`)
+        if (refreshRes.ok) setAlternateContacts((await refreshRes.json()).contacts || [])
+        setShowAddContact(false)
+        setAddContactValue('')
+      }
+    } catch (err) { console.error('Add contact failed:', err) }
+  }
+
+  const handleDeleteContact = async (contactId: string) => {
+    if (!confirm('Delete this contact?')) return
+    try {
+      await fetch(`/api/admin/lead-contacts/${id}?contactId=${contactId}`, { method: 'DELETE' })
+      setAlternateContacts(prev => prev.filter(c => c.id !== contactId))
+    } catch (err) { console.error('Delete contact failed:', err) }
+  }
+
+  const handleReassign = async () => {
+    if (!reassignRepId) return
+    try {
+      const res = await fetch(`/api/admin/leads/${id}/reassign`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newRepId: reassignRepId, reason: reassignReason }),
+      })
+      if (res.ok) {
+        // Refresh lead data
+        const leadRes = await fetch(`/api/leads/${id}`)
+        if (leadRes.ok) setLead((await leadRes.json()).lead)
+        setShowReassign(false)
+        setReassignReason('')
+      }
+    } catch (err) { console.error('Reassign failed:', err) }
+  }
 
   const handleSendSms = async () => {
     if (!smsText.trim() || sendingSms) return
@@ -336,12 +422,6 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
                     {new Date(lead.createdAt).toLocaleDateString()}
                   </p>
                 </div>
-                {lead.assignedTo && (
-                  <div>
-                    <p className="text-gray-600">Assigned To</p>
-                    <p className="font-medium text-gray-900">{lead.assignedTo.name}</p>
-                  </div>
-                )}
                 {lead.estimatedValue && (
                   <div>
                     <p className="text-gray-600">Estimated Value</p>
@@ -350,6 +430,163 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
                 )}
               </div>
             </Card>
+
+            {/* Assignment & Commission */}
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Assignment</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600">Assigned Rep</p>
+                    <p className="font-medium text-gray-900">{lead.assignedTo?.name || 'Unassigned'}</p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => setShowReassign(!showReassign)}>
+                    <RefreshCw size={14} className="mr-1" /> Reassign
+                  </Button>
+                </div>
+                {showReassign && (
+                  <div className="p-3 bg-gray-50 rounded-lg space-y-2">
+                    <select
+                      value={reassignRepId}
+                      onChange={(e) => setReassignRepId(e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="">Select rep...</option>
+                      {reps.map((r: any) => (
+                        <option key={r.id} value={r.id}>{r.name}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Reason (optional)"
+                      value={reassignReason}
+                      onChange={(e) => setReassignReason(e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2 text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleReassign} disabled={!reassignRepId}>Confirm</Button>
+                      <Button size="sm" variant="outline" onClick={() => setShowReassign(false)}>Cancel</Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Commission Status */}
+                <div className="border-t pt-3">
+                  <p className="text-gray-600 mb-1">Commission</p>
+                  {commissions.length > 0 ? (
+                    commissions.map((c: any) => (
+                      <div key={c.id} className="flex items-center justify-between text-sm mb-1">
+                        <span className="font-medium">{formatCurrency(c.amount)}</span>
+                        <Badge variant="outline" className={
+                          c.status === 'PAID' ? 'bg-emerald-100 text-emerald-700' :
+                          c.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                          c.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                          'bg-red-100 text-red-700'
+                        }>{c.status}</Badge>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-400 text-xs">No payment received yet</p>
+                  )}
+                </div>
+
+                {/* Assignment History */}
+                {lead.events?.filter((e: any) => e.eventType === 'REASSIGNED').length > 0 && (
+                  <div className="border-t pt-3">
+                    <p className="text-gray-600 mb-2">Assignment History</p>
+                    {lead.events.filter((e: any) => e.eventType === 'REASSIGNED').map((e: any) => {
+                      const meta = typeof e.metadata === 'string' ? JSON.parse(e.metadata) : (e.metadata || {})
+                      return (
+                        <div key={e.id} className="text-xs text-gray-500 mb-1">
+                          {new Date(e.createdAt).toLocaleDateString()} — {meta.fromRepName || '?'} → {meta.toRepName || '?'}
+                          {meta.reason && <span className="italic"> ({meta.reason})</span>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Alternate Contacts */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Alternate Contacts</h3>
+                <button onClick={() => setShowAddContact(!showAddContact)} className="text-blue-600 hover:text-blue-800">
+                  <Plus size={18} />
+                </button>
+              </div>
+              {showAddContact && (
+                <div className="p-3 bg-gray-50 rounded-lg mb-3 space-y-2">
+                  <div className="flex gap-2">
+                    <select value={addContactType} onChange={(e) => setAddContactType(e.target.value as 'PHONE' | 'EMAIL')} className="border rounded px-2 py-1 text-sm">
+                      <option value="PHONE">Phone</option>
+                      <option value="EMAIL">Email</option>
+                    </select>
+                    <select value={addContactLabel} onChange={(e) => setAddContactLabel(e.target.value)} className="border rounded px-2 py-1 text-sm">
+                      <option value="Other">Other</option>
+                      <option value="Owner Cell">Owner Cell</option>
+                      <option value="Office">Office</option>
+                      <option value="Spouse">Spouse</option>
+                      <option value="Manager">Manager</option>
+                    </select>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder={addContactType === 'PHONE' ? '+1 (555) 123-4567' : 'email@example.com'}
+                    value={addContactValue}
+                    onChange={(e) => setAddContactValue(e.target.value)}
+                    className="w-full border rounded px-3 py-2 text-sm"
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleAddContact}>Add</Button>
+                    <Button size="sm" variant="outline" onClick={() => setShowAddContact(false)}>Cancel</Button>
+                  </div>
+                </div>
+              )}
+              {alternateContacts.length > 0 ? (
+                <div className="space-y-2">
+                  {alternateContacts.map((c: any) => (
+                    <div key={c.id} className="flex items-center justify-between text-sm p-2 bg-gray-50 rounded">
+                      <div className="flex items-center gap-2">
+                        {c.type === 'PHONE' ? <Phone size={12} className="text-gray-400" /> : <Mail size={12} className="text-gray-400" />}
+                        <span>{c.value}</span>
+                        <Badge variant="outline" className="text-[10px]">{c.label}</Badge>
+                      </div>
+                      <button onClick={() => handleDeleteContact(c.id)} className="text-gray-400 hover:text-red-500">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-400 text-sm">No alternate contacts</p>
+              )}
+            </Card>
+
+            {/* Upsells Pitched */}
+            {lead.events?.some((e: any) => e.eventType === 'UPSELL_PITCHED' || e.eventType === 'UPSELL_LINK_SENT') && (
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Upsells</h3>
+                <div className="space-y-2">
+                  {lead.events.filter((e: any) => e.eventType === 'UPSELL_PITCHED' || e.eventType === 'UPSELL_LINK_SENT').map((e: any) => {
+                    const meta = typeof e.metadata === 'string' ? JSON.parse(e.metadata) : (e.metadata || {})
+                    return (
+                      <div key={e.id} className="p-3 bg-violet-50 rounded-lg text-sm">
+                        <div className="flex items-center gap-2">
+                          <Package size={14} className="text-violet-600" />
+                          <span className="font-medium text-violet-800">{meta.productName || 'Unknown Product'}</span>
+                          {meta.productPrice && <span className="text-violet-600">${meta.productPrice}</span>}
+                        </div>
+                        <p className="text-xs text-violet-500 mt-1">
+                          {e.eventType === 'UPSELL_LINK_SENT' ? 'Link Sent' : 'Pitched'} on {new Date(e.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </Card>
+            )}
           </div>
         </div>
       </div>

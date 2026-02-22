@@ -17,6 +17,7 @@ import {
   Radio,
   ShieldCheck,
   Hammer,
+  Wallet,
 } from 'lucide-react'
 import { BriefingModal } from '@/components/admin/BriefingModal'
 
@@ -101,6 +102,9 @@ export default function AdminLayout({
           </NavLink>
           <NavLink href="/admin/revenue" icon={<DollarSign size={20} />}>
             Revenue
+          </NavLink>
+          <NavLink href="/admin/payouts" icon={<Wallet size={20} />}>
+            Payouts
           </NavLink>
           <NavLink href="/admin/messages" icon={<MessageSquare size={20} />}>
             Messages

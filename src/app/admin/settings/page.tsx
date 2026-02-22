@@ -101,7 +101,13 @@ function PriceInput({ value, onChange, className = '' }: { value: number | strin
 
 // ── Default Values ─────────────────────────────────────────────
 
-const DEFAULT_COMPANY = { companyName: 'Bright Automations', adminPhone: '', previewExpirationDays: 14 }
+const DEFAULT_COMPANY = {
+  companyName: 'Bright Automations',
+  adminPhone: '',
+  previewExpirationDays: 14,
+  postPaymentExplainer: 'Once payment is confirmed, our team finalizes your site within 48 hours. You\'ll get a text when it\'s ready to review. We handle everything — no login needed. If you want any changes, just text us and we\'ll update it before it goes live.',
+  competitiveAdvantages: 'Sites are mobile-first, load in under 2 seconds.\nSEO-optimized out of the box for local search.\nWe pre-build the site so they see it before they pay — nobody else does that.\nNo contracts, no hidden fees.\nChanges included before go-live.',
+}
 // Pricing is now driven by core product in Products table — see getPricingConfig()
 const DEFAULT_SEQUENCES = {
   urgencyDays: [3, 5, 6, 7, 8, 10, 14],
@@ -169,6 +175,7 @@ const DEFAULT_TARGETS = {
   dailyCloses: 3,
   dailyLeadCap: 25,
   monthlyRevenueTarget: 50000,
+  minAutoDialDelay: 3,
 }
 
 // Messages & AI defaults
@@ -1068,6 +1075,24 @@ export default function SettingsPage() {
                 onChange={(e) => setCompanyInfo({ ...companyInfo, previewExpirationDays: parseInt(e.target.value) || 14 })}
               />
               <p className="text-xs text-gray-400 mt-1">How many days before a preview link expires</p>
+            </div>
+            <div className="mt-4">
+              <FieldLabel>Post-Payment Explainer (shown to reps) <FieldInfo text="This is what reps see in their Product Info tab when a client asks 'what happens after I pay?' Keep it conversational." /></FieldLabel>
+              <textarea
+                value={companyInfo.postPaymentExplainer || ''}
+                onChange={(e) => setCompanyInfo({ ...companyInfo, postPaymentExplainer: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg p-3 text-sm resize-none h-28 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Once payment is confirmed, our team finalizes your site within 48 hours..."
+              />
+            </div>
+            <div className="mt-4">
+              <FieldLabel>Competitive Advantages (shown to reps) <FieldInfo text="Talking points for reps when positioning against competitors. One per line works well." /></FieldLabel>
+              <textarea
+                value={companyInfo.competitiveAdvantages || ''}
+                onChange={(e) => setCompanyInfo({ ...companyInfo, competitiveAdvantages: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg p-3 text-sm resize-none h-28 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Sites are mobile-first, load in under 2 seconds.&#10;SEO-optimized out of the box for local search."
+              />
             </div>
             <div className="mt-6 flex justify-end">
               <SaveButton
@@ -2344,6 +2369,18 @@ export default function SettingsPage() {
                 />
                 <p className="text-xs text-gray-400 mt-1">Max new leads per rep</p>
               </div>
+            </div>
+            <div className="mt-4">
+              <FieldLabel>Minimum Auto-Dial Delay (seconds) <FieldInfo text="Floor for how fast reps can auto-dial the next lead. Prevents burning through the list without logging notes." /></FieldLabel>
+              <Input
+                type="number"
+                min={0}
+                max={30}
+                className="w-32"
+                value={targets.minAutoDialDelay}
+                onChange={(e) => setTargets({ ...targets, minAutoDialDelay: parseInt(e.target.value) || 0 })}
+              />
+              <p className="text-xs text-gray-400 mt-1">Reps can set their own delay but can&apos;t go below this value</p>
             </div>
             <div className="mt-6 flex justify-end">
               <SaveButton
