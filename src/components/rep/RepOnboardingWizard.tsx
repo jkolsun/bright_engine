@@ -535,6 +535,20 @@ function StepPayment(props: StepPaymentProps) {
         </div>
       </div>
 
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6">
+        <div className="flex items-start gap-3">
+          <span className="text-lg flex-shrink-0">&#x1F30D;</span>
+          <div>
+            <p className="text-sm font-semibold text-blue-900 mb-1">International? Set up your account with Wise</p>
+            <p className="text-xs text-blue-700">
+              If you&apos;re outside the US, create a{' '}
+              <a href="https://wise.com" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-blue-900">Wise</a>{' '}
+              account to get a US bank routing &amp; account number, then connect it through Stripe above.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex justify-between items-center mt-8">
         <button onClick={onBack} className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium inline-flex items-center gap-1">
           <ChevronLeft size={18} /> Back
