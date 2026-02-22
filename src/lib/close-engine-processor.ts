@@ -362,6 +362,11 @@ export async function processCloseEngineInbound(
 
     claudeResponse = parseClaudeResponse(rawText)
 
+    // Post-process: normalize hallucinated stage names from Claude
+    if (claudeResponse.nextStage) {
+      claudeResponse.nextStage = normalizeNextStage(claudeResponse.nextStage)
+    }
+
     // Post-process: intercept Stripe/payment URLs — AI must NEVER send these directly
     if (claudeResponse.replyText && containsPaymentUrl(claudeResponse.replyText)) {
       console.warn(`[CloseEngine] BLOCKED: AI tried to send payment URL directly for ${lead.companyName}`)
@@ -498,18 +503,19 @@ export async function processCloseEngineInbound(
     claudeResponse.nextStage = CONVERSATION_STAGES.PAYMENT_SENT
   }
 
-  // 3.6 Safety net: if stage is PENDING_APPROVAL but no pending PAYMENT_LINK approval exists,
-  // re-trigger the payment flow. This handles cases where the stage transitioned but the
-  // approval was cleaned up, denied, or never created (e.g. previous sendPaymentLink error).
+  // 3.6 Safety net: if stage is PENDING_APPROVAL (or any invalid payment-adjacent stage
+  // from a previous hallucination) but no pending PAYMENT_LINK approval exists,
+  // re-trigger the payment flow.
+  const paymentAdjacentStages = ['PENDING_APPROVAL', 'PAYMENT_PENDING', 'PENDING_PAYMENT', 'AWAITING_PAYMENT']
   if (
-    context.conversation.stage === 'PENDING_APPROVAL' &&
+    paymentAdjacentStages.includes(context.conversation.stage) &&
     !claudeResponse.nextStage
   ) {
     const pendingApproval = await prisma.approval.findFirst({
       where: { leadId: lead.id, gate: 'PAYMENT_LINK', status: 'PENDING' },
     })
     if (!pendingApproval) {
-      console.log(`[CloseEngine] PENDING_APPROVAL stage but no pending PAYMENT_LINK approval for ${lead.companyName} — re-triggering payment flow`)
+      console.log(`[CloseEngine] Stage "${context.conversation.stage}" but no pending PAYMENT_LINK approval for ${lead.companyName} — re-triggering payment flow`)
       claudeResponse.nextStage = CONVERSATION_STAGES.PAYMENT_SENT
     }
   }
@@ -858,6 +864,47 @@ export function parseClaudeResponse(raw: string): ClaudeCloseResponse {
       escalateReason: null,
     }
   }
+}
+
+// ============================================
+// Stage Normalization — catch hallucinated stage names from Claude
+// ============================================
+
+const VALID_STAGES = new Set<string>(Object.values(CONVERSATION_STAGES))
+
+const STAGE_ALIASES: Record<string, string> = {
+  'PAYMENT_PENDING': CONVERSATION_STAGES.PAYMENT_SENT,
+  'PENDING_PAYMENT': CONVERSATION_STAGES.PAYMENT_SENT,
+  'PAYMENT': CONVERSATION_STAGES.PAYMENT_SENT,
+  'SEND_PAYMENT': CONVERSATION_STAGES.PAYMENT_SENT,
+  'AWAITING_PAYMENT': CONVERSATION_STAGES.PAYMENT_SENT,
+  'READY_TO_PAY': CONVERSATION_STAGES.PAYMENT_SENT,
+  'PAYMENT_LINK': CONVERSATION_STAGES.PAYMENT_SENT,
+  'SEND_PAYMENT_LINK': CONVERSATION_STAGES.PAYMENT_SENT,
+  'PAYMENT_READY': CONVERSATION_STAGES.PAYMENT_SENT,
+  'APPROVE_PAYMENT': CONVERSATION_STAGES.PAYMENT_SENT,
+  'EDITING': CONVERSATION_STAGES.EDIT_LOOP,
+  'EDITS': CONVERSATION_STAGES.EDIT_LOOP,
+  'CHANGES': CONVERSATION_STAGES.EDIT_LOOP,
+  'REVISION': CONVERSATION_STAGES.EDIT_LOOP,
+  'BUILT': CONVERSATION_STAGES.BUILDING,
+  'BUILD': CONVERSATION_STAGES.BUILDING,
+  'DONE': CONVERSATION_STAGES.COMPLETED,
+  'COMPLETE': CONVERSATION_STAGES.COMPLETED,
+  'CLOSED': CONVERSATION_STAGES.CLOSED_LOST,
+  'LOST': CONVERSATION_STAGES.CLOSED_LOST,
+}
+
+function normalizeNextStage(stage: string): string {
+  if (VALID_STAGES.has(stage)) return stage
+  const normalized = STAGE_ALIASES[stage]
+  if (normalized) {
+    console.warn(`[CloseEngine] Normalized hallucinated stage "${stage}" → "${normalized}"`)
+    return normalized
+  }
+  // Unknown stage — log and return as-is (will hit "Unknown stage" in prompt builder)
+  console.warn(`[CloseEngine] Unrecognized stage from Claude: "${stage}"`)
+  return stage
 }
 
 // ============================================
