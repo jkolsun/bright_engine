@@ -175,11 +175,14 @@ export async function checkAndTransitionToQA(leadId: string): Promise<ReadinessR
     data: { buildReadinessScore: result.score },
   })
 
-  // Only auto-transition if score >= 70 and not already in site build pipeline
+  // Only auto-transition if score >= 70, websiteCopy exists, and not already in site build pipeline.
+  // The websiteCopy guard prevents premature QA transition before the build pipeline
+  // (ENRICHMENT → PREVIEW → PERSONALIZATION) has generated the actual website content.
   const siteBuildSteps = ['QA_REVIEW', 'EDITING', 'QA_APPROVED', 'CLIENT_REVIEW', 'CLIENT_APPROVED', 'LAUNCHING', 'LIVE']
   const alreadyInSitePipeline = lead.buildStep && siteBuildSteps.includes(lead.buildStep)
+  const hasWebsiteCopy = (result.breakdown.websiteCopy ?? 0) > 0
 
-  if (result.score >= 70 && !alreadyInSitePipeline) {
+  if (result.score >= 70 && hasWebsiteCopy && !alreadyInSitePipeline) {
     // Transition from any active lead status (not PAID/CLOSED)
     const ineligibleStatuses = ['PAID', 'CLOSED_LOST', 'DO_NOT_CONTACT']
     if (!ineligibleStatuses.includes(lead.status)) {

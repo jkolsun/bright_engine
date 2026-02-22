@@ -467,14 +467,19 @@ export async function processCloseEngineInbound(
         })
 
         // Auto-push check: use GLOBAL setting (not per-lead) + services collected
-        // Re-check every time to catch leads that were missed on earlier extractions
+        // When triggered, start the build pipeline (ENRICHMENT → PREVIEW → PERSONALIZATION)
+        // which generates websiteCopy. The pipeline's PERSONALIZATION step will auto-transition to QA_REVIEW.
         if (globalAutoPush && updatedBS.servicesCollected) {
           const currentLead = await prisma.lead.findUnique({
             where: { id: lead.id },
-            select: { buildStep: true, companyName: true, status: true },
+            select: { buildStep: true, companyName: true, status: true, city: true, state: true },
           })
-          const siteBuildSteps = ['QA_REVIEW', 'EDITING', 'QA_APPROVED', 'CLIENT_REVIEW', 'CLIENT_APPROVED', 'LAUNCHING', 'LIVE']
-          const alreadyInSitePipeline = currentLead?.buildStep && siteBuildSteps.includes(currentLead.buildStep)
+          // Include both pipeline steps AND post-pipeline steps to avoid re-queuing
+          const allBuildSteps = [
+            'ENRICHMENT', 'PREVIEW', 'PERSONALIZATION', 'SCRIPTS', 'DISTRIBUTION', 'COMPLETE',
+            'QA_REVIEW', 'EDITING', 'QA_APPROVED', 'CLIENT_REVIEW', 'CLIENT_APPROVED', 'LAUNCHING', 'LIVE',
+          ]
+          const alreadyInPipeline = currentLead?.buildStep && allBuildSteps.includes(currentLead.buildStep)
 
           // Mark BuildStatus as building if not already
           if (updatedBS.status !== 'building') {
@@ -484,23 +489,32 @@ export async function processCloseEngineInbound(
             })
           }
 
-          // Ensure lead.buildStep = QA_REVIEW if not already in site pipeline
-          if (!alreadyInSitePipeline) {
+          // Start the build pipeline if not already in progress
+          if (!alreadyInPipeline) {
             const ineligibleStatuses = ['PAID', 'CLOSED_LOST', 'DO_NOT_CONTACT']
             if (!ineligibleStatuses.includes(currentLead?.status || '')) {
+              // Set build timing and clear any previous errors
               await prisma.lead.update({
                 where: { id: lead.id },
-                data: { buildStep: 'QA_REVIEW' },
+                data: { buildStartedAt: new Date(), buildError: null },
+              })
+              // Queue the enrichment job — it chains: ENRICHMENT → PREVIEW → PERSONALIZATION → QA_REVIEW
+              const { addEnrichmentJob } = await import('@/worker/queue')
+              await addEnrichmentJob({
+                leadId: lead.id,
+                companyName: currentLead?.companyName || lead.companyName || 'Unknown',
+                city: currentLead?.city || lead.city || undefined,
+                state: currentLead?.state || lead.state || undefined,
               })
               await prisma.notification.create({
                 data: {
                   type: 'SITE_QA_READY',
-                  title: 'Auto-Push: Build Ready',
-                  message: `Auto-pushed build for ${currentLead?.companyName || lead.companyName}. Ready for QA review.`,
+                  title: 'Auto-Push: Build Pipeline Started',
+                  message: `Build pipeline started for ${currentLead?.companyName || lead.companyName}. Will auto-transition to QA when complete.`,
                   metadata: { leadId: lead.id, autoPush: true },
                 },
               })
-              console.log(`[BuildStatus] Auto-pushed ${lead.companyName} to QA_REVIEW`)
+              console.log(`[BuildStatus] Auto-push triggered build pipeline for ${lead.companyName}`)
             }
           }
         }
