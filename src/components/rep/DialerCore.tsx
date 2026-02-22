@@ -223,7 +223,7 @@ function TopBar({
           <select
             value={linesPerDial}
             onChange={(e) => setLinesPerDial(Number(e.target.value))}
-            className="text-xs border border-white/30 rounded-md px-2 py-1 bg-white/10 text-white"
+            className="text-xs border border-white/30 rounded-md px-2 py-1 bg-white/10 text-white [&>option]:text-gray-900 [&>option]:bg-white"
           >
             <option value={1}>1 line</option>
             <option value={2}>2 lines</option>
@@ -285,7 +285,7 @@ function QueuePanel({
     <div className="w-1/4 bg-white border-r border-gray-200 flex flex-col overflow-hidden flex-shrink-0">
       <div className="px-4 py-3 border-b border-teal-100 bg-teal-50">
         <span className="text-xs font-semibold text-teal-700 uppercase tracking-wide">
-          {currentIndex + 1} of {queue.length} leads
+          {queue.length > 0 ? `${currentIndex + 1} of ${queue.length}` : '0'} leads
         </span>
       </div>
       <div className="flex-1 overflow-y-auto">
@@ -678,12 +678,12 @@ function DispositionPanel({
 
         {/* DIALING */}
         {callPhase === 'dialing' && (
-          <div className="text-center py-8 space-y-4">
-            <div className="relative mx-auto w-16 h-16">
-              <PhoneCall size={32} className="absolute inset-0 m-auto text-teal-500 animate-pulse" />
-              <div className="absolute inset-0 rounded-full border-2 border-teal-300 animate-ping" />
-            </div>
-            <div>
+          <div className="space-y-4">
+            <div className="text-center py-4">
+              <div className="relative mx-auto w-16 h-16 mb-3">
+                <PhoneCall size={32} className="absolute inset-0 m-auto text-teal-500 animate-pulse" />
+                <div className="absolute inset-0 rounded-full border-2 border-teal-300 animate-ping" />
+              </div>
               <p className="text-sm font-bold text-gray-900 animate-pulse">Ringing...</p>
               {currentLead && (
                 <>
@@ -691,8 +691,8 @@ function DispositionPanel({
                   <p className="text-xs text-gray-500">{formatPhone(currentLead.phone)}</p>
                 </>
               )}
+              <p className="text-xs text-gray-400 mt-1">{currentIndex + 1} of {queueLength}</p>
             </div>
-            <p className="text-xs text-gray-400">{currentIndex + 1} of {queueLength}</p>
 
             {/* Connect button — reps click when someone picks up */}
             <button
@@ -701,6 +701,52 @@ function DispositionPanel({
             >
               <CheckCircle size={14} className="inline mr-1" /> They Answered
             </button>
+
+            {/* Quick dispositions available while ringing */}
+            <div className="border-t border-gray-100 pt-3">
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold mb-2">No connection?</p>
+              <div className="space-y-1.5">
+                <button
+                  onClick={() => onDisposition('no_answer')}
+                  disabled={processing}
+                  className="w-full py-2 bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-300 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <PhoneMissed size={13} /> No Answer <kbd className="text-[9px] opacity-40 bg-gray-300 px-1 rounded ml-auto">5</kbd>
+                </button>
+                <button
+                  onClick={() => { setActiveDisposition(activeDisposition === 'voicemail' ? null : 'voicemail') }}
+                  disabled={processing}
+                  className="w-full py-2 bg-orange-100 text-orange-700 rounded-lg text-xs font-semibold hover:bg-orange-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <Volume2 size={13} /> Voicemail <kbd className="text-[9px] opacity-40 bg-orange-200 px-1 rounded ml-auto">4</kbd>
+                </button>
+                {activeDisposition === 'voicemail' && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-2">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { onDisposition('voicemail', { sub: 'left' }); setActiveDisposition(null) }}
+                        className="flex-1 py-1.5 bg-orange-500 text-white text-xs font-medium rounded-md hover:bg-orange-600"
+                      >
+                        Left VM
+                      </button>
+                      <button
+                        onClick={() => { onDisposition('voicemail', { sub: 'no_vm' }); setActiveDisposition(null) }}
+                        className="flex-1 py-1.5 bg-orange-300 text-white text-xs font-medium rounded-md hover:bg-orange-400"
+                      >
+                        No VM
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <button
+                  onClick={() => onDisposition('bad_number')}
+                  disabled={processing}
+                  className="w-full py-2 bg-red-100 text-red-700 rounded-lg text-xs font-semibold hover:bg-red-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <Ban size={13} /> Bad Number <kbd className="text-[9px] opacity-40 bg-red-200 px-1 rounded ml-auto">6</kbd>
+                </button>
+              </div>
+            </div>
 
             <button
               onClick={onSkip}
@@ -1275,15 +1321,24 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       if (res.ok) {
         const data = await res.json()
         setSessionId(data.session?.id || `session-${Date.now()}`)
-        setSessionActive(true)
-        showToast('Session started')
-        // Auto-dial first lead in power mode
-        if (dialerMode === 'power' && queue.length > 0) {
-          setTimeout(() => handleDialRef.current(), 300)
-        }
+      } else {
+        // API failed but we still want the session to work locally
+        setSessionId(`session-${Date.now()}`)
+      }
+      setSessionActive(true)
+      showToast('Session started')
+      // Auto-dial first lead in power mode
+      if (dialerMode === 'power' && queue.length > 0) {
+        setTimeout(() => handleDialRef.current(), 300)
       }
     } catch (err) {
-      showToast('Failed to start session', 'error')
+      // Even if the API is down, let the rep start dialing
+      setSessionId(`session-${Date.now()}`)
+      setSessionActive(true)
+      showToast('Session started (offline mode)', 'success')
+      if (dialerMode === 'power' && queue.length > 0) {
+        setTimeout(() => handleDialRef.current(), 300)
+      }
     }
   }
 
@@ -1330,7 +1385,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       })
 
       if (isPartTime) {
-        // Part-time: open native dialer
+        // Part-time: open native dialer via tel: link
         window.open(`tel:${leadToDial.phone}`, '_self')
       } else {
         // Full-time: initiate via Twilio API
@@ -1346,9 +1401,6 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           if (dialRes.ok) {
             const dialData = await dialRes.json()
             if (dialData.callId) setActiveCallId(dialData.callId)
-            // Auto-connect for VoIP calls (API handles the ringing)
-            // For now, we still need the rep to click "connect"
-            // In a real Twilio setup, the connected event would come via WebSocket
           }
         } catch {
           // Fall back to tel: link if API fails
@@ -1361,6 +1413,12 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
     } finally {
       setProcessing(false)
     }
+
+    // Safety timeout: if still dialing after 45 seconds, reset to idle
+    // (prevents rep being stuck on "Ringing..." forever)
+    setTimeout(() => {
+      setCallPhase(prev => prev === 'dialing' ? 'idle' : prev)
+    }, 45000)
   }, [processing, callPhase, queue, currentIndex, isPartTime, sessionId])
 
   // Keep ref in sync for setTimeout callbacks
@@ -1424,14 +1482,17 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
     // If we were dialing (no connection), just go back to idle and skip
     if (callPhase === 'dialing') {
       setCallPhase('idle')
+      setActiveCallId(null)
       return
     }
 
-    // If connected, show disposition buttons (callPhase stays connected for disposition selection)
-    // The disposition buttons are already visible during connected state
-    // So hangup just transitions to idle - the rep should have already dispositioned
-    setCallPhase('idle')
-    setActiveCallId(null)
+    // If connected/on_hold, keep phase as 'connected' so disposition buttons stay visible.
+    // The call is hung up server-side, but the rep still needs to log the outcome.
+    // Disposition handler will reset callPhase to idle after logging.
+    if (callPhase === 'connected' || callPhase === 'on_hold') {
+      // Stop the timer but keep connected state for disposition
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
   }
 
   const handleSkip = async () => {
