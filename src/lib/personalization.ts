@@ -833,11 +833,39 @@ function buildWebsiteCopyPrompt(lead: any, research: SerperResearchData | null, 
 
   // Service descriptions
   if (services.length > 0) {
-    parts.push(`\nFor each service below, write a one-line description (10-18 words) that focuses on the OUTCOME or BENEFIT to the customer, not a definition of the service. BAD: "Professional installation of residential roofing systems." GOOD: "Complete tear-off and install — most jobs done in a single day with a 10-year warranty."`)
-    for (const svc of services.slice(0, 6)) {
-      parts.push(`SVC_${svc.toUpperCase().replace(/[^A-Z0-9]/g, '_')}: [10-18 word outcome-focused description for "${svc}"]`)
+    parts.push(`\nFor each service below, write a RICH description (2-3 sentences, 30-50 words) that focuses on the OUTCOME or BENEFIT to the customer. Include what the process looks like and a trust signal. BAD: "Professional installation of residential roofing systems." GOOD: "Complete tear-off and install with premium materials — most jobs wrapped in a single day. Every project backed by a 10-year workmanship warranty and full cleanup."`)
+    for (const svc of services.slice(0, 8)) {
+      parts.push(`SVC_${svc.toUpperCase().replace(/[^A-Z0-9]/g, '_')}: [30-50 word rich description for "${svc}" — outcome + process + trust signal]`)
     }
   }
+
+  // New rich content labels
+  parts.push(`\n--- ADDITIONAL RICH CONTENT (generate ALL of these) ---`)
+  parts.push(`PROCESS_STEP_1_TITLE: [2-4 words, e.g. "Free Consultation"]`)
+  parts.push(`PROCESS_STEP_1_DESC: [8-15 words describing this step]`)
+  parts.push(`PROCESS_STEP_2_TITLE: [2-4 words, e.g. "Custom Plan"]`)
+  parts.push(`PROCESS_STEP_2_DESC: [8-15 words describing this step]`)
+  parts.push(`PROCESS_STEP_3_TITLE: [2-4 words, e.g. "Expert Execution"]`)
+  parts.push(`PROCESS_STEP_3_DESC: [8-15 words describing this step]`)
+  parts.push(`PROCESS_STEP_4_TITLE: [2-4 words, e.g. "Final Walkthrough"]`)
+  parts.push(`PROCESS_STEP_4_DESC: [8-15 words describing this step]`)
+  parts.push(`WHY_1_TITLE: [2-5 words — a real differentiator]`)
+  parts.push(`WHY_1_DESC: [10-20 words explaining why this matters to the customer]`)
+  parts.push(`WHY_2_TITLE: [2-5 words — another differentiator]`)
+  parts.push(`WHY_2_DESC: [10-20 words explaining why this matters]`)
+  parts.push(`WHY_3_TITLE: [2-5 words — a third differentiator]`)
+  parts.push(`WHY_3_DESC: [10-20 words explaining why this matters]`)
+  parts.push(`BRAND_1: [well-known brand/material name in ${industry || 'their industry'}, e.g. "GAF", "Carrier", "Kohler"]`)
+  parts.push(`BRAND_2: [another brand name]`)
+  parts.push(`BRAND_3: [another brand name]`)
+  parts.push(`BRAND_4: [another brand name]`)
+  parts.push(`BRAND_5: [another brand name]`)
+  parts.push(`TESTIMONIAL_2_QUOTE: [Realistic 1-2 sentence customer review mentioning a specific service. Different from TESTIMONIAL_QUOTE above.]`)
+  parts.push(`TESTIMONIAL_2_AUTHOR: [Realistic name, e.g. "Mike R., Homeowner"]`)
+  parts.push(`TESTIMONIAL_3_QUOTE: [Another realistic review, different angle/service]`)
+  parts.push(`TESTIMONIAL_3_AUTHOR: [Realistic name]`)
+  parts.push(`TESTIMONIAL_4_QUOTE: [Another realistic review]`)
+  parts.push(`TESTIMONIAL_4_AUTHOR: [Realistic name]`)
 
   return parts.join('\n')
 }
@@ -907,7 +935,7 @@ function parseWebsiteCopyResponse(raw: string, services: string[]): WebsiteCopy 
 
     // Parse service descriptions
     const serviceDescriptions: Record<string, string> = {}
-    for (const svc of services.slice(0, 6)) {
+    for (const svc of services.slice(0, 8)) {
       const svcKey = svc.toUpperCase().replace(/[^A-Z0-9]/g, '_')
       const desc = get(`SVC_${svcKey}`)
       if (desc && desc.length > 10) {
@@ -915,10 +943,52 @@ function parseWebsiteCopyResponse(raw: string, services: string[]): WebsiteCopy 
       }
     }
 
-    // Enforce word limits to prevent layout blowout
+    // Parse process steps
+    const processSteps: Array<{ title: string; description: string }> = []
+    for (let i = 1; i <= 4; i++) {
+      const title = get(`PROCESS_STEP_${i}_TITLE`)
+      const desc = get(`PROCESS_STEP_${i}_DESC`)
+      if (title && title.length > 2) {
+        processSteps.push({ title: truncateWords(title, 5), description: truncateWords(desc || '', 18) })
+      }
+    }
+
+    // Parse why choose us
+    const whyChooseUs: Array<{ title: string; description: string }> = []
+    for (let i = 1; i <= 3; i++) {
+      const title = get(`WHY_${i}_TITLE`)
+      const desc = get(`WHY_${i}_DESC`)
+      if (title && title.length > 2) {
+        whyChooseUs.push({ title: truncateWords(title, 6), description: truncateWords(desc || '', 25) })
+      }
+    }
+
+    // Parse brand names
+    const brandNames: string[] = []
+    for (let i = 1; i <= 5; i++) {
+      const brand = get(`BRAND_${i}`)
+      if (brand && brand.length > 1 && brand.toUpperCase() !== 'NONE') {
+        brandNames.push(truncateWords(brand, 4))
+      }
+    }
+
+    // Parse additional testimonials
+    const additionalTestimonials: Array<{ quote: string; author: string }> = []
+    for (let i = 2; i <= 4; i++) {
+      const quote = get(`TESTIMONIAL_${i}_QUOTE`)
+      const author = get(`TESTIMONIAL_${i}_AUTHOR`)
+      if (quote && quote.length > 15) {
+        additionalTestimonials.push({
+          quote: truncateWords(quote, 50),
+          author: author || 'Verified Customer',
+        })
+      }
+    }
+
+    // Enforce word limits to prevent layout blowout (50 words for rich descriptions)
     const trimmedServiceDescriptions: Record<string, string> = {}
     for (const [key, val] of Object.entries(serviceDescriptions)) {
-      trimmedServiceDescriptions[key] = truncateWords(val, 20)
+      trimmedServiceDescriptions[key] = truncateWords(val, 50)
     }
 
     return {
@@ -938,6 +1008,10 @@ function parseWebsiteCopyResponse(raw: string, services: string[]): WebsiteCopy 
       closingHeadline: truncateWords(closingHeadline || 'Let\'s Talk About Your Project', 12),
       closingBody: truncateWords(closingBody || '', 30),
       serviceDescriptions: trimmedServiceDescriptions,
+      processSteps: processSteps.length > 0 ? processSteps : undefined,
+      whyChooseUs: whyChooseUs.length > 0 ? whyChooseUs : undefined,
+      brandNames: brandNames.length > 0 ? brandNames : undefined,
+      additionalTestimonials: additionalTestimonials.length > 0 ? additionalTestimonials : undefined,
     }
   } catch (error) {
     console.error('[WEBSITE_COPY] Parse error:', error)
@@ -957,7 +1031,7 @@ async function generateWebsiteCopy(
 
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1200,
+      max_tokens: 2000,
       system: WEBSITE_COPY_SYSTEM,
       messages: [{ role: 'user', content: prompt }],
     })

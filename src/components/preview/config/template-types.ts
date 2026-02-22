@@ -13,7 +13,14 @@ export interface WebsiteCopy {
   testimonialAuthor?: string
   yearsBadge?: string
   serviceAreaText?: string
+  // Rich content fields (optional — old leads will have undefined, templates use fallbacks)
+  processSteps?: Array<{ title: string; description: string }>
+  whyChooseUs?: Array<{ title: string; description: string }>
+  brandNames?: string[]
+  additionalTestimonials?: Array<{ quote: string; author: string }>
 }
+
+export type TemplateTheme = 'modern' | 'bold' | 'classic' | 'premium'
 
 export interface PreviewLead {
   companyName: string

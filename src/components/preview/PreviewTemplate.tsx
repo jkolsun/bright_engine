@@ -12,11 +12,12 @@ import ClassicBTemplate from './templates/ClassicBTemplate'
 import PremiumTemplate from './templates/PremiumTemplate'
 import PremiumBTemplate from './templates/PremiumBTemplate'
 import PremiumCTemplate from './templates/PremiumCTemplate'
+import PreviewQAChecker from './shared/PreviewQAChecker'
 
 /** Detect if a string is a raw placeholder label leaked from the AI parser */
 function isPlaceholder(text: string): boolean {
   const t = text.trim()
-  return /^(VP[0-9]_|ABOUT_P[0-9]|HERO_|CLOSING_|SVC_|TESTIMONIAL_|YEARS_|SERVICE_AREA)/i.test(t)
+  return /^(VP[0-9]_|ABOUT_P[0-9]|HERO_|CLOSING_|SVC_|TESTIMONIAL_|YEARS_|SERVICE_AREA|PROCESS_STEP_|WHY_[0-9]|BRAND_[0-9])/i.test(t)
 }
 
 /** Strip leading "LABEL:" prefix that may have leaked through parsing */
@@ -52,6 +53,19 @@ function sanitizeWebsiteCopy(wc?: WebsiteCopy): WebsiteCopy | undefined {
       Object.entries(wc.serviceDescriptions || {}).map(([k, v]) => [k, cleanField(v)])
         .filter(([, v]) => v)
     ),
+    processSteps: wc.processSteps?.map(s => ({
+      title: cleanField(s.title) || s.title,
+      description: cleanField(s.description),
+    })).filter(s => s.title && !isPlaceholder(s.title)),
+    whyChooseUs: wc.whyChooseUs?.map(w => ({
+      title: cleanField(w.title) || w.title,
+      description: cleanField(w.description),
+    })).filter(w => w.title && !isPlaceholder(w.title)),
+    brandNames: wc.brandNames?.filter(b => b && !isPlaceholder(b)).map(b => cleanField(b) || b),
+    additionalTestimonials: wc.additionalTestimonials?.map(t => ({
+      quote: cleanField(t.quote) || t.quote,
+      author: cleanField(t.author) || t.author,
+    })).filter(t => t.quote && !isPlaceholder(t.quote)),
   }
 }
 
@@ -101,16 +115,24 @@ export default function PreviewTemplate({ lead, websiteCopy }: { lead: any; webs
   const cleanCopy = sanitizeWebsiteCopy(websiteCopy)
   const props = { lead: typedLead, config, onCTAClick, onCallClick, websiteCopy: cleanCopy }
 
+  let template: React.ReactNode
   switch (config.template) {
-    case 'modern':    return <ModernTemplate {...props} />
-    case 'modern-b':  return <ModernBTemplate {...props} />
-    case 'bold':      return <BoldTemplate {...props} />
-    case 'bold-b':    return <BoldBTemplate {...props} />
-    case 'classic-b': return <ClassicBTemplate {...props} />
-    case 'premium':   return <PremiumTemplate {...props} />
-    case 'premium-b': return <PremiumBTemplate {...props} />
-    case 'premium-c': return <PremiumCTemplate {...props} />
+    case 'modern':    template = <ModernTemplate {...props} />; break
+    case 'modern-b':  template = <ModernBTemplate {...props} />; break
+    case 'bold':      template = <BoldTemplate {...props} />; break
+    case 'bold-b':    template = <BoldBTemplate {...props} />; break
+    case 'classic-b': template = <ClassicBTemplate {...props} />; break
+    case 'premium':   template = <PremiumTemplate {...props} />; break
+    case 'premium-b': template = <PremiumBTemplate {...props} />; break
+    case 'premium-c': template = <PremiumCTemplate {...props} />; break
     case 'classic':
-    default:          return <ClassicTemplate {...props} />
+    default:          template = <ClassicTemplate {...props} />; break
   }
+
+  return (
+    <>
+      {template}
+      <PreviewQAChecker lead={lead} websiteCopy={cleanCopy} />
+    </>
+  )
 }

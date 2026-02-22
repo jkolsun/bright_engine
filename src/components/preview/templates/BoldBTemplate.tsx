@@ -21,6 +21,15 @@ import type { PageName } from '../shared/usePageRouter'
 import PageShell from '../shared/PageShell'
 import PageHeader from '../shared/PageHeader'
 import { brandGradientStyle, brandGradientClass, brandAccent } from '../shared/colorUtils'
+import { distributePhotos } from '../shared/photoUtils'
+import { ServiceHero, ServiceGrid, ProcessTimeline, WhyChooseUs } from '../shared/ServiceSections'
+import TrustBadges from '../shared/TrustBadges'
+import BrandsStrip from '../shared/BrandsStrip'
+import ReviewsSection from '../shared/ReviewsSection'
+import ContactFormEnhanced from '../shared/ContactFormEnhanced'
+import PhotoLightbox from '../shared/PhotoLightbox'
+import AnimatedCounter from '../shared/AnimatedCounter'
+import VideoPlaceholder from '../shared/VideoPlaceholder'
 
 // Google "G" icon (not in lucide)
 function GoogleIcon({ size = 15, className = '' }: { size?: number; className?: string }) {
@@ -261,13 +270,13 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
 
           {/* Social Icons */}
           <div className="flex gap-3 mb-5">
-            <a href="#" className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-blue-400 transition-colors">
+            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-blue-400 transition-colors">
               <Facebook size={16} />
             </a>
-            <a href="#" className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-pink-400 transition-colors">
+            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-pink-400 transition-colors">
               <Instagram size={16} />
             </a>
-            <a href="#" className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-blue-400 transition-colors">
+            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-blue-400 transition-colors">
               <GoogleIcon size={16} />
             </a>
           </div>
@@ -358,34 +367,14 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
   const { currentPage, navigateTo } = usePageRouter()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [openFAQ, setOpenFAQ] = useState<number | null>(null)
-  const [formData, setFormData] = useState({ name: '', phone: '', email: '', message: '' })
-  const [formSubmitted, setFormSubmitted] = useState(false)
-  const [formLoading, setFormLoading] = useState(false)
-
-  const handleFormSubmit = async () => {
-    if (formLoading || formSubmitted) return
-    if (!formData.name && !formData.phone && !formData.email) return
-    setFormLoading(true)
-    try {
-      await fetch('/api/preview/track', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          previewId: lead.previewId,
-          event: 'contact_form',
-          metadata: { ...formData },
-        }),
-      })
-      setFormSubmitted(true)
-    } catch {
-      // silently fail
-    } finally {
-      setFormLoading(false)
-    }
-  }
 
   const services = lead.enrichedServices || []
   const photos = lead.enrichedPhotos || []
+  const photosDist = distributePhotos(photos)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+  /** Combined handler: track CTA click + navigate to contact */
+  const ctaNavigate = () => { onCTAClick(); navigateTo('contact') }
   const industryLabel = lead.industry.toLowerCase().replace(/_/g, ' ')
   const location = [lead.city, lead.state].filter(Boolean).join(', ')
   const hasRating = lead.enrichedRating && lead.enrichedRating > 0
@@ -456,13 +445,13 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
             <div className="flex items-center gap-3">
               {/* Social Icons — Desktop */}
               <div className="hidden md:flex items-center gap-0.5 text-gray-500">
-                <a href="#" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 hover:text-blue-400 transition-all" aria-label="Facebook">
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 hover:text-blue-400 transition-all" aria-label="Facebook">
                   <Facebook size={14} />
                 </a>
-                <a href="#" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 hover:text-pink-400 transition-all" aria-label="Instagram">
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 hover:text-pink-400 transition-all" aria-label="Instagram">
                   <Instagram size={14} />
                 </a>
-                <a href="#" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 hover:text-blue-400 transition-all" aria-label="Google Reviews">
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 hover:text-blue-400 transition-all" aria-label="Google Reviews">
                   <GoogleIcon size={13} />
                 </a>
               </div>
@@ -577,7 +566,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                 </a>
               )}
               <button
-                onClick={onCTAClick}
+                onClick={ctaNavigate}
                 className="inline-flex items-center justify-center gap-2.5 bg-white/8 backdrop-blur-sm border border-white/15 text-white px-10 py-5 rounded-xl font-bold text-lg hover:bg-white hover:text-gray-900 transition-all duration-300 group"
               >
                 {config.ctaText}
@@ -708,17 +697,17 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                 </p>
                 <div className="flex flex-wrap gap-8 mb-8">
                   <div>
-                    <p className="font-display text-3xl font-black text-blue-400">{hasRating ? lead.enrichedRating : '5.0'}</p>
+                    <p className="font-display text-3xl font-black text-blue-400"><AnimatedCounter value={hasRating ? (lead.enrichedRating || 5.0) : 5.0} /></p>
                     <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Star Rating</p>
                   </div>
                   {lead.enrichedReviews && (
                     <div>
-                      <p className="font-display text-3xl font-black text-blue-400">{lead.enrichedReviews}+</p>
+                      <p className="font-display text-3xl font-black text-blue-400"><AnimatedCounter value={lead.enrichedReviews} suffix="+" /></p>
                       <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Reviews</p>
                     </div>
                   )}
                   <div>
-                    <p className="font-display text-3xl font-black text-blue-400">100%</p>
+                    <p className="font-display text-3xl font-black text-blue-400"><AnimatedCounter value={100} suffix="%" /></p>
                     <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Satisfaction</p>
                   </div>
                 </div>
@@ -821,6 +810,9 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           </div>
         </section>
 
+        <TrustBadges theme="bold" config={config} rating={lead.enrichedRating} reviewCount={lead.enrichedReviews} />
+        <BrandsStrip theme="bold" brandNames={wc?.brandNames} industry={lead.industry} />
+
         {/* HOMEPAGE: CTA BAND */}
         <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
@@ -839,53 +831,10 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           onBackClick={() => navigateTo('home')}
         />
 
-        {services.length > 0 && (
-          <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
-            <div className="max-w-5xl mx-auto">
-              <div className="divide-y divide-gray-800/60">
-                {services.slice(0, 8).map((service, i) => (
-                  <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
-                  <div
-                    className="group flex items-center justify-between py-5 sm:py-6 cursor-pointer hover:pl-3 transition-all duration-300"
-                    onClick={onCTAClick}
-                  >
-                    <div className="flex items-start gap-6">
-                      <span className="text-xs text-gray-600 font-mono tabular-nums w-6 font-bold">
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
-                      <div className="flex flex-col min-w-0">
-                        <h3 className="text-base sm:text-lg font-bold text-gray-200 group-hover:text-white transition-colors">
-                          {service}
-                        </h3>
-                        {wc?.serviceDescriptions?.[service] && (
-                          <p className="text-sm text-gray-500 mt-1 leading-relaxed">{wc.serviceDescriptions[service]}</p>
-                        )}
-                      </div>
-                    </div>
-                    <ArrowRight
-                      size={16}
-                      className="text-gray-700 group-hover:text-blue-400 group-hover:translate-x-1 transition-all flex-shrink-0"
-                    />
-                  </div>
-                  </ScrollReveal>
-                ))}
-              </div>
-
-              <ScrollReveal animation="fade-up" delay={0}>
-              <div className="mt-12 sm:mt-14 flex justify-center">
-                <button
-                  onClick={onCTAClick}
-                  className={`flex items-center gap-2.5 ${config.primaryHex ? '' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-blue-500/15 hover:shadow-blue-500/30'} text-white px-8 py-3.5 sm:py-4 rounded-xl font-bold text-base transition-all shadow-lg`}
-                  style={brandGradientStyle(config, 'to right')}
-                >
-                  Request a Quote
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-              </ScrollReveal>
-            </div>
-          </section>
-        )}
+        {services.length > 0 && <ServiceHero theme="bold" config={config} service={services[0]} description={wc?.serviceDescriptions?.[services[0]]} photo={photosDist.serviceHero} onCTAClick={ctaNavigate} />}
+        {services.length > 1 && <ServiceGrid theme="bold" services={services} descriptions={wc?.serviceDescriptions} photos={photosDist.serviceAccents} />}
+        <ProcessTimeline theme="bold" config={config} steps={wc?.processSteps} />
+        <WhyChooseUs theme="bold" config={config} companyName={lead.companyName} items={wc?.whyChooseUs || wc?.valueProps} photo={photosDist.aboutPhoto} />
 
         {/* Service area info */}
         {(wc?.serviceAreaText || location) && (
@@ -961,17 +910,17 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
 
                 <div className="mt-10 flex flex-wrap gap-12">
                   <div>
-                    <p className="font-display text-4xl font-black text-blue-400">{hasRating ? lead.enrichedRating : '5.0'}</p>
+                    <p className="font-display text-4xl font-black text-blue-400"><AnimatedCounter value={hasRating ? (lead.enrichedRating || 5.0) : 5.0} /></p>
                     <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-2">Star Rating</p>
                   </div>
                   {lead.enrichedReviews && (
                     <div>
-                      <p className="font-display text-4xl font-black text-blue-400">{lead.enrichedReviews}+</p>
+                      <p className="font-display text-4xl font-black text-blue-400"><AnimatedCounter value={lead.enrichedReviews} suffix="+" /></p>
                       <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-2">Reviews</p>
                     </div>
                   )}
                   <div>
-                    <p className="font-display text-4xl font-black text-blue-400">100%</p>
+                    <p className="font-display text-4xl font-black text-blue-400"><AnimatedCounter value={100} suffix="%" /></p>
                     <p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-2">Satisfaction</p>
                   </div>
                 </div>
@@ -1043,49 +992,10 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         </section>
 
         {/* Full Testimonials */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
-          <div className="max-w-6xl mx-auto">
-            <ScrollReveal animation="fade-up" delay={0}>
-            <div className="text-center mb-12 sm:mb-16">
-              <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-blue-500/15 uppercase tracking-wider">
-                <Sparkles size={12} />
-                Reviews
-              </div>
-              <h2 className="font-display text-4xl md:text-5xl font-black text-white">
-                Trusted by Homeowners
-              </h2>
-            </div>
-            </ScrollReveal>
-
-            <div className={testimonials.length === 1 ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 md:grid-cols-2 gap-6'}>
-              {testimonials.map((review, i) => (
-                <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
-                <div
-                  className="bg-gray-950/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8 hover:border-blue-500/20 transition-all duration-300"
-                >
-                  <div className="flex gap-0.5 mb-4">
-                    {Array.from({ length: 5 }, (_, j) => (
-                      <Star key={j} size={14} className="text-blue-400 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-gray-300 text-base leading-relaxed mb-5 italic">
-                    "{review.quote}"
-                  </p>
-                  <div className="flex items-center gap-3 text-xs">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-[11px] font-bold">{review.name[0]}</span>
-                    </div>
-                    <div>
-                      <span className="font-bold text-gray-300">{review.name}</span>
-                      <span className="text-gray-600"> — {review.loc}</span>
-                    </div>
-                  </div>
-                </div>
-                </ScrollReveal>
-              ))}
-            </div>
-          </div>
-        </section>
+        <ReviewsSection theme="bold" config={config} location={location} testimonials={[
+          ...(wc?.testimonialQuote ? [{ quote: wc.testimonialQuote, author: wc?.testimonialAuthor || 'Verified Customer' }] : []),
+          ...(wc?.additionalTestimonials || []),
+        ]} />
 
         <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
@@ -1111,7 +1021,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                 {/* Hero photo full width */}
                 <ScrollReveal animation="zoom-in" delay={0}>
                 <div className="mb-3 sm:mb-4">
-                  <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-blue-500/30 transition-all duration-500">
+                  <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-blue-500/30 transition-all duration-500 cursor-pointer" onClick={() => { setLightboxIndex(0); setLightboxOpen(true) }}>
                     <div className="aspect-[16/9] sm:aspect-[2/1]">
                       <img
                         src={photos[0]}
@@ -1131,7 +1041,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                     {photos.slice(1, 5).map((photo, i) => (
                       <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
                       <div
-                        className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-blue-500/30 transition-all duration-500"
+                        className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-blue-500/30 transition-all duration-500 cursor-pointer"
+                        onClick={() => { setLightboxIndex(i + 1); setLightboxOpen(true) }}
                       >
                         <div className="aspect-[4/3]">
                           <img
@@ -1156,7 +1067,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                 </div>
                 <h3 className="text-lg font-bold text-white mb-2">Portfolio Coming Soon</h3>
                 <p className="text-sm text-gray-500 max-w-md mx-auto">We&apos;re putting together our best project photos. Contact us to see examples of our work.</p>
-                <button onClick={onCTAClick} className={`mt-6 inline-flex items-center gap-2 ${config.primaryHex ? '' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-blue-500/15'} text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-lg`} style={brandGradientStyle(config, 'to right')}>
+                <button onClick={ctaNavigate} className={`mt-6 inline-flex items-center gap-2 ${config.primaryHex ? '' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-blue-500/15'} text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-lg`} style={brandGradientStyle(config, 'to right')}>
                   Request Examples <ArrowRight size={14} />
                 </button>
               </div>
@@ -1164,7 +1075,11 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           </div>
         </section>
 
+        <VideoPlaceholder theme="bold" photo={photos[1]} onCTAClick={ctaNavigate} config={config} />
+
         <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
+
+        <PhotoLightbox photos={photos} isOpen={lightboxOpen} initialIndex={lightboxIndex} onClose={() => setLightboxOpen(false)} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -1181,150 +1096,8 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           onBackClick={() => navigateTo('home')}
         />
 
-        {/* Contact form + info */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
-              {/* Info Side */}
-              <ScrollReveal animation="fade-left" delay={0}>
-              <div>
-                <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-6 leading-[0.95]">
-                  Let&apos;s Talk.
-                </h2>
-                <p className="text-gray-400 text-base leading-relaxed mb-10 max-w-md">
-                  {wc?.closingBody || `Free estimates, fast response. Reach out today.`}
-                </p>
-
-                <div className="space-y-5">
-                  {lead.phone && (
-                    <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 group">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/15 group-hover:shadow-blue-500/30 transition-shadow">
-                        <Phone size={20} className="text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-white">{lead.phone}</p>
-                        <p className="text-xs text-gray-500">Call or text anytime</p>
-                      </div>
-                    </a>
-                  )}
-                  {lead.email && (
-                    <a href={`mailto:${lead.email}`} className="flex items-center gap-4 group">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/15 group-hover:shadow-indigo-500/30 transition-shadow">
-                        <Mail size={20} className="text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-white">{lead.email}</p>
-                        <p className="text-xs text-gray-500">We reply within hours</p>
-                      </div>
-                    </a>
-                  )}
-                  {lead.enrichedAddress && (
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-cyan-500/15">
-                        <MapPin size={20} className="text-white" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-white">{lead.enrichedAddress}</p>
-                        <p className="text-xs text-gray-500">{location}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Social Links */}
-                <div className="flex gap-3 mt-10">
-                  {[
-                    { icon: Facebook, label: 'Facebook', hoverColor: 'hover:text-blue-400 hover:border-blue-500/30' },
-                    { icon: Instagram, label: 'Instagram', hoverColor: 'hover:text-pink-400 hover:border-pink-500/30' },
-                    { icon: GoogleIcon, label: 'Google', hoverColor: 'hover:text-blue-400 hover:border-blue-500/30' },
-                  ].map(({ icon: Icon, label, hoverColor }) => (
-                    <a
-                      key={label}
-                      href="#"
-                      className={`w-10 h-10 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-500 transition-all ${hoverColor}`}
-                      aria-label={label}
-                    >
-                      <Icon size={16} />
-                    </a>
-                  ))}
-                </div>
-              </div>
-              </ScrollReveal>
-
-              {/* Form Side */}
-              <ScrollReveal animation="fade-right" delay={200}>
-              <div className="bg-gray-900/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8">
-                {formSubmitted ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
-                      <CheckCircle size={32} className="text-green-500" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-white mb-2">Message Sent!</h3>
-                    <p className="text-sm text-gray-500">We&apos;ll get back to you shortly.</p>
-                  </div>
-                ) : (
-                  <>
-                    <h3 className="text-lg font-bold text-white mb-1">Send us a message</h3>
-                    <p className="text-xs text-gray-500 mb-6">We&apos;ll get back to you within a few hours.</p>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Name</label>
-                          <input
-                            type="text"
-                            placeholder="Your name"
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Phone</label>
-                          <input
-                            type="tel"
-                            placeholder="(555) 555-5555"
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Email</label>
-                        <input
-                          type="email"
-                          placeholder="your@email.com"
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">How can we help?</label>
-                        <textarea
-                          rows={4}
-                          placeholder="Tell us about your project..."
-                          value={formData.message}
-                          onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                          className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 placeholder:text-gray-600 transition-all resize-none"
-                        />
-                      </div>
-                      <button
-                        onClick={handleFormSubmit}
-                        disabled={formLoading}
-                        className={`w-full py-3.5 rounded-xl ${config.primaryHex ? '' : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-blue-500/15 hover:shadow-blue-500/30'} text-white font-bold text-sm transition-all shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50`}
-                        style={brandGradientStyle(config, 'to right')}
-                      >
-                        {formLoading ? 'Sending...' : 'Send Message'}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-              </ScrollReveal>
-            </div>
-          </div>
-        </section>
+        {/* Contact form */}
+        <ContactFormEnhanced theme="bold" config={config} previewId={lead.previewId} services={services} companyName={lead.companyName} />
 
         {/* FAQ */}
         <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
@@ -1381,9 +1154,9 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               )}
               {/* Footer Socials */}
               <div className="flex gap-2.5 mt-5">
-                <a href="#" className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-gray-600 hover:text-white hover:bg-gray-800 transition-all"><Facebook size={13} /></a>
-                <a href="#" className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-gray-600 hover:text-white hover:bg-gray-800 transition-all"><Instagram size={13} /></a>
-                <a href="#" className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-gray-600 hover:text-white hover:bg-gray-800 transition-all"><GoogleIcon size={12} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-gray-600 hover:text-white hover:bg-gray-800 transition-all"><Facebook size={13} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-gray-600 hover:text-white hover:bg-gray-800 transition-all"><Instagram size={13} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-gray-600 hover:text-white hover:bg-gray-800 transition-all"><GoogleIcon size={12} /></a>
               </div>
             </div>
 
@@ -1433,6 +1206,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
                 Professional {industryLabel} · {location}
               </p>
             )}
+            <span className="text-gray-700 text-[10px]">Powered by <a href="https://brightautomations.com" target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-400 transition-colors">Bright Automations</a></span>
           </div>
         </div>
       </footer>

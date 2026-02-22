@@ -26,6 +26,15 @@ import usePageRouter from '../shared/usePageRouter'
 import type { PageName } from '../shared/usePageRouter'
 import PageShell from '../shared/PageShell'
 import PageHeader from '../shared/PageHeader'
+import { distributePhotos } from '../shared/photoUtils'
+import { ServiceHero, ServiceGrid, ProcessTimeline, WhyChooseUs } from '../shared/ServiceSections'
+import TrustBadges from '../shared/TrustBadges'
+import BrandsStrip from '../shared/BrandsStrip'
+import ReviewsSection from '../shared/ReviewsSection'
+import ContactFormEnhanced from '../shared/ContactFormEnhanced'
+import PhotoLightbox from '../shared/PhotoLightbox'
+import AnimatedCounter from '../shared/AnimatedCounter'
+import VideoPlaceholder from '../shared/VideoPlaceholder'
 
 function formatNavPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '')
@@ -255,9 +264,9 @@ function MobileNav({
           </nav>
 
           <div className="flex gap-3 mb-5">
-            <a href="#" className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center text-stone-500 hover:text-emerald-700 transition-colors" aria-label="Facebook"><Facebook size={16} /></a>
-            <a href="#" className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center text-stone-500 hover:text-emerald-700 transition-colors" aria-label="Instagram"><Instagram size={16} /></a>
-            <a href="#" className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center text-stone-500 hover:text-emerald-700 transition-colors" aria-label="Google"><GoogleIcon size={16} /></a>
+            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center text-stone-500 hover:text-emerald-700 transition-colors" aria-label="Facebook"><Facebook size={16} /></a>
+            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center text-stone-500 hover:text-emerald-700 transition-colors" aria-label="Instagram"><Instagram size={16} /></a>
+            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center text-stone-500 hover:text-emerald-700 transition-colors" aria-label="Google"><GoogleIcon size={16} /></a>
           </div>
 
           <div className="space-y-3">
@@ -326,34 +335,13 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
   const { currentPage, navigateTo } = usePageRouter()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [openFAQ, setOpenFAQ] = useState<number | null>(null)
-  const [formData, setFormData] = useState({ name: '', phone: '', email: '', message: '' })
-  const [formSubmitted, setFormSubmitted] = useState(false)
-  const [formLoading, setFormLoading] = useState(false)
-
-  const handleFormSubmit = async () => {
-    if (formLoading || formSubmitted) return
-    if (!formData.name && !formData.phone && !formData.email) return
-    setFormLoading(true)
-    try {
-      await fetch('/api/preview/track', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          previewId: lead.previewId,
-          event: 'contact_form',
-          metadata: { ...formData },
-        }),
-      })
-      setFormSubmitted(true)
-    } catch {
-      // silently fail
-    } finally {
-      setFormLoading(false)
-    }
-  }
-
   const services = lead.enrichedServices || []
   const photos = lead.enrichedPhotos || []
+  const photosDist = distributePhotos(photos)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+  /** Combined handler: track CTA click + navigate to contact */
+  const ctaNavigate = () => { onCTAClick(); navigateTo('contact') }
   const industryLabel = lead.industry.toLowerCase().replace(/_/g, ' ')
   const location = [lead.city, lead.state].filter(Boolean).join(', ')
   const hasRating = lead.enrichedRating && lead.enrichedRating > 0
@@ -418,9 +406,9 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
             <div className="flex items-center gap-3">
               {/* Social icons — desktop */}
               <div className="hidden md:flex items-center gap-0.5 text-stone-400">
-                <a href="#" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-emerald-50 hover:text-emerald-600 transition-all" aria-label="Facebook"><Facebook size={14} /></a>
-                <a href="#" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-emerald-50 hover:text-emerald-600 transition-all" aria-label="Instagram"><Instagram size={14} /></a>
-                <a href="#" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-emerald-50 hover:text-emerald-600 transition-all" aria-label="Google"><GoogleIcon size={13} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-emerald-50 hover:text-emerald-600 transition-all" aria-label="Facebook"><Facebook size={14} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-emerald-50 hover:text-emerald-600 transition-all" aria-label="Instagram"><Instagram size={14} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-emerald-50 hover:text-emerald-600 transition-all" aria-label="Google"><GoogleIcon size={13} /></a>
               </div>
               <div className="hidden md:block w-px h-5 bg-stone-200" />
 
@@ -511,7 +499,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                   Call Now
                 </a>
               )}
-              <button onClick={onCTAClick} className="inline-flex items-center justify-center gap-2.5 border-2 border-emerald-700/25 text-emerald-700 px-10 py-4 rounded-xl font-semibold text-lg hover:bg-emerald-700 hover:text-white hover:border-emerald-700 transition-all duration-300 group">
+              <button onClick={ctaNavigate} className="inline-flex items-center justify-center gap-2.5 border-2 border-emerald-700/25 text-emerald-700 px-10 py-4 rounded-xl font-semibold text-lg hover:bg-emerald-700 hover:text-white hover:border-emerald-700 transition-all duration-300 group">
                 {config.ctaText}
                 <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
               </button>
@@ -616,9 +604,9 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                 <h2 className="font-display text-3xl sm:text-4xl font-light text-stone-900 leading-tight mb-6">{lead.companyName}</h2>
                 <p className="text-stone-600 text-base leading-relaxed mb-6">{wc?.aboutParagraph1 || `${lead.companyName} delivers expert ${industryLabel}${location ? ` in ${location}` : ''} with a client-first approach.`}</p>
                 <div className="flex flex-wrap gap-8 mb-8">
-                  <div><p className="font-display text-3xl font-light text-emerald-700">{hasRating ? lead.enrichedRating : '5.0'}</p><p className="text-[11px] uppercase tracking-[0.2em] text-stone-500 mt-1">Star Rating</p></div>
-                  {lead.enrichedReviews && (<div><p className="font-display text-3xl font-light text-emerald-700">{lead.enrichedReviews}+</p><p className="text-[11px] uppercase tracking-[0.2em] text-stone-500 mt-1">Reviews</p></div>)}
-                  <div><p className="font-display text-3xl font-light text-emerald-700">100%</p><p className="text-[11px] uppercase tracking-[0.2em] text-stone-500 mt-1">Satisfaction</p></div>
+                  <div><p className="font-display text-3xl font-light text-emerald-700"><AnimatedCounter value={hasRating ? Number(lead.enrichedRating) : 5.0} /></p><p className="text-[11px] uppercase tracking-[0.2em] text-stone-500 mt-1">Star Rating</p></div>
+                  {lead.enrichedReviews && (<div><p className="font-display text-3xl font-light text-emerald-700"><AnimatedCounter value={Number(lead.enrichedReviews)} suffix="+" /></p><p className="text-[11px] uppercase tracking-[0.2em] text-stone-500 mt-1">Reviews</p></div>)}
+                  <div><p className="font-display text-3xl font-light text-emerald-700"><AnimatedCounter value={100} suffix="%" /></p><p className="text-[11px] uppercase tracking-[0.2em] text-stone-500 mt-1">Satisfaction</p></div>
                 </div>
                 <button onClick={() => navigateTo('about')} className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 hover:text-emerald-600 transition-colors group">
                   Learn More About Us <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -691,6 +679,9 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
           </div>
         </section>
 
+        <TrustBadges theme="premium" config={config} rating={lead.enrichedRating} reviewCount={lead.enrichedReviews} />
+        <BrandsStrip theme="premium" brandNames={wc?.brandNames} industry={lead.industry} />
+
         {/* HOMEPAGE: CTA BAND */}
         <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
@@ -709,30 +700,10 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
           onBackClick={() => navigateTo('home')}
         />
 
-        {services.length > 0 && (
-          <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-stone-50">
-            <div className="max-w-5xl mx-auto">
-              <div className="divide-y divide-stone-200/60">
-                {services.slice(0, 8).map((service, i) => (
-                  <ScrollReveal key={i} animation="fade-left" delay={i * 100}>
-                  <div className="group flex items-center justify-between py-5 sm:py-6 cursor-pointer hover:pl-2 transition-all duration-300" onClick={onCTAClick}>
-                    <div className="flex items-start gap-5">
-                      <span className="text-xs text-emerald-500/40 font-mono tabular-nums w-6 font-medium">{String(i + 1).padStart(2, '0')}</span>
-                      <div className="flex flex-col min-w-0">
-                        <h3 className="text-base sm:text-lg font-medium text-stone-800 group-hover:text-emerald-700 transition-colors">{service}</h3>
-                        {wc?.serviceDescriptions?.[service] && (
-                          <p className="text-sm text-gray-600 mt-1 leading-relaxed">{wc.serviceDescriptions[service]}</p>
-                        )}
-                      </div>
-                    </div>
-                    <ArrowRight size={16} className="text-stone-300 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all flex-shrink-0" />
-                  </div>
-                  </ScrollReveal>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
+        {services.length > 0 && <ServiceHero theme="premium" config={config} service={services[0]} description={wc?.serviceDescriptions?.[services[0]]} photo={photosDist.serviceHero} onCTAClick={ctaNavigate} />}
+        {services.length > 1 && <ServiceGrid theme="premium" services={services} descriptions={wc?.serviceDescriptions} photos={photosDist.serviceAccents} />}
+        <ProcessTimeline theme="premium" config={config} steps={wc?.processSteps} />
+        <WhyChooseUs theme="premium" config={config} companyName={lead.companyName} items={(wc?.whyChooseUs || wc?.valueProps) as Array<{ title: string; description: string }> | undefined} photo={photosDist.aboutPhoto} />
 
         {/* Service area info */}
         {(wc?.serviceAreaText || location) && (
@@ -792,9 +763,9 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
 
                 {/* Stats */}
                 <div className="mt-10 flex flex-wrap gap-12">
-                  <div><p className="font-display text-4xl font-light text-emerald-700">{hasRating ? lead.enrichedRating : '5.0'}</p><p className="text-[11px] uppercase tracking-[0.2em] text-stone-500 mt-2">Star Rating</p></div>
-                  {lead.enrichedReviews && (<div><p className="font-display text-4xl font-light text-emerald-700">{lead.enrichedReviews}+</p><p className="text-[11px] uppercase tracking-[0.2em] text-stone-500 mt-2">Reviews</p></div>)}
-                  <div><p className="font-display text-4xl font-light text-emerald-700">100%</p><p className="text-[11px] uppercase tracking-[0.2em] text-stone-500 mt-2">Satisfaction</p></div>
+                  <div><p className="font-display text-4xl font-light text-emerald-700"><AnimatedCounter value={hasRating ? Number(lead.enrichedRating) : 5.0} /></p><p className="text-[11px] uppercase tracking-[0.2em] text-stone-500 mt-2">Star Rating</p></div>
+                  {lead.enrichedReviews && (<div><p className="font-display text-4xl font-light text-emerald-700"><AnimatedCounter value={Number(lead.enrichedReviews)} suffix="+" /></p><p className="text-[11px] uppercase tracking-[0.2em] text-stone-500 mt-2">Reviews</p></div>)}
+                  <div><p className="font-display text-4xl font-light text-emerald-700"><AnimatedCounter value={100} suffix="%" /></p><p className="text-[11px] uppercase tracking-[0.2em] text-stone-500 mt-2">Satisfaction</p></div>
                 </div>
               </div>
               </ScrollReveal>
@@ -863,30 +834,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
         </section>
 
         {/* Full Testimonials */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-stone-100/50">
-          <div className="max-w-6xl mx-auto">
-            <ScrollReveal animation="fade-up" delay={0}>
-            <div className="text-center mb-12 sm:mb-16">
-              <p className="text-xs uppercase tracking-[0.25em] text-emerald-600/50 mb-3 font-medium">Testimonials</p>
-              <h2 className="font-display text-3xl sm:text-4xl font-light text-stone-900">What clients say.</h2>
-            </div>
-            </ScrollReveal>
-            <div className={testimonials.length === 1 ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 md:grid-cols-2 gap-6'}>
-              {testimonials.map((r, i) => (
-                <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
-                <div className="bg-white border border-stone-200 rounded-2xl p-8 hover:border-emerald-400/30 hover:shadow-lg hover:shadow-emerald-900/5 transition-all">
-                  <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={15} className="text-emerald-500 fill-current" />)}</div>
-                  <p className="text-stone-600 text-base leading-relaxed mb-5 italic font-light">&ldquo;{r.quote}&rdquo;</p>
-                  <div className="flex items-center gap-3 text-sm pt-4 border-t border-stone-100">
-                    <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100"><span className="text-emerald-700 font-semibold text-xs">{r.name[0]}</span></div>
-                    <div><span className="font-medium text-stone-800">{r.name}</span><span className="text-stone-400"> &mdash; {r.loc}</span></div>
-                  </div>
-                </div>
-                </ScrollReveal>
-              ))}
-            </div>
-          </div>
-        </section>
+        <ReviewsSection theme="premium" config={config} location={location} testimonials={testimonials.map(t => ({ quote: t.quote, author: t.name }))} />
 
         <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
@@ -911,7 +859,7 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                 {photos.slice(0, 6).map((photo, i) => (
                   <ScrollReveal key={i} animation="zoom-in" delay={i * 100} className={i === 0 ? 'col-span-1 sm:col-span-2 sm:row-span-2' : ''}>
-                  <div className="relative overflow-hidden rounded-2xl group border border-stone-200 hover:border-emerald-400/40 transition-all duration-500 hover:shadow-xl hover:shadow-emerald-900/5">
+                  <div className="relative overflow-hidden rounded-2xl group border border-stone-200 hover:border-emerald-400/40 transition-all duration-500 hover:shadow-xl hover:shadow-emerald-900/5 cursor-pointer" onClick={() => { setLightboxIndex(i); setLightboxOpen(true) }}>
                     <img
                       src={photo}
                       alt={`${lead.companyName} project ${i + 1}`}
@@ -933,13 +881,15 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                 </div>
                 <h3 className="text-lg font-medium text-stone-800 mb-2">Portfolio Coming Soon</h3>
                 <p className="text-sm text-stone-500 max-w-md mx-auto">We&apos;re putting together our best project photos. Contact us to see examples of our work.</p>
-                <button onClick={onCTAClick} className={`mt-6 inline-flex items-center gap-2 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-all ${config.primaryHex ? '' : 'bg-emerald-700 hover:bg-emerald-600'}`} style={brandGradientStyle(config, 'to right') || undefined}>
+                <button onClick={ctaNavigate} className={`mt-6 inline-flex items-center gap-2 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-all ${config.primaryHex ? '' : 'bg-emerald-700 hover:bg-emerald-600'}`} style={brandGradientStyle(config, 'to right') || undefined}>
                   Request Examples <ArrowRight size={14} />
                 </button>
               </div>
             )}
           </div>
         </section>
+
+        <VideoPlaceholder theme="premium" photo={photos[1]} onCTAClick={ctaNavigate} config={config} />
 
         <CTABand closingHeadline={wc?.closingHeadline} location={location} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
@@ -1003,50 +953,14 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
 
                 {/* Social links */}
                 <div className="flex gap-3 mt-10">
-                  <a href="#" className="w-10 h-10 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-center text-stone-400 hover:text-emerald-600 hover:border-emerald-200 transition-all" aria-label="Facebook"><Facebook size={16} /></a>
-                  <a href="#" className="w-10 h-10 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-center text-stone-400 hover:text-emerald-600 hover:border-emerald-200 transition-all" aria-label="Instagram"><Instagram size={16} /></a>
-                  <a href="#" className="w-10 h-10 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-center text-stone-400 hover:text-emerald-600 hover:border-emerald-200 transition-all" aria-label="Google"><GoogleIcon size={16} /></a>
+                  <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-center text-stone-400 hover:text-emerald-600 hover:border-emerald-200 transition-all" aria-label="Facebook"><Facebook size={16} /></a>
+                  <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-center text-stone-400 hover:text-emerald-600 hover:border-emerald-200 transition-all" aria-label="Instagram"><Instagram size={16} /></a>
+                  <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-center text-stone-400 hover:text-emerald-600 hover:border-emerald-200 transition-all" aria-label="Google"><GoogleIcon size={16} /></a>
                 </div>
               </div>
               </ScrollReveal>
               <ScrollReveal animation="fade-right" delay={200}>
-              <div className="bg-stone-50 rounded-2xl border border-stone-200 p-7 sm:p-8">
-                <h3 className="text-lg font-medium text-stone-800 mb-1">Send us a message</h3>
-                <p className="text-xs text-stone-400 mb-6">We respond within 24 hours.</p>
-                {formSubmitted ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
-                      <CheckCircle size={32} className="text-green-500" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-stone-800 mb-2">Message Sent!</h3>
-                    <p className="text-sm text-stone-500">We&apos;ll get back to you shortly.</p>
-                  </div>
-                ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[11px] font-medium text-stone-400 mb-1.5 uppercase tracking-wider">Name</label>
-                      <input type="text" placeholder="Your name" value={formData.name} onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-stone-200 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 placeholder:text-stone-300 transition-all" />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-stone-400 mb-1.5 uppercase tracking-wider">Phone</label>
-                      <input type="tel" placeholder="(555) 555-5555" value={formData.phone} onChange={(e) => setFormData(p => ({ ...p, phone: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-stone-200 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 placeholder:text-stone-300 transition-all" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-stone-400 mb-1.5 uppercase tracking-wider">Email</label>
-                    <input type="email" placeholder="your@email.com" value={formData.email} onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-stone-200 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 placeholder:text-stone-300 transition-all" />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-stone-400 mb-1.5 uppercase tracking-wider">Project details</label>
-                    <textarea rows={4} placeholder="Tell us about your project..." value={formData.message} onChange={(e) => setFormData(p => ({ ...p, message: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-stone-200 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 placeholder:text-stone-300 transition-all resize-none" />
-                  </div>
-                  <button onClick={handleFormSubmit} className={`w-full py-3.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 transition-all shadow-md ${config.primaryHex ? '' : 'bg-emerald-700 hover:bg-emerald-600'}`} style={brandGradientStyle(config, 'to right') || undefined}>
-                    {formLoading ? 'Sending...' : 'Send Message'}
-                  </button>
-                </div>
-                )}
-              </div>
+              <ContactFormEnhanced theme="premium" config={config} previewId={lead.previewId} services={services} companyName={lead.companyName} />
               </ScrollReveal>
             </div>
           </div>
@@ -1089,9 +1003,9 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
                 </div>
               )}
               <div className="flex gap-2.5 mt-5">
-                <a href="#" className="w-8 h-8 rounded-lg bg-emerald-800 border border-emerald-700/50 flex items-center justify-center text-emerald-100/30 hover:text-white transition-all" aria-label="Facebook"><Facebook size={13} /></a>
-                <a href="#" className="w-8 h-8 rounded-lg bg-emerald-800 border border-emerald-700/50 flex items-center justify-center text-emerald-100/30 hover:text-white transition-all" aria-label="Instagram"><Instagram size={13} /></a>
-                <a href="#" className="w-8 h-8 rounded-lg bg-emerald-800 border border-emerald-700/50 flex items-center justify-center text-emerald-100/30 hover:text-white transition-all" aria-label="Google"><GoogleIcon size={12} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-emerald-800 border border-emerald-700/50 flex items-center justify-center text-emerald-100/30 hover:text-white transition-all" aria-label="Facebook"><Facebook size={13} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-emerald-800 border border-emerald-700/50 flex items-center justify-center text-emerald-100/30 hover:text-white transition-all" aria-label="Instagram"><Instagram size={13} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-emerald-800 border border-emerald-700/50 flex items-center justify-center text-emerald-100/30 hover:text-white transition-all" aria-label="Google"><GoogleIcon size={12} /></a>
               </div>
             </div>
 
@@ -1133,10 +1047,13 @@ export default function PremiumCTemplate({ lead, config, onCTAClick, onCallClick
 
           <div className="border-t border-emerald-800/50 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-emerald-100/20 text-xs">&copy; {new Date().getFullYear()} {lead.companyName}</p>
+            <span className="text-gray-700 text-[10px]">Powered by <a href="https://brightautomations.com" target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:text-amber-400 transition-colors">Bright Automations</a></span>
             {location && <p className="text-emerald-100/15 text-xs">{location} &middot; {industryLabel}</p>}
           </div>
         </div>
       </footer>
+
+      <PhotoLightbox photos={photos} isOpen={lightboxOpen} initialIndex={lightboxIndex} onClose={() => setLightboxOpen(false)} />
 
       {/* ═══════════════════════ CHATBOT ═══════════════════════ */}
       <ChatbotWidget companyName={lead.companyName} accentHex={config.primaryHex ? brandAccent(config, '#047857') : undefined} />

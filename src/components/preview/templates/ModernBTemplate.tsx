@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import {
-  Phone, MapPin, Star, Shield, Clock, CheckCircle, ArrowRight, Mail,
+  Phone, MapPin, Star, Shield, Clock, ArrowRight, Mail,
   Sparkles, Camera, Quote,
   MessageCircle, X, Send, ChevronDown, Menu, ChevronRight,
   Minus, Plus, Facebook, Instagram
@@ -21,6 +21,15 @@ import usePageRouter from '../shared/usePageRouter'
 import type { PageName } from '../shared/usePageRouter'
 import PageShell from '../shared/PageShell'
 import PageHeader from '../shared/PageHeader'
+import { distributePhotos } from '../shared/photoUtils'
+import { ServiceHero, ServiceGrid, ProcessTimeline, WhyChooseUs } from '../shared/ServiceSections'
+import TrustBadges from '../shared/TrustBadges'
+import BrandsStrip from '../shared/BrandsStrip'
+import ReviewsSection from '../shared/ReviewsSection'
+import ContactFormEnhanced from '../shared/ContactFormEnhanced'
+import PhotoLightbox from '../shared/PhotoLightbox'
+import AnimatedCounter from '../shared/AnimatedCounter'
+import VideoPlaceholder from '../shared/VideoPlaceholder'
 
 function GoogleIcon({ size = 15, className = '' }: { size?: number; className?: string }) {
   return (<svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>)
@@ -99,9 +108,9 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
           <div className="flex justify-between items-center mb-10"><span className="text-lg font-bold text-gray-900">{companyName}</span><button onClick={onClose} className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500"><X size={18} /></button></div>
           <nav className="space-y-1 flex-1">{sections.map((s) => (<button key={s.page} data-nav-page={s.page} onClick={() => { onNavigate(s.page); onClose() }} className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-gray-700 hover:bg-violet-50 transition-all text-[15px] font-medium">{s.label}<ChevronRight size={16} className="text-gray-300" /></button>))}</nav>
           <div className="flex gap-3 mb-5">
-            <a href="#" className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:text-violet-600 transition-colors"><Facebook size={16} /></a>
-            <a href="#" className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:text-violet-600 transition-colors"><Instagram size={16} /></a>
-            <a href="#" className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:text-violet-600 transition-colors"><GoogleIcon size={16} /></a>
+            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:text-violet-600 transition-colors"><Facebook size={16} /></a>
+            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:text-violet-600 transition-colors"><Instagram size={16} /></a>
+            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:text-violet-600 transition-colors"><GoogleIcon size={16} /></a>
           </div>
           <div className="space-y-3">
             {phone && (<a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gray-100 text-gray-800 font-bold text-sm border border-gray-200"><Phone size={16} />Call {formatNavPhone(phone)}</a>)}
@@ -150,38 +159,18 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
   const { currentPage, navigateTo } = usePageRouter()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [openFAQ, setOpenFAQ] = useState<number | null>(null)
-  const [formData, setFormData] = useState({ name: '', phone: '', email: '', message: '' })
-  const [formSubmitted, setFormSubmitted] = useState(false)
-  const [formLoading, setFormLoading] = useState(false)
-
-  const handleFormSubmit = async () => {
-    if (formLoading || formSubmitted) return
-    if (!formData.name && !formData.phone && !formData.email) return
-    setFormLoading(true)
-    try {
-      await fetch('/api/preview/track', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          previewId: lead.previewId,
-          event: 'contact_form',
-          metadata: { ...formData },
-        }),
-      })
-      setFormSubmitted(true)
-    } catch {
-      // silently fail
-    } finally {
-      setFormLoading(false)
-    }
-  }
-
+  // Form state moved to ContactFormEnhanced component
   const services = lead.enrichedServices || []
   const photos = lead.enrichedPhotos || []
+  const photosDist = distributePhotos(photos)
   const industryLabel = lead.industry.toLowerCase().replace(/_/g, ' ')
   const location = [lead.city, lead.state].filter(Boolean).join(', ')
   const hasRating = lead.enrichedRating && lead.enrichedRating > 0
   const wc = websiteCopy
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+  /** Combined handler: track CTA click + navigate to contact */
+  const ctaNavigate = () => { onCTAClick(); navigateTo('contact') }
 
   const navSections: { page: PageName; label: string }[] = [
     { page: 'home', label: 'Home' }, { page: 'services', label: 'Services' },
@@ -220,9 +209,9 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
             ))}</div>
             <div className="flex items-center gap-3">
               <div className="hidden md:flex items-center gap-0.5 text-gray-400">
-                <a href="#" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-violet-50 hover:text-violet-500 transition-all"><Facebook size={14} /></a>
-                <a href="#" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-violet-50 hover:text-violet-500 transition-all"><Instagram size={14} /></a>
-                <a href="#" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-violet-50 hover:text-violet-500 transition-all"><GoogleIcon size={13} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-violet-50 hover:text-violet-500 transition-all"><Facebook size={14} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-violet-50 hover:text-violet-500 transition-all"><Instagram size={14} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-violet-50 hover:text-violet-500 transition-all"><GoogleIcon size={13} /></a>
               </div>
               <div className="hidden md:block w-px h-5 bg-gray-200" />
               {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-sm text-gray-500 hover:text-violet-600 font-medium"><Phone size={14} />{formatNavPhone(lead.phone)}</a>)}
@@ -256,7 +245,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                 )}
                 <div className="flex flex-col sm:flex-row gap-4">
                   {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className={`inline-flex items-center justify-center gap-2.5 ${config.primaryHex ? '' : 'bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700'} text-white px-9 py-4 rounded-full font-semibold text-base transition-all shadow-lg hover:-translate-y-0.5`} style={brandGradientStyle(config, 'to right')}><Phone size={18} />Call Now</a>)}
-                  <button onClick={onCTAClick} className="inline-flex items-center justify-center gap-2.5 bg-white border-2 border-gray-200 text-gray-700 px-9 py-4 rounded-full font-semibold text-base hover:border-violet-300 hover:text-violet-600 transition-all group">{config.ctaText}<ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></button>
+                  <button onClick={ctaNavigate} className="inline-flex items-center justify-center gap-2.5 bg-white border-2 border-gray-200 text-gray-700 px-9 py-4 rounded-full font-semibold text-base hover:border-violet-300 hover:text-violet-600 transition-all group">{config.ctaText}<ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></button>
                 </div>
               </div>
               {/* Right — Stats + Quick CTA */}
@@ -345,9 +334,9 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                   {wc?.aboutParagraph1 || `${lead.companyName} delivers expert ${industryLabel}${location ? ` in ${location}` : ''}. Licensed, insured, and dedicated to getting it right.`}
                 </p>
                 <div className="flex flex-wrap gap-8 mb-8">
-                  <div><p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-purple-600">{hasRating ? `${lead.enrichedRating}` : '5.0'}</p><p className="text-xs text-gray-500 mt-1">Rating</p></div>
-                  {lead.enrichedReviews && (<div><p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-purple-600">{lead.enrichedReviews}+</p><p className="text-xs text-gray-500 mt-1">Reviews</p></div>)}
-                  <div><p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-purple-600">100%</p><p className="text-xs text-gray-500 mt-1">Satisfaction</p></div>
+                  <div><p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-purple-600"><AnimatedCounter value={hasRating ? lead.enrichedRating! : 5.0} /></p><p className="text-xs text-gray-500 mt-1">Rating</p></div>
+                  {lead.enrichedReviews && (<div><p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-purple-600"><AnimatedCounter value={lead.enrichedReviews} suffix="+" /></p><p className="text-xs text-gray-500 mt-1">Reviews</p></div>)}
+                  <div><p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-purple-600"><AnimatedCounter value={100} suffix="%" /></p><p className="text-xs text-gray-500 mt-1">Satisfaction</p></div>
                 </div>
                 <button onClick={() => navigateTo('about')} className="inline-flex items-center gap-2 text-sm font-semibold text-violet-600 hover:text-violet-500 transition-colors group">
                   Learn More About Us <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -413,6 +402,12 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
           </div>
         </section>
 
+        {/* HOMEPAGE: TRUST BADGES */}
+        <TrustBadges theme="modern" config={config} rating={lead.enrichedRating} reviewCount={lead.enrichedReviews} />
+
+        {/* HOMEPAGE: BRANDS STRIP */}
+        <BrandsStrip theme="modern" brandNames={wc?.brandNames} industry={lead.industry} />
+
         {/* HOMEPAGE: CTA BAND */}
         <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
@@ -431,35 +426,43 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
           onBackClick={() => navigateTo('home')}
         />
 
+        {/* Service Hero — featured service with photo */}
         {services.length > 0 && (
-          <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
-            <div className="max-w-5xl mx-auto">
-              <div className="divide-y divide-gray-100">
-                {services.slice(0, 8).map((service, i) => (
-                  <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
-                  <div className="group flex items-center justify-between py-5 cursor-pointer hover:pl-2 transition-all duration-300" onClick={onCTAClick}>
-                    <div className="flex items-start gap-5">
-                      <span className="text-xs text-violet-300 font-mono tabular-nums w-6 font-bold">{String(i + 1).padStart(2, '0')}</span>
-                      <div className="flex flex-col min-w-0">
-                        <h3 className="text-base sm:text-lg font-semibold text-gray-800 group-hover:text-violet-600 transition-colors">{service}</h3>
-                        {wc?.serviceDescriptions?.[service] && (
-                          <p className="text-sm text-gray-500 mt-1 leading-relaxed">{wc.serviceDescriptions[service]}</p>
-                        )}
-                      </div>
-                    </div>
-                    <ArrowRight size={16} className="text-gray-300 group-hover:text-violet-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
-                  </div>
-                  </ScrollReveal>
-                ))}
-              </div>
-              <ScrollReveal animation="fade-up" delay={100}>
-              <div className="mt-12 flex justify-center">
-                <button onClick={onCTAClick} className={`flex items-center gap-2 ${config.primaryHex ? '' : 'bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700'} text-white px-7 py-3.5 rounded-full font-semibold text-sm transition-all shadow-md`} style={brandGradientStyle(config, 'to right')}>Get a Free Quote<ArrowRight size={16} /></button>
-              </div>
-              </ScrollReveal>
-            </div>
-          </section>
+          <ServiceHero
+            theme="modern"
+            config={config}
+            service={services[0]}
+            description={wc?.serviceDescriptions?.[services[0]]}
+            photo={photosDist.serviceHero}
+            onCTAClick={ctaNavigate}
+          />
         )}
+
+        {/* Service Grid — rich cards */}
+        {services.length > 1 && (
+          <ServiceGrid
+            theme="modern"
+            services={services}
+            descriptions={wc?.serviceDescriptions}
+            photos={photosDist.serviceAccents}
+          />
+        )}
+
+        {/* Process Timeline — How We Work */}
+        <ProcessTimeline
+          theme="modern"
+          config={config}
+          steps={wc?.processSteps}
+        />
+
+        {/* Why Choose Us */}
+        <WhyChooseUs
+          theme="modern"
+          config={config}
+          companyName={lead.companyName}
+          items={wc?.whyChooseUs || wc?.valueProps}
+          photo={photosDist.aboutPhoto}
+        />
 
         {/* Service area info */}
         {(wc?.serviceAreaText || location) && (
@@ -507,12 +510,10 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                   {wc?.closingBody && <p>{wc.closingBody}</p>}
                 </div>
                 <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {[
-                    { val: hasRating ? `${lead.enrichedRating}` : '5.0', label: 'Rating' },
-                    { val: lead.enrichedReviews ? `${lead.enrichedReviews}+` : '100+', label: 'Reviews' },
-                    { val: '100%', label: 'Satisfaction' },
-                    { val: '24hr', label: 'Response' },
-                  ].map((s, i) => (<div key={i} className="p-4 rounded-xl bg-violet-50/50 border border-violet-100 text-center"><p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-purple-600">{s.val}</p><p className="text-xs text-gray-500 mt-1">{s.label}</p></div>))}
+                  <div className="p-4 rounded-xl bg-violet-50/50 border border-violet-100 text-center"><p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-purple-600"><AnimatedCounter value={hasRating ? lead.enrichedRating! : 5.0} /></p><p className="text-xs text-gray-500 mt-1">Rating</p></div>
+                  <div className="p-4 rounded-xl bg-violet-50/50 border border-violet-100 text-center"><p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-purple-600"><AnimatedCounter value={lead.enrichedReviews || 100} suffix="+" /></p><p className="text-xs text-gray-500 mt-1">Reviews</p></div>
+                  <div className="p-4 rounded-xl bg-violet-50/50 border border-violet-100 text-center"><p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-purple-600"><AnimatedCounter value={100} suffix="%" /></p><p className="text-xs text-gray-500 mt-1">Satisfaction</p></div>
+                  <div className="p-4 rounded-xl bg-violet-50/50 border border-violet-100 text-center"><p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-purple-600">24hr</p><p className="text-xs text-gray-500 mt-1">Response</p></div>
                 </div>
               </div>
               </ScrollReveal>
@@ -539,31 +540,20 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
           </div>
         </section>
 
-        {/* Full Testimonials */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-50/50">
-          <div className="max-w-6xl mx-auto">
-            <ScrollReveal animation="fade-up">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 bg-violet-50 text-violet-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-violet-100">Reviews</div>
-              <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900">What clients say.</h2>
-            </div>
-            </ScrollReveal>
-            <div className={testimonials.length === 1 ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 md:grid-cols-2 gap-6'}>
-              {testimonials.map((r, i) => (
-              <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
-              <div className="bg-white border border-gray-100 rounded-2xl p-7 hover:border-violet-200 transition-all">
-                <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={16} className="text-amber-400 fill-current" />)}</div>
-                <p className="text-gray-600 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
-                <div className="flex items-center gap-3 text-sm pt-3 border-t border-gray-100">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center"><span className="text-violet-600 font-bold text-xs">{r.name[0]}</span></div>
-                  <div><span className="font-semibold text-gray-800">{r.name}</span><span className="text-gray-400"> — {r.loc}</span></div>
-                </div>
-              </div>
-              </ScrollReveal>
-              ))}
-            </div>
-          </div>
-        </section>
+        {/* Full Reviews Section */}
+        <ReviewsSection
+          theme="modern"
+          config={config}
+          location={location}
+          testimonials={[
+            ...(wc?.testimonialQuote ? [{ quote: wc.testimonialQuote, author: wc.testimonialAuthor || 'Verified Customer' }] : []),
+            ...(wc?.additionalTestimonials || []),
+            ...(!wc?.testimonialQuote && !wc?.additionalTestimonials?.length ? [
+              { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, author: 'Sarah M.' },
+              { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we wanted.`, author: 'David R.' },
+            ] : []),
+          ]}
+        />
 
         <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
@@ -589,7 +579,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                 {/* First photo hero-sized */}
                 {photos[0] && (
                   <ScrollReveal animation="zoom-in" delay={100}>
-                  <div className="relative overflow-hidden rounded-2xl group border border-gray-100 hover:border-violet-200 transition-all mb-3 sm:mb-4">
+                  <div className="relative overflow-hidden rounded-2xl group border border-gray-100 hover:border-violet-200 transition-all mb-3 sm:mb-4 cursor-pointer" onClick={() => { setLightboxIndex(0); setLightboxOpen(true) }}>
                     <img src={photos[0]} alt="Project 1" className="w-full object-cover aspect-[4/3] sm:aspect-[16/9] transition-transform duration-700 group-hover:scale-105" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
@@ -600,7 +590,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                     {photos.slice(1, 7).map((photo, i) => (
                       <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
-                      <div className="relative overflow-hidden rounded-2xl group border border-gray-100 hover:border-violet-200 transition-all">
+                      <div className="relative overflow-hidden rounded-2xl group border border-gray-100 hover:border-violet-200 transition-all cursor-pointer" onClick={() => { setLightboxIndex(i + 1); setLightboxOpen(true) }}>
                         <img src={photo} alt={`Project ${i + 2}`} className="w-full object-cover aspect-[4/3] transition-transform duration-700 group-hover:scale-105" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
@@ -616,13 +606,16 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                 </div>
                 <h3 className="text-lg font-bold text-gray-800 mb-2">Portfolio Coming Soon</h3>
                 <p className="text-sm text-gray-500 max-w-md mx-auto">We&apos;re putting together our best project photos. Contact us to see examples of our work.</p>
-                <button onClick={onCTAClick} className={`mt-6 inline-flex items-center gap-2 ${config.primaryHex ? '' : 'bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700'} text-white px-6 py-3 rounded-full font-semibold text-sm transition-all shadow-md`} style={brandGradientStyle(config, 'to right')}>
+                <button onClick={ctaNavigate} className={`mt-6 inline-flex items-center gap-2 ${config.primaryHex ? '' : 'bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700'} text-white px-6 py-3 rounded-full font-semibold text-sm transition-all shadow-md`} style={brandGradientStyle(config, 'to right')}>
                   Request Examples <ArrowRight size={14} />
                 </button>
               </div>
             )}
           </div>
         </section>
+
+        {/* Video Placeholder */}
+        <VideoPlaceholder theme="modern" photo={photos[1]} onCTAClick={ctaNavigate} config={config} />
 
         <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
@@ -654,38 +647,20 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                   {lead.enrichedAddress && (<div className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-sm"><MapPin size={20} className="text-white" /></div><div><p className="text-sm font-bold text-gray-800">{lead.enrichedAddress}</p><p className="text-xs text-gray-400">{location}</p></div></div>)}
                 </div>
                 <div className="flex gap-3 mt-10">
-                  <a href="#" className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-violet-500 hover:border-violet-200 transition-all"><Facebook size={16} /></a>
-                  <a href="#" className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-violet-500 hover:border-violet-200 transition-all"><Instagram size={16} /></a>
-                  <a href="#" className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-violet-500 hover:border-violet-200 transition-all"><GoogleIcon size={16} /></a>
+                  <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-violet-500 hover:border-violet-200 transition-all"><Facebook size={16} /></a>
+                  <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-violet-500 hover:border-violet-200 transition-all"><Instagram size={16} /></a>
+                  <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-violet-500 hover:border-violet-200 transition-all"><GoogleIcon size={16} /></a>
                 </div>
               </div>
               </ScrollReveal>
               <ScrollReveal animation="fade-right" delay={100}>
-              <div className="bg-gray-50 rounded-2xl border border-gray-100 p-7 sm:p-8">
-                {formSubmitted ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
-                      <CheckCircle size={32} className="text-green-500" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Message Sent!</h3>
-                    <p className="text-sm text-gray-500">We&apos;ll get back to you shortly.</p>
-                  </div>
-                ) : (
-                <>
-                <h3 className="text-lg font-bold text-gray-800 mb-1">Send us a message</h3>
-                <p className="text-xs text-gray-400 mb-6">We respond same-day.</p>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div><label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Name</label><input type="text" placeholder="Your name" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-300 placeholder:text-gray-300 transition-all" /></div>
-                    <div><label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Phone</label><input type="tel" placeholder="(555) 555-5555" value={formData.phone} onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-300 placeholder:text-gray-300 transition-all" /></div>
-                  </div>
-                  <div><label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Email</label><input type="email" placeholder="your@email.com" value={formData.email} onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-300 placeholder:text-gray-300 transition-all" /></div>
-                  <div><label className="block text-[11px] font-bold text-gray-400 mb-1.5 uppercase tracking-wider">Project details</label><textarea rows={4} placeholder="Tell us about your project..." value={formData.message} onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-400/30 focus:border-violet-300 placeholder:text-gray-300 transition-all resize-none" /></div>
-                  <button onClick={handleFormSubmit} disabled={formLoading} className={`w-full py-3.5 rounded-xl ${config.primaryHex ? '' : 'bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700'} text-white font-semibold text-sm transition-all shadow-md disabled:opacity-50`} style={brandGradientStyle(config, 'to right')}>{formLoading ? 'Sending...' : 'Send Message'}</button>
-                </div>
-                </>
-                )}
-              </div>
+              <ContactFormEnhanced
+                theme="modern"
+                config={config}
+                previewId={lead.previewId}
+                services={services}
+                companyName={lead.companyName}
+              />
               </ScrollReveal>
             </div>
           </div>
@@ -718,9 +693,9 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
               <p className="text-gray-400 text-sm leading-relaxed mt-3">Professional {industryLabel}{location ? ` in ${location}` : ''}. Quality workmanship, guaranteed.</p>
               {hasRating && (<div className="flex items-center gap-2 mt-4"><div className="flex gap-0.5">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={11} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-amber-400 fill-current' : 'text-gray-700'} />)}</div><span className="text-gray-500 text-xs">{lead.enrichedRating} rating</span></div>)}
               <div className="flex gap-2.5 mt-5">
-                <a href="#" className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-white transition-all"><Facebook size={13} /></a>
-                <a href="#" className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-white transition-all"><Instagram size={13} /></a>
-                <a href="#" className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-white transition-all"><GoogleIcon size={12} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-white transition-all"><Facebook size={13} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-white transition-all"><Instagram size={13} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-white transition-all"><GoogleIcon size={12} /></a>
               </div>
             </div>
             <div>
@@ -735,11 +710,15 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
           </div>
           <div className="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-gray-500 text-xs">&copy; {new Date().getFullYear()} {lead.companyName}. All rights reserved.</p>
-            {location && <p className="text-gray-600 text-xs">Professional {industryLabel} · {location}</p>}
+            <div className="flex items-center gap-4">
+              {location && <p className="text-gray-600 text-xs">Professional {industryLabel} · {location}</p>}
+              <span className="text-gray-700 text-[10px]">Powered by <a href="https://brightautomations.com" target="_blank" rel="noopener noreferrer" className="text-teal-500 hover:text-teal-400 transition-colors">Bright Automations</a></span>
+            </div>
           </div>
         </div>
       </footer>
 
+      <PhotoLightbox photos={photos} isOpen={lightboxOpen} initialIndex={lightboxIndex} onClose={() => setLightboxOpen(false)} />
       <ChatbotWidget companyName={lead.companyName} accentColor={brandAccent(config, '#8b5cf6')} />
       <div className="h-16 sm:h-0" />
     </div>

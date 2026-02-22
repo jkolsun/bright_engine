@@ -21,6 +21,15 @@ import type { PageName } from '../shared/usePageRouter'
 import PageShell from '../shared/PageShell'
 import PageHeader from '../shared/PageHeader'
 import { brandGradientStyle, brandGradientClass, brandAccent } from '../shared/colorUtils'
+import { distributePhotos } from '../shared/photoUtils'
+import { ServiceHero, ServiceGrid, ProcessTimeline, WhyChooseUs } from '../shared/ServiceSections'
+import TrustBadges from '../shared/TrustBadges'
+import BrandsStrip from '../shared/BrandsStrip'
+import ReviewsSection from '../shared/ReviewsSection'
+import ContactFormEnhanced from '../shared/ContactFormEnhanced'
+import PhotoLightbox from '../shared/PhotoLightbox'
+import AnimatedCounter from '../shared/AnimatedCounter'
+import VideoPlaceholder from '../shared/VideoPlaceholder'
 
 // Google "G" icon
 function GoogleIcon({ size = 15, className = '' }: { size?: number; className?: string }) {
@@ -168,9 +177,9 @@ function MobileNav({ isOpen, onClose, companyName, sections, phone, onCallClick,
             ))}
           </nav>
           <div className="flex gap-3 mb-5">
-            <a href="#" className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-orange-400 transition-colors"><Facebook size={16} /></a>
-            <a href="#" className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-orange-400 transition-colors"><Instagram size={16} /></a>
-            <a href="#" className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-orange-400 transition-colors"><GoogleIcon size={16} /></a>
+            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-orange-400 transition-colors"><Facebook size={16} /></a>
+            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-orange-400 transition-colors"><Instagram size={16} /></a>
+            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-orange-400 transition-colors"><GoogleIcon size={16} /></a>
           </div>
           <div className="space-y-3">
             {phone && (
@@ -237,34 +246,14 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [openFAQ, setOpenFAQ] = useState<number | null>(null)
-  const [formData, setFormData] = useState({ name: '', phone: '', email: '', message: '' })
-  const [formSubmitted, setFormSubmitted] = useState(false)
-  const [formLoading, setFormLoading] = useState(false)
-
-  const handleFormSubmit = async () => {
-    if (formLoading || formSubmitted) return
-    if (!formData.name && !formData.phone && !formData.email) return
-    setFormLoading(true)
-    try {
-      await fetch('/api/preview/track', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          previewId: lead.previewId,
-          event: 'contact_form',
-          metadata: { ...formData },
-        }),
-      })
-      setFormSubmitted(true)
-    } catch {
-      // silently fail
-    } finally {
-      setFormLoading(false)
-    }
-  }
 
   const services = lead.enrichedServices || []
   const photos = lead.enrichedPhotos || []
+  const photosDist = distributePhotos(photos)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+  /** Combined handler: track CTA click + navigate to contact */
+  const ctaNavigate = () => { onCTAClick(); navigateTo('contact') }
   const industryLabel = lead.industry.toLowerCase().replace(/_/g, ' ')
   const location = [lead.city, lead.state].filter(Boolean).join(', ')
   const hasRating = lead.enrichedRating && lead.enrichedRating > 0
@@ -323,9 +312,9 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
 
             <div className="flex items-center gap-3">
               <div className="hidden md:flex items-center gap-0.5 text-gray-500">
-                <a href="#" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 hover:text-orange-400 transition-all"><Facebook size={14} /></a>
-                <a href="#" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 hover:text-orange-400 transition-all"><Instagram size={14} /></a>
-                <a href="#" className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 hover:text-orange-400 transition-all"><GoogleIcon size={13} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 hover:text-orange-400 transition-all"><Facebook size={14} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 hover:text-orange-400 transition-all"><Instagram size={14} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5 hover:text-orange-400 transition-all"><GoogleIcon size={13} /></a>
               </div>
               <div className="hidden md:block w-px h-5 bg-white/10" />
               {lead.phone && (
@@ -389,7 +378,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                   <Phone size={22} />Call Now
                 </a>
               )}
-              <button onClick={onCTAClick} className="inline-flex items-center justify-center gap-2.5 bg-white/8 backdrop-blur-sm border border-white/15 text-white px-10 py-5 rounded-xl font-bold text-lg hover:bg-white hover:text-gray-900 transition-all duration-300 group">
+              <button onClick={ctaNavigate} className="inline-flex items-center justify-center gap-2.5 bg-white/8 backdrop-blur-sm border border-white/15 text-white px-10 py-5 rounded-xl font-bold text-lg hover:bg-white hover:text-gray-900 transition-all duration-300 group">
                 {config.ctaText}<ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
@@ -409,7 +398,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                 {hasRating && (
                   <div>
-                    <p className="font-display text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400 mb-1">{lead.enrichedRating}</p>
+                    <p className="font-display text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400 mb-1"><AnimatedCounter value={lead.enrichedRating || 0} /></p>
                     <div className="flex justify-center mb-2 gap-0.5">
                       {Array.from({ length: 5 }, (_, i) => (
                         <Star key={i} size={12} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-orange-400 fill-current' : 'text-gray-700'} />
@@ -420,18 +409,18 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                 )}
                 {lead.enrichedReviews && (
                   <div>
-                    <p className="font-display text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400 mb-1">{lead.enrichedReviews}+</p>
+                    <p className="font-display text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400 mb-1"><AnimatedCounter value={lead.enrichedReviews} suffix="+" /></p>
                     <div className="h-[12px] mb-2" />
                     <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Happy Customers</p>
                   </div>
                 )}
                 <div>
-                  <p className="font-display text-4xl md:text-5xl font-black text-white mb-1">100%</p>
+                  <p className="font-display text-4xl md:text-5xl font-black text-white mb-1"><AnimatedCounter value={100} suffix="%" /></p>
                   <div className="flex justify-center mb-2"><Shield size={12} className="text-orange-400" /></div>
                   <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Licensed & Insured</p>
                 </div>
                 <div>
-                  <p className="font-display text-4xl md:text-5xl font-black text-white mb-1">24hr</p>
+                  <p className="font-display text-4xl md:text-5xl font-black text-white mb-1"><AnimatedCounter value={24} suffix="hr" /></p>
                   <div className="flex justify-center mb-2"><Clock size={12} className="text-orange-400" /></div>
                   <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">Response Time</p>
                 </div>
@@ -504,9 +493,9 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                   {wc?.aboutParagraph1 || `${lead.companyName} — dedicated ${industryLabel} professionals${location ? ` in ${location}` : ''}. We show up on time and get the job done right.`}
                 </p>
                 <div className="flex flex-wrap gap-8 my-8">
-                  <div><p className="font-display text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400">{hasRating ? lead.enrichedRating : '5.0'}</p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Star Rating</p></div>
-                  {lead.enrichedReviews && (<div><p className="font-display text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400">{lead.enrichedReviews}+</p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Reviews</p></div>)}
-                  <div><p className="font-display text-3xl font-black text-white">100%</p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Satisfaction</p></div>
+                  <div><p className="font-display text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400"><AnimatedCounter value={hasRating ? (lead.enrichedRating || 5.0) : 5.0} /></p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Star Rating</p></div>
+                  {lead.enrichedReviews && (<div><p className="font-display text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400"><AnimatedCounter value={lead.enrichedReviews} suffix="+" /></p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Reviews</p></div>)}
+                  <div><p className="font-display text-3xl font-black text-white"><AnimatedCounter value={100} suffix="%" /></p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-1">Satisfaction</p></div>
                 </div>
                 <button onClick={() => navigateTo('about')} className="inline-flex items-center gap-2 text-sm font-bold text-orange-400 hover:text-orange-300 transition-colors group">
                   Learn More About Us <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -583,6 +572,9 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           </div>
         </section>
 
+        <TrustBadges theme="bold" config={config} rating={lead.enrichedRating} reviewCount={lead.enrichedReviews} />
+        <BrandsStrip theme="bold" brandNames={wc?.brandNames} industry={lead.industry} />
+
         {/* HOMEPAGE: CTA BAND */}
         <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
@@ -601,38 +593,10 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           onBackClick={() => navigateTo('home')}
         />
 
-        {services.length > 0 && (
-          <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
-            <div className="max-w-5xl mx-auto">
-              <div className="divide-y divide-gray-800/60">
-                {services.slice(0, 8).map((service, i) => (
-                  <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
-                  <div className="group flex items-center justify-between py-5 cursor-pointer hover:pl-3 transition-all duration-300" onClick={onCTAClick}>
-                    <div className="flex items-start gap-6">
-                      <span className="text-xs text-gray-600 font-mono tabular-nums w-6 font-bold mt-1">{String(i + 1).padStart(2, '0')}</span>
-                      <div className="flex flex-col min-w-0">
-                        <h3 className="text-base sm:text-lg font-bold text-gray-200 group-hover:text-white transition-colors">{service}</h3>
-                        {wc?.serviceDescriptions?.[service] && (
-                          <p className="text-sm text-gray-500 mt-1 leading-relaxed">{wc.serviceDescriptions[service]}</p>
-                        )}
-                      </div>
-                    </div>
-                    <ArrowRight size={16} className="text-gray-700 group-hover:text-orange-400 group-hover:translate-x-1 transition-all flex-shrink-0" />
-                  </div>
-                  </ScrollReveal>
-                ))}
-              </div>
-
-              <ScrollReveal animation="fade-up">
-              <div className="mt-14 flex justify-center">
-                <button onClick={onCTAClick} className={`flex items-center gap-2.5 ${config.primaryHex ? '' : 'bg-gradient-to-r from-orange-500 to-red-500'} text-white px-8 py-4 rounded-xl font-bold text-base hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15 hover:shadow-orange-500/30`} style={brandGradientStyle(config, 'to right')}>
-                  Request a Quote<ArrowRight size={18} />
-                </button>
-              </div>
-              </ScrollReveal>
-            </div>
-          </section>
-        )}
+        {services.length > 0 && <ServiceHero theme="bold" config={config} service={services[0]} description={wc?.serviceDescriptions?.[services[0]]} photo={photosDist.serviceHero} onCTAClick={ctaNavigate} />}
+        {services.length > 1 && <ServiceGrid theme="bold" services={services} descriptions={wc?.serviceDescriptions} photos={photosDist.serviceAccents} />}
+        <ProcessTimeline theme="bold" config={config} steps={wc?.processSteps} />
+        <WhyChooseUs theme="bold" config={config} companyName={lead.companyName} items={wc?.whyChooseUs || wc?.valueProps} photo={photosDist.aboutPhoto} />
 
         {/* Service area info */}
         {(wc?.serviceAreaText || location) && (
@@ -699,9 +663,9 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                 </div>
 
                 <div className="mt-10 flex flex-wrap gap-12">
-                  <div><p className="font-display text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400">{hasRating ? lead.enrichedRating : '5.0'}</p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-2">Star Rating</p></div>
-                  {lead.enrichedReviews && (<div><p className="font-display text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400">{lead.enrichedReviews}+</p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-2">Reviews</p></div>)}
-                  <div><p className="font-display text-4xl font-black text-white">100%</p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-2">Satisfaction</p></div>
+                  <div><p className="font-display text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400"><AnimatedCounter value={hasRating ? (lead.enrichedRating || 5.0) : 5.0} /></p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-2">Star Rating</p></div>
+                  {lead.enrichedReviews && (<div><p className="font-display text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400"><AnimatedCounter value={lead.enrichedReviews} suffix="+" /></p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-2">Reviews</p></div>)}
+                  <div><p className="font-display text-4xl font-black text-white"><AnimatedCounter value={100} suffix="%" /></p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-500 mt-2">Satisfaction</p></div>
                 </div>
               </ScrollReveal>
 
@@ -750,30 +714,10 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         </section>
 
         {/* Full Testimonials */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
-          <div className="max-w-6xl mx-auto">
-            <ScrollReveal animation="fade-up">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">Reviews</div>
-              <h2 className="font-display text-4xl md:text-5xl font-black text-white">What People Say</h2>
-            </div>
-            </ScrollReveal>
-            <div className={testimonials.length === 1 ? 'max-w-2xl mx-auto' : 'grid grid-cols-1 md:grid-cols-2 gap-6'}>
-              {testimonials.map((r, i) => (
-                <ScrollReveal key={i} animation="fade-up" delay={i * 100}>
-                <div className={`bg-gray-950/60 border border-gray-800/40 rounded-2xl p-7 hover:border-orange-500/20 transition-all duration-300 ${testimonials.length === 3 && i === 2 ? 'md:col-span-2 md:max-w-lg md:mx-auto' : ''}`}>
-                  <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={14} className="text-amber-400 fill-current" />)}</div>
-                  <p className="text-gray-300 text-base leading-relaxed mb-5 italic">"{r.quote}"</p>
-                  <div className="flex items-center gap-3 text-xs">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center"><span className="text-white text-[11px] font-bold">{r.name[0]}</span></div>
-                    <div><span className="font-bold text-gray-300">{r.name}</span><span className="text-gray-600"> — {r.loc}</span></div>
-                  </div>
-                </div>
-                </ScrollReveal>
-              ))}
-            </div>
-          </div>
-        </section>
+        <ReviewsSection theme="bold" config={config} location={location} testimonials={[
+          ...(wc?.testimonialQuote ? [{ quote: wc.testimonialQuote, author: wc?.testimonialAuthor || 'Verified Customer' }] : []),
+          ...(wc?.additionalTestimonials || []),
+        ]} />
 
         <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
       </PageShell>
@@ -799,7 +743,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                 {/* First photo hero-sized */}
                 {photos[0] && (
                   <ScrollReveal animation="zoom-in">
-                  <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-orange-500/30 transition-all duration-500 mb-3 sm:mb-4">
+                  <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-orange-500/30 transition-all duration-500 mb-3 sm:mb-4 cursor-pointer" onClick={() => { setLightboxIndex(0); setLightboxOpen(true) }}>
                     <div className="aspect-[4/3] sm:aspect-[16/9]"><img src={photos[0]} alt="Project 1" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" /></div>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
                   </div>
@@ -810,7 +754,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
                     {photos.slice(1, 7).map((photo, i) => (
                       <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
-                      <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-orange-500/30 transition-all duration-500">
+                      <div className="group relative rounded-xl overflow-hidden border border-gray-800/40 hover:border-orange-500/30 transition-all duration-500 cursor-pointer" onClick={() => { setLightboxIndex(i + 1); setLightboxOpen(true) }}>
                         <div className="aspect-[4/3]"><img src={photo} alt={`Project ${i + 2}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" {...{ loading: 'lazy' as const }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} /></div>
                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
                       </div>
@@ -826,7 +770,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                 </div>
                 <h3 className="text-lg font-bold text-white mb-2">Portfolio Coming Soon</h3>
                 <p className="text-sm text-gray-500 max-w-md mx-auto">We&apos;re putting together our best project photos. Contact us to see examples of our work.</p>
-                <button onClick={onCTAClick} className={`mt-6 inline-flex items-center gap-2 ${config.primaryHex ? '' : 'bg-gradient-to-r from-orange-500 to-red-500'} text-white px-6 py-3 rounded-xl font-bold text-sm hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15`} style={brandGradientStyle(config, 'to right')}>
+                <button onClick={ctaNavigate} className={`mt-6 inline-flex items-center gap-2 ${config.primaryHex ? '' : 'bg-gradient-to-r from-orange-500 to-red-500'} text-white px-6 py-3 rounded-xl font-bold text-sm hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15`} style={brandGradientStyle(config, 'to right')}>
                   Request Examples <ArrowRight size={14} />
                 </button>
               </div>
@@ -834,7 +778,11 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           </div>
         </section>
 
+        <VideoPlaceholder theme="bold" photo={photos[1]} onCTAClick={ctaNavigate} config={config} />
+
         <CTABand phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
+
+        <PhotoLightbox photos={photos} isOpen={lightboxOpen} initialIndex={lightboxIndex} onClose={() => setLightboxOpen(false)} />
       </PageShell>
 
       {/* ═══════════════════════════════════════════
@@ -851,70 +799,8 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           onBackClick={() => navigateTo('home')}
         />
 
-        {/* Contact form + info */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-              <ScrollReveal animation="fade-left">
-              <div>
-                <div className="inline-flex items-center gap-2 bg-orange-500/10 text-orange-400 rounded-full px-4 py-1.5 text-xs font-bold mb-5 border border-orange-500/15 uppercase tracking-wider">Contact</div>
-                <h2 className="font-display text-4xl md:text-5xl font-black text-white mb-8 leading-[0.95]">Get Your Free Estimate.</h2>
-                <div className="space-y-5">
-                  {lead.phone && (
-                    <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 group">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-orange-500/15 group-hover:shadow-orange-500/30 transition-shadow"><Phone size={20} className="text-white" /></div>
-                      <div><p className="text-sm font-bold text-white">{lead.phone}</p><p className="text-xs text-gray-500">Call or text anytime</p></div>
-                    </a>
-                  )}
-                  {lead.email && (
-                    <a href={`mailto:${lead.email}`} className="flex items-center gap-4 group">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-red-500/15 group-hover:shadow-red-500/30 transition-shadow"><Mail size={20} className="text-white" /></div>
-                      <div><p className="text-sm font-bold text-white">{lead.email}</p><p className="text-xs text-gray-500">We reply fast</p></div>
-                    </a>
-                  )}
-                  {lead.enrichedAddress && (
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-amber-500/15"><MapPin size={20} className="text-white" /></div>
-                      <div><p className="text-sm font-bold text-white">{lead.enrichedAddress}</p><p className="text-xs text-gray-500">{location}</p></div>
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-3 mt-10">
-                  <a href="#" className="w-10 h-10 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-500 hover:text-orange-400 hover:border-orange-500/30 transition-all"><Facebook size={16} /></a>
-                  <a href="#" className="w-10 h-10 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-500 hover:text-orange-400 hover:border-orange-500/30 transition-all"><Instagram size={16} /></a>
-                  <a href="#" className="w-10 h-10 rounded-lg bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-500 hover:text-orange-400 hover:border-orange-500/30 transition-all"><GoogleIcon size={16} /></a>
-                </div>
-              </div>
-              </ScrollReveal>
-
-              <ScrollReveal animation="fade-right">
-              <div className="bg-gray-900/60 border border-gray-800/40 rounded-2xl p-7 sm:p-8">
-                <h3 className="text-lg font-bold text-white mb-1">Send us a message</h3>
-                <p className="text-xs text-gray-500 mb-6">We'll get back to you fast.</p>
-                {formSubmitted ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
-                      <CheckCircle size={32} className="text-green-500" />
-                    </div>
-                    <h3 className="text-lg font-bold text-white mb-2">Message Sent!</h3>
-                    <p className="text-sm text-gray-500">We&apos;ll get back to you shortly.</p>
-                  </div>
-                ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div><label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Name</label><input type="text" placeholder="Your name" value={formData.name} onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 placeholder:text-gray-600 transition-all" /></div>
-                    <div><label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Phone</label><input type="tel" placeholder="(555) 555-5555" value={formData.phone} onChange={(e) => setFormData(p => ({ ...p, phone: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 placeholder:text-gray-600 transition-all" /></div>
-                  </div>
-                  <div><label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">Email</label><input type="email" placeholder="your@email.com" value={formData.email} onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 placeholder:text-gray-600 transition-all" /></div>
-                  <div><label className="block text-[11px] font-bold text-gray-500 mb-1.5 uppercase tracking-wider">How can we help?</label><textarea rows={4} placeholder="Tell us about your project..." value={formData.message} onChange={(e) => setFormData(p => ({ ...p, message: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-gray-800/60 border border-gray-700/50 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 placeholder:text-gray-600 transition-all resize-none" /></div>
-                  <button onClick={handleFormSubmit} className={`w-full py-3.5 rounded-xl ${config.primaryHex ? '' : 'bg-gradient-to-r from-orange-500 to-red-500'} text-white font-bold text-sm hover:from-orange-600 hover:to-red-600 transition-all shadow-lg shadow-orange-500/15 hover:shadow-orange-500/30 hover:scale-[1.01] active:scale-[0.99]`} style={brandGradientStyle(config, 'to right')}>{formLoading ? 'Sending...' : 'Send Message'}</button>
-                </div>
-                )}
-              </div>
-              </ScrollReveal>
-            </div>
-          </div>
-        </section>
+        {/* Contact form */}
+        <ContactFormEnhanced theme="bold" config={config} previewId={lead.previewId} services={services} companyName={lead.companyName} />
 
         {/* FAQ */}
         <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-900/30">
@@ -948,9 +834,9 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
                 </div>
               )}
               <div className="flex gap-2.5 mt-5">
-                <a href="#" className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-gray-600 hover:text-white hover:bg-gray-800 transition-all"><Facebook size={13} /></a>
-                <a href="#" className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-gray-600 hover:text-white hover:bg-gray-800 transition-all"><Instagram size={13} /></a>
-                <a href="#" className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-gray-600 hover:text-white hover:bg-gray-800 transition-all"><GoogleIcon size={12} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-gray-600 hover:text-white hover:bg-gray-800 transition-all"><Facebook size={13} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-gray-600 hover:text-white hover:bg-gray-800 transition-all"><Instagram size={13} /></a>
+                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center text-gray-600 hover:text-white hover:bg-gray-800 transition-all"><GoogleIcon size={12} /></a>
               </div>
             </div>
             <div>
@@ -973,6 +859,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           <div className="border-t border-gray-900 pt-10 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-gray-600 text-xs">&copy; {new Date().getFullYear()} {lead.companyName}. All rights reserved.</p>
             {location && <p className="text-gray-700 text-xs">Professional {industryLabel} · {location}</p>}
+            <span className="text-gray-700 text-[10px]">Powered by <a href="https://brightautomations.com" target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-400 transition-colors">Bright Automations</a></span>
           </div>
         </div>
       </footer>

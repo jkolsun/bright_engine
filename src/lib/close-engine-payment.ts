@@ -157,6 +157,12 @@ export async function sendPaymentLink(conversationId: string): Promise<{ success
     },
   })
 
+  // SMS alert to admin phone
+  try {
+    const { notifyAdmin } = await import('./notifications')
+    await notifyAdmin('approval', 'Payment Link Ready', `${lead.companyName} approved their site. Review & approve payment link.`)
+  } catch {}
+
   // Transition conversation to PENDING_APPROVAL while waiting for Andrew
   await transitionStage(conversationId, CONVERSATION_STAGES.PENDING_APPROVAL)
 

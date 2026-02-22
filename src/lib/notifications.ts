@@ -9,7 +9,7 @@
 import { prisma } from './db'
 import { sendSMSViaProvider } from './sms-provider'
 
-type NotificationType = 'hot_lead' | 'payment' | 'escalation' | 'edit_request' | 'domain_verified'
+type NotificationType = 'hot_lead' | 'payment' | 'escalation' | 'edit_request' | 'domain_verified' | 'approval'
 
 /**
  * Send an SMS notification to the admin phone number.
