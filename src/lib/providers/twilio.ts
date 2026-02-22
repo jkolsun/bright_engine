@@ -1,8 +1,19 @@
 import twilio from 'twilio'
 import type { SMSProvider, SMSSendOptions, SMSSendResult, SMSInboundMessage } from '../sms-provider'
+import { registerClientInvalidator } from '../api-keys'
+
+// Track active instance for key invalidation
+let _activeProvider: TwilioProvider | null = null
+registerClientInvalidator(() => { _activeProvider?.resetClient() })
 
 export class TwilioProvider implements SMSProvider {
   private client: ReturnType<typeof twilio> | null = null
+
+  constructor() {
+    _activeProvider = this
+  }
+
+  resetClient() { this.client = null }
 
   private getClient() {
     if (!this.client) {

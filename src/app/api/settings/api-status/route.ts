@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifySession } from '@/lib/session'
+import { syncApiKeysToEnv } from '@/lib/api-keys'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,6 +24,9 @@ export async function GET(request: NextRequest) {
     if (!session || session.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }
+
+    // Ensure DB key overrides are loaded into process.env before checking
+    await syncApiKeysToEnv()
 
     const results: ServiceStatus[] = await Promise.all([
       checkInstantly(),

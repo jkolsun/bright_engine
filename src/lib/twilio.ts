@@ -1,8 +1,10 @@
 import twilio from 'twilio'
 import { sendSMSViaProvider, logInboundSMSViaProvider } from './sms-provider'
+import { registerClientInvalidator } from './api-keys'
 
 // Lazy initialize Twilio client (kept for direct Twilio usage like voice/dialer)
 let client: ReturnType<typeof twilio> | null = null
+registerClientInvalidator(() => { client = null })
 
 function getTwilioClient() {
   if (!client) {

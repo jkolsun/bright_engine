@@ -29,6 +29,13 @@ import {
 // ============================================
 
 let anthropicClient: Anthropic | null = null
+
+// Register invalidator so admin API key changes take effect
+try {
+  const { registerClientInvalidator } = require('./api-keys')
+  registerClientInvalidator(() => { anthropicClient = null })
+} catch { /* api-keys module may not be loaded yet */ }
+
 function getAnthropicClient(): Anthropic {
   if (!anthropicClient) {
     anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })

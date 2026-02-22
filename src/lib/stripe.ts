@@ -1,7 +1,9 @@
 import Stripe from 'stripe'
 import { prisma } from './db'
+import { registerClientInvalidator } from './api-keys'
 
 let _stripe: Stripe | null = null
+registerClientInvalidator(() => { _stripe = null })
 
 function validateStripeKey(key: string): void {
   if (key === 'build-placeholder-do-not-use-in-production') {

@@ -1,9 +1,11 @@
 import { Resend } from 'resend'
 import { prisma } from './db'
 import { addSequenceJob } from '../worker/queue'
+import { registerClientInvalidator } from './api-keys'
 
 // Lazy initialize Resend client
 let resendClient: Resend | null = null
+registerClientInvalidator(() => { resendClient = null })
 
 function getResendClient(): Resend {
   if (!resendClient) {
