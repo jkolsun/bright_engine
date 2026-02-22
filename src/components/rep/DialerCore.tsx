@@ -694,15 +694,13 @@ function DispositionPanel({
             </div>
             <p className="text-xs text-gray-400">{currentIndex + 1} of {queueLength}</p>
 
-            {/* For part-time / tel: based, show Connect button */}
-            {isPartTime && (
-              <button
-                onClick={onConnect}
-                className="w-full py-2.5 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 transition-colors"
-              >
-                <CheckCircle size={14} className="inline mr-1" /> They Answered
-              </button>
-            )}
+            {/* Connect button — reps click when someone picks up */}
+            <button
+              onClick={onConnect}
+              className="w-full py-2.5 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 transition-colors"
+            >
+              <CheckCircle size={14} className="inline mr-1" /> They Answered
+            </button>
 
             <button
               onClick={onSkip}
@@ -1563,9 +1561,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       // 6. Update local state
       setQueueResults(prev => ({ ...prev, [lead.id]: outcome }))
 
-      if (isConversation) {
-        setSessionStats(prev => ({ ...prev, connects: Math.max(prev.connects, prev.connects) }))
-      }
+      // connects already incremented by handleConnect() — no double-count needed
 
       // 7. Queue management
       const isTerminal = TERMINAL_OUTCOMES.includes(type)
@@ -1675,13 +1671,13 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           if (isConnected) { e.preventDefault(); handleDisposition('interested') }
           break
         case '2':
-          if (isConnected) { e.preventDefault(); /* Callback needs inline UI, can't auto-fire */ }
+          if (isConnected) { e.preventDefault(); handleDisposition('callback', { callbackDate: new Date(Date.now() + 86400000).toISOString().split('T')[0], callbackTime: '10:00' }) }
           break
         case '3':
-          if (isConnected) { e.preventDefault(); /* Not Interested needs inline UI */ }
+          if (isConnected) { e.preventDefault(); handleDisposition('not_interested') }
           break
         case '4':
-          if (isConnected) { e.preventDefault(); /* Voicemail needs sub-choice */ }
+          if (isConnected) { e.preventDefault(); handleDisposition('voicemail', { sub: 'left' }) }
           break
         case '5':
           if (isConnected) { e.preventDefault(); handleDisposition('no_answer') }
