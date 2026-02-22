@@ -126,7 +126,6 @@ export async function PUT(
           name: true,
           personalPhone: true,
           availableHours: true,
-          stripeConnectStatus: true,
           agreedToTermsAt: true,
         },
       })
@@ -151,11 +150,7 @@ export async function PUT(
         missing.push('availableHours')
       }
 
-      // 4. Stripe status must be active or pending
-      const stripeStatus = existingUser.stripeConnectStatus
-      if (stripeStatus !== 'active' && stripeStatus !== 'pending') missing.push('stripeConnect')
-
-      // 5. Terms must be agreed
+      // 4. Terms must be agreed (Stripe is optional — reps can connect later)
       const termsAgreed = updateData.agreedToTermsAt || existingUser.agreedToTermsAt
       if (!termsAgreed) missing.push('agreedToTermsAt')
 

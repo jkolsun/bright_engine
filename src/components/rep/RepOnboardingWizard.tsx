@@ -90,15 +90,10 @@ export default function RepOnboardingWizard({ userId, onComplete }: RepOnboardin
 
         // Resume from last incomplete step
         if (data.personalPhone && data.availableHours) {
-          if (data.stripeConnectStatus === 'active' || data.stripeConnectStatus === 'pending') {
-            // Stripe started or completed — skip to training/acknowledge
-            if (data.agreedToTermsAt) {
-              setStep(4) // Go to acknowledgment
-            } else {
-              setStep(3) // Go to training
-            }
+          if (data.agreedToTermsAt) {
+            setStep(4) // Go to acknowledgment
           } else {
-            setStep(2) // Go to Stripe step
+            setStep(3) // Go to training (Stripe is optional, skip past it)
           }
         }
       }
@@ -206,7 +201,6 @@ export default function RepOnboardingWizard({ userId, onComplete }: RepOnboardin
     && timezone.length > 0
     && DAYS.some(d => availableHours[d]?.active)
 
-  const stripeValid = stripeDetailsSubmitted || stripeStatus === 'active'
   const allChecked = checks.every(Boolean)
 
   if (loading) {
@@ -272,7 +266,6 @@ export default function RepOnboardingWizard({ userId, onComplete }: RepOnboardin
                 stripeDetailsSubmitted={stripeDetailsSubmitted}
                 connecting={connectingStripe}
                 onConnect={handleConnectStripe}
-                valid={stripeValid}
                 onBack={() => { if (pollingRef.current) clearInterval(pollingRef.current); setStep(1) }}
                 onNext={() => { if (pollingRef.current) clearInterval(pollingRef.current); setStep(3) }}
               />
@@ -474,13 +467,12 @@ interface StepPaymentProps {
   stripeDetailsSubmitted: boolean
   connecting: boolean
   onConnect: () => void
-  valid: boolean
   onBack: () => void
   onNext: () => void
 }
 
 function StepPayment(props: StepPaymentProps) {
-  const { commissionRate, stripeStatus, stripeDetailsSubmitted, connecting, onConnect, valid, onBack, onNext } = props
+  const { commissionRate, stripeStatus, stripeDetailsSubmitted, connecting, onConnect, onBack, onNext } = props
   const commission = (149 * commissionRate).toFixed(2)
 
   const statusBadge = () => {
@@ -543,17 +535,21 @@ function StepPayment(props: StepPaymentProps) {
         </div>
       </div>
 
-      <div className="flex justify-between mt-8">
+      <div className="flex justify-between items-center mt-8">
         <button onClick={onBack} className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium inline-flex items-center gap-1">
           <ChevronLeft size={18} /> Back
         </button>
-        <button
-          onClick={onNext}
-          disabled={!valid}
-          className="px-8 py-2.5 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-2"
-        >
-          Continue <ChevronRight size={18} />
-        </button>
+        <div className="flex items-center gap-3">
+          {!stripeDetailsSubmitted && stripeStatus !== 'active' && (
+            <span className="text-xs text-gray-400">You can set this up later</span>
+          )}
+          <button
+            onClick={onNext}
+            className="px-8 py-2.5 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 transition-colors inline-flex items-center gap-2"
+          >
+            {!stripeDetailsSubmitted && stripeStatus !== 'active' ? 'Skip for Now' : 'Continue'} <ChevronRight size={18} />
+          </button>
+        </div>
       </div>
     </div>
   )
