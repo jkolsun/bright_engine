@@ -117,7 +117,7 @@ export async function middleware(request: NextRequest) {
     '/api/clients',
     '/api/dashboard/stats'
   ]
-  if (adminOnlyPaths.some(p => pathname.startsWith(p)) && !pathname.includes('/diagnostics')) {
+  if (adminOnlyPaths.some(p => pathname.startsWith(p)) && !pathname.includes('/diagnostics') && !pathname.includes('/onboarding')) {
     if (userRole !== 'ADMIN') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
