@@ -58,7 +58,7 @@ interface HistoryItem {
   metadata?: Record<string, unknown>
 }
 
-type CallPhase = 'idle' | 'dialing' | 'connected' | 'on_hold'
+type CallPhase = 'idle' | 'dialing' | 'connected' | 'on_hold' | 'disposing'
 type Disposition = 'interested' | 'callback' | 'not_interested' | 'voicemail' | 'no_answer' | 'bad_number'
 
 const TERMINAL_OUTCOMES = ['interested', 'not_interested', 'bad_number']
@@ -145,7 +145,6 @@ function getTemperature(score: number): { label: string; color: string; bg: stri
 function TopBar({
   basePath, isPartTime, dialerMode, setDialerMode,
   callPhase, callTimer, sessionStats, sessionActive,
-  linesPerDial, setLinesPerDial,
   onStartSession, onEndSession, onClose,
 }: {
   basePath: string
@@ -156,8 +155,6 @@ function TopBar({
   callTimer: number
   sessionStats: { dials: number; connects: number; previewsSent: number }
   sessionActive: boolean
-  linesPerDial: number
-  setLinesPerDial: (n: number) => void
   onStartSession: () => void
   onEndSession: () => void
   onClose: () => void
@@ -167,6 +164,7 @@ function TopBar({
       case 'dialing': return <span className="px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-bold animate-pulse">DIALING...</span>
       case 'connected': return <span className="px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">LIVE {formatTime(callTimer)}</span>
       case 'on_hold': return <span className="px-2.5 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-bold">ON HOLD {formatTime(callTimer)}</span>
+      case 'disposing': return <span className="px-2.5 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-bold">ENDED {formatTime(callTimer)}</span>
       default: return <span className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 text-xs font-medium">IDLE</span>
     }
   }
@@ -216,19 +214,6 @@ function TopBar({
               Single
             </button>
           </div>
-        )}
-
-        {/* Lines selector - power mode only */}
-        {!isPartTime && dialerMode === 'power' && (
-          <select
-            value={linesPerDial}
-            onChange={(e) => setLinesPerDial(Number(e.target.value))}
-            className="text-xs border border-white/30 rounded-md px-2 py-1 bg-white/10 text-white [&>option]:text-gray-900 [&>option]:bg-white"
-          >
-            <option value={1}>1 line</option>
-            <option value={2}>2 lines</option>
-            <option value={3}>3 lines</option>
-          </select>
         )}
 
         {/* Session button */}
@@ -594,7 +579,7 @@ function DispositionPanel({
   const [activeDisposition, setActiveDisposition] = useState<Disposition | null>(null)
   const [showPreviewPrompt, setShowPreviewPrompt] = useState(false)
 
-  // Reset active disposition when call phase changes
+  // Reset active disposition when call phase changes (but NOT when entering disposing)
   useEffect(() => {
     if (callPhase === 'idle' || callPhase === 'dialing') {
       setActiveDisposition(null)
@@ -757,41 +742,49 @@ function DispositionPanel({
           </div>
         )}
 
-        {/* CONNECTED / ON HOLD */}
-        {(callPhase === 'connected' || callPhase === 'on_hold') && (
+        {/* CONNECTED / ON HOLD / DISPOSING */}
+        {(callPhase === 'connected' || callPhase === 'on_hold' || callPhase === 'disposing') && (
           <div className="space-y-4">
-            {/* Timer */}
+            {/* Timer + Status */}
             <div className="text-center py-3">
-              <div className={`text-3xl font-mono font-bold ${callPhase === 'on_hold' ? 'text-purple-600' : 'text-green-600'}`}>
+              <div className={`text-3xl font-mono font-bold ${
+                callPhase === 'disposing' ? 'text-orange-600' :
+                callPhase === 'on_hold' ? 'text-purple-600' : 'text-green-600'
+              }`}>
                 {formatTime(callTimer)}
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {callPhase === 'on_hold' ? 'ON HOLD' : 'CONNECTED'}
+              <p className={`text-xs mt-1 font-medium ${
+                callPhase === 'disposing' ? 'text-orange-500' : 'text-gray-500'
+              }`}>
+                {callPhase === 'disposing' ? 'CALL ENDED — LOG OUTCOME' :
+                 callPhase === 'on_hold' ? 'ON HOLD' : 'CONNECTED'}
               </p>
             </div>
 
-            {/* Call controls */}
-            <div className="flex gap-2">
-              <button
-                onClick={onHold}
-                className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
-                  callPhase === 'on_hold'
-                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {callPhase === 'on_hold' ? <PlayCircle size={13} /> : <PauseCircle size={13} />}
-                {callPhase === 'on_hold' ? 'Resume' : 'Hold'}
-                <kbd className="text-[9px] opacity-50 ml-0.5">⎵</kbd>
-              </button>
-              <button
-                onClick={onHangup}
-                className="flex-1 py-2 bg-red-100 text-red-700 rounded-lg text-xs font-medium hover:bg-red-200 transition-colors flex items-center justify-center gap-1"
-              >
-                <PhoneOff size={13} /> Hang Up
-                <kbd className="text-[9px] opacity-50 ml-0.5">X</kbd>
-              </button>
-            </div>
+            {/* Call controls — only show during live call */}
+            {callPhase !== 'disposing' && (
+              <div className="flex gap-2">
+                <button
+                  onClick={onHold}
+                  className={`flex-1 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
+                    callPhase === 'on_hold'
+                      ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {callPhase === 'on_hold' ? <PlayCircle size={13} /> : <PauseCircle size={13} />}
+                  {callPhase === 'on_hold' ? 'Resume' : 'Hold'}
+                  <kbd className="text-[9px] opacity-50 ml-0.5">⎵</kbd>
+                </button>
+                <button
+                  onClick={onHangup}
+                  className="flex-1 py-2 bg-red-100 text-red-700 rounded-lg text-xs font-medium hover:bg-red-200 transition-colors flex items-center justify-center gap-1"
+                >
+                  <PhoneOff size={13} /> Hang Up
+                  <kbd className="text-[9px] opacity-50 ml-0.5">X</kbd>
+                </button>
+              </div>
+            )}
 
             {/* Preview prompt */}
             {showPreviewPrompt && (
@@ -808,9 +801,13 @@ function DispositionPanel({
               </div>
             )}
 
-            {/* 6 Disposition Buttons */}
-            <div className="border-t border-gray-100 pt-3">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wide font-semibold mb-2">Disposition</p>
+            {/* Disposition Buttons */}
+            <div className={callPhase === 'disposing' ? '' : 'border-t border-gray-100 pt-3'}>
+              <p className={`text-[10px] uppercase tracking-wide font-semibold mb-2 ${
+                callPhase === 'disposing' ? 'text-orange-500' : 'text-gray-400'
+              }`}>
+                {callPhase === 'disposing' ? 'Select Outcome' : 'Disposition'}
+              </p>
 
               <div className="space-y-1.5">
                 {/* 1. Interested */}
@@ -1069,7 +1066,6 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   const [dialerMode, setDialerMode] = useState<'power' | 'single'>(isPartTime ? 'single' : 'power')
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [sessionActive, setSessionActive] = useState(false)
-  const [linesPerDial, setLinesPerDial] = useState(1)
 
   // ----- Call State -----
   const [callPhase, setCallPhase] = useState<CallPhase>('idle')
@@ -1240,7 +1236,11 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   useEffect(() => {
     if (callPhase === 'connected' || callPhase === 'on_hold') {
       timerRef.current = setInterval(() => setCallTimer(t => t + 1), 1000)
+    } else if (callPhase === 'disposing') {
+      // Keep the timer value frozen (shows call duration) but stop counting
+      if (timerRef.current) clearInterval(timerRef.current)
     } else {
+      // idle or dialing — reset timer
       setCallTimer(0)
     }
     return () => {
@@ -1316,7 +1316,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       const res = await fetch('/api/dialer/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'start', mode: dialerMode, linesPerDial }),
+        body: JSON.stringify({ action: 'start', mode: dialerMode }),
       })
       if (res.ok) {
         const data = await res.json()
@@ -1467,7 +1467,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   }
 
   const handleHangup = async () => {
-    if (callPhase === 'idle') return
+    if (callPhase === 'idle' || callPhase === 'disposing') return
 
     try {
       if (activeCallId) {
@@ -1479,19 +1479,17 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       }
     } catch { /* silent */ }
 
-    // If we were dialing (no connection), just go back to idle and skip
+    // If we were dialing (no connection), just go back to idle
     if (callPhase === 'dialing') {
       setCallPhase('idle')
       setActiveCallId(null)
       return
     }
 
-    // If connected/on_hold, keep phase as 'connected' so disposition buttons stay visible.
-    // The call is hung up server-side, but the rep still needs to log the outcome.
-    // Disposition handler will reset callPhase to idle after logging.
+    // If connected/on_hold → transition to disposing phase
+    // Timer freezes, disposition buttons appear, call controls hide
     if (callPhase === 'connected' || callPhase === 'on_hold') {
-      // Stop the timer but keep connected state for disposition
-      if (timerRef.current) clearInterval(timerRef.current)
+      setCallPhase('disposing')
     }
   }
 
@@ -1508,9 +1506,17 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         })
       }
 
+      // Reset call state
+      setCallPhase('idle')
+      setActiveCallId(null)
+
       // Advance to next lead
       if (currentIndex < queue.length - 1) {
         setCurrentIndex(prev => prev + 1)
+        // Auto-dial next in power mode
+        if (dialerMode === 'power' && sessionActive) {
+          setTimeout(() => handleDialRef.current(), 500)
+        }
       } else {
         showToast('End of queue')
       }
@@ -1725,26 +1731,26 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return
       if (processing) return
 
-      const isConnected = callPhase === 'connected' || callPhase === 'on_hold'
+      const canDispose = callPhase === 'connected' || callPhase === 'on_hold' || callPhase === 'disposing'
 
       switch (e.key) {
         case '1':
-          if (isConnected) { e.preventDefault(); handleDisposition('interested') }
+          if (canDispose) { e.preventDefault(); handleDisposition('interested') }
           break
         case '2':
-          if (isConnected) { e.preventDefault(); handleDisposition('callback', { callbackDate: new Date(Date.now() + 86400000).toISOString().split('T')[0], callbackTime: '10:00' }) }
+          if (canDispose) { e.preventDefault(); handleDisposition('callback', { callbackDate: new Date(Date.now() + 86400000).toISOString().split('T')[0], callbackTime: '10:00' }) }
           break
         case '3':
-          if (isConnected) { e.preventDefault(); handleDisposition('not_interested') }
+          if (canDispose) { e.preventDefault(); handleDisposition('not_interested') }
           break
         case '4':
-          if (isConnected) { e.preventDefault(); handleDisposition('voicemail', { sub: 'left' }) }
+          if (canDispose) { e.preventDefault(); handleDisposition('voicemail', { sub: 'left' }) }
           break
         case '5':
-          if (isConnected) { e.preventDefault(); handleDisposition('no_answer') }
+          if (canDispose) { e.preventDefault(); handleDisposition('no_answer') }
           break
         case '6':
-          if (isConnected) { e.preventDefault(); handleDisposition('bad_number') }
+          if (canDispose) { e.preventDefault(); handleDisposition('bad_number') }
           break
         case 'p': case 'P':
           e.preventDefault(); handleTextPreview()
@@ -1756,7 +1762,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           e.preventDefault(); handleHangup()
           break
         case ' ':
-          if (isConnected) { e.preventDefault(); handleHold() }
+          if (callPhase === 'connected' || callPhase === 'on_hold') { e.preventDefault(); handleHold() }
           break
       }
     }
@@ -1835,8 +1841,6 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         callTimer={callTimer}
         sessionStats={sessionStats}
         sessionActive={sessionActive}
-        linesPerDial={linesPerDial}
-        setLinesPerDial={setLinesPerDial}
         onStartSession={handleStartSession}
         onEndSession={handleEndSession}
         onClose={() => setDialerActive(false)}
