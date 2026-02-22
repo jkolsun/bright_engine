@@ -16,7 +16,11 @@ export async function GET(request: NextRequest) {
     const folders = await prisma.leadFolder.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        _count: { select: { leads: true } },
+        _count: {
+          select: {
+            leads: { where: { status: { notIn: ['CLOSED_LOST', 'PAID'] } } },
+          },
+        },
       },
     })
 
