@@ -34,6 +34,7 @@ export default function RepsLayout({
   const [feedbackCategory, setFeedbackCategory] = useState('general')
   const [feedbackSending, setFeedbackSending] = useState(false)
   const [feedbackSent, setFeedbackSent] = useState(false)
+  const [showWelcomeToast, setShowWelcomeToast] = useState(false)
 
   // Onboarding gate
   const [showOnboarding, setShowOnboarding] = useState(false)
@@ -121,7 +122,7 @@ export default function RepsLayout({
     return (
       <RepOnboardingWizard
         userId={onboardingUserId}
-        onComplete={() => { setShowOnboarding(false); router.refresh() }}
+        onComplete={() => { setShowOnboarding(false); setShowWelcomeToast(true); router.refresh(); setTimeout(() => setShowWelcomeToast(false), 5000) }}
       />
     )
   }
@@ -285,6 +286,24 @@ export default function RepsLayout({
                 </>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Welcome Toast */}
+      {showWelcomeToast && (
+        <div className="fixed top-6 right-6 z-50 animate-fade-in">
+          <div className="bg-white border border-green-200 rounded-xl shadow-lg p-4 flex items-center gap-3 max-w-sm">
+            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+              <CheckCircle size={20} className="text-green-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900 text-sm">You&apos;re all set!</p>
+              <p className="text-gray-500 text-xs">Your leads are ready. Start dialing!</p>
+            </div>
+            <button onClick={() => setShowWelcomeToast(false)} className="text-gray-400 hover:text-gray-600 ml-2">
+              <X size={16} />
+            </button>
           </div>
         </div>
       )}

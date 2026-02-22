@@ -505,7 +505,18 @@ function RepsSection() {
                                 </div>
                                 <div>
                                   <p className="text-gray-500 font-medium mb-1">Stripe Connect ID</p>
-                                  <p className="text-gray-900 font-mono text-xs">{rep.stripeConnectId || 'None'}</p>
+                                  {rep.stripeConnectId ? (
+                                    <a
+                                      href={`https://dashboard.stripe.com/connect/accounts/${rep.stripeConnectId}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:text-blue-800 font-mono text-xs underline"
+                                    >
+                                      {rep.stripeConnectId}
+                                    </a>
+                                  ) : (
+                                    <p className="text-gray-900 font-mono text-xs">None</p>
+                                  )}
                                 </div>
                                 <div>
                                   <p className="text-gray-500 font-medium mb-1">Terms Agreed</p>

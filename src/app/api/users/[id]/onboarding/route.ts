@@ -10,16 +10,15 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
-
-    const { id } = params
 
     // Rep can only read own onboarding, admin can read any
     if (session.role !== 'ADMIN' && session.userId !== id) {
@@ -66,16 +65,15 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params
     const sessionCookie = request.cookies.get('session')?.value
     const session = sessionCookie ? await verifySession(sessionCookie) : null
     if (!session) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
-
-    const { id } = params
 
     // Rep can only update own onboarding, admin can update any
     if (session.role !== 'ADMIN' && session.userId !== id) {
@@ -120,34 +118,50 @@ export async function PUT(
       }
     }
 
-    // Validate onboardingComplete: only allow setting to true if stripe + terms conditions met
+    // Validate onboardingComplete: only allow setting to true if ALL conditions met
     if (updateData.onboardingComplete === true) {
       const existingUser = await prisma.user.findUnique({
         where: { id },
-        select: { stripeConnectStatus: true, agreedToTermsAt: true },
+        select: {
+          name: true,
+          personalPhone: true,
+          availableHours: true,
+          stripeConnectStatus: true,
+          agreedToTermsAt: true,
+        },
       })
 
       if (!existingUser) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 })
       }
 
-      // Check stripe status from DB or incoming data
-      const stripeStatus = existingUser.stripeConnectStatus
-      const stripeOk = stripeStatus === 'active' || stripeStatus === 'pending'
+      const missing: string[] = []
 
-      // Check agreedToTermsAt from incoming data or DB
-      const termsAgreed = updateData.agreedToTermsAt || existingUser.agreedToTermsAt
+      // 1. Name must be set
+      const finalName = updateData.name ?? existingUser.name
+      if (!finalName || !String(finalName).trim()) missing.push('name')
 
-      if (!stripeOk) {
-        return NextResponse.json(
-          { error: 'Stripe Connect must be active or pending to complete onboarding' },
-          { status: 400 }
-        )
+      // 2. Personal phone must be set and valid
+      const finalPhone = updateData.personalPhone ?? existingUser.personalPhone
+      if (!finalPhone || String(finalPhone).replace(/\D/g, '').length < 10) missing.push('personalPhone')
+
+      // 3. Available hours must have at least 1 active day
+      const finalHours = updateData.availableHours ?? existingUser.availableHours
+      if (!finalHours || typeof finalHours !== 'object' || !Object.values(finalHours).some((d: any) => d?.active)) {
+        missing.push('availableHours')
       }
 
-      if (!termsAgreed) {
+      // 4. Stripe status must be active or pending
+      const stripeStatus = existingUser.stripeConnectStatus
+      if (stripeStatus !== 'active' && stripeStatus !== 'pending') missing.push('stripeConnect')
+
+      // 5. Terms must be agreed
+      const termsAgreed = updateData.agreedToTermsAt || existingUser.agreedToTermsAt
+      if (!termsAgreed) missing.push('agreedToTermsAt')
+
+      if (missing.length > 0) {
         return NextResponse.json(
-          { error: 'Terms must be agreed to before completing onboarding' },
+          { error: 'Incomplete onboarding', missing },
           { status: 400 }
         )
       }
