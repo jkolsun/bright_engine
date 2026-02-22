@@ -498,6 +498,22 @@ export async function processCloseEngineInbound(
     claudeResponse.nextStage = CONVERSATION_STAGES.PAYMENT_SENT
   }
 
+  // 3.6 Safety net: if stage is PENDING_APPROVAL but no pending PAYMENT_LINK approval exists,
+  // re-trigger the payment flow. This handles cases where the stage transitioned but the
+  // approval was cleaned up, denied, or never created (e.g. previous sendPaymentLink error).
+  if (
+    context.conversation.stage === 'PENDING_APPROVAL' &&
+    !claudeResponse.nextStage
+  ) {
+    const pendingApproval = await prisma.approval.findFirst({
+      where: { leadId: lead.id, gate: 'PAYMENT_LINK', status: 'PENDING' },
+    })
+    if (!pendingApproval) {
+      console.log(`[CloseEngine] PENDING_APPROVAL stage but no pending PAYMENT_LINK approval for ${lead.companyName} — re-triggering payment flow`)
+      claudeResponse.nextStage = CONVERSATION_STAGES.PAYMENT_SENT
+    }
+  }
+
   // 4. Handle stage transition (skip PAYMENT_SENT — sendPaymentLink handles that)
   if (claudeResponse.nextStage && claudeResponse.nextStage !== CONVERSATION_STAGES.PAYMENT_SENT) {
     await transitionStage(conversationId, claudeResponse.nextStage)

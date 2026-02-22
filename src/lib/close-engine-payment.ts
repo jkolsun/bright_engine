@@ -102,7 +102,16 @@ export async function sendPaymentLink(conversationId: string): Promise<{ success
     draftContent = `Here's your payment link to go live: ${paymentUrl || '[no link configured]'}\n\n$${config.firstMonthTotal} gets your site built and launched, plus monthly hosting at $${config.monthlyHosting}/month. You can cancel anytime.\n\nOnce you pay, we'll have your site live within 48 hours!`
   }
 
-  // Always create a PAYMENT_LINK approval with the Stripe link visible for admin review.
+  // Dedup guard: skip if a pending PAYMENT_LINK approval already exists for this lead
+  const existingApproval = await prisma.approval.findFirst({
+    where: { leadId: lead.id, gate: 'PAYMENT_LINK', status: 'PENDING' },
+  })
+  if (existingApproval) {
+    console.log(`[CloseEngine] PAYMENT_LINK approval already exists for ${lead.companyName} (${existingApproval.id}) — skipping duplicate`)
+    return { success: true }
+  }
+
+  // Create a PAYMENT_LINK approval with the Stripe link visible for admin review.
   await prisma.approval.create({
     data: {
       gate: 'PAYMENT_LINK',
