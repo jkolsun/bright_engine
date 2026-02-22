@@ -269,26 +269,34 @@ export async function getRepCommissionSummary(repId: string) {
   }
 }
 
-export async function markCommissionPaid(commissionId: string, paidAt?: Date) {
+export async function markCommissionPaid(
+  commissionId: string,
+  options?: {
+    wiseTransferId?: string
+    payoutBatchId?: string
+    paidAt?: Date
+  }
+) {
   try {
     const commission = await prisma.commission.update({
       where: { id: commissionId },
       data: {
         status: 'PAID',
-        paidAt: paidAt || new Date()
+        paidAt: options?.paidAt || new Date(),
+        wiseTransferId: options?.wiseTransferId || null,
+        payoutBatchId: options?.payoutBatchId || null,
       },
       include: {
         rep: { select: { name: true, email: true } }
       }
     })
 
-    // Notify rep
     await prisma.notification.create({
       data: {
-        type: 'PAYMENT_RECEIVED', // Use existing type
+        type: 'PAYMENT_RECEIVED',
         title: 'Commission Paid',
-        message: `Your $${commission.amount} commission has been paid`,
-        metadata: { commissionId: commission.id }
+        message: `Your $${commission.amount.toFixed(2)} commission has been paid${options?.wiseTransferId ? ` (Transfer: ${options.wiseTransferId})` : ''}`,
+        metadata: { commissionId: commission.id, wiseTransferId: options?.wiseTransferId }
       }
     })
 

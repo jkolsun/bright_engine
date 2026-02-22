@@ -86,6 +86,10 @@ export async function POST(request: NextRequest) {
         break
       }
 
+      case 'charge.refunded':
+        await handleChargeRefunded(event.data.object as Stripe.Charge)
+        break
+
       default:
         console.log(`Unhandled event type: ${event.type}`)
     }
@@ -505,4 +509,109 @@ async function handleSubscriptionCancelled(subscription: Stripe.Subscription) {
       console.error('Win-back email sequence failed to queue:', err)
     }
   }
+}
+
+function safeParseJSON(str: string | null): Record<string, any> {
+  if (!str) return {}
+  try { return JSON.parse(str) } catch { return {} }
+}
+
+async function handleChargeRefunded(charge: Stripe.Charge) {
+  const refundAmount = (charge.amount_refunded || 0) / 100
+  console.log(`[Stripe Webhook] charge.refunded — $${refundAmount}`)
+
+  // Find the Revenue record via stripePaymentId
+  const revenue = await prisma.revenue.findFirst({
+    where: {
+      OR: [
+        { stripePaymentId: charge.payment_intent as string },
+        { stripePaymentId: charge.id },
+      ],
+    },
+    include: {
+      client: {
+        include: {
+          lead: { select: { assignedToId: true } },
+        },
+      },
+    },
+  })
+
+  if (!revenue) {
+    console.warn('[Stripe Webhook] No revenue record found for refunded charge')
+    return
+  }
+
+  // Mark revenue as refunded
+  await prisma.revenue.update({
+    where: { id: revenue.id },
+    data: { status: 'REFUNDED' as any },
+  })
+
+  // Find linked commission
+  const commission = await prisma.commission.findFirst({
+    where: {
+      clientId: revenue.clientId,
+      amount: { gt: 0 },
+      status: { in: ['PENDING', 'APPROVED', 'PAID'] },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  if (!commission) {
+    console.log('[Stripe Webhook] No commission linked to refunded revenue')
+    return
+  }
+
+  if (commission.status === 'PENDING' || commission.status === 'APPROVED') {
+    // Not yet paid to rep — just reject it
+    await prisma.commission.update({
+      where: { id: commission.id },
+      data: {
+        status: 'REJECTED',
+        notes: JSON.stringify({
+          ...safeParseJSON(commission.notes),
+          rejectedReason: 'Client refund',
+          refundAmount,
+          refundedAt: new Date().toISOString(),
+          originalChargeId: charge.id,
+        }),
+      },
+    })
+    console.log(`[Stripe Webhook] Commission ${commission.id} REJECTED — client refunded before payout`)
+  } else if (commission.status === 'PAID') {
+    // Already paid to rep — create negative clawback
+    await prisma.commission.create({
+      data: {
+        repId: commission.repId,
+        clientId: commission.clientId,
+        type: commission.type,
+        amount: -commission.amount,
+        status: 'PENDING',
+        notes: JSON.stringify({
+          clawbackOf: commission.id,
+          reason: 'Client refund',
+          refundAmount,
+          refundedAt: new Date().toISOString(),
+          originalChargeId: charge.id,
+        }),
+      },
+    })
+    console.log(`[Stripe Webhook] Clawback created for commission ${commission.id} — $${commission.amount}`)
+  }
+
+  // Notify admin
+  await prisma.notification.create({
+    data: {
+      type: 'PAYMENT_FAILED',
+      title: 'Client Refund — Commission Affected',
+      message: `$${refundAmount} refund for ${revenue.client?.companyName || 'Unknown'}. Commission ${commission.status === 'PAID' ? 'clawback created' : 'rejected'}.`,
+      metadata: {
+        commissionId: commission.id,
+        revenueId: revenue.id,
+        refundAmount,
+        action: commission.status === 'PAID' ? 'clawback' : 'rejected',
+      },
+    },
+  })
 }

@@ -24,6 +24,7 @@ interface EarningsData {
   totalEarned: number
   thisMonth: number
   pending: { amount: number; count: number }
+  paidTotal: number
   commissions: Commission[]
   activeLeads: number
   paymentLinksSent: number
@@ -55,7 +56,7 @@ export default function EarningsPage() {
       if (!commRes.ok) {
         setData({
           totalEarned: 0, thisMonth: 0,
-          pending: { amount: 0, count: 0 },
+          pending: { amount: 0, count: 0 }, paidTotal: 0,
           commissions: [], activeLeads: 0, paymentLinksSent: 0, dealsThisMonth: 0,
         })
         return
@@ -91,16 +92,23 @@ export default function EarningsPage() {
 
       const now = new Date()
 
+      // Total Earned = everything except REJECTED
       const totalEarned = commissions
-        .filter(c => c.status === 'APPROVED' || c.status === 'PAID')
+        .filter(c => c.status !== 'REJECTED')
         .reduce((sum, c) => sum + (c.amount || 0), 0)
 
+      // This month (all non-REJECTED)
       const thisMonth = commissions
         .filter(c => {
           const d = new Date(c.createdAt)
           return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() &&
-            (c.status === 'APPROVED' || c.status === 'PAID')
+            c.status !== 'REJECTED'
         })
+        .reduce((sum, c) => sum + (c.amount || 0), 0)
+
+      // Paid total
+      const paidTotal = commissions
+        .filter(c => c.status === 'PAID')
         .reduce((sum, c) => sum + (c.amount || 0), 0)
 
       const pendingComms = commissions.filter(c => c.status === 'PENDING')
@@ -115,7 +123,7 @@ export default function EarningsPage() {
       }).length
 
       setData({
-        totalEarned, thisMonth, pending, commissions,
+        totalEarned, thisMonth, pending, paidTotal, commissions,
         activeLeads, paymentLinksSent, dealsThisMonth,
       })
     } catch (err) {
@@ -159,13 +167,13 @@ export default function EarningsPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'PENDING':
-        return { icon: <Clock size={12} />, label: 'Pending', className: 'bg-amber-100 text-amber-700', reason: 'Awaiting admin approval' }
+        return { icon: <Clock size={12} />, label: 'Pending', className: 'bg-amber-100 text-amber-700', reason: 'Awaiting Friday payout' }
       case 'APPROVED':
-        return { icon: <CheckCircle size={12} />, label: 'Approved', className: 'bg-green-100 text-green-700', reason: 'Payment confirmed — ready for payout' }
+        return { icon: <CheckCircle size={12} />, label: 'Approved', className: 'bg-green-100 text-green-700', reason: 'Ready for payout' }
       case 'PAID':
-        return { icon: <DollarSign size={12} />, label: 'Paid', className: 'bg-emerald-100 text-emerald-700', reason: 'Payout released' }
+        return { icon: <DollarSign size={12} />, label: 'Paid', className: 'bg-emerald-100 text-emerald-700', reason: 'Sent via Wise' }
       case 'REJECTED':
-        return { icon: <XCircle size={12} />, label: 'Rejected', className: 'bg-red-100 text-red-700', reason: 'Commission declined — contact admin' }
+        return { icon: <XCircle size={12} />, label: 'Refunded', className: 'bg-red-100 text-red-700', reason: 'Client refunded' }
       default:
         return { icon: <AlertCircle size={12} />, label: status, className: 'bg-gray-100 text-gray-700', reason: '' }
     }
@@ -222,14 +230,6 @@ export default function EarningsPage() {
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <EarningsCard
-          icon={<DollarSign size={20} />}
-          iconBg="bg-teal-50"
-          iconColor="text-teal-600"
-          label="Total Earned"
-          value={formatCurrency(data.totalEarned)}
-          subtitle="Approved + paid"
-        />
-        <EarningsCard
           icon={<TrendingUp size={20} />}
           iconBg="bg-purple-50"
           iconColor="text-purple-600"
@@ -242,16 +242,24 @@ export default function EarningsPage() {
           iconBg="bg-amber-50"
           iconColor="text-amber-600"
           label="Pending"
-          value={`${formatCurrency(data.pending.amount)}`}
-          subtitle={`${data.pending.count} deal${data.pending.count !== 1 ? 's' : ''}`}
+          value={formatCurrency(data.pending.amount)}
+          subtitle="Awaiting payout"
         />
         <EarningsCard
-          icon={<Target size={20} />}
+          icon={<CheckCircle size={20} />}
           iconBg="bg-emerald-50"
           iconColor="text-emerald-600"
-          label="Deals This Month"
-          value={String(data.dealsThisMonth)}
-          subtitle="Commissions earned"
+          label="Paid"
+          value={formatCurrency(data.paidTotal)}
+          subtitle="Sent via Wise"
+        />
+        <EarningsCard
+          icon={<DollarSign size={20} />}
+          iconBg="bg-teal-50"
+          iconColor="text-teal-600"
+          label="Total"
+          value={formatCurrency(data.totalEarned)}
+          subtitle="All-time earnings"
         />
       </div>
 

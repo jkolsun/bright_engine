@@ -391,9 +391,11 @@ model Commission {
   period    String?
   notes     String?
   createdAt DateTime         @default(now()) @map("created_at")
-  paidAt    DateTime?        @map("paid_at")
-  client    Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  rep       User             @relation(fields: [repId], references: [id])
+  paidAt          DateTime?        @map("paid_at")
+  wiseTransferId  String?          @map("wise_transfer_id")
+  payoutBatchId   String?          @map("payout_batch_id")
+  client          Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  rep             User             @relation(fields: [repId], references: [id])
 
   @@index([repId])
   @@index([status])
