@@ -35,6 +35,14 @@ export async function GET(request: NextRequest) {
               stagingUrl: true,
               leadId: true,
             }
+          },
+          lead: {
+            select: {
+              id: true,
+              previewId: true,
+              previewUrl: true,
+              buildStep: true,
+            }
           }
         },
         orderBy: { createdAt: 'desc' },

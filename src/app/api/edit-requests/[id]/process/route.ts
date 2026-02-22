@@ -11,6 +11,7 @@ export const maxDuration = 300 // AI editing can take minutes
  *
  * Triggers AI edit processing for a new/stuck edit request.
  * Used from the admin Edit Queue UI to manually kick off processing.
+ * Ensures leadId is set on the edit request before processing.
  */
 export async function POST(
   request: NextRequest,
@@ -40,6 +41,22 @@ export async function POST(
       )
     }
 
+    // Ensure leadId is set — look it up from client if missing
+    if (!editRequest.leadId && editRequest.client?.leadId) {
+      await prisma.editRequest.update({
+        where: { id },
+        data: { leadId: editRequest.client.leadId },
+      })
+    }
+
+    // Reset status for retry if it was failed
+    if (editRequest.editFlowState === 'failed') {
+      await prisma.editRequest.update({
+        where: { id },
+        data: { editFlowState: 'pending', status: 'new' },
+      })
+    }
+
     // Allow admin to override complexity
     const body = await request.json().catch(() => ({}))
     const complexity = body.complexity || editRequest.complexityTier || 'medium'
@@ -53,7 +70,7 @@ export async function POST(
     })
 
     const updated = await prisma.editRequest.findUnique({ where: { id } })
-    return NextResponse.json({ editRequest: updated, message: 'Processing started' })
+    return NextResponse.json({ editRequest: updated, message: 'Processing complete' })
   } catch (error) {
     console.error('Error processing edit request:', error)
     return NextResponse.json({ error: 'Failed to process edit request' }, { status: 500 })
