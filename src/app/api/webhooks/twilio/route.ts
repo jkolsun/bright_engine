@@ -33,18 +33,35 @@ export async function POST(request: NextRequest) {
     const withoutPlus = digits.startsWith('1') ? digits : `1${digits}`
     const justNumber = digits.startsWith('1') ? digits.slice(1) : digits
 
-    // Find lead or client by phone (try multiple formats)
+    // Find lead by phone — prefer the one with an active Close Engine conversation
+    const phoneFilter = {
+      OR: [
+        { phone: from },
+        { phone: withPlus },
+        { phone: withoutPlus },
+        { phone: justNumber },
+        { phone: digits },
+      ]
+    }
+
+    // First: try to find a lead that has an active Close Engine conversation
     let lead = await prisma.lead.findFirst({
       where: {
-        OR: [
-          { phone: from },
-          { phone: withPlus },
-          { phone: withoutPlus },
-          { phone: justNumber },
-          { phone: digits },
-        ]
-      }
+        ...phoneFilter,
+        closeConversation: {
+          stage: { notIn: ['COMPLETED', 'CLOSED_LOST'] },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
     })
+
+    // Fallback: any lead with this phone (most recent first)
+    if (!lead) {
+      lead = await prisma.lead.findFirst({
+        where: phoneFilter,
+        orderBy: { createdAt: 'desc' },
+      })
+    }
 
     let client = await prisma.client.findFirst({
       where: {
