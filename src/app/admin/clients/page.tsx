@@ -1092,30 +1092,36 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
 // ═══════════════════════════════════════════════
 function EditQueueView({ editRequests, loading, onAction, onBatchApprove, onRefresh }: any) {
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set())
-  const router = useRouter()
+  const [completingIds, setCompletingIds] = useState<Set<string>>(new Set())
+
+  // Helper: resolve the lead ID from all possible sources
+  const getLeadId = (req: any): string | null =>
+    req.leadId || req.lead?.id || req.client?.leadId || null
+
+  // Helper: build preview URL
+  const getPreviewUrl = (req: any): string | null => {
+    const leadId = getLeadId(req)
+    if (req.lead?.previewUrl) return req.lead.previewUrl
+    if (req.lead?.previewId) return `/preview/${req.lead.previewId}`
+    if (leadId) return `/preview/${leadId}`
+    return null
+  }
 
   // ── Categorize edits by their actual flow state ──
-  // New/unprocessed — need to be kicked off
   const unprocessed = editRequests.filter((r: any) => r.status === 'new' && r.editFlowState === 'pending')
-  // AI is currently working
   const aiProcessing = editRequests.filter((r: any) => r.status === 'ai_processing' || r.editFlowState === 'ai_editing')
-  // AI applied, awaiting admin approval (medium edits)
   const awaitingApproval = editRequests.filter((r: any) =>
     r.status === 'ready_for_review' && (r.editFlowState === 'awaiting_approval' || (r.editFlowState === 'escalated' && r.postEditHtml))
   )
-  // Complex — needs manual editing (no AI result or escalated without AI attempt)
   const needsManualEdit = editRequests.filter((r: any) =>
     r.status === 'ready_for_review' && r.editFlowState === 'escalated' && !r.postEditHtml
   )
-  // AI failed — needs manual intervention
   const failed = editRequests.filter((r: any) => r.editFlowState === 'failed' && r.status !== 'rejected')
-  // Completed (approved + live)
   const completed = editRequests.filter((r: any) => r.status === 'approved' || r.status === 'live' || r.status === 'rejected')
-  // Auto-applied by AI (simple edits that are done)
   const autoApplied = completed.filter((r: any) => r.approvedBy === 'ai_auto')
   const manuallyCompleted = completed.filter((r: any) => r.approvedBy !== 'ai_auto')
 
-  const actionableCount = awaitingApproval.length + needsManualEdit.length + failed.length
+  const actionableCount = awaitingApproval.length + needsManualEdit.length + failed.length + unprocessed.length
   const completedWithTime = completed.filter((r: any) => r.approvedAt && r.createdAt)
   const avgTurnaround = completedWithTime.length > 0
     ? Math.round(completedWithTime.reduce((sum: number, r: any) => sum + (new Date(r.approvedAt).getTime() - new Date(r.createdAt).getTime()) / (1000 * 60 * 60), 0) / completedWithTime.length * 10) / 10
@@ -1141,8 +1147,19 @@ function EditQueueView({ editRequests, loading, onAction, onBatchApprove, onRefr
     await Promise.all(ids.map(id => handleProcess(id)))
   }
 
-  const openInEditor = (leadId: string) => {
-    router.push(`/admin/build-queue?edit=${leadId}`)
+  const handleComplete = async (id: string) => {
+    setCompletingIds(prev => new Set(prev).add(id))
+    try {
+      await fetch(`/api/edit-requests/${id}/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      onRefresh()
+    } catch (error) {
+      console.error('Error completing edit:', error)
+    } finally {
+      setCompletingIds(prev => { const n = new Set(prev); n.delete(id); return n })
+    }
   }
 
   return (
@@ -1169,7 +1186,7 @@ function EditQueueView({ editRequests, loading, onAction, onBatchApprove, onRefr
         </Card>
       ) : (
         <>
-          {/* ── Unprocessed: New edits that haven't been kicked off ── */}
+          {/* ── Unprocessed: New edits that need to be kicked off ── */}
           {unprocessed.length > 0 && (
             <Card className="p-4 border-blue-200 bg-blue-50/50">
               <div className="flex items-center justify-between mb-3">
@@ -1181,34 +1198,44 @@ function EditQueueView({ editRequests, loading, onAction, onBatchApprove, onRefr
                 </Button>
               </div>
               <div className="space-y-2">
-                {unprocessed.map((req: any) => (
-                  <div key={req.id} className="bg-white rounded-lg p-3 text-sm">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <span className="font-medium">{req.client?.companyName}</span>
-                        <span className="text-gray-500 ml-2">— {req.requestText}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
+                {unprocessed.map((req: any) => {
+                  const leadId = getLeadId(req)
+                  const previewUrl = getPreviewUrl(req)
+                  return (
+                    <div key={req.id} className="bg-white rounded-lg p-3 text-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <span className="font-medium">{req.client?.companyName}</span>
+                          <span className="text-gray-500 ml-2">— {req.requestText}</span>
+                        </div>
                         <Badge variant="secondary" className="capitalize">{req.complexityTier}</Badge>
-                        <Button
-                          variant="outline" size="sm"
-                          disabled={processingIds.has(req.id)}
-                          onClick={() => handleProcess(req.id)}
-                        >
+                      </div>
+                      {req.aiInterpretation && (
+                        <div className="text-xs text-blue-600 mt-1">AI: {req.aiInterpretation}</div>
+                      )}
+                      <div className="flex gap-2 mt-2">
+                        <Button size="sm" disabled={processingIds.has(req.id)} onClick={() => handleProcess(req.id)}>
                           {processingIds.has(req.id) ? 'Processing...' : 'Process'}
                         </Button>
+                        {previewUrl && (
+                          <Button variant="outline" size="sm" onClick={() => window.open(previewUrl, '_blank')}>
+                            <ExternalLink size={14} className="mr-1" /> View Site
+                          </Button>
+                        )}
+                        {leadId && (
+                          <Button variant="outline" size="sm" onClick={() => window.open(`/site-editor/${leadId}`, '_blank')}>
+                            <Edit3 size={14} className="mr-1" /> Open in Editor
+                          </Button>
+                        )}
                       </div>
                     </div>
-                    {req.aiInterpretation && (
-                      <div className="text-xs text-blue-600 mt-1">AI: {req.aiInterpretation}</div>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </Card>
           )}
 
-          {/* ── AI Processing: Currently being edited by AI ── */}
+          {/* ── AI Processing ── */}
           {aiProcessing.length > 0 && (
             <Card className="p-4 bg-yellow-50/50 border-yellow-200">
               <h3 className="font-semibold text-yellow-800 mb-3 flex items-center gap-2">
@@ -1228,7 +1255,7 @@ function EditQueueView({ editRequests, loading, onAction, onBatchApprove, onRefr
             </Card>
           )}
 
-          {/* ── Awaiting Approval: AI applied, needs admin sign-off (medium tier) ── */}
+          {/* ── Awaiting Approval: AI applied, needs admin sign-off ── */}
           {awaitingApproval.length > 0 && (
             <Card className="p-4 border-indigo-200 bg-indigo-50/30">
               <div className="flex items-center justify-between mb-3">
@@ -1242,86 +1269,148 @@ function EditQueueView({ editRequests, loading, onAction, onBatchApprove, onRefr
                 )}
               </div>
               <div className="space-y-3">
-                {awaitingApproval.map((req: any) => (
-                  <EditReviewCard key={req.id} request={req} onAction={onAction} onOpenEditor={openInEditor} />
-                ))}
+                {awaitingApproval.map((req: any) => {
+                  const leadId = getLeadId(req)
+                  const previewUrl = getPreviewUrl(req)
+                  return (
+                    <div key={req.id} className="bg-white border rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{req.client?.companyName}</div>
+                          <div className="text-sm text-gray-600 mt-1">Request: &quot;{req.requestText}&quot;</div>
+                          {req.editSummary && (
+                            <div className="text-sm text-green-700 mt-1 bg-green-50 rounded px-2 py-1 inline-block">
+                              AI applied: {req.editSummary.replace('[AI attempt] ', '')}
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-400 mt-1">
+                            {formatTimeSince(req.createdAt)} via {req.requestChannel}
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="capitalize">{req.complexityTier}</Badge>
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <Button size="sm" onClick={() => onAction(req.id, 'approved')} className="bg-green-600 hover:bg-green-700">
+                          <CheckCircle size={14} className="mr-1" /> Approve & Push
+                        </Button>
+                        {previewUrl && (
+                          <Button variant="outline" size="sm" onClick={() => window.open(previewUrl, '_blank')}>
+                            <ExternalLink size={14} className="mr-1" /> View Site
+                          </Button>
+                        )}
+                        {leadId && (
+                          <Button variant="outline" size="sm" onClick={() => window.open(`/site-editor/${leadId}`, '_blank')}>
+                            <Edit3 size={14} className="mr-1" /> Edit More
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm" onClick={() => onAction(req.id, 'rejected')}>
+                          <X size={14} className="mr-1" /> Reject
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </Card>
           )}
 
-          {/* ── Manual Edit Required: Complex edits, admin needs to edit in builder ── */}
+          {/* ── Manual Edit Required: Complex edits ── */}
           {needsManualEdit.length > 0 && (
             <Card className="p-4 border-amber-200 bg-amber-50/30">
               <h3 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
                 <AlertTriangle size={16} /> Manual Edit Required ({needsManualEdit.length})
               </h3>
               <div className="space-y-3">
-                {needsManualEdit.map((req: any) => (
-                  <div key={req.id} className="bg-white border rounded-lg p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-900">{req.client?.companyName}</div>
-                        <div className="text-sm text-gray-600 mt-1">&quot;{req.requestText}&quot;</div>
-                        {req.aiInterpretation && (
-                          <div className="text-xs text-blue-600 mt-1">AI interpretation: {req.aiInterpretation}</div>
-                        )}
-                        <div className="text-xs text-gray-400 mt-1">
-                          {formatTimeSince(req.createdAt)} via {req.requestChannel}
+                {needsManualEdit.map((req: any) => {
+                  const leadId = getLeadId(req)
+                  const previewUrl = getPreviewUrl(req)
+                  return (
+                    <div key={req.id} className="bg-white border rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{req.client?.companyName}</div>
+                          <div className="text-sm text-gray-600 mt-1">&quot;{req.requestText}&quot;</div>
+                          {req.aiInterpretation && (
+                            <div className="text-xs text-blue-600 mt-1">AI interpretation: {req.aiInterpretation}</div>
+                          )}
+                          <div className="text-xs text-gray-400 mt-1">
+                            {formatTimeSince(req.createdAt)} via {req.requestChannel}
+                          </div>
                         </div>
+                        <Badge className="bg-amber-100 text-amber-800 border-amber-300">Complex</Badge>
                       </div>
-                      <Badge className="bg-amber-100 text-amber-800 border-amber-300">Complex</Badge>
-                    </div>
-                    <div className="flex gap-2 mt-3">
-                      {req.client?.leadId && (
-                        <Button size="sm" onClick={() => openInEditor(req.client.leadId)}>
-                          <Edit3 size={14} className="mr-1" /> Open in Editor
+                      <div className="flex gap-2 mt-3">
+                        {leadId && (
+                          <Button size="sm" onClick={() => window.open(`/site-editor/${leadId}`, '_blank')}>
+                            <Edit3 size={14} className="mr-1" /> Open in Editor
+                          </Button>
+                        )}
+                        {previewUrl && (
+                          <Button variant="outline" size="sm" onClick={() => window.open(previewUrl, '_blank')}>
+                            <ExternalLink size={14} className="mr-1" /> View Site
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm" onClick={() => handleComplete(req.id)} disabled={completingIds.has(req.id)}>
+                          <CheckCircle size={14} className="mr-1" /> {completingIds.has(req.id) ? 'Completing...' : 'Mark Complete'}
                         </Button>
-                      )}
-                      <Button variant="outline" size="sm" onClick={() => handleProcess(req.id, 'medium')} disabled={processingIds.has(req.id)}>
-                        {processingIds.has(req.id) ? 'Processing...' : 'Let AI Try'}
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => onAction(req.id, 'rejected')}>
-                        <X size={14} className="mr-1" /> Dismiss
-                      </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleProcess(req.id, 'medium')} disabled={processingIds.has(req.id)}>
+                          {processingIds.has(req.id) ? 'Processing...' : 'Let AI Try'}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => onAction(req.id, 'rejected')}>
+                          <X size={14} className="mr-1" /> Dismiss
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </Card>
           )}
 
-          {/* ── Failed: AI edit failed, needs manual intervention ── */}
+          {/* ── Failed: AI edit failed ── */}
           {failed.length > 0 && (
             <Card className="p-4 border-red-200 bg-red-50/30">
               <h3 className="font-semibold text-red-800 mb-3 flex items-center gap-2">
                 <XCircle size={16} /> Failed — Needs Attention ({failed.length})
               </h3>
               <div className="space-y-3">
-                {failed.map((req: any) => (
-                  <div key={req.id} className="bg-white border rounded-lg p-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="font-medium text-gray-900">{req.client?.companyName}</div>
-                        <div className="text-sm text-gray-600 mt-1">&quot;{req.requestText}&quot;</div>
-                        <div className="text-xs text-red-600 mt-1">AI edit failed — manual edit needed</div>
+                {failed.map((req: any) => {
+                  const leadId = getLeadId(req)
+                  const previewUrl = getPreviewUrl(req)
+                  return (
+                    <div key={req.id} className="bg-white border rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="font-medium text-gray-900">{req.client?.companyName}</div>
+                          <div className="text-sm text-gray-600 mt-1">&quot;{req.requestText}&quot;</div>
+                          <div className="text-xs text-red-600 mt-1">AI edit failed — manual edit needed</div>
+                        </div>
+                        <Badge className="bg-red-100 text-red-800 border-red-300">Failed</Badge>
                       </div>
-                      <Badge className="bg-red-100 text-red-800 border-red-300">Failed</Badge>
-                    </div>
-                    <div className="flex gap-2 mt-3">
-                      {req.client?.leadId && (
-                        <Button size="sm" onClick={() => openInEditor(req.client.leadId)}>
-                          <Edit3 size={14} className="mr-1" /> Open in Editor
+                      <div className="flex gap-2 mt-3">
+                        {leadId && (
+                          <Button size="sm" onClick={() => window.open(`/site-editor/${leadId}`, '_blank')}>
+                            <Edit3 size={14} className="mr-1" /> Open in Editor
+                          </Button>
+                        )}
+                        {previewUrl && (
+                          <Button variant="outline" size="sm" onClick={() => window.open(previewUrl, '_blank')}>
+                            <ExternalLink size={14} className="mr-1" /> View Site
+                          </Button>
+                        )}
+                        <Button variant="outline" size="sm" onClick={() => handleComplete(req.id)} disabled={completingIds.has(req.id)}>
+                          <CheckCircle size={14} className="mr-1" /> {completingIds.has(req.id) ? 'Completing...' : 'Mark Complete'}
                         </Button>
-                      )}
-                      <Button variant="outline" size="sm" onClick={() => handleProcess(req.id)} disabled={processingIds.has(req.id)}>
-                        {processingIds.has(req.id) ? 'Retrying...' : 'Retry AI'}
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => onAction(req.id, 'rejected')}>
-                        <X size={14} className="mr-1" /> Dismiss
-                      </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleProcess(req.id)} disabled={processingIds.has(req.id)}>
+                          {processingIds.has(req.id) ? 'Retrying...' : 'Retry AI'}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => onAction(req.id, 'rejected')}>
+                          <X size={14} className="mr-1" /> Dismiss
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </Card>
           )}
@@ -1375,49 +1464,6 @@ function formatTimeSince(dateStr: string | null) {
   if (hours < 1) return `${Math.round(hours * 60)}m ago`
   if (hours < 24) return `${hours}h ago`
   return `${Math.round(hours / 24)}d ago`
-}
-
-function EditReviewCard({ request, onAction, onOpenEditor }: any) {
-  const previewUrl = request.client?.stagingUrl || (request.leadId ? `https://preview.brightautomations.org/preview/${request.leadId}` : null)
-
-  return (
-    <div className="bg-white border rounded-lg p-4">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="font-medium text-gray-900">{request.client?.companyName}</div>
-          <div className="text-sm text-gray-600 mt-1">Request: &quot;{request.requestText}&quot;</div>
-          {request.editSummary && (
-            <div className="text-sm text-green-700 mt-1 bg-green-50 rounded px-2 py-1 inline-block">
-              AI applied: {request.editSummary.replace('[AI attempt] ', '')}
-            </div>
-          )}
-          <div className="text-xs text-gray-400 mt-1">
-            {formatTimeSince(request.createdAt)} via {request.requestChannel}
-            {request.aiInterpretation && <span className="ml-2 text-blue-600">AI: {request.aiInterpretation}</span>}
-          </div>
-        </div>
-        <Badge variant="secondary" className="capitalize">{request.complexityTier}</Badge>
-      </div>
-      <div className="flex gap-2 mt-3">
-        <Button size="sm" onClick={() => onAction(request.id, 'approved')} className="bg-green-600 hover:bg-green-700">
-          <CheckCircle size={14} className="mr-1" /> Approve & Push
-        </Button>
-        {previewUrl && (
-          <Button variant="outline" size="sm" onClick={() => window.open(previewUrl, '_blank')}>
-            <ExternalLink size={14} className="mr-1" /> Preview
-          </Button>
-        )}
-        {request.client?.leadId && (
-          <Button variant="outline" size="sm" onClick={() => onOpenEditor(request.client.leadId)}>
-            <Edit3 size={14} className="mr-1" /> Edit More
-          </Button>
-        )}
-        <Button variant="outline" size="sm" onClick={() => onAction(request.id, 'rejected')}>
-          <X size={14} className="mr-1" /> Reject
-        </Button>
-      </div>
-    </div>
-  )
 }
 
 
