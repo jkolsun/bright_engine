@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, Component, ReactNode } from 'react'
-import DialerCore from '@/components/rep/DialerCore'
+import DialerLayout from '@/components/dialer/DialerLayout'
 
 class DialerErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   constructor(props: { children: ReactNode }) {
@@ -50,7 +50,7 @@ export default function PartTimeDialerPage() {
   return (
     <DialerErrorBoundary>
       <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading dialer...</div>}>
-        <DialerCore portalType="PART_TIME" basePath="/part-time" />
+        <DialerLayout />
       </Suspense>
     </DialerErrorBoundary>
   )

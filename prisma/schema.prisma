@@ -34,6 +34,16 @@ model User {
   stripeConnectId          String?                   @map("stripe_connect_id")
   stripeConnectStatus      String?                   @map("stripe_connect_status")
   timezone                 String?                   @default("America/New_York")
+  twilioNumber1            String?                   @map("twilio_number_1")
+  twilioNumber2            String?                   @map("twilio_number_2")
+  vmRecordingUrl           String?                   @map("vm_recording_url")
+  vmRecordingSid           String?                   @map("vm_recording_sid")
+  autoDialEnabled          Boolean                   @default(false) @map("auto_dial_enabled")
+  onboardingCompletedAt    DateTime?                 @map("onboarding_completed_at")
+  outboundVmUrl            String?                   @map("outbound_vm_url")
+  inboundVmUrl             String?                   @map("inbound_vm_url")
+  outboundVmApproved       Boolean                   @default(false) @map("outbound_vm_approved")
+  inboundVmApproved        Boolean                   @default(false) @map("inbound_vm_approved")
   activities               Activity[]
   callScorings             CallScoring[]             @relation("RepScoring")
   calls                    Call[]                    @relation("RepCalls")
@@ -47,6 +57,11 @@ model User {
   messages                 Message[]
   outboundEvents           OutboundEvent[]           @relation("RepOutboundEvents")
   repTasks                 RepTask[]                 @relation("RepTasks")
+  dialerCallsAsRep         DialerCall[]              @relation("RepDialerCalls")
+  dialerSessionsNew        DialerSessionNew[]        @relation("RepDialerSessionsNew")
+  repUpsellTags            UpsellTag[]               @relation("RepUpsellTags")
+  repCallbacks             CallbackSchedule[]        @relation("RepCallbacks")
+  ownedLeads               Lead[]                    @relation("OwnedLeads")
 
   @@map("users")
 }
@@ -128,6 +143,10 @@ model Lead {
   onboardingStep         Int                      @default(0) @map("onboarding_step")
   aiFollowup             Boolean                  @default(false) @map("ai_followup")
   handoffContext         Json?                    @map("handoff_context")
+  secondaryPhone         String?                  @map("secondary_phone")
+  smsPreferredNumber     String?                  @default("primary") @map("sms_preferred_number")
+  dncAt                  DateTime?                @map("dnc_at")
+  ownerRepId             String?                  @map("owner_rep_id")
   activities             Activity[]
   buildStatus            BuildStatus?
   calls                  Call[]
@@ -145,6 +164,10 @@ model Lead {
   repTasks               RepTask[]
   touchRecommendations   TouchRecommendation[]
   editRequests           EditRequest[]
+  ownerRep               User?                    @relation("OwnedLeads", fields: [ownerRepId], references: [id])
+  dialerCalls            DialerCall[]             @relation("DialerCalls")
+  upsellTags             UpsellTag[]              @relation("LeadUpsellTags")
+  callbackSchedules      CallbackSchedule[]       @relation("LeadCallbacks")
 
   @@index([status])
   @@index([assignedToId])
@@ -161,6 +184,8 @@ model Lead {
   @@index([personalization])
   @@index([previewUrl])
   @@index([buildStep])
+  @@index([ownerRepId])
+  @@index([dncAt])
   @@map("leads")
 }
 
@@ -806,6 +831,7 @@ model UpsellProduct {
   deletedAt           DateTime?     @map("deleted_at")
   repPitch            String?       @map("rep_pitch")
   pitches             UpsellPitch[]
+  upsellTags          UpsellTag[]
 
   @@map("upsell_products")
 }
@@ -1090,6 +1116,7 @@ enum LeadSource {
 enum LeadPriority {
   HOT
   WARM
+  NORMAL
   COLD
 }
 
@@ -1276,4 +1303,137 @@ enum RecommendationType {
   NURTURE
   RE_ENGAGEMENT
   ESCALATION
+}
+
+// ==========================================
+// Power Dialer V2 Models
+// ==========================================
+
+enum DialerCallStatus {
+  INITIATED
+  RINGING
+  CONNECTED
+  COMPLETED
+  FAILED
+  NO_ANSWER
+  BUSY
+  VOICEMAIL
+}
+
+enum CallDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum CallbackStatus {
+  PENDING
+  COMPLETED
+  MISSED
+  CANCELLED
+}
+
+model DialerCall {
+  id                      String           @id @default(cuid())
+  leadId                  String           @map("lead_id")
+  repId                   String           @map("rep_id")
+  sessionId               String?          @map("session_id")
+  twilioCallSid           String?          @unique @map("twilio_call_sid")
+  status                  DialerCallStatus @default(INITIATED)
+  direction               CallDirection    @default(OUTBOUND)
+  startedAt               DateTime         @default(now()) @map("started_at")
+  connectedAt             DateTime?        @map("connected_at")
+  endedAt                 DateTime?        @map("ended_at")
+  duration                Int?
+  recordingUrl            String?          @map("recording_url")
+  recordingSid            String?          @map("recording_sid")
+  dispositionResult       String?          @map("disposition_result")
+  dispositionPath         Json?            @map("disposition_path")
+  wasRecommended          Boolean          @default(false) @map("was_recommended")
+  previewSentDuringCall   Boolean          @default(false) @map("preview_sent_during_call")
+  previewSentChannel      String?          @map("preview_sent_channel")
+  previewOpenedDuringCall Boolean          @default(false) @map("preview_opened_during_call")
+  ctaClickedDuringCall    Boolean          @default(false) @map("cta_clicked_during_call")
+  vmDropped               Boolean          @default(false) @map("vm_dropped")
+  vmDroppedAt             DateTime?        @map("vm_dropped_at")
+  vmDropSid               String?          @map("vm_drop_sid")
+  notes                   String?
+  phoneNumberUsed         String?          @map("phone_number_used")
+  amdResult               String?          @map("amd_result")
+
+  lead                    Lead             @relation("DialerCalls", fields: [leadId], references: [id], onDelete: Cascade)
+  rep                     User             @relation("RepDialerCalls", fields: [repId], references: [id])
+  session                 DialerSessionNew? @relation(fields: [sessionId], references: [id])
+  upsellTags              UpsellTag[]
+  callbackSchedules       CallbackSchedule[]
+
+  @@index([repId, startedAt])
+  @@index([leadId])
+  @@index([sessionId])
+  @@map("dialer_calls")
+}
+
+model DialerSessionNew {
+  id                 String       @id @default(cuid())
+  repId              String       @map("rep_id")
+  startedAt          DateTime     @default(now()) @map("started_at")
+  endedAt            DateTime?    @map("ended_at")
+  isActive           Boolean      @default(true) @map("is_active")
+  autoDialEnabled    Boolean      @default(false) @map("auto_dial_enabled")
+  totalCalls         Int          @default(0) @map("total_calls")
+  connectedCalls     Int          @default(0) @map("connected_calls")
+  voicemails         Int          @default(0)
+  noAnswers          Int          @default(0) @map("no_answers")
+  avgCallDuration    Float        @default(0) @map("avg_call_duration")
+  previewsSent       Int          @default(0) @map("previews_sent")
+  previewsOpened     Int          @default(0) @map("previews_opened")
+  ctaClicks          Int          @default(0) @map("cta_clicks")
+  callbacksScheduled Int          @default(0) @map("callbacks_scheduled")
+  interestedCount    Int          @default(0) @map("interested_count")
+  notInterestedCount Int          @default(0) @map("not_interested_count")
+
+  rep                User         @relation("RepDialerSessionsNew", fields: [repId], references: [id])
+  calls              DialerCall[]
+
+  @@index([repId, isActive])
+  @@map("dialer_sessions_new")
+}
+
+model UpsellTag {
+  id           String        @id @default(cuid())
+  leadId       String        @map("lead_id")
+  productId    String        @map("product_id")
+  addedByRepId String        @map("added_by_rep_id")
+  callId       String?       @map("call_id")
+  productName  String        @map("product_name")
+  productPrice Float         @map("product_price")
+  taggedAt     DateTime      @default(now()) @map("tagged_at")
+  removedAt    DateTime?     @map("removed_at")
+
+  lead         Lead          @relation("LeadUpsellTags", fields: [leadId], references: [id], onDelete: Cascade)
+  product      UpsellProduct @relation(fields: [productId], references: [id])
+  rep          User          @relation("RepUpsellTags", fields: [addedByRepId], references: [id])
+  call         DialerCall?   @relation(fields: [callId], references: [id])
+
+  @@index([leadId])
+  @@index([productId])
+  @@map("upsell_tags")
+}
+
+model CallbackSchedule {
+  id                String         @id @default(cuid())
+  leadId            String         @map("lead_id")
+  repId             String         @map("rep_id")
+  scheduledAt       DateTime       @map("scheduled_at")
+  completedAt       DateTime?      @map("completed_at")
+  status            CallbackStatus @default(PENDING)
+  notes             String?
+  createdFromCallId String?        @map("created_from_call_id")
+  createdAt         DateTime       @default(now()) @map("created_at")
+
+  lead              Lead           @relation("LeadCallbacks", fields: [leadId], references: [id], onDelete: Cascade)
+  rep               User           @relation("RepCallbacks", fields: [repId], references: [id])
+  call              DialerCall?    @relation(fields: [createdFromCallId], references: [id])
+
+  @@index([repId, status, scheduledAt])
+  @@map("callback_schedules")
 }

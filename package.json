@@ -33,6 +33,7 @@
     "@radix-ui/react-toast": "^1.1.5",
     "@radix-ui/react-tooltip": "^1.0.7",
     "@tanstack/react-table": "^8.12.0",
+    "@twilio/voice-sdk": "^2.18.0",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.13.0",
     "city-timezones": "^1.2.1",

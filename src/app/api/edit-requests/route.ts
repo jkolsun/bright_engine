@@ -69,9 +69,20 @@ export async function POST(request: NextRequest) {
 
     const data = await request.json()
 
+    // Auto-resolve leadId from client if not provided
+    let resolvedLeadId = data.leadId || undefined
+    if (!resolvedLeadId && data.clientId) {
+      const client = await prisma.client.findUnique({
+        where: { id: data.clientId },
+        select: { leadId: true },
+      })
+      resolvedLeadId = client?.leadId || undefined
+    }
+
     const editRequest = await prisma.editRequest.create({
       data: {
         clientId: data.clientId,
+        leadId: resolvedLeadId,
         requestText: data.requestText,
         requestChannel: data.requestChannel || 'sms',
         aiInterpretation: data.aiInterpretation,

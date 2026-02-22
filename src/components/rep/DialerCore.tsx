@@ -1320,6 +1320,18 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   }
 
   const handleStartSession = async () => {
+    // VM approval pre-flight check
+    try {
+      const meRes = await fetch('/api/auth/me')
+      if (meRes.ok) {
+        const { user } = await meRes.json()
+        if (user.outboundVmUrl && !user.outboundVmApproved) {
+          showToast('Your outbound voicemail is pending approval. You\'ll be able to dial once Andrew reviews it.', 'error')
+          return
+        }
+      }
+    } catch { /* proceed if check fails */ }
+
     try {
       const res = await fetch('/api/dialer/settings', {
         method: 'POST',

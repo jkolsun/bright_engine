@@ -82,6 +82,18 @@ export function getSMSProvider(): SMSProvider {
  * provider.send() directly. Sends via the configured provider AND logs to the database.
  */
 export async function sendSMSViaProvider(options: SMSSendOptions): Promise<SMSSendResult> {
+  // Bug 1: DNC check — block ALL outbound SMS to DNC numbers
+  try {
+    const { isDNC } = await import('./dnc-check')
+    const blocked = await isDNC(options.to, options.leadId)
+    if (blocked) {
+      console.warn(`[SMS] DNC blocked: ${options.to} (trigger: ${options.trigger})`)
+      return { success: false, error: 'Number is on Do Not Call list' }
+    }
+  } catch (dncErr) {
+    console.error('[SMS] DNC check failed, allowing send:', dncErr)
+  }
+
   const provider = getSMSProvider()
 
   try {

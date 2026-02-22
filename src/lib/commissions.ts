@@ -163,8 +163,13 @@ export async function processRevenueCommission(revenueId: string) {
 
     if (!revenue) return null
 
+    // Gap 1: Use ownerRepId (dialer) OR assignedToId (original) for commission
+    const lead = revenue.client?.lead
+    const repUser = lead?.assignedTo
+    const ownerRepId = (lead as any)?.ownerRepId as string | null
+
     // Handle unassigned leads — cannot create Commission with null repId
-    if (!revenue.client?.lead?.assignedTo) {
+    if (!repUser && !ownerRepId) {
       const companyName = revenue.client?.companyName || 'Unknown Company'
       console.warn(`[Commission] No rep assigned for revenue ${revenueId} (${companyName}) — skipping commission`)
 
@@ -200,7 +205,8 @@ export async function processRevenueCommission(revenueId: string) {
       return null
     }
 
-    const repId = revenue.client.lead.assignedTo.id
+    // Gap 1: Prefer ownerRepId (dialer-set) over assignedToId
+    const repId = ownerRepId || repUser!.id
     const calculation = await calculateCommission({
       repId,
       clientId: revenue.clientId!,

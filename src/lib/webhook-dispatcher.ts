@@ -109,7 +109,28 @@ export const WebhookEvents = {
   REP_PERFORMANCE_ALERT: (repId: string, metric: string, value: number, threshold: number) => ({
     type: 'rep.performance_alert',
     data: { repId, metric, value, threshold }
-  })
+  }),
+
+  // Dialer Events
+  DIALER_CALL_COMPLETED: (callId: string, leadId: string, repId: string, disposition: string, duration?: number) => ({
+    type: 'dialer.call_completed',
+    data: { callId, leadId, repId, disposition, duration }
+  }),
+
+  DIALER_LEAD_INTERESTED: (callId: string, leadId: string, repId: string, disposition: string, companyName?: string) => ({
+    type: 'dialer.lead_interested',
+    data: { callId, leadId, repId, disposition, companyName }
+  }),
+
+  DIALER_UPSELL_TAGGED: (leadId: string, productId: string, productName: string, repId: string) => ({
+    type: 'dialer.upsell_tagged',
+    data: { leadId, productId, productName, repId }
+  }),
+
+  DIALER_DNC: (leadId: string, phone: string, repId: string) => ({
+    type: 'dialer.dnc',
+    data: { leadId, phone, repId }
+  }),
 }
 
 // Batch dispatch for multiple events

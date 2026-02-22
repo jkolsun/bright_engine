@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { calculateEngagementScore } from '@/lib/engagement-scoring'
 import { dispatchWebhook, WebhookEvents } from '@/lib/webhook-dispatcher'
+import { pushToRep, pushToAllAdmins } from '@/lib/dialer-events'
 
 export const dynamic = 'force-dynamic'
 
@@ -69,6 +70,55 @@ export async function POST(request: NextRequest) {
         actor: 'client',
       }
     })
+
+    // Bug 7: If there's an active dialer call for this lead, push SSE + update call flags
+    try {
+      const activeCall = await prisma.dialerCall.findFirst({
+        where: {
+          leadId: lead.id,
+          endedAt: null,
+          status: { in: ['INITIATED', 'RINGING', 'CONNECTED'] },
+        },
+        select: { id: true, repId: true },
+        orderBy: { startedAt: 'desc' },
+      })
+
+      if (activeCall) {
+        const isPreviewOpen = event === 'page_view' || event === 'time_on_page' || event === 'return_visit' || event === 'scroll_depth'
+        const isCtaClick = event === 'cta_click' || event === 'call_click' || event === 'contact_form'
+
+        if (isPreviewOpen) {
+          await prisma.dialerCall.update({
+            where: { id: activeCall.id },
+            data: { previewOpenedDuringCall: true },
+          })
+          const sseEvent = {
+            type: 'PREVIEW_OPENED' as const,
+            data: { callId: activeCall.id, leadId: lead.id, event, duration },
+            timestamp: new Date().toISOString(),
+          }
+          pushToRep(activeCall.repId, sseEvent)
+          pushToAllAdmins({ ...sseEvent, data: { ...sseEvent.data, repId: activeCall.repId } })
+        }
+
+        if (isCtaClick) {
+          await prisma.dialerCall.update({
+            where: { id: activeCall.id },
+            data: { ctaClickedDuringCall: true },
+          })
+          const sseEvent = {
+            type: 'CTA_CLICKED' as const,
+            data: { callId: activeCall.id, leadId: lead.id, event },
+            timestamp: new Date().toISOString(),
+          }
+          pushToRep(activeCall.repId, sseEvent)
+          pushToAllAdmins({ ...sseEvent, data: { ...sseEvent.data, repId: activeCall.repId } })
+        }
+      }
+    } catch (dialerErr) {
+      // Non-critical — don't break preview tracking
+      console.warn('[Preview Track] Dialer SSE push failed:', dialerErr)
+    }
 
     // If high engagement, mark as HOT and dispatch webhook
     if (duration && duration > 60 || event === 'cta_click' || event === 'call_click' || event === 'contact_form') {

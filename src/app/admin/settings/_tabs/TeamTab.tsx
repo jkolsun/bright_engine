@@ -574,6 +574,84 @@ function RepsSection() {
                                   <p className="text-gray-900">{rep.commissionRate ? `${(rep.commissionRate * 100).toFixed(0)}%` : 'Not set'}</p>
                                 </div>
                               </div>
+                              {/* Voicemail Recordings */}
+                              {(rep.outboundVmUrl || rep.inboundVmUrl) && (
+                                <div className="mt-4 pt-3 border-t border-gray-200">
+                                  <p className="text-gray-500 font-medium mb-2">Voicemail Recordings</p>
+                                  <div className="space-y-3">
+                                    {rep.outboundVmUrl && (
+                                      <div className="flex items-center gap-3 flex-wrap">
+                                        <span className="text-sm font-medium text-gray-700 w-28">Outbound VM:</span>
+                                        <audio src={rep.outboundVmUrl} controls className="h-8" />
+                                        <Badge variant={rep.outboundVmApproved ? 'default' : 'secondary'} className={rep.outboundVmApproved ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}>
+                                          {rep.outboundVmApproved ? 'Approved' : 'Pending'}
+                                        </Badge>
+                                        {!rep.outboundVmApproved && (
+                                          <>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="gap-1 text-green-600 border-green-200 hover:bg-green-50"
+                                              onClick={async () => {
+                                                await fetch(`/api/users/${rep.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ outboundVmApproved: true }) })
+                                                setReps(reps.map(r => r.id === rep.id ? { ...r, outboundVmApproved: true } : r))
+                                              }}
+                                            >
+                                              <UserCheck size={14} /> Approve
+                                            </Button>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                                              onClick={async () => {
+                                                await fetch(`/api/users/${rep.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ outboundVmUrl: null, outboundVmApproved: false }) })
+                                                setReps(reps.map(r => r.id === rep.id ? { ...r, outboundVmUrl: null, outboundVmApproved: false } : r))
+                                              }}
+                                            >
+                                              <UserX size={14} /> Reject
+                                            </Button>
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
+                                    {rep.inboundVmUrl && (
+                                      <div className="flex items-center gap-3 flex-wrap">
+                                        <span className="text-sm font-medium text-gray-700 w-28">Inbound VM:</span>
+                                        <audio src={rep.inboundVmUrl} controls className="h-8" />
+                                        <Badge variant={rep.inboundVmApproved ? 'default' : 'secondary'} className={rep.inboundVmApproved ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}>
+                                          {rep.inboundVmApproved ? 'Approved' : 'Pending'}
+                                        </Badge>
+                                        {!rep.inboundVmApproved && (
+                                          <>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="gap-1 text-green-600 border-green-200 hover:bg-green-50"
+                                              onClick={async () => {
+                                                await fetch(`/api/users/${rep.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ inboundVmApproved: true }) })
+                                                setReps(reps.map(r => r.id === rep.id ? { ...r, inboundVmApproved: true } : r))
+                                              }}
+                                            >
+                                              <UserCheck size={14} /> Approve
+                                            </Button>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              className="gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                                              onClick={async () => {
+                                                await fetch(`/api/users/${rep.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ inboundVmUrl: null, inboundVmApproved: false }) })
+                                                setReps(reps.map(r => r.id === rep.id ? { ...r, inboundVmUrl: null, inboundVmApproved: false } : r))
+                                              }}
+                                            >
+                                              <UserX size={14} /> Reject
+                                            </Button>
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                               {rep.onboardingComplete && (
                                 <div className="mt-4 pt-3 border-t border-gray-200">
                                   <Button

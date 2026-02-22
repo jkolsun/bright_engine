@@ -188,6 +188,84 @@ export async function processPostClientInbound(
       }
     }
 
+    // ── Process extracted data (hours, services, etc.) ──
+    if (parsed.extractedData && client.leadId) {
+      try {
+        const extracted = parsed.extractedData as Record<string, unknown>
+        const leadUpdate: Record<string, unknown> = {}
+        if (extracted.services) leadUpdate.enrichedServices = extracted.services
+        if (extracted.hours) leadUpdate.enrichedHours = extracted.hours
+
+        // Merge into qualificationData
+        const existingQD = (client.lead!.qualificationData as Record<string, unknown>) || {}
+        leadUpdate.qualificationData = { ...existingQD, ...extracted }
+
+        await prisma.lead.update({
+          where: { id: client.leadId },
+          data: leadUpdate,
+        })
+
+        // Update BuildStatus with collected data flags
+        const bsUpdate: Record<string, unknown> = {}
+        if (extracted.services) { bsUpdate.servicesCollected = true; bsUpdate.servicesData = extracted.services }
+        if (extracted.hours) { bsUpdate.hoursCollected = true; bsUpdate.hoursData = typeof extracted.hours === 'string' ? extracted.hours : JSON.stringify(extracted.hours) }
+        if (extracted.logo) { bsUpdate.logoCollected = true; bsUpdate.logoUrl = extracted.logo }
+        if (extracted.photos) { bsUpdate.photosCollected = true; bsUpdate.photosData = extracted.photos }
+        if (extracted.companyName) { bsUpdate.companyNameConfirmed = true; bsUpdate.companyNameOverride = extracted.companyName as string }
+        if (extracted.colorPrefs || extracted.colors) { bsUpdate.colorPrefsCollected = true }
+
+        if (Object.keys(bsUpdate).length > 0) {
+          // Check global auto-push setting
+          let globalAutoPush = true
+          try {
+            const setting = await prisma.settings.findUnique({ where: { key: 'globalAutoPush' } })
+            if (setting?.value && typeof setting.value === 'object' && 'enabled' in (setting.value as Record<string, unknown>)) {
+              globalAutoPush = (setting.value as Record<string, unknown>).enabled !== false
+            }
+          } catch { /* default to true */ }
+
+          const updatedBS = await prisma.buildStatus.upsert({
+            where: { leadId: client.leadId },
+            create: { leadId: client.leadId, autoPush: globalAutoPush, ...bsUpdate },
+            update: bsUpdate,
+          })
+
+          // Auto-push: if global toggle ON + services collected + not already building
+          if (globalAutoPush && updatedBS.servicesCollected && updatedBS.status !== 'building') {
+            await prisma.buildStatus.update({
+              where: { leadId: client.leadId },
+              data: { status: 'building', lastPushedAt: new Date() },
+            })
+            // Only push to QA if not already in site pipeline
+            const currentLead = await prisma.lead.findUnique({
+              where: { id: client.leadId },
+              select: { buildStep: true, companyName: true },
+            })
+            const siteBuildSteps = ['QA_REVIEW', 'EDITING', 'QA_APPROVED', 'CLIENT_REVIEW', 'CLIENT_APPROVED', 'LAUNCHING', 'LIVE']
+            if (!currentLead?.buildStep || !siteBuildSteps.includes(currentLead.buildStep)) {
+              await prisma.lead.update({
+                where: { id: client.leadId },
+                data: { buildStep: 'QA_REVIEW' },
+              })
+              await prisma.notification.create({
+                data: {
+                  type: 'SITE_QA_READY',
+                  title: 'Auto-Push: Build Ready (Post-Client)',
+                  message: `Auto-pushed build for ${client.companyName}. Ready for QA review.`,
+                  metadata: { leadId: client.leadId, autoPush: true, source: 'post_client' },
+                },
+              })
+              console.log(`[PostClient] Auto-pushed ${client.companyName} to QA_REVIEW`)
+            }
+          }
+        }
+
+        console.log(`[PostClient] Extracted data saved for ${client.companyName}:`, Object.keys(extracted).join(', '))
+      } catch (err) {
+        console.error('[PostClient] extractedData processing failed:', err)
+      }
+    }
+
     // ── Handle intents ──
 
     // Edit request → create EditRequest record and kick off handler

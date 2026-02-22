@@ -108,14 +108,30 @@ export default function SiteEditorPanel({
     return () => { document.body.style.overflow = '' }
   }, [])
 
-  // Escape key to close
+  // Warn before browser close if unsaved
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (saveStatus === 'unsaved') {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [saveStatus])
+
+  // Escape key to close (with unsaved check)
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        if (saveStatus === 'unsaved') {
+          if (!confirm('You have unsaved changes. Close anyway?')) return
+        }
+        onClose()
+      }
     }
     window.addEventListener('keydown', handleEsc)
     return () => window.removeEventListener('keydown', handleEsc)
-  }, [onClose])
+  }, [onClose, saveStatus])
 
   // ─── Load HTML (fresh from DB, then snapshot if needed) ─
   const loadEditorHtml = async () => {
@@ -274,7 +290,14 @@ export default function SiteEditorPanel({
         {/* Left: Close + Company */}
         <div className="flex items-center gap-3">
           <button
-            onClick={onClose}
+            onClick={() => {
+              if (saveStatus === 'unsaved') {
+                // Flush pending save before closing
+                if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+                saveHtml(html)
+              }
+              onClose()
+            }}
             className="p-1.5 rounded hover:bg-gray-600 text-gray-400 hover:text-white transition-colors"
             title="Close Editor (Esc)"
           >

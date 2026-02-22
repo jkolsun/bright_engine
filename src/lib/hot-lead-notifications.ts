@@ -97,6 +97,9 @@ function calculateUrgencyScore(lead: any, eventType: string, metadata?: any): nu
   if (metadata?.clickedPhone) score += 30
   if (metadata?.clickedEmail) score += 20
 
+  // Dialer source bonus — live conversation = higher urgency
+  if (metadata?.source === 'dialer') score += 15
+
   // Business hours bonus (M-F 9-5 EST)
   const now = new Date()
   const hour = now.getHours()

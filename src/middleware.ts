@@ -160,6 +160,12 @@ export async function middleware(request: NextRequest) {
     if (userRole === 'REP' && decoded.portalType === 'PART_TIME') {
       return NextResponse.redirect(new URL('/part-time', request.url))
     }
+    // Onboarding gate — redirect unboarded full-time reps
+    if (userRole === 'REP' && decoded.portalType !== 'PART_TIME' && !decoded.onboardingCompletedAt) {
+      if (!pathname.startsWith('/reps/onboarding')) {
+        return NextResponse.redirect(new URL('/reps/onboarding', request.url))
+      }
+    }
     return NextResponse.next()
   }
 

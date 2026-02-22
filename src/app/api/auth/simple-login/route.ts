@@ -139,6 +139,7 @@ async function handleLogin(request: NextRequest): Promise<Response> {
       name: user.name,
       role: user.role,
       portalType: user.portalType || 'FULL',
+      onboardingCompletedAt: user.onboardingCompletedAt?.toISOString() || null,
       iat: Date.now()
     })
     const signTimeout = new Promise((_, reject) =>

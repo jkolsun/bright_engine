@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
     const justNumber = digits.startsWith('1') ? digits.slice(1) : digits
 
     // Find lead by phone — prefer the one with an active Close Engine conversation
+    // Bug 2: Also match on secondaryPhone
     const phoneFilter = {
       OR: [
         { phone: from },
@@ -41,6 +42,11 @@ export async function POST(request: NextRequest) {
         { phone: withoutPlus },
         { phone: justNumber },
         { phone: digits },
+        { secondaryPhone: from },
+        { secondaryPhone: withPlus },
+        { secondaryPhone: withoutPlus },
+        { secondaryPhone: justNumber },
+        { secondaryPhone: digits },
       ]
     }
 
@@ -72,6 +78,11 @@ export async function POST(request: NextRequest) {
             { phone: withoutPlus },
             { phone: justNumber },
             { phone: digits },
+            { secondaryPhone: from },
+            { secondaryPhone: withPlus },
+            { secondaryPhone: withoutPlus },
+            { secondaryPhone: justNumber },
+            { secondaryPhone: digits },
           ]
         }
       },
@@ -318,6 +329,16 @@ export async function POST(request: NextRequest) {
       } catch (err) {
         console.error('[Twilio] AI Vision processing failed:', err)
       }
+    }
+
+    // Bug 2: DNC check — if lead is DNC, log message but DON'T trigger AI/Close Engine
+    const isDNCLead = lead?.dncAt || lead?.status === 'DO_NOT_CONTACT'
+    if (isDNCLead && lead) {
+      console.log(`[Twilio] DNC lead ${lead.id} sent inbound SMS — logged but skipping AI processing`)
+      return new NextResponse(
+        '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+        { headers: { 'Content-Type': 'text/xml' } }
+      )
     }
 
     // ── CLOSE ENGINE HANDLER (with SmartChat message batching) ──

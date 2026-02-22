@@ -16,6 +16,7 @@ export interface EngagementScore {
     emailEngagement: number
     outboundRecency: number
     conversionSignals: number
+    callEngagement: number
   }
   temperature: string // COLD (0-30), WARM (31-70), HOT (71-100)
   lastEngagement?: Date
@@ -35,6 +36,18 @@ export async function calculateEngagementScore(
       events: true,
       outboundEvents: true,
       client: true,
+      dialerCalls: {
+        select: {
+          connectedAt: true,
+          dispositionResult: true,
+          previewOpenedDuringCall: true,
+          ctaClickedDuringCall: true,
+        },
+      },
+      upsellTags: {
+        where: { removedAt: null },
+        select: { id: true },
+      },
     },
   })
 
@@ -48,6 +61,7 @@ export async function calculateEngagementScore(
         emailEngagement: 0,
         outboundRecency: 0,
         conversionSignals: 0,
+        callEngagement: 0,
       },
       temperature: 'COLD',
       trend: 'flat',
@@ -61,17 +75,18 @@ export async function calculateEngagementScore(
       score: 100,
       level: 'HOT',
       components: {
-        previewEngagement: 25,
-        emailEngagement: 25,
-        outboundRecency: 25,
-        conversionSignals: 25,
+        previewEngagement: 20,
+        emailEngagement: 20,
+        outboundRecency: 20,
+        conversionSignals: 20,
+        callEngagement: 20,
       },
       temperature: 'HOT',
       trend: 'flat',
     }
   }
 
-  // Score 1: Preview Engagement (max 25 points)
+  // Score 1: Preview Engagement (max 20 points)
   let previewEngagementScore = 0
   const previewEvents = lead.events.filter((e) =>
     [
@@ -83,20 +98,20 @@ export async function calculateEngagementScore(
   )
 
   if (previewEvents.length > 0) {
-    previewEngagementScore = Math.min(25, previewEvents.length * 5)
+    previewEngagementScore = Math.min(20, previewEvents.length * 4)
   }
 
-  // Score 2: Email/Outbound Response (max 25 points)
+  // Score 2: Email/Outbound Response (max 20 points)
   let emailEngagementScore = 0
   const emailResponseEvents = lead.events.filter((e) =>
     ['EMAIL_OPENED', 'EMAIL_REPLIED', 'TEXT_RECEIVED'].includes(e.eventType)
   )
 
   if (emailResponseEvents.length > 0) {
-    emailEngagementScore = Math.min(25, emailResponseEvents.length * 8) // Emails are weighted higher
+    emailEngagementScore = Math.min(20, emailResponseEvents.length * 6)
   }
 
-  // Score 3: Outbound Recency (max 25 points)
+  // Score 3: Outbound Recency (max 20 points)
   let recencyScore = 0
   const now = new Date()
   const outboundEvents = lead.outboundEvents || []
@@ -107,37 +122,65 @@ export async function calculateEngagementScore(
     )
     const daysSince = (now.getTime() - lastOutbound.getTime()) / (1000 * 60 * 60 * 24)
 
-    // Fresh outbound = 25 points, decays over time
-    if (daysSince <= 1) recencyScore = 25
-    else if (daysSince <= 3) recencyScore = 20
-    else if (daysSince <= 7) recencyScore = 15
-    else if (daysSince <= 14) recencyScore = 10
-    else if (daysSince <= 30) recencyScore = 5
+    if (daysSince <= 1) recencyScore = 20
+    else if (daysSince <= 3) recencyScore = 16
+    else if (daysSince <= 7) recencyScore = 12
+    else if (daysSince <= 14) recencyScore = 8
+    else if (daysSince <= 30) recencyScore = 4
     else recencyScore = 0
   }
 
-  // Score 4: Conversion Signals (max 25 points)
+  // Score 4: Conversion Signals (max 20 points)
   let conversionSignalScore = 0
   const conversionEvents = lead.events.filter((e) =>
     ['PAYMENT_RECEIVED', 'SITE_LIVE'].includes(e.eventType)
   )
 
   if (conversionEvents.length > 0) {
-    conversionSignalScore = 25 // Strong signal
+    conversionSignalScore = 20
   }
 
-  // Also check: did they reply to emails? That's +10
   const replyEvents = lead.events.filter((e) => e.eventType === 'EMAIL_REPLIED')
-  if (replyEvents.length > 0 && conversionSignalScore < 25) {
-    conversionSignalScore = Math.min(25, conversionSignalScore + 10)
+  if (replyEvents.length > 0 && conversionSignalScore < 20) {
+    conversionSignalScore = Math.min(20, conversionSignalScore + 8)
   }
+
+  // Score 5: Call Engagement (max 20 points) — NEW for dialer
+  let callEngagementScore = 0
+  const dialerCalls = (lead as any).dialerCalls || []
+  const upsellTags = (lead as any).upsellTags || []
+
+  // Connected calls: 0→0, 1→5, 2+→8
+  const connectedCalls = dialerCalls.filter((c: any) => c.connectedAt).length
+  if (connectedCalls >= 2) callEngagementScore += 8
+  else if (connectedCalls >= 1) callEngagementScore += 5
+
+  // Disposition-based scoring
+  const dispositions = dialerCalls.map((c: any) => c.dispositionResult).filter(Boolean)
+  if (dispositions.includes('WANTS_TO_MOVE_FORWARD')) callEngagementScore = Math.min(20, callEngagementScore + 12)
+  else if (dispositions.includes('WANTS_CHANGES')) callEngagementScore = Math.min(20, callEngagementScore + 10)
+  else if (dispositions.includes('CALLBACK')) callEngagementScore = Math.min(20, callEngagementScore + 8)
+  else if (dispositions.includes('INTERESTED_VERBAL')) callEngagementScore = Math.min(20, callEngagementScore + 7)
+  else if (dispositions.includes('WILL_LOOK_LATER')) callEngagementScore = Math.min(20, callEngagementScore + 5)
+  else if (dispositions.includes('NOT_INTERESTED')) callEngagementScore = Math.max(0, callEngagementScore - 5)
+  else if (dispositions.includes('DNC')) callEngagementScore = 0
+
+  // Upsell tags bonus
+  if (upsellTags.length > 0) callEngagementScore = Math.min(20, callEngagementScore + 5)
+
+  // Preview opened/CTA clicked during call bonus
+  if (dialerCalls.some((c: any) => c.previewOpenedDuringCall)) callEngagementScore = Math.min(20, callEngagementScore + 3)
+  if (dialerCalls.some((c: any) => c.ctaClickedDuringCall)) callEngagementScore = Math.min(20, callEngagementScore + 5)
+
+  callEngagementScore = Math.min(20, Math.max(0, callEngagementScore))
 
   // Total score (0-100)
   const totalScore =
     previewEngagementScore +
     emailEngagementScore +
     recencyScore +
-    conversionSignalScore
+    conversionSignalScore +
+    callEngagementScore
 
   // Determine temperature/level
   let level: EngagementLevel
@@ -184,6 +227,7 @@ export async function calculateEngagementScore(
       emailEngagement: emailEngagementScore,
       outboundRecency: recencyScore,
       conversionSignals: conversionSignalScore,
+      callEngagement: callEngagementScore,
     },
     temperature,
     lastEngagement,

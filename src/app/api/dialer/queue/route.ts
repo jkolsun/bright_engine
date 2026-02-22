@@ -1,14 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifySession } from '@/lib/session'
-import { buildRepQueue, getLeadHistory } from '@/lib/dialer-queue'
-import { generateAITip } from '@/lib/dialer-queue'
-
 export const dynamic = 'force-dynamic'
 
-/**
- * GET /api/dialer/queue — Get prioritized lead queue for current rep
- * Query: ?history=leadId (optionally fetch history for a specific lead)
- */
+import { NextRequest, NextResponse } from 'next/server'
+import { verifySession } from '@/lib/session'
+import { prisma } from '@/lib/db'
+
 export async function GET(request: NextRequest) {
   try {
     const sessionCookie = request.cookies.get('session')?.value
@@ -18,29 +13,36 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const historyLeadId = searchParams.get('history')
+    const repId = searchParams.get('repId')
 
-    // If requesting history for a specific lead
-    if (historyLeadId) {
-      const history = await getLeadHistory(historyLeadId)
-      return NextResponse.json({ history })
-    }
+    const targetRepId = (session.role === 'ADMIN' && repId) ? repId : session.userId
 
-    // Build full prioritized queue
-    const { leads, summary } = await buildRepQueue(session.userId)
+    const leads = await prisma.lead.findMany({
+      where: {
+        OR: [
+          { ownerRepId: targetRepId },
+          { assignedToId: targetRepId },
+        ],
+        status: { notIn: ['CLOSED_LOST', 'DO_NOT_CONTACT'] },
+        dncAt: null,
+      },
+      select: {
+        id: true, companyName: true, firstName: true, lastName: true,
+        phone: true, secondaryPhone: true, email: true, status: true, priority: true,
+        city: true, state: true, industry: true, ownerRepId: true,
+        previewId: true, previewUrl: true,
+        _count: { select: { dialerCalls: true } },
+      },
+      orderBy: [
+        { priority: 'desc' },
+        { updatedAt: 'desc' },
+      ],
+      take: 100,
+    })
 
-    // Add AI tips to each lead
-    const leadsWithTips = leads.map(lead => ({
-      ...lead,
-      aiTip: generateAITip(lead),
-    }))
-
-    return NextResponse.json({ leads: leadsWithTips, summary })
+    return NextResponse.json({ leads })
   } catch (error) {
-    console.error('Queue error:', error)
-    return NextResponse.json(
-      { error: 'Failed to build queue', details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    )
+    console.error('[Dialer Queue API] GET error:', error)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

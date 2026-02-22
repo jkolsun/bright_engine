@@ -107,8 +107,8 @@ export async function PUT(
       select: { id: true, siteHtml: true },
     })
 
-    // Verify the save actually committed — if siteHtml length doesn't match, something went wrong
-    if (!updated.siteHtml || (html.length > 0 && Math.abs(updated.siteHtml.length - html.length) > 10)) {
+    // Verify the save actually committed — strict length check
+    if (!updated.siteHtml || (html.length > 0 && updated.siteHtml.length !== html.length)) {
       console.error(`[Save] Verification failed: sent ${html.length} chars, got back ${updated.siteHtml?.length ?? 0} chars`)
       return NextResponse.json({ error: 'Save verification failed — please try again' }, { status: 500 })
     }

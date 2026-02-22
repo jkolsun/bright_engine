@@ -98,6 +98,11 @@ export async function PATCH(
         ...(data.dailyLeadCap !== undefined && { dailyLeadCap: data.dailyLeadCap }),
         ...(data.assignedDialerPhone !== undefined && { assignedDialerPhone: data.assignedDialerPhone }),
         ...(data.onboardingComplete !== undefined && { onboardingComplete: data.onboardingComplete }),
+        ...(data.onboardingCompletedAt !== undefined && { onboardingCompletedAt: data.onboardingCompletedAt ? new Date(data.onboardingCompletedAt) : null }),
+        ...(data.outboundVmUrl !== undefined && { outboundVmUrl: data.outboundVmUrl }),
+        ...(data.outboundVmApproved !== undefined && { outboundVmApproved: data.outboundVmApproved }),
+        ...(data.inboundVmUrl !== undefined && { inboundVmUrl: data.inboundVmUrl }),
+        ...(data.inboundVmApproved !== undefined && { inboundVmApproved: data.inboundVmApproved }),
         ...(passwordHash && { passwordHash }),
       },
     })

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { pushToRep, pushToAllAdmins } from '@/lib/dialer-events'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,6 +46,35 @@ export async function POST(request: NextRequest) {
         metadata: { leadId: lead.id, previewId, source: 'cta_banner' },
       },
     })
+
+    // Bug 7: If there's an active dialer call for this lead, push SSE + update call flags
+    try {
+      const activeCall = await prisma.dialerCall.findFirst({
+        where: {
+          leadId: lead.id,
+          endedAt: null,
+          status: { in: ['INITIATED', 'RINGING', 'CONNECTED'] },
+        },
+        select: { id: true, repId: true },
+        orderBy: { startedAt: 'desc' },
+      })
+
+      if (activeCall) {
+        await prisma.dialerCall.update({
+          where: { id: activeCall.id },
+          data: { ctaClickedDuringCall: true },
+        })
+        const sseEvent = {
+          type: 'CTA_CLICKED' as const,
+          data: { callId: activeCall.id, leadId: lead.id, source: 'cta_banner' },
+          timestamp: new Date().toISOString(),
+        }
+        pushToRep(activeCall.repId, sseEvent)
+        pushToAllAdmins({ ...sseEvent, data: { ...sseEvent.data, repId: activeCall.repId } })
+      }
+    } catch (dialerErr) {
+      console.warn('[Preview CTA] Dialer SSE push failed:', dialerErr)
+    }
 
     // Send urgent email notification to admin via Resend
     try {

@@ -819,14 +819,23 @@ function MessagesPageInner() {
 
               {/* Action Buttons */}
               <div className="pt-3 border-t space-y-2">
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={handleManualPush}
-                  disabled={pushingBuild || !buildStatus.servicesCollected}
-                >
-                  {pushingBuild ? 'Pushing...' : 'Push to Build'}
-                </Button>
+                {globalAutoPush ? (
+                  <div className="flex items-center justify-center gap-2 py-1.5 px-3 rounded-md bg-green-50 border border-green-200">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-xs font-medium text-green-700">
+                      {buildStatus.status === 'building' ? 'Auto-Pushed to Build' : 'Auto-Push Enabled'}
+                    </span>
+                  </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={handleManualPush}
+                    disabled={pushingBuild || !buildStatus.servicesCollected}
+                  >
+                    {pushingBuild ? 'Pushing...' : 'Push to Build'}
+                  </Button>
+                )}
               </div>
             </div>
           ) : (

@@ -1,99 +1,98 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/db'
-
 export const dynamic = 'force-dynamic'
 
+import { NextRequest } from 'next/server'
+import { verifyTwilioSignature } from '@/lib/twilio-verify'
+import { prisma } from '@/lib/db'
+
+const getPublicUrl = () =>
+  process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || 'https://preview.brightautomations.org'
+
 /**
- * POST /api/webhooks/twilio-voice — Handle Twilio voice call events
- * This endpoint receives call status callbacks from Twilio
+ * POST /api/webhooks/twilio-voice — TwiML App webhook
+ * When a rep initiates a call via @twilio/voice-sdk, Twilio hits this endpoint
+ * to get TwiML instructions. Returns <Dial> with caller ID, AMD, and status callbacks.
+ * Bug 9: Verify Twilio signature in production.
  */
 export async function POST(request: NextRequest) {
+  const publicUrl = getPublicUrl()
+  const webhookUrl = `${publicUrl}/api/webhooks/twilio-voice`
+
+  const isValid = await verifyTwilioSignature(request.clone(), webhookUrl)
+  if (!isValid) {
+    console.warn('[TwilioVoice] Invalid signature — rejecting request')
+    return new Response('Forbidden', { status: 403 })
+  }
+
   try {
-    const { searchParams } = new URL(request.url)
-    const callId = searchParams.get('callId')
-    const batchId = searchParams.get('batchId')
-    const repId = searchParams.get('repId')
-    const event = searchParams.get('event')
-
     const formData = await request.formData()
-    const callStatus = formData.get('CallStatus') as string
-    const callSid = formData.get('CallSid') as string
-    const callDuration = formData.get('CallDuration') as string
+    const to = formData.get('To') as string | null
+    const from = formData.get('From') as string | null
+    const callSid = formData.get('CallSid') as string | null
 
-    if (event === 'status' && callId) {
-      // Status callback — update call record
-      const statusMap: Record<string, string> = {
-        initiated: 'initiated',
-        ringing: 'ringing',
-        'in-progress': 'connected',
-        completed: 'completed',
-        busy: 'busy',
-        'no-answer': 'no_answer',
-        failed: 'failed',
-        canceled: 'failed',
-      }
+    // Custom params passed from device.connect({ params: { ... } })
+    const callId = formData.get('callId') as string | null
+    const leadId = formData.get('leadId') as string | null
 
-      const newStatus = statusMap[callStatus] || callStatus
+    if (!to) {
+      return new Response(
+        '<?xml version="1.0" encoding="UTF-8"?><Response><Say>No destination number provided.</Say></Response>',
+        { headers: { 'Content-Type': 'text/xml' } }
+      )
+    }
 
-      await prisma.call.update({
-        where: { id: callId },
-        data: {
-          status: newStatus,
-          ...(callDuration ? { durationSeconds: parseInt(callDuration) } : {}),
-        },
+    // Extract repId from identity (format: "client:rep-{userId}" or "rep-{userId}")
+    const identityMatch = from?.match(/rep-(.+)/)
+    const repId = identityMatch ? identityMatch[1] : null
+
+    // Look up rep's twilioNumber1 for caller ID
+    let callerId = process.env.TWILIO_PHONE_NUMBER || ''
+    if (repId) {
+      const rep = await prisma.user.findUnique({
+        where: { id: repId },
+        select: { twilioNumber1: true },
       })
-
-      // If call was answered, check if we need to connect to rep and drop others
-      if (callStatus === 'in-progress' && batchId && repId) {
-        // This call was answered — drop all other calls in the same batch
-        const otherCalls = await prisma.call.findMany({
-          where: {
-            dialBatchId: batchId,
-            id: { not: callId },
-            status: { in: ['initiated', 'ringing'] },
-          },
-        })
-
-        for (const otherCall of otherCalls) {
-          if (otherCall.twilioCallSid) {
-            // In production, would hang up via Twilio API
-          }
-          await prisma.call.update({
-            where: { id: otherCall.id },
-            data: { status: 'completed', outcome: 'dropped' },
-          })
-        }
+      if (rep?.twilioNumber1) {
+        callerId = rep.twilioNumber1
       }
-    } else if (callId) {
-      // TwiML response for outbound call
-      // When Twilio connects the call, serve TwiML to bridge to conference
-      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+    }
+
+    // Update DialerCall with Twilio CallSid if we have a callId
+    if (callId && callSid) {
+      await prisma.dialerCall.update({
+        where: { id: callId },
+        data: { twilioCallSid: callSid, status: 'INITIATED' },
+      }).catch(() => { /* call may not exist yet */ })
+    }
+
+    // Build callback URLs
+    const queryParams = callId ? `?callId=${encodeURIComponent(callId)}` : ''
+    const statusCallbackUrl = `${publicUrl}/api/webhooks/twilio-voice-status${queryParams}`
+    const amdCallbackUrl = `${publicUrl}/api/webhooks/twilio-amd${queryParams}`
+
+    // Escape XML special chars in URLs
+    const escXml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Dial>
-    <Conference
-      beep="false"
-      startConferenceOnEnter="true"
-      endConferenceOnExit="false"
-      waitUrl=""
-    >
-      dialer-${repId}-${batchId}
-    </Conference>
+  <Dial callerId="${escXml(callerId)}" answerOnBridge="true"
+        statusCallback="${escXml(statusCallbackUrl)}"
+        statusCallbackEvent="initiated ringing answered completed"
+        statusCallbackMethod="POST">
+    <Number
+      machineDetection="DetectMessageEnd"
+      asyncAmd="true"
+      asyncAmdStatusCallback="${escXml(amdCallbackUrl)}"
+      asyncAmdStatusCallbackMethod="POST"
+    >${escXml(to)}</Number>
   </Dial>
 </Response>`
 
-      return new NextResponse(twiml, {
-        headers: { 'Content-Type': 'text/xml' },
-      })
-    }
-
-    // Default empty TwiML response
-    return new NextResponse(
-      '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
-      { headers: { 'Content-Type': 'text/xml' } }
-    )
+    return new Response(twiml, {
+      headers: { 'Content-Type': 'text/xml' },
+    })
   } catch (error) {
-    console.error('Twilio voice webhook error:', error)
-    return new NextResponse(
+    console.error('[TwilioVoice] Error generating TwiML:', error)
+    return new Response(
       '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
       { headers: { 'Content-Type': 'text/xml' } }
     )

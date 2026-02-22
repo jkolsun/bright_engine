@@ -1,189 +1,99 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Loader2, Check, ExternalLink, ChevronRight, ChevronLeft } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import {
+  Loader2, Check, ChevronRight, ChevronLeft, Mic, MicOff,
+  Volume2, AlertTriangle, SkipForward, CheckCircle, Upload,
+  Headphones, Wifi, Chrome, Eye,
+} from 'lucide-react'
+import AudioRecorder from './AudioRecorder'
 
-interface RepOnboardingWizardProps {
-  userId: string
-  onComplete: () => void
+// ════════════════════════════════════════════════════════════
+// TYPES
+// ════════════════════════════════════════════════════════════
+
+interface StepStatus {
+  equipment: boolean
+  microphone: boolean
+  outboundVm: boolean | 'skipped'
+  inboundVm: boolean | 'skipped'
+  training: boolean
 }
 
-interface AvailableDay {
-  start: string | null
-  end: string | null
-  active: boolean
-}
+// ════════════════════════════════════════════════════════════
+// MAIN WIZARD
+// ════════════════════════════════════════════════════════════
 
-type AvailableHours = Record<string, AvailableDay>
-
-const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-const DAY_LABELS: Record<string, string> = {
-  monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu',
-  friday: 'Fri', saturday: 'Sat', sunday: 'Sun',
-}
-
-const TIME_OPTIONS = [
-  '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00',
-  '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00',
-]
-
-const TIMEZONES = [
-  { value: 'America/New_York', label: 'Eastern (ET)' },
-  { value: 'America/Chicago', label: 'Central (CT)' },
-  { value: 'America/Denver', label: 'Mountain (MT)' },
-  { value: 'America/Los_Angeles', label: 'Pacific (PT)' },
-  { value: 'America/Anchorage', label: 'Alaska (AKT)' },
-  { value: 'Pacific/Honolulu', label: 'Hawaii (HT)' },
-]
-
-const DEFAULT_HOURS: AvailableHours = {
-  monday: { start: '09:00', end: '17:00', active: true },
-  tuesday: { start: '09:00', end: '17:00', active: true },
-  wednesday: { start: '09:00', end: '17:00', active: true },
-  thursday: { start: '09:00', end: '17:00', active: true },
-  friday: { start: '09:00', end: '17:00', active: true },
-  saturday: { start: null, end: null, active: false },
-  sunday: { start: null, end: null, active: false },
-}
-
-export default function RepOnboardingWizard({ userId, onComplete }: RepOnboardingWizardProps) {
+export default function RepOnboardingWizard({ userId: initialUserId, onComplete }: { userId?: string; onComplete?: () => void } = {}) {
+  const router = useRouter()
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [completing, setCompleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
 
-  // Step 2: Profile
-  const [name, setName] = useState('')
-  const [personalPhone, setPersonalPhone] = useState('')
-  const [timezone, setTimezone] = useState('America/New_York')
-  const [availableHours, setAvailableHours] = useState<AvailableHours>(DEFAULT_HOURS)
+  // Track what was completed vs skipped
+  const [status, setStatus] = useState<StepStatus>({
+    equipment: false,
+    microphone: false,
+    outboundVm: false,
+    inboundVm: false,
+    training: false,
+  })
 
-  // Step 3: Stripe
-  const [commissionRate, setCommissionRate] = useState(0.5)
-  const [stripeStatus, setStripeStatus] = useState<string>('not_started')
-  const [stripeDetailsSubmitted, setStripeDetailsSubmitted] = useState(false)
-  const [connectingStripe, setConnectingStripe] = useState(false)
-  const pollingRef = useRef<NodeJS.Timeout>()
-
-  // Step 5: Acknowledgments
-  const [checks, setChecks] = useState([false, false, false, false])
-
-  // Load onboarding data on mount
+  // Load user data + determine resume point
   useEffect(() => {
-    loadOnboardingData()
-    return () => { if (pollingRef.current) clearInterval(pollingRef.current) }
+    async function init() {
+      try {
+        const res = await fetch('/api/auth/me')
+        if (!res.ok) return
+        const { user } = await res.json()
+        setUserId(user.id)
+
+        // Already completed — redirect
+        if (user.onboardingCompletedAt) {
+          router.replace('/reps')
+          return
+        }
+
+        // Resume logic: skip steps that are already done
+        const newStatus = { ...status }
+        let resumeStep = 0
+
+        if (user.outboundVmUrl) {
+          newStatus.equipment = true
+          newStatus.microphone = true
+          newStatus.outboundVm = true
+          resumeStep = 3 // jump to inbound VM
+        }
+        if (user.inboundVmUrl) {
+          newStatus.inboundVm = true
+          if (resumeStep <= 3) resumeStep = 4 // jump to training
+        }
+
+        setStatus(newStatus)
+        if (resumeStep > 0) setStep(resumeStep)
+      } catch {
+        console.error('Failed to load user data')
+      } finally {
+        setLoading(false)
+      }
+    }
+    init()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const loadOnboardingData = async () => {
-    try {
-      const res = await fetch(`/api/users/${userId}/onboarding`)
-      if (res.ok) {
-        const data = await res.json()
-        setName(data.name || '')
-        setPersonalPhone(data.personalPhone || '')
-        setTimezone(data.timezone || 'America/New_York')
-        if (data.availableHours) setAvailableHours(data.availableHours)
-        setCommissionRate(data.commissionRate ?? 0.5)
-        setStripeStatus(data.stripeConnectStatus || 'not_started')
-        setStripeDetailsSubmitted(data.stripeConnectStatus === 'active')
+  const goNext = () => setStep(prev => Math.min(prev + 1, 5))
+  const goBack = () => setStep(prev => Math.max(prev - 1, 0))
 
-        // Resume from last incomplete step
-        if (data.personalPhone && data.availableHours) {
-          if (data.agreedToTermsAt) {
-            setStep(4) // Go to acknowledgment
-          } else {
-            setStep(3) // Go to training (Stripe is optional, skip past it)
-          }
-        }
-      }
-    } catch {
-      console.error('Failed to load onboarding data')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Stripe status polling
-  const startPolling = useCallback(() => {
-    if (pollingRef.current) clearInterval(pollingRef.current)
-    pollingRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/stripe/connect/status?userId=${userId}`)
-        if (res.ok) {
-          const data = await res.json()
-          setStripeStatus(data.status)
-          setStripeDetailsSubmitted(data.detailsSubmitted)
-          if (data.detailsSubmitted) {
-            if (pollingRef.current) clearInterval(pollingRef.current)
-          }
-        }
-      } catch { /* ignore polling errors */ }
-    }, 3000)
-  }, [userId])
-
-  const handleConnectStripe = async () => {
-    setConnectingStripe(true)
+  const handleComplete = async () => {
+    setCompleting(true)
     setError(null)
     try {
-      const endpoint = stripeStatus === 'not_started' || !stripeStatus
-        ? '/api/stripe/connect/create'
-        : '/api/stripe/connect/refresh'
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      })
-      const data = await res.json()
-      if (res.ok && data.url) {
-        window.open(data.url, '_blank')
-        startPolling()
-      } else {
-        setError(data.error || 'Failed to connect Stripe')
-      }
-    } catch {
-      setError('Network error. Please try again.')
-    } finally {
-      setConnectingStripe(false)
-    }
-  }
-
-  const saveProfile = async () => {
-    setSaving(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/users/${userId}/onboarding`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, personalPhone, timezone, availableHours }),
-      })
-      const data = await res.json()
+      const res = await fetch('/api/reps/onboarding/complete', { method: 'POST' })
       if (res.ok) {
-        setStep(2)
-      } else {
-        setError(data.error || 'Failed to save profile')
-      }
-    } catch {
-      setError('Network error. Please try again.')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const finishOnboarding = async () => {
-    setSaving(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/users/${userId}/onboarding`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agreedToTermsAt: new Date().toISOString(),
-          onboardingComplete: true,
-        }),
-      })
-      if (res.ok) {
-        onComplete()
+        router.replace('/reps')
       } else {
         const data = await res.json()
         setError(data.error || 'Failed to complete onboarding')
@@ -191,17 +101,9 @@ export default function RepOnboardingWizard({ userId, onComplete }: RepOnboardin
     } catch {
       setError('Network error. Please try again.')
     } finally {
-      setSaving(false)
+      setCompleting(false)
     }
   }
-
-  // Validation
-  const profileValid = name.trim().length > 0
-    && personalPhone.replace(/\D/g, '').length >= 10
-    && timezone.length > 0
-    && DAYS.some(d => availableHours[d]?.active)
-
-  const allChecked = checks.every(Boolean)
 
   if (loading) {
     return (
@@ -221,16 +123,21 @@ export default function RepOnboardingWizard({ userId, onComplete }: RepOnboardin
         <div className="bg-gray-100 h-1.5">
           <div
             className="h-full bg-teal-500 transition-all duration-500"
-            style={{ width: `${((step + 1) / 5) * 100}%` }}
+            style={{ width: `${((step + 1) / 6) * 100}%` }}
           />
         </div>
 
-        {/* Step indicator */}
+        {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
-            <p className="text-sm text-gray-500">Step {step + 1} of 5</p>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-teal-100 rounded-xl flex items-center justify-center">
+                <span className="text-sm font-bold text-teal-700">B</span>
+              </div>
+              <p className="text-sm text-gray-500">Step {step + 1} of 6</p>
+            </div>
             <div className="flex gap-1.5">
-              {[0, 1, 2, 3, 4].map(i => (
+              {[0, 1, 2, 3, 4, 5].map(i => (
                 <div key={i} className={`w-2 h-2 rounded-full ${i <= step ? 'bg-teal-500' : 'bg-gray-300'}`} />
               ))}
             </div>
@@ -238,7 +145,7 @@ export default function RepOnboardingWizard({ userId, onComplete }: RepOnboardin
         </div>
 
         {/* Content */}
-        <div className="flex-1 flex items-center justify-center p-6">
+        <div className="flex-1 flex items-start justify-center p-6 pt-8">
           <div className="w-full max-w-2xl">
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
@@ -246,38 +153,50 @@ export default function RepOnboardingWizard({ userId, onComplete }: RepOnboardin
               </div>
             )}
 
-            {step === 0 && <StepWelcome onNext={() => setStep(1)} />}
+            {step === 0 && (
+              <StepEquipment
+                onNext={() => { setStatus(s => ({ ...s, equipment: true })); goNext() }}
+                onSkip={() => { setStatus(s => ({ ...s, equipment: false })); goNext() }}
+              />
+            )}
             {step === 1 && (
-              <StepProfile
-                name={name} setName={setName}
-                personalPhone={personalPhone} setPersonalPhone={setPersonalPhone}
-                timezone={timezone} setTimezone={setTimezone}
-                availableHours={availableHours} setAvailableHours={setAvailableHours}
-                valid={profileValid}
-                saving={saving}
-                onBack={() => setStep(0)}
-                onNext={saveProfile}
+              <StepMicrophone
+                onNext={() => { setStatus(s => ({ ...s, microphone: true })); goNext() }}
+                onSkip={() => { setStatus(s => ({ ...s, microphone: false })); goNext() }}
+                onBack={goBack}
               />
             )}
             {step === 2 && (
-              <StepPayment
-                commissionRate={commissionRate}
-                stripeStatus={stripeStatus}
-                stripeDetailsSubmitted={stripeDetailsSubmitted}
-                connecting={connectingStripe}
-                onConnect={handleConnectStripe}
-                onBack={() => { if (pollingRef.current) clearInterval(pollingRef.current); setStep(1) }}
-                onNext={() => { if (pollingRef.current) clearInterval(pollingRef.current); setStep(3) }}
+              <StepRecordVM
+                type="outbound"
+                userId={userId}
+                onNext={() => { setStatus(s => ({ ...s, outboundVm: true })); goNext() }}
+                onSkip={() => { setStatus(s => ({ ...s, outboundVm: 'skipped' })); goNext() }}
+                onBack={goBack}
               />
             )}
-            {step === 3 && <StepTraining onBack={() => setStep(2)} onNext={() => setStep(4)} />}
+            {step === 3 && (
+              <StepRecordVM
+                type="inbound"
+                userId={userId}
+                onNext={() => { setStatus(s => ({ ...s, inboundVm: true })); goNext() }}
+                onSkip={() => { setStatus(s => ({ ...s, inboundVm: 'skipped' })); goNext() }}
+                onBack={goBack}
+              />
+            )}
             {step === 4 && (
-              <StepAcknowledge
-                checks={checks} setChecks={setChecks}
-                allChecked={allChecked}
-                saving={saving}
-                onBack={() => setStep(3)}
-                onFinish={finishOnboarding}
+              <StepTraining
+                onNext={() => { setStatus(s => ({ ...s, training: true })); goNext() }}
+                onSkip={() => { setStatus(s => ({ ...s, training: false })); goNext() }}
+                onBack={goBack}
+              />
+            )}
+            {step === 5 && (
+              <StepConfirmation
+                status={status}
+                completing={completing}
+                onComplete={handleComplete}
+                onBack={goBack}
               />
             )}
           </div>
@@ -287,281 +206,255 @@ export default function RepOnboardingWizard({ userId, onComplete }: RepOnboardin
   )
 }
 
-// ─── Step 1: Welcome ───────────────────────────────────────
+// ════════════════════════════════════════════════════════════
+// STEP 1: WELCOME + EQUIPMENT CHECK
+// ════════════════════════════════════════════════════════════
 
-function StepWelcome({ onNext }: { onNext: () => void }) {
+function StepEquipment({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
+  const [browserWarning, setBrowserWarning] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (typeof navigator !== 'undefined') {
+      const ua = navigator.userAgent
+      if (/Chrome/.test(ua) && !/Edg|OPR/.test(ua)) {
+        // Chrome detected — good
+      } else if (/Edg/.test(ua)) {
+        setBrowserWarning('Microsoft Edge')
+      } else if (/Firefox/.test(ua)) {
+        setBrowserWarning('Firefox')
+      } else if (/Safari/.test(ua)) {
+        setBrowserWarning('Safari')
+      } else {
+        setBrowserWarning('your current browser')
+      }
+    }
+  }, [])
+
   return (
     <div className="text-center">
       <div className="w-16 h-16 bg-teal-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
         <span className="text-2xl font-bold text-teal-700">B</span>
       </div>
       <h1 className="text-3xl font-bold text-gray-900 mb-3">Welcome to Bright Automations</h1>
-      <p className="text-gray-500 mb-8 text-lg">You&apos;re about to start closing deals. Here&apos;s how it works:</p>
+      <p className="text-gray-500 mb-8 text-lg">
+        Before you start dialing, we need to set up a few things.<br />
+        This takes about 5 minutes.
+      </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto mb-10 text-left">
-        {[
-          { icon: '&#x1F4CB;', text: 'We give you leads with pre-built websites' },
-          { icon: '&#x1F4DE;', text: 'You call them using the power dialer' },
-          { icon: '&#x1F4F1;', text: 'You text them the preview link' },
-          { icon: '&#x1F4B0;', text: 'They pay $149 \u2192 you earn commission' },
-        ].map((item, i) => (
-          <div key={i} className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">
-            <span className="text-xl flex-shrink-0" dangerouslySetInnerHTML={{ __html: item.icon }} />
-            <span className="text-sm text-gray-700">{item.text}</span>
-          </div>
-        ))}
+      <div className="max-w-md mx-auto text-left mb-8">
+        <p className="text-sm font-semibold text-gray-700 mb-3">You&apos;ll need:</p>
+        <div className="space-y-3">
+          {[
+            { icon: Headphones, text: 'A headset or earbuds with a microphone' },
+            { icon: Wifi, text: 'A stable internet connection (ethernet preferred)' },
+            { icon: Chrome, text: 'Google Chrome browser' },
+          ].map((item, i) => (
+            <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+              <item.icon size={20} className="text-teal-600 flex-shrink-0" />
+              <span className="text-sm text-gray-700">{item.text}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <p className="text-gray-400 text-sm mb-6">Let&apos;s get you set up. Takes about 2 minutes.</p>
+      {browserWarning && (
+        <div className="max-w-md mx-auto mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+          <AlertTriangle size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-800">
+            We recommend Chrome for the best call quality. You&apos;re currently using <strong>{browserWarning}</strong>. You can continue, but audio quality may vary.
+          </p>
+        </div>
+      )}
 
       <button
         onClick={onNext}
         className="px-8 py-3 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 transition-colors inline-flex items-center gap-2"
       >
-        Get Started <ChevronRight size={18} />
+        I Have Everything <ChevronRight size={18} />
       </button>
+
+      <div className="mt-4">
+        <button onClick={onSkip} className="text-sm text-gray-400 hover:text-gray-600 transition-colors inline-flex items-center gap-1">
+          <SkipForward size={14} /> Skip
+        </button>
+      </div>
     </div>
   )
 }
 
-// ─── Step 2: Profile ───────────────────────────────────────
+// ════════════════════════════════════════════════════════════
+// STEP 2: MICROPHONE PERMISSION
+// ════════════════════════════════════════════════════════════
 
-interface StepProfileProps {
-  name: string; setName: (v: string) => void
-  personalPhone: string; setPersonalPhone: (v: string) => void
-  timezone: string; setTimezone: (v: string) => void
-  availableHours: AvailableHours; setAvailableHours: (v: AvailableHours) => void
-  valid: boolean
-  saving: boolean
-  onBack: () => void
-  onNext: () => void
-}
+function StepMicrophone({ onNext, onSkip, onBack }: { onNext: () => void; onSkip: () => void; onBack: () => void }) {
+  const [micState, setMicState] = useState<'idle' | 'granted' | 'denied' | 'error'>('idle')
+  const [toneState, setToneState] = useState<'idle' | 'playing' | 'heard' | 'not_heard'>('idle')
+  const streamRef = useRef<MediaStream | null>(null)
 
-function StepProfile(props: StepProfileProps) {
-  const { name, setName, personalPhone, setPersonalPhone, timezone, setTimezone, availableHours, setAvailableHours, valid, saving, onBack, onNext } = props
-
-  const toggleDay = (day: string) => {
-    setAvailableHours({
-      ...availableHours,
-      [day]: {
-        ...availableHours[day],
-        active: !availableHours[day]?.active,
-        start: !availableHours[day]?.active ? '09:00' : null,
-        end: !availableHours[day]?.active ? '17:00' : null,
-      },
-    })
+  const requestMic = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
+      setMicState('granted')
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setMicState('denied')
+      } else {
+        setMicState('error')
+      }
+    }
   }
 
-  const setDayTime = (day: string, field: 'start' | 'end', value: string) => {
-    setAvailableHours({
-      ...availableHours,
-      [day]: { ...availableHours[day], [field]: value },
-    })
+  const playTestTone = () => {
+    setToneState('playing')
+    try {
+      const ctx = new AudioContext()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.frequency.value = 440
+      osc.type = 'sine'
+      gain.gain.value = 0.3
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      setTimeout(() => {
+        osc.stop()
+        ctx.close()
+        setToneState('idle')
+      }, 1000)
+    } catch {
+      setToneState('idle')
+    }
   }
+
+  // Cleanup stream on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop())
+      }
+    }
+  }, [])
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Confirm Your Info</h1>
-      <p className="text-gray-500 mb-6">We need a few details to get you started.</p>
+      <h1 className="text-2xl font-bold text-gray-900 mb-1">Microphone Access</h1>
+      <p className="text-gray-500 mb-6">Calls happen through your browser. We need microphone access to connect you.</p>
 
-      <div className="space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-          <input
-            type="text"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-          />
-        </div>
+      <div className="bg-gray-50 rounded-xl p-8 text-center mb-6">
+        {micState === 'idle' && (
+          <>
+            <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mic size={28} className="text-teal-600" />
+            </div>
+            <button
+              onClick={requestMic}
+              className="px-6 py-3 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 transition-colors inline-flex items-center gap-2"
+            >
+              <Mic size={18} /> Allow Microphone Access
+            </button>
+            <p className="text-xs text-gray-400 mt-3">Chrome will show a popup asking for permission</p>
+          </>
+        )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Personal Phone *</label>
-          <input
-            type="tel"
-            value={personalPhone}
-            onChange={e => setPersonalPhone(e.target.value)}
-            placeholder="(555) 123-4567"
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-          />
-          <p className="text-xs text-gray-400 mt-1">For admin contact only. Calls to leads come from the company Twilio number.</p>
-        </div>
+        {micState === 'granted' && (
+          <>
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle size={28} className="text-green-600" />
+            </div>
+            <p className="text-green-700 font-semibold mb-4">Microphone connected</p>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Your Timezone *</label>
-          <select
-            value={timezone}
-            onChange={e => setTimezone(e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
-          >
-            {TIMEZONES.map(tz => (
-              <option key={tz.value} value={tz.value}>{tz.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">When are you available to dial? *</label>
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
-            {DAYS.map(day => (
-              <div key={day} className={`flex items-center gap-3 px-4 py-2.5 ${day !== 'sunday' ? 'border-b border-gray-100' : ''}`}>
+            {toneState !== 'heard' && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-600 mb-3">Let&apos;s test your audio output:</p>
                 <button
-                  type="button"
-                  onClick={() => toggleDay(day)}
-                  className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                    availableHours[day]?.active ? 'bg-teal-500 border-teal-500' : 'border-gray-300'
-                  }`}
+                  onClick={playTestTone}
+                  disabled={toneState === 'playing'}
+                  className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors inline-flex items-center gap-2"
                 >
-                  {availableHours[day]?.active && <Check size={12} className="text-white" />}
+                  <Volume2 size={16} /> {toneState === 'playing' ? 'Playing...' : 'Play Test Beep'}
                 </button>
-                <span className="w-10 text-sm font-medium text-gray-700">{DAY_LABELS[day]}</span>
-                {availableHours[day]?.active ? (
-                  <div className="flex items-center gap-2 text-sm">
-                    <select
-                      value={availableHours[day]?.start || '09:00'}
-                      onChange={e => setDayTime(day, 'start', e.target.value)}
-                      className="px-2 py-1 border border-gray-200 rounded bg-white text-sm"
-                    >
-                      {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                    <span className="text-gray-400">to</span>
-                    <select
-                      value={availableHours[day]?.end || '17:00'}
-                      onChange={e => setDayTime(day, 'end', e.target.value)}
-                      className="px-2 py-1 border border-gray-200 rounded bg-white text-sm"
-                    >
-                      {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
+                {toneState === 'idle' && (
+                  <div className="flex items-center justify-center gap-3 mt-4">
+                    <p className="text-sm text-gray-500">Did you hear a beep?</p>
+                    <button onClick={() => setToneState('heard')} className="px-4 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors">
+                      Yes
+                    </button>
+                    <button onClick={() => setToneState('not_heard')} className="px-4 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors">
+                      No
+                    </button>
                   </div>
-                ) : (
-                  <span className="text-sm text-gray-400">&mdash;</span>
+                )}
+                {toneState === 'not_heard' && (
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 text-left">
+                    <p className="font-medium mb-1">Troubleshooting:</p>
+                    <ul className="list-disc ml-4 space-y-1">
+                      <li>Check that your headset is plugged in</li>
+                      <li>Make sure it&apos;s selected as the audio output in your system settings</li>
+                      <li>Try adjusting the volume</li>
+                    </ul>
+                    <button onClick={playTestTone} className="mt-2 text-blue-600 font-medium hover:underline">
+                      Try Again
+                    </button>
+                  </div>
                 )}
               </div>
-            ))}
-          </div>
-          <p className="text-xs text-gray-400 mt-1">Select at least 1 day you&apos;re available.</p>
-        </div>
-      </div>
+            )}
+            {toneState === 'heard' && (
+              <p className="text-green-600 text-sm font-medium mt-2">Audio output confirmed</p>
+            )}
+          </>
+        )}
 
-      <div className="flex justify-between mt-8">
-        <button onClick={onBack} className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium inline-flex items-center gap-1">
-          <ChevronLeft size={18} /> Back
-        </button>
-        <button
-          onClick={onNext}
-          disabled={!valid || saving}
-          className="px-8 py-2.5 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-2"
-        >
-          {saving ? <><Loader2 size={16} className="animate-spin" /> Saving...</> : <>Continue <ChevronRight size={18} /></>}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ─── Step 3: Payment ───────────────────────────────────────
-
-interface StepPaymentProps {
-  commissionRate: number
-  stripeStatus: string
-  stripeDetailsSubmitted: boolean
-  connecting: boolean
-  onConnect: () => void
-  onBack: () => void
-  onNext: () => void
-}
-
-function StepPayment(props: StepPaymentProps) {
-  const { commissionRate, stripeStatus, stripeDetailsSubmitted, connecting, onConnect, onBack, onNext } = props
-  const commission = (149 * commissionRate).toFixed(2)
-
-  const statusBadge = () => {
-    if (stripeStatus === 'active' || stripeDetailsSubmitted) {
-      return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-100 text-green-700 text-sm font-medium"><Check size={14} /> Connected</span>
-    }
-    if (stripeStatus === 'pending') {
-      return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 text-sm font-medium"><Loader2 size={14} className="animate-spin" /> Pending</span>
-    }
-    if (stripeStatus === 'restricted') {
-      return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-100 text-red-700 text-sm font-medium">Restricted</span>
-    }
-    return <span className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm">Not Connected</span>
-  }
-
-  return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">How You Get Paid</h1>
-      <p className="text-gray-500 mb-6">Connect your bank account to receive commission payouts.</p>
-
-      <div className="bg-teal-50 border border-teal-200 rounded-xl p-6 mb-6">
-        <div className="text-center">
-          <p className="text-sm text-teal-700 font-medium mb-1">Your Commission: {Math.round(commissionRate * 100)}% per close</p>
-          <p className="text-2xl font-bold text-teal-900">Client pays $149 &rarr; You earn ${commission}</p>
-          <p className="text-sm text-teal-600 mt-2">Payouts: Weekly on Fridays via Stripe</p>
-        </div>
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-        <div className="text-center space-y-4">
-          <p className="text-sm text-gray-600">
-            To receive payouts, connect your bank account through Stripe. It&apos;s secure and takes 2 minutes.
-          </p>
-
-          <div className="flex justify-center">
-            {statusBadge()}
-          </div>
-
-          {!stripeDetailsSubmitted && stripeStatus !== 'active' && (
-            <button
-              onClick={onConnect}
-              disabled={connecting}
-              className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors inline-flex items-center gap-2"
-            >
-              {connecting ? (
-                <><Loader2 size={16} className="animate-spin" /> Connecting...</>
-              ) : (
-                <><ExternalLink size={16} /> {stripeStatus === 'pending' || stripeStatus === 'restricted' ? 'Complete Stripe Setup' : 'Connect with Stripe'}</>
-              )}
+        {micState === 'denied' && (
+          <>
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <MicOff size={28} className="text-red-600" />
+            </div>
+            <p className="text-red-700 font-semibold mb-3">Microphone access was denied</p>
+            <div className="text-sm text-gray-600 text-left bg-white rounded-lg p-4 border border-gray-200 max-w-sm mx-auto">
+              <p className="mb-2">To enable it:</p>
+              <ol className="list-decimal ml-4 space-y-1">
+                <li>Click the <strong>lock icon</strong> in the address bar</li>
+                <li>Go to <strong>Site settings</strong></li>
+                <li>Set <strong>Microphone</strong> to <strong>Allow</strong></li>
+                <li>Reload this page</li>
+              </ol>
+            </div>
+            <button onClick={requestMic} className="mt-4 px-5 py-2.5 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-700 transition-colors">
+              Try Again
             </button>
-          )}
+          </>
+        )}
 
-          {stripeStatus === 'pending' && !stripeDetailsSubmitted && (
-            <p className="text-xs text-gray-400">Waiting for you to complete Stripe setup in the other tab...</p>
-          )}
-
-          <p className="text-xs text-gray-400">
-            You&apos;ll be redirected to Stripe to enter your banking details. You&apos;ll come right back here.
-          </p>
-        </div>
+        {micState === 'error' && (
+          <>
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle size={28} className="text-red-600" />
+            </div>
+            <p className="text-red-700 font-semibold mb-2">Could not access microphone</p>
+            <p className="text-sm text-gray-500 mb-4">Make sure no other app is using your microphone and try again.</p>
+            <button onClick={requestMic} className="px-5 py-2.5 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-700 transition-colors">
+              Try Again
+            </button>
+          </>
+        )}
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6">
-        <div className="flex items-start gap-3">
-          <span className="text-lg flex-shrink-0">&#x1F30D;</span>
-          <div>
-            <p className="text-sm font-semibold text-blue-900 mb-1">International? Set up your account with Wise</p>
-            <p className="text-xs text-blue-700">
-              If you&apos;re outside the US, create a{' '}
-              <a href="https://wise.com" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-blue-900">Wise</a>{' '}
-              account to get a US bank routing &amp; account number, then connect it through Stripe above.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center mt-8">
+      <div className="flex justify-between items-center">
         <button onClick={onBack} className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium inline-flex items-center gap-1">
           <ChevronLeft size={18} /> Back
         </button>
         <div className="flex items-center gap-3">
-          {!stripeDetailsSubmitted && stripeStatus !== 'active' && (
-            <span className="text-xs text-gray-400">You can set this up later in your profile settings</span>
-          )}
+          <button onClick={onSkip} className="text-sm text-gray-400 hover:text-gray-600 transition-colors inline-flex items-center gap-1">
+            <SkipForward size={14} /> Skip
+          </button>
           <button
             onClick={onNext}
-            className="px-8 py-2.5 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 transition-colors inline-flex items-center gap-2"
+            disabled={micState !== 'granted'}
+            className="px-8 py-2.5 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-2"
           >
-            {!stripeDetailsSubmitted && stripeStatus !== 'active' ? 'Skip for Now' : 'Continue'} <ChevronRight size={18} />
+            Continue <ChevronRight size={18} />
           </button>
         </div>
       </div>
@@ -569,128 +462,425 @@ function StepPayment(props: StepPaymentProps) {
   )
 }
 
-// ─── Step 4: Training ──────────────────────────────────────
+// ════════════════════════════════════════════════════════════
+// STEPS 3 & 4: RECORD VM (OUTBOUND / INBOUND)
+// ════════════════════════════════════════════════════════════
 
-function StepTraining({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
-  const cards = [
-    { icon: '&#x1F4CB;', title: 'LEADS', desc: 'We load your queue daily' },
-    { icon: '&#x1F4DE;', title: 'CALL', desc: 'Dialer auto-calls through the list' },
-    { icon: '&#x1F4F1;', title: 'PREVIEW', desc: 'One tap sends them a preview of their new site' },
-    { icon: '&#x1F3AF;', title: 'PITCH', desc: 'Follow the script on screen' },
-    { icon: '&#x1F4B3;', title: 'CLOSE', desc: 'They pay $149 through the preview' },
-    { icon: '&#x1F4B0;', title: 'EARN', desc: 'You get commission deposited every Friday' },
-  ]
+const VM_SCRIPTS = {
+  outbound: {
+    title: 'Record Your Outbound Voicemail',
+    subtitle: 'When you call a lead and they don\'t pick up, this message plays on their voicemail. The preview link is texted to them automatically at the same time.',
+    script: '"Hey, this is [YOUR NAME] with Bright Automations. I put together a website for your company — texting you the link right now so you can check it out. Let me know what you think. Talk soon."',
+  },
+  inbound: {
+    title: 'Record Your Inbound Voicemail',
+    subtitle: 'When a lead calls you back and you\'re busy or offline, this plays.',
+    script: '"Hey, you\'ve reached [YOUR NAME] with Bright Automations. I can\'t get to the phone right now but leave a message and I\'ll get back to you. Thanks!"',
+  },
+}
 
-  const rules = [
-    'Follow the script \u2014 it works',
-    'Send previews via text, not email',
-    'Never discuss pricing changes or discounts',
-    'If someone asks for a refund or gets angry, the system will auto-escalate to management',
-  ]
+function StepRecordVM({
+  type,
+  userId,
+  onNext,
+  onSkip,
+  onBack,
+}: {
+  type: 'outbound' | 'inbound'
+  userId: string | null
+  onNext: () => void
+  onSkip: () => void
+  onBack: () => void
+}) {
+  const [recording, setRecording] = useState<Blob | null>(null)
+  const [duration, setDuration] = useState(0)
+  const [uploading, setUploading] = useState(false)
+  const [uploaded, setUploaded] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [durationWarning, setDurationWarning] = useState<string | null>(null)
+
+  const config = VM_SCRIPTS[type]
+
+  const handleRecordingComplete = (blob: Blob, dur: number) => {
+    setRecording(blob)
+    setDuration(dur)
+    setUploadError(null)
+    if (dur > 25) {
+      setDurationWarning(`Your recording is ${Math.round(dur)} seconds. Try to keep it under 20 seconds for best results.`)
+    } else {
+      setDurationWarning(null)
+    }
+  }
+
+  const handleUpload = async () => {
+    if (!recording || !userId) return
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const formData = new FormData()
+      formData.append('audio', recording, `${type}-vm.webm`)
+      formData.append('type', type)
+
+      const res = await fetch('/api/reps/onboarding/vm-upload', {
+        method: 'POST',
+        body: formData,
+      })
+      if (res.ok) {
+        setUploaded(true)
+      } else {
+        const data = await res.json()
+        setUploadError(data.error || 'Upload failed. Please try again.')
+      }
+    } catch {
+      setUploadError('Network error. Please try again.')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">How the Dialer Works</h1>
-      <p className="text-gray-500 mb-6">Here&apos;s the process from start to finish.</p>
+      <h1 className="text-2xl font-bold text-gray-900 mb-1">{config.title}</h1>
+      <p className="text-gray-500 mb-6">{config.subtitle}</p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
-        {cards.map((card, i) => (
-          <div key={i} className="bg-gray-50 rounded-xl p-4 text-center">
-            <span className="text-2xl block mb-2" dangerouslySetInnerHTML={{ __html: card.icon }} />
-            <p className="font-bold text-xs text-gray-900 tracking-wider mb-1">{card.title}</p>
-            <p className="text-xs text-gray-500">{card.desc}</p>
+      {/* Script box */}
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 mb-4">
+        <p className="text-sm text-gray-500 font-medium mb-2">Here&apos;s what to say (in your own words, keep it under 20 seconds):</p>
+        <p className="text-gray-800 italic leading-relaxed">{config.script}</p>
+      </div>
+
+      {/* Tips */}
+      <div className="grid grid-cols-2 gap-2 mb-6">
+        {[
+          'Sound natural, not scripted',
+          'Smile when you talk',
+          'Keep it under 20 seconds',
+          'Record in a quiet room',
+        ].map((tip, i) => (
+          <div key={i} className="flex items-center gap-2 text-xs text-gray-500">
+            <div className="w-1 h-1 rounded-full bg-teal-400 flex-shrink-0" />
+            {tip}
           </div>
         ))}
       </div>
 
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
-        <h3 className="font-semibold text-gray-900 mb-2 text-sm">Key Rules</h3>
-        <ul className="space-y-2">
-          {rules.map((rule, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-              <span className="text-amber-500 mt-0.5">&#x2022;</span>
-              {rule}
-            </li>
-          ))}
-        </ul>
-      </div>
+      {/* Recorder */}
+      {!uploaded ? (
+        <>
+          <AudioRecorder
+            onRecordingComplete={handleRecordingComplete}
+            maxDurationSec={30}
+            minDurationSec={5}
+          />
 
-      <div className="flex justify-between mt-8">
+          {durationWarning && (
+            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700 flex items-start gap-2">
+              <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" />
+              {durationWarning}
+            </div>
+          )}
+
+          {uploadError && (
+            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {uploadError}
+            </div>
+          )}
+
+          {recording && duration >= 5 && (
+            <button
+              onClick={handleUpload}
+              disabled={uploading}
+              className="mt-4 w-full py-3 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 disabled:opacity-50 transition-colors inline-flex items-center justify-center gap-2"
+            >
+              {uploading ? (
+                <><Loader2 size={18} className="animate-spin" /> Uploading...</>
+              ) : (
+                <><Upload size={18} /> Upload &amp; Continue</>
+              )}
+            </button>
+          )}
+        </>
+      ) : (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+          <CheckCircle size={32} className="text-green-600 mx-auto mb-3" />
+          <p className="text-green-800 font-semibold">Uploaded!</p>
+          <p className="text-green-600 text-sm mt-1">Andrew will review and approve your recording before your first session.</p>
+        </div>
+      )}
+
+      <div className="flex justify-between items-center mt-6">
         <button onClick={onBack} className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium inline-flex items-center gap-1">
           <ChevronLeft size={18} /> Back
         </button>
-        <button
-          onClick={onNext}
-          className="px-8 py-2.5 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 transition-colors inline-flex items-center gap-2"
-        >
-          Continue <ChevronRight size={18} />
-        </button>
+        <div className="flex items-center gap-3">
+          {!uploaded && (
+            <button onClick={onSkip} className="text-sm text-gray-400 hover:text-gray-600 transition-colors inline-flex items-center gap-1">
+              <SkipForward size={14} /> Skip
+            </button>
+          )}
+          {uploaded && (
+            <button
+              onClick={onNext}
+              className="px-8 py-2.5 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 transition-colors inline-flex items-center gap-2"
+            >
+              Continue <ChevronRight size={18} />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
 }
 
-// ─── Step 5: Acknowledge ───────────────────────────────────
+// ════════════════════════════════════════════════════════════
+// STEP 5: HOW THE DIALER WORKS
+// ════════════════════════════════════════════════════════════
 
-interface StepAcknowledgeProps {
-  checks: boolean[]; setChecks: (v: boolean[]) => void
-  allChecked: boolean
-  saving: boolean
-  onBack: () => void
-  onFinish: () => void
+const TRAINING_SECTIONS = [
+  {
+    title: 'CALLS',
+    content: 'Calls happen through your browser. The system automatically detects voicemail, no answer, and bad numbers — you don\'t log these manually.',
+  },
+  {
+    title: 'PREVIEWS',
+    content: 'During a call, click "Text Preview" to send the lead their personalized website preview. You\'ll see in real-time when they open it and click "Get Started."',
+  },
+  {
+    title: 'CLOSING',
+    content: 'When a lead says yes: say "Expect a text from our team in the next few minutes." Then log the result and move to your next call. Our AI handles everything after that.',
+  },
+  {
+    title: 'LOGGING RESULTS',
+    content: 'After each call, the system recommends an outcome based on what happened. If it\'s right, tap it once. If not, use the yes/no questions to find the right one.',
+  },
+  {
+    title: 'UPSELLS',
+    content: 'The call guide shows products you can pitch. If a lead wants one, tap "+ Add" to tag it. This records their interest — it doesn\'t send them anything.',
+  },
+  {
+    title: 'DNC',
+    content: 'If someone says "don\'t call me again," click the DNC button. This is permanent. Only use it when explicitly asked.',
+  },
+  {
+    title: 'COMMISSION',
+    content: 'First contact with a lead = you own it. If that lead converts, you earn commission. Paid weekly on Fridays via Wise.',
+  },
+]
+
+function TrainingSectionItem({
+  section,
+  index,
+  viewed,
+  onView,
+}: {
+  section: { title: string; content: string }
+  index: number
+  viewed: boolean
+  onView: (index: number) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setExpanded(!expanded)
+        onView(index)
+      }}
+      className={`w-full text-left rounded-xl border transition-colors ${
+        viewed
+          ? 'bg-teal-50/50 border-teal-200'
+          : 'bg-white border-gray-200 hover:border-gray-300'
+      }`}
+    >
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-2">
+          {viewed ? (
+            <CheckCircle size={16} className="text-teal-500" />
+          ) : (
+            <Eye size={16} className="text-gray-400" />
+          )}
+          <span className="font-semibold text-sm text-gray-900">{section.title}</span>
+        </div>
+        <ChevronRight size={16} className={`text-gray-400 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+      </div>
+      {expanded && (
+        <div className="px-4 pb-3 pt-0">
+          <p className="text-sm text-gray-600 leading-relaxed">{section.content}</p>
+        </div>
+      )}
+    </button>
+  )
 }
 
-function StepAcknowledge(props: StepAcknowledgeProps) {
-  const { checks, setChecks, allChecked, saving, onBack, onFinish } = props
+function StepTraining({ onNext, onSkip, onBack }: { onNext: () => void; onSkip: () => void; onBack: () => void }) {
+  const [viewedSections, setViewedSections] = useState<Set<number>>(new Set())
+  const [elapsedSec, setElapsedSec] = useState(0)
+  const timerRef = useRef<NodeJS.Timeout>()
 
-  const toggleCheck = (i: number) => {
-    const next = [...checks]
-    next[i] = !next[i]
-    setChecks(next)
-  }
+  const allViewed = viewedSections.size >= TRAINING_SECTIONS.length
+  const canContinue = allViewed || elapsedSec >= 30
 
-  const items = [
-    'I understand this is a commission-only position \u2014 I earn when I close deals',
-    'I will follow the provided call scripts and not make unauthorized promises',
-    'I will not share lead data, client info, or internal tools with anyone outside the company',
-    'I understand the escalation system \u2014 if a lead gets upset, the system handles it automatically',
-  ]
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      setElapsedSec(prev => prev + 1)
+    }, 1000)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [])
+
+  const handleView = useCallback((index: number) => {
+    setViewedSections(prev => {
+      const next = new Set(prev)
+      next.add(index)
+      return next
+    })
+  }, [])
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Almost There</h1>
-      <p className="text-gray-500 mb-6">Please confirm the following:</p>
+      <h1 className="text-2xl font-bold text-gray-900 mb-1">How the Power Dialer Works</h1>
+      <p className="text-gray-500 mb-6">Key information you need before your first session. Click each section to expand.</p>
 
-      <div className="space-y-3 mb-8">
-        {items.map((item, i) => (
-          <button
+      <div className="space-y-2 mb-6">
+        {TRAINING_SECTIONS.map((section, i) => (
+          <TrainingSectionItem
             key={i}
-            type="button"
-            onClick={() => toggleCheck(i)}
-            className={`w-full flex items-start gap-3 p-4 rounded-xl border text-left transition-colors ${
-              checks[i] ? 'bg-teal-50 border-teal-200' : 'bg-white border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
-              checks[i] ? 'bg-teal-500 border-teal-500' : 'border-gray-300'
-            }`}>
-              {checks[i] && <Check size={12} className="text-white" />}
-            </div>
-            <span className="text-sm text-gray-700">{item}</span>
-          </button>
+            section={section}
+            index={i}
+            viewed={viewedSections.has(i)}
+            onView={handleView}
+          />
         ))}
       </div>
 
-      <div className="flex justify-between">
+      {!canContinue && (
+        <p className="text-xs text-gray-400 text-center mb-4">
+          Read all sections to continue ({viewedSections.size}/{TRAINING_SECTIONS.length} viewed)
+        </p>
+      )}
+
+      <div className="flex justify-between items-center">
+        <button onClick={onBack} className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium inline-flex items-center gap-1">
+          <ChevronLeft size={18} /> Back
+        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={onSkip} className="text-sm text-gray-400 hover:text-gray-600 transition-colors inline-flex items-center gap-1">
+            <SkipForward size={14} /> Skip
+          </button>
+          <button
+            onClick={onNext}
+            disabled={!canContinue}
+            className="px-8 py-2.5 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-2"
+          >
+            Continue <ChevronRight size={18} />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ════════════════════════════════════════════════════════════
+// STEP 6: CONFIRMATION + COMPLETE
+// ════════════════════════════════════════════════════════════
+
+function StepConfirmation({
+  status,
+  completing,
+  onComplete,
+  onBack,
+}: {
+  status: StepStatus
+  completing: boolean
+  onComplete: () => void
+  onBack: () => void
+}) {
+  const items = [
+    {
+      label: 'Equipment confirmed',
+      done: status.equipment,
+    },
+    {
+      label: 'Microphone connected',
+      done: status.microphone,
+    },
+    {
+      label: 'Outbound voicemail',
+      done: status.outboundVm,
+      detail: status.outboundVm === true ? 'Recorded — pending approval' : status.outboundVm === 'skipped' ? 'Skipped' : 'Not completed',
+    },
+    {
+      label: 'Inbound voicemail',
+      done: status.inboundVm,
+      detail: status.inboundVm === true ? 'Recorded — pending approval' : status.inboundVm === 'skipped' ? 'Skipped' : 'Not completed',
+    },
+    {
+      label: 'Dialer training reviewed',
+      done: status.training,
+    },
+  ]
+
+  const hasVMs = status.outboundVm === true || status.inboundVm === true
+  const skippedVMs = status.outboundVm === 'skipped' || status.inboundVm === 'skipped' || !status.outboundVm || !status.inboundVm
+
+  return (
+    <div className="text-center">
+      <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+        <CheckCircle size={32} className="text-green-600" />
+      </div>
+      <h1 className="text-3xl font-bold text-gray-900 mb-2">You&apos;re All Set!</h1>
+      <p className="text-gray-500 mb-8">Here&apos;s where you stand:</p>
+
+      <div className="max-w-md mx-auto space-y-2 mb-8 text-left">
+        {items.map((item, i) => (
+          <div key={i} className={`flex items-center gap-3 p-3 rounded-xl ${
+            item.done === true ? 'bg-green-50 border border-green-200' :
+            item.done === 'skipped' ? 'bg-gray-50 border border-gray-200' :
+            'bg-gray-50 border border-gray-200'
+          }`}>
+            {item.done === true ? (
+              <CheckCircle size={18} className="text-green-500 flex-shrink-0" />
+            ) : (
+              <SkipForward size={18} className="text-gray-400 flex-shrink-0" />
+            )}
+            <div>
+              <p className="text-sm font-medium text-gray-900">{item.label}</p>
+              {item.detail && <p className="text-xs text-gray-500">{item.detail}</p>}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {hasVMs && (
+        <div className="max-w-md mx-auto mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800">
+          <p>Waiting for Andrew to approve your voicemail recordings. You&apos;ll get a notification when you&apos;re cleared to start dialing.</p>
+        </div>
+      )}
+
+      {skippedVMs && (
+        <div className="max-w-md mx-auto mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+          <p>You can record your voicemails anytime in your profile settings.</p>
+        </div>
+      )}
+
+      <p className="text-gray-500 text-sm mb-6">
+        In the meantime, you can explore your dashboard and review your assigned leads.
+      </p>
+
+      <div className="flex justify-between items-center">
         <button onClick={onBack} className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium inline-flex items-center gap-1">
           <ChevronLeft size={18} /> Back
         </button>
         <button
-          onClick={onFinish}
-          disabled={!allChecked || saving}
-          className="px-8 py-3 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-2 text-lg"
+          onClick={onComplete}
+          disabled={completing}
+          className="px-8 py-3 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 disabled:opacity-50 transition-colors inline-flex items-center gap-2 text-lg"
         >
-          {saving ? <><Loader2 size={18} className="animate-spin" /> Finishing...</> : <>Start Dialing &#x1F680;</>}
+          {completing ? (
+            <><Loader2 size={18} className="animate-spin" /> Finishing...</>
+          ) : (
+            <>Go to Dashboard <ChevronRight size={18} /></>
+          )}
         </button>
       </div>
     </div>

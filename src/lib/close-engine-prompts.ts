@@ -569,9 +569,20 @@ You MUST respond with valid JSON only. No text before or after the JSON.
     // medium = rearranging layout, adding a new section, changing navigation structure, redesigning a component
     // complex = adding a new page, major redesign, functionality changes, form modifications, adding interactive features
   } or null,
+  "extractedData": {
+    "services": ["service1", "service2"],
+    "hours": "business hours",
+    "photos": ["url1"],
+    "logo": "url",
+    "companyName": "confirmed or corrected name",
+    "aboutStory": "owner's own words about their company",
+    "serviceArea": "cities or counties they serve",
+    "colorPrefs": "brand colors or style preference"
+  } or null,
   "escalate": true/false,
   "escalateReason": "reason" or null${onboardingResponseFields}
-}`
+}
+IMPORTANT: If the client provides ANY business information (hours, services, photos, about their company, service area, etc.) — even casually — you MUST capture it in extractedData. Every piece of info improves their site. Never just acknowledge data without extracting it.`
 }
 
 function buildOnboardingPromptSection(step: number, data: Record<string, unknown>, _companyName: string, stageTemplate?: string): string {

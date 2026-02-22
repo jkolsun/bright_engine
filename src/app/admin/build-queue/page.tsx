@@ -516,7 +516,10 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
 
   const openEditorForRequest = (req: any) => {
     const leadId = getLeadId(req)
-    if (!leadId) return
+    if (!leadId) {
+      alert(`Cannot open editor: No lead linked to this edit request for ${req.client?.companyName || 'Unknown'}. The edit request may need a lead association.`)
+      return
+    }
     onOpenEditor({
       id: leadId,
       companyName: req.client?.companyName || 'Unknown',
@@ -1240,7 +1243,7 @@ export default function BuildQueuePage() {
           buildStep={editorLead.buildStep || 'QA_REVIEW'}
           previewId={editorLead.previewId || null}
           editInstruction={editorLead.editInstruction || undefined}
-          onClose={() => setEditorLead(null)}
+          onClose={() => { setEditorLead(null); loadData() }}
           onRefresh={loadData}
         />
       )}

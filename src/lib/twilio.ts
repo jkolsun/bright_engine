@@ -57,5 +57,23 @@ export async function logInboundSMS(options: {
   return logInboundSMSViaProvider(options)
 }
 
+/**
+ * Get the preferred SMS number for a lead.
+ * Respects the smsPreferredNumber field (primary vs secondary).
+ */
+export async function getLeadSmsNumber(leadId: string): Promise<string> {
+  const { prisma } = await import('./db')
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    select: { phone: true, secondaryPhone: true, smsPreferredNumber: true },
+  })
+  if (!lead) throw new Error(`Lead ${leadId} not found`)
+
+  if (lead.smsPreferredNumber === 'secondary' && lead.secondaryPhone) {
+    return lead.secondaryPhone
+  }
+  return lead.phone
+}
+
 export { getTwilioClient }
 export default client
