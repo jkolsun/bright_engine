@@ -1559,6 +1559,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         body: JSON.stringify({
           callId: activeCallId || `call-${Date.now()}`,
           outcome,
+          leadId: lead.id,
           notes: callNotes.trim() || undefined,
           durationSeconds,
           callbackDate: type === 'callback' && extra?.callbackDate

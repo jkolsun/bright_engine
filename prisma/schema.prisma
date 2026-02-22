@@ -107,6 +107,7 @@ model Lead {
   folderId               String?                  @map("folder_id")
   autonomyLevel          String                   @default("FULL_AUTO") @map("autonomy_level")
   closeEntryPoint        String?                  @map("close_entry_point")
+  closeEngineTriggeredAt DateTime?                @map("close_engine_triggered_at")
   qualificationData      Json?                    @map("qualification_data")
   buildCompletedAt       DateTime?                @map("build_completed_at")
   buildDistributionMs    Int?                     @map("build_distribution_ms")

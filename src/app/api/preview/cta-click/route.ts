@@ -20,16 +20,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     }
 
-    // Rate limit: Skip Close Engine trigger if CTA already clicked in last hour
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
-    const recentClick = await prisma.leadEvent.findFirst({
-      where: {
-        leadId: lead.id,
-        eventType: 'PREVIEW_CTA_CLICKED',
-        createdAt: { gte: oneHourAgo },
-      },
-    })
-
     // Always log the click event
     await prisma.leadEvent.create({
       data: {
@@ -71,17 +61,15 @@ export async function POST(request: NextRequest) {
       console.error('[Preview CTA] Admin email notification failed:', emailErr)
     }
 
-    // Only trigger Close Engine if not recently clicked
-    if (!recentClick) {
-      try {
-        const { triggerCloseEngine } = await import('@/lib/close-engine')
-        await triggerCloseEngine({
-          leadId: lead.id,
-          entryPoint: 'PREVIEW_CTA',
-        })
-      } catch (err) {
-        console.error('[Preview CTA] Close Engine trigger failed:', err)
-      }
+    // Trigger Close Engine (atomic guard inside prevents double-fire)
+    try {
+      const { triggerCloseEngine } = await import('@/lib/close-engine')
+      await triggerCloseEngine({
+        leadId: lead.id,
+        entryPoint: 'PREVIEW_CTA',
+      })
+    } catch (err) {
+      console.error('[Preview CTA] Close Engine trigger failed:', err)
     }
 
     return NextResponse.json({ success: true })

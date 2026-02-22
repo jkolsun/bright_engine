@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const { callId, outcome, notes, callbackDate, durationSeconds, autoText } = await request.json()
+    const { callId, outcome, notes, callbackDate, durationSeconds, autoText, leadId: requestLeadId } = await request.json()
 
     if (!callId || !outcome) {
       return NextResponse.json({ error: 'callId and outcome required' }, { status: 400 })
@@ -40,6 +40,22 @@ export async function POST(request: NextRequest) {
     let textResult: any = null
     if (autoText) {
       textResult = await autoTextPreview(callId, session.name || 'Rep')
+    }
+
+    // Trigger Close Engine for interested outcomes (atomic guard prevents double-fire)
+    const interestedOutcomes = ['interested', 'interested_saw_preview', 'interested_no_preview']
+    const resolvedLeadId = (call as any)?.leadId || requestLeadId
+    if (interestedOutcomes.includes(outcome) && resolvedLeadId) {
+      try {
+        const { triggerCloseEngine } = await import('@/lib/close-engine')
+        await triggerCloseEngine({
+          leadId: resolvedLeadId,
+          entryPoint: 'REP_CLOSE',
+          repId: session.userId,
+        })
+      } catch (err) {
+        console.error('[Dialer Log] Close Engine trigger failed:', err)
+      }
     }
 
     return NextResponse.json({ call, textResult })

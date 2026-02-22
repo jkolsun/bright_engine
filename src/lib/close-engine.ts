@@ -68,6 +68,17 @@ export async function triggerCloseEngine(options: {
   const { leadId, entryPoint, repId } = options
 
   try {
+    // 0. Atomic dedup: only one entry point can win the race
+    // updateMany with WHERE null is atomic — prevents double-fire
+    const dedup = await prisma.lead.updateMany({
+      where: { id: leadId, closeEngineTriggeredAt: null },
+      data: { closeEngineTriggeredAt: new Date() },
+    })
+    if (dedup.count === 0) {
+      console.log(`[CloseEngine] Dedup: already triggered for lead ${leadId}, skipping`)
+      return { success: true, conversationId: undefined }
+    }
+
     // 1. Check for existing active conversation
     const existing = await prisma.closeEngineConversation.findUnique({
       where: { leadId },
