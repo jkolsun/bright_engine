@@ -91,6 +91,7 @@ function formatTime(seconds: number): string {
 }
 
 function formatPhone(phone: string): string {
+  if (!phone) return '—'
   const digits = phone.replace(/\D/g, '')
   if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
   if (digits.length === 11 && digits[0] === '1') return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
@@ -98,12 +99,14 @@ function formatPhone(phone: string): string {
 }
 
 function truncatePhone(phone: string): string {
+  if (!phone) return '—'
   const digits = phone.replace(/\D/g, '')
   if (digits.length >= 10) return `•••-${digits.slice(-4)}`
   return phone
 }
 
 function formatRelative(dateStr: string): string {
+  if (!dateStr) return '—'
   const now = new Date()
   const date = new Date(dateStr)
   const diffMs = now.getTime() - date.getTime()
@@ -381,7 +384,7 @@ function LeadProfile({
               </span>
             )}
             <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-teal-50 text-teal-700 border border-teal-200">
-              {lead.status.replace(/_/g, ' ')}
+              {(lead.status || 'NEW').replace(/_/g, ' ')}
             </span>
           </div>
         </div>
@@ -1864,7 +1867,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                         <span className="text-gray-400">{formatRelative(item.createdAt)}</span>
                         <span className="mx-1.5 text-gray-300">·</span>
                         <span className="text-gray-600">
-                          {item.eventType.replace(/_/g, ' ')}
+                          {(item.eventType || 'ACTIVITY').replace(/_/g, ' ')}
                           {item.description && ` — ${item.description}`}
                         </span>
                       </div>
