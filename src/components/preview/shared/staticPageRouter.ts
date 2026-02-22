@@ -7,6 +7,8 @@
  * - Multi-page navigation via URL hash (#home, #services, etc.)
  * - CTA button clicks → navigate to contact page
  * - Mobile hamburger menu → dynamic overlay nav
+ * - Text-based nav link detection (fallback when data-nav-page missing)
+ * - Chatbot widget button → navigate to contact page
  * - Phone link tracking (tel: links work natively)
  */
 export const STATIC_PAGE_ROUTER_SCRIPT = `
@@ -30,6 +32,19 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
   var PAGES=['home','services','about','portfolio','contact'];
   var NAV_LABELS={home:'Home',services:'Services',about:'About',portfolio:'Our Work',contact:'Contact'};
 
+  // Map common link text to page names (case-insensitive)
+  var TEXT_TO_PAGE={
+    'home':'home','services':'services','about':'about','about us':'about',
+    'our work':'portfolio','portfolio':'portfolio','gallery':'portfolio','projects':'portfolio',
+    'contact':'contact','contact us':'contact','get in touch':'contact'
+  };
+
+  function getNavPageFromText(text){
+    if(!text)return null;
+    var t=text.toLowerCase().trim();
+    return TEXT_TO_PAGE[t]||null;
+  }
+
   function getPage(){
     var h=location.hash.replace('#','');
     return PAGES.indexOf(h)!==-1?h:'home';
@@ -39,10 +54,14 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
     var all=document.querySelectorAll('[data-page]');
     for(var i=0;i<all.length;i++){
       all[i].classList.remove('active-page');
+      all[i].style.display='none';
     }
     var target=document.querySelector('[data-page="'+page+'"]');
-    if(target)target.classList.add('active-page');
-    // Update nav active states
+    if(target){
+      target.classList.add('active-page');
+      target.style.display='block';
+    }
+    // Update nav active states for data-nav-page links
     var navLinks=document.querySelectorAll('[data-nav-page]');
     for(var j=0;j<navLinks.length;j++){
       var link=navLinks[j];
@@ -68,7 +87,7 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
   }
 
   // ═══ CTA BUTTON DETECTION ═══
-  var CTA_WORDS=/free estimate|get estimate|free quote|get quote|get started|start your|request.*estimate|request.*quote|book.*now|schedule|consultation/i;
+  var CTA_WORDS=/free estimate|get estimate|free quote|get quote|get started|start your|request.*estimate|request.*quote|book.*now|schedule|consultation|let.*build|get.*website/i;
 
   function isCTAButton(el){
     if(!el)return false;
@@ -76,11 +95,37 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
     return CTA_WORDS.test(text);
   }
 
+  // ═══ CHATBOT DETECTION ═══
+  function isChatbotButton(el){
+    if(!el)return false;
+    // Chatbot widget buttons — look for the floating chat bubble
+    var btn=el.closest('button');
+    if(!btn)return false;
+    var classes=btn.className||'';
+    // Chatbot buttons typically have fixed/absolute positioning and chat-related content
+    if(classes.indexOf('fixed')!==-1||classes.indexOf('absolute')!==-1){
+      var svg=btn.querySelector('svg');
+      if(svg){
+        // Check for MessageCircle icon (chatbot) or chat-related paths
+        var paths=svg.querySelectorAll('path');
+        for(var i=0;i<paths.length;i++){
+          var d=paths[i].getAttribute('d')||'';
+          if(d.indexOf('M21 15a2')!==-1||d.indexOf('m3 21')!==-1||d.indexOf('M7.9')!==-1){
+            return true;
+          }
+        }
+      }
+      // Also check for chat-related text
+      var text=(btn.textContent||'').toLowerCase();
+      if(text.indexOf('chat')!==-1||text.indexOf('message')!==-1){return true}
+    }
+    return false;
+  }
+
   // ═══ MOBILE NAV ═══
   var mobileOverlay=null;
 
   function createMobileNav(){
-    // Find existing nav pages from the page
     var overlay=document.createElement('div');
     overlay.className='sp-mobile-overlay';
     overlay.innerHTML='<div class="sp-mobile-backdrop"></div>'
@@ -93,7 +138,6 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
         return '<button class="sp-mobile-nav-link" data-sp-nav="'+p+'">'+NAV_LABELS[p]+'</button>';
       }).join('')+'</nav>'
       +'<button class="sp-mobile-cta" data-sp-nav="contact">Get Free Estimate</button>'
-      // Phone link — try to find from the page
       +'</div>';
 
     // Try to find a phone number in the page
@@ -127,11 +171,9 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
   }
 
   function isHamburgerButton(el){
-    // Hamburger buttons are typically inside lg:hidden containers and contain an SVG
     if(!el)return false;
     var btn=el.closest('button');
     if(!btn)return false;
-    // Check if it's in a mobile-only context (lg:hidden parent or the button itself)
     var classes=(btn.className||'')+(btn.parentElement?(' '+(btn.parentElement.className||'')):'');
     if(classes.indexOf('lg:hidden')!==-1 && btn.querySelector('svg')){
       return true;
@@ -143,7 +185,7 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
   document.addEventListener('click',function(e){
     var target=e.target;
 
-    // 1. Nav page links (existing behavior)
+    // 1. Nav page links via data-nav-page attribute
     var navEl=target.closest('[data-nav-page]');
     if(navEl){
       e.preventDefault();
@@ -151,7 +193,30 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
       return;
     }
 
-    // 2. CTA buttons → contact page
+    // 2. Text-based nav link detection (buttons/links in nav/header areas)
+    var navBtn=target.closest('button,a');
+    if(navBtn && navBtn.closest('nav,header,[role="navigation"]')){
+      var navText=(navBtn.textContent||'').trim();
+      var navPage=getNavPageFromText(navText);
+      if(navPage){
+        e.preventDefault();
+        navigateTo(navPage);
+        return;
+      }
+    }
+
+    // 3. Footer nav links (buttons/links inside footer)
+    if(navBtn && navBtn.closest('footer')){
+      var footerText=(navBtn.textContent||'').trim();
+      var footerPage=getNavPageFromText(footerText);
+      if(footerPage){
+        e.preventDefault();
+        navigateTo(footerPage);
+        return;
+      }
+    }
+
+    // 4. CTA buttons → contact page
     var btn=target.closest('button');
     if(btn && isCTAButton(btn)){
       e.preventDefault();
@@ -160,13 +225,23 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
     }
     // Also check <a> tags that are CTA-like (not tel: or mailto:)
     var link=target.closest('a');
-    if(link && !link.href.match(/^(tel:|mailto:)/) && isCTAButton(link)){
+    if(link){
+      var href=link.getAttribute('href')||'';
+      if(href.indexOf('tel:')!==0 && href.indexOf('mailto:')!==0 && isCTAButton(link)){
+        e.preventDefault();
+        navigateTo('contact');
+        return;
+      }
+    }
+
+    // 5. Chatbot widget button → contact page
+    if(isChatbotButton(target)){
       e.preventDefault();
       navigateTo('contact');
       return;
     }
 
-    // 3. Hamburger menu button
+    // 6. Hamburger menu button
     if(isHamburgerButton(target)){
       e.preventDefault();
       if(!mobileOverlay)createMobileNav();
@@ -176,7 +251,13 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
   });
 
   window.addEventListener('hashchange',function(){showPage(getPage())});
-  // Initial page
+
+  // Initial setup: strip React inline styles from [data-page] sections and show the right page
+  var allPages=document.querySelectorAll('[data-page]');
+  for(var p=0;p<allPages.length;p++){
+    allPages[p].style.display='none';
+    allPages[p].classList.remove('active-page');
+  }
   showPage(getPage());
 })();
 </script>

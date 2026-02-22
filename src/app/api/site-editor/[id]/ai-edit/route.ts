@@ -65,7 +65,9 @@ Rules:
 The site belongs to: ${lead.companyName}`
 
     const anthropic = getAnthropicClient()
-    const response = await anthropic.messages.create({
+
+    // Use streaming to avoid Anthropic timeout on large HTML payloads
+    const stream = anthropic.messages.stream({
       model: AI_MODEL,
       max_tokens: 32000,
       system: systemPrompt,
@@ -76,6 +78,8 @@ The site belongs to: ${lead.companyName}`
         },
       ],
     })
+
+    const response = await stream.finalMessage()
 
     const rawText = response.content
       .filter((block): block is Anthropic.TextBlock => block.type === 'text')
