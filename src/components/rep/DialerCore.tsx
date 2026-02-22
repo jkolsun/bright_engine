@@ -169,14 +169,14 @@ function TopBar({
   }
 
   return (
-    <div className="h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-4 flex-shrink-0 shadow-sm">
+    <div className="h-14 gradient-primary flex items-center px-4 gap-4 flex-shrink-0 shadow-teal">
       {/* Left */}
-      <Link href={basePath} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+      <Link href={basePath} className="flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors">
         <ArrowLeft size={16} />
         <span className="hidden sm:inline">Dashboard</span>
       </Link>
-      <div className="h-5 w-px bg-gray-200" />
-      <span className="text-sm font-semibold text-gray-900">
+      <div className="h-5 w-px bg-white/20" />
+      <span className="text-sm font-semibold text-white">
         {dialerMode === 'power' ? 'Power Dialer' : 'Single Dial'}
       </span>
       {statusBadge()}
@@ -195,11 +195,11 @@ function TopBar({
       <div className="flex items-center gap-3">
         {/* Mode toggle - full-time only */}
         {!isPartTime && (
-          <div className="flex bg-gray-100 rounded-lg p-0.5">
+          <div className="flex bg-white/15 rounded-lg p-0.5">
             <button
               onClick={() => setDialerMode('power')}
               className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                dialerMode === 'power' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                dialerMode === 'power' ? 'bg-white text-teal-700 shadow-sm' : 'text-white/70 hover:text-white'
               }`}
             >
               Power
@@ -207,7 +207,7 @@ function TopBar({
             <button
               onClick={() => setDialerMode('single')}
               className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                dialerMode === 'single' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                dialerMode === 'single' ? 'bg-white text-teal-700 shadow-sm' : 'text-white/70 hover:text-white'
               }`}
             >
               Single
@@ -220,7 +220,7 @@ function TopBar({
           <select
             value={linesPerDial}
             onChange={(e) => setLinesPerDial(Number(e.target.value))}
-            className="text-xs border border-gray-300 rounded-md px-2 py-1 bg-white"
+            className="text-xs border border-white/30 rounded-md px-2 py-1 bg-white/10 text-white"
           >
             <option value={1}>1 line</option>
             <option value={2}>2 lines</option>
@@ -232,18 +232,23 @@ function TopBar({
         {!sessionActive ? (
           <button
             onClick={onStartSession}
-            className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-1.5 bg-white text-teal-700 text-xs font-bold rounded-lg hover:bg-white/90 transition-colors shadow-sm"
           >
             Start Session
           </button>
         ) : (
           <button
             onClick={onEndSession}
-            className="px-4 py-1.5 bg-gray-600 text-white text-xs font-semibold rounded-lg hover:bg-gray-700 transition-colors"
+            className="px-4 py-1.5 bg-white/15 text-white text-xs font-semibold rounded-lg hover:bg-white/25 transition-colors"
           >
             End Session
           </button>
         )}
+
+        {/* Close dialer */}
+        <Link href={basePath} className="p-1.5 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors" title="Close Dialer">
+          <X size={18} />
+        </Link>
       </div>
     </div>
   )
@@ -252,8 +257,8 @@ function TopBar({
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="text-center">
-      <div className="text-lg font-bold text-gray-900">{value}</div>
-      <div className="text-[10px] text-gray-500 uppercase tracking-wide">{label}</div>
+      <div className="text-lg font-bold text-white">{value}</div>
+      <div className="text-[10px] text-white/60 uppercase tracking-wide">{label}</div>
     </div>
   )
 }
@@ -275,8 +280,8 @@ function QueuePanel({
 
   return (
     <div className="w-1/4 bg-white border-r border-gray-200 flex flex-col overflow-hidden flex-shrink-0">
-      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+      <div className="px-4 py-3 border-b border-teal-100 bg-teal-50">
+        <span className="text-xs font-semibold text-teal-700 uppercase tracking-wide">
           {currentIndex + 1} of {queue.length} leads
         </span>
       </div>
@@ -348,7 +353,7 @@ function LeadProfile({
   // Preview status display
   const previewStatusText = () => {
     if (previewStatus.ctaClicked) return { text: 'CTA Clicked', color: 'text-green-600 bg-green-50' }
-    if (previewStatus.opened) return { text: 'Viewed', color: 'text-blue-600 bg-blue-50' }
+    if (previewStatus.opened) return { text: 'Viewed', color: 'text-teal-600 bg-teal-50' }
     if (previewStatus.sent || previewSentThisCall) return { text: 'Sent', color: 'text-amber-600 bg-amber-50' }
     return { text: 'Not Sent', color: 'text-gray-400 bg-gray-50' }
   }
@@ -375,14 +380,14 @@ function LeadProfile({
                 {temp.label}
               </span>
             )}
-            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-teal-50 text-teal-700 border border-teal-200">
               {lead.status.replace(/_/g, ' ')}
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-4 mt-2 text-sm">
-          <a href={`tel:${lead.phone}`} className="text-blue-600 hover:underline flex items-center gap-1">
+          <a href={`tel:${lead.phone}`} className="text-teal-600 hover:underline flex items-center gap-1">
             <Phone size={13} /> {formatPhone(lead.phone)}
           </a>
           {location && (
@@ -402,7 +407,7 @@ function LeadProfile({
           label="Website"
           value={lead.website ? 'Yes' : 'No'}
           extra={lead.website ? (
-            <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-[10px] truncate block">
+            <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline text-[10px] truncate block">
               {lead.website.replace(/^https?:\/\//, '')}
             </a>
           ) : undefined}
@@ -420,9 +425,9 @@ function LeadProfile({
 
       {/* Preview Section */}
       {lead.previewUrl && (
-        <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-3">
+        <div className="bg-teal-50/50 border border-teal-100 rounded-lg p-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-blue-800 uppercase tracking-wide">Preview Link</span>
+            <span className="text-xs font-semibold text-teal-800 uppercase tracking-wide">Preview Link</span>
             {previewStatus.opened && (
               <span className="text-[10px] text-green-600 font-medium">
                 {previewStatus.viewDuration > 0 && `Viewed ${previewStatus.viewDuration}s`}
@@ -434,11 +439,11 @@ function LeadProfile({
             <input
               readOnly
               value={lead.previewUrl}
-              className="flex-1 text-xs bg-white border border-blue-200 rounded px-2 py-1.5 text-gray-700 truncate"
+              className="flex-1 text-xs bg-white border border-teal-200 rounded px-2 py-1.5 text-gray-700 truncate"
             />
             <button
               onClick={onCopyPreview}
-              className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+              className="p-1.5 text-teal-600 hover:bg-teal-100 rounded transition-colors"
               title="Copy link"
             >
               <Copy size={14} />
@@ -447,7 +452,7 @@ function LeadProfile({
               href={lead.previewUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+              className="p-1.5 text-teal-600 hover:bg-teal-100 rounded transition-colors"
               title="Open in new tab"
             >
               <ExternalLink size={14} />
@@ -456,12 +461,12 @@ function LeadProfile({
           <button
             onClick={onTextPreview}
             disabled={previewSending || previewSentThisCall}
-            className={`mt-2 w-full py-2 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+            className={`mt-2 w-full py-2 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
               previewSentThisCall
                 ? 'bg-green-100 text-green-700 cursor-default'
                 : previewSending
-                ? 'bg-blue-100 text-blue-500 cursor-wait'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                ? 'bg-teal-100 text-teal-500 cursor-wait'
+                : 'gradient-primary text-white hover:opacity-90 shadow-teal'
             }`}
           >
             <Send size={14} />
@@ -485,7 +490,7 @@ function InfoCard({ label, value, extra, icon, valueClass }: {
   label: string; value: string; extra?: React.ReactNode; icon: React.ReactNode; valueClass?: string
 }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-2.5">
+    <div className="bg-white border border-gray-200 rounded-xl p-2.5">
       <div className="flex items-center gap-1.5 text-gray-400 mb-1">
         {icon}
         <span className="text-[10px] uppercase tracking-wide font-medium">{label}</span>
@@ -517,9 +522,9 @@ function CallScriptPanel({
     <div className="border border-gray-200 rounded-lg overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-gray-100 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-2.5 bg-teal-50 hover:bg-teal-100 transition-colors"
       >
-        <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Call Script</span>
+        <span className="text-xs font-semibold text-teal-700 uppercase tracking-wide">Call Script</span>
         {expanded ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
       </button>
       {expanded && (
@@ -618,8 +623,8 @@ function DispositionPanel({
 
   return (
     <div className="w-1/4 bg-white border-l border-gray-200 flex flex-col overflow-hidden flex-shrink-0">
-      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Call Controls</span>
+      <div className="px-4 py-3 border-b border-teal-100 bg-teal-50">
+        <span className="text-xs font-semibold text-teal-700 uppercase tracking-wide">Call Controls</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -641,7 +646,7 @@ function DispositionPanel({
                 {!sessionActive ? (
                   <button
                     onClick={onStartSession}
-                    className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700 transition-colors"
+                    className="w-full py-3 gradient-primary text-white rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity shadow-teal"
                   >
                     Start Session
                   </button>
@@ -672,8 +677,8 @@ function DispositionPanel({
         {callPhase === 'dialing' && (
           <div className="text-center py-8 space-y-4">
             <div className="relative mx-auto w-16 h-16">
-              <PhoneCall size={32} className="absolute inset-0 m-auto text-blue-500 animate-pulse" />
-              <div className="absolute inset-0 rounded-full border-2 border-blue-300 animate-ping" />
+              <PhoneCall size={32} className="absolute inset-0 m-auto text-teal-500 animate-pulse" />
+              <div className="absolute inset-0 rounded-full border-2 border-teal-300 animate-ping" />
             </div>
             <div>
               <p className="text-sm font-bold text-gray-900 animate-pulse">Ringing...</p>
@@ -743,10 +748,10 @@ function DispositionPanel({
 
             {/* Preview prompt */}
             {showPreviewPrompt && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
-                <p className="text-xs font-medium text-blue-800">Send preview before logging?</p>
+              <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 space-y-2">
+                <p className="text-xs font-medium text-teal-800">Send preview before logging?</p>
                 <div className="flex gap-2">
-                  <button onClick={() => confirmInterested(true)} className="flex-1 py-1.5 bg-blue-600 text-white text-xs rounded-md font-medium">
+                  <button onClick={() => confirmInterested(true)} className="flex-1 py-1.5 gradient-primary text-white text-xs rounded-md font-medium">
                     Send & Log
                   </button>
                   <button onClick={() => confirmInterested(false)} className="flex-1 py-1.5 bg-gray-200 text-gray-700 text-xs rounded-md font-medium">
@@ -901,7 +906,7 @@ function DispositionPanel({
                           onDisposition('voicemail', { sub: 'left', autoText: true })
                           setActiveDisposition(null)
                         }}
-                        className="w-full py-1.5 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700"
+                        className="w-full py-1.5 gradient-primary text-white text-xs font-medium rounded-md hover:opacity-90"
                       >
                         <Send size={12} className="inline mr-1" /> Left VM + Auto-Text Preview
                       </button>
@@ -971,15 +976,15 @@ function EndOfSessionScreen({
           </div>
         </div>
 
-        <div className="bg-blue-50 rounded-lg p-3 mb-6">
-          <div className="text-xl font-bold text-blue-700">{connectRate}%</div>
-          <div className="text-xs text-blue-600">Connect Rate</div>
+        <div className="bg-teal-50 rounded-lg p-3 mb-6">
+          <div className="text-xl font-bold text-teal-700">{connectRate}%</div>
+          <div className="text-xs text-teal-600">Connect Rate</div>
         </div>
 
         <div className="flex items-center gap-3 justify-center">
           <Link
             href={basePath}
-            className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700 transition-colors"
+            className="inline-block px-6 py-3 gradient-primary text-white rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity shadow-teal"
           >
             Back to Dashboard
           </Link>
@@ -1720,7 +1725,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   const queueEmpty = queue.length === 0
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-gray-50">
+    <div className="fixed inset-0 flex flex-col" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f0fdfa 40%, #ecfdf5 70%, #f0f9ff 100%)' }}>
       {/* Toast */}
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-sm font-medium ${
@@ -1787,8 +1792,8 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
               {/* Notes Section (always visible) */}
               <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100">
-                  <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Notes</span>
+                <div className="px-4 py-2.5 bg-teal-50 border-b border-teal-100">
+                  <span className="text-xs font-semibold text-teal-700 uppercase tracking-wide">Notes</span>
                   <kbd className="ml-2 text-[10px] text-gray-400 bg-gray-200 px-1 rounded">N</kbd>
                 </div>
 
