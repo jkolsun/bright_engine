@@ -74,202 +74,232 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  console.log('Processing checkout.session.completed:', session.id)
-
-  const clientReferenceId = session.client_reference_id
   const amountTotal = session.amount_total || 0
-  
-  let clientId: string | undefined
+  const amountDollars = amountTotal / 100
 
-  // If client_reference_id is a leadId, convert lead to client
-  if (clientReferenceId) {
-    const lead = await prisma.lead.findUnique({
-      where: { id: clientReferenceId },
+  console.log(`[Stripe Webhook] checkout.session.completed — session=${session.id}, amount=$${amountDollars}, client_reference_id=${session.client_reference_id}, customer=${session.customer}, email=${session.customer_details?.email}`)
+
+  // ── Step 1: Match to a Lead ──
+  // Try client_reference_id first, then session metadata, then email fallback
+  const leadId = session.client_reference_id
+    || (session.metadata?.leadId as string | undefined)
+
+  let lead = leadId
+    ? await prisma.lead.findUnique({ where: { id: leadId } })
+    : null
+
+  // Email fallback: match by customer_details.email or customer_email
+  if (!lead) {
+    const email = session.customer_details?.email || session.customer_email
+    if (email) {
+      lead = await prisma.lead.findFirst({
+        where: { email, status: { notIn: ['PAID', 'CLOSED_LOST', 'DO_NOT_CONTACT'] } },
+        orderBy: { createdAt: 'desc' },
+      })
+      if (lead) {
+        console.log(`[Stripe Webhook] Matched lead by email fallback: ${email} → ${lead.id} (${lead.companyName})`)
+      }
+    }
+  }
+
+  if (!lead) {
+    console.warn(`[Stripe Webhook] No lead found for session ${session.id} — client_reference_id=${session.client_reference_id}, email=${session.customer_details?.email}`)
+    // Still record the payment as a notification so it's not lost
+    await prisma.notification.create({
+      data: {
+        type: 'PAYMENT_RECEIVED',
+        title: 'Unmatched Payment Received',
+        message: `Stripe payment of $${amountDollars} could not be matched to a lead. Session: ${session.id}, Email: ${session.customer_details?.email || 'unknown'}`,
+        metadata: { sessionId: session.id, amount: amountDollars, email: session.customer_details?.email },
+      },
     })
-
-    if (lead) {
-      // Create client from lead
-      const webhookConfig = await getPricingConfig()
-      const client = await prisma.client.create({
-        data: {
-          companyName: lead.companyName,
-          industry: lead.industry,
-          siteUrl: '', // Will be set when site goes live
-          hostingStatus: 'ACTIVE',
-          monthlyRevenue: webhookConfig.monthlyHosting,
-          stripeCustomerId: session.customer as string,
-          leadId: lead.id,
-        },
-      })
-
-      clientId = client.id
-
-      // Update lead status
-      await prisma.lead.update({
-        where: { id: lead.id },
-        data: { status: 'PAID' },
-      })
-
-      // Create notification
-      await prisma.notification.create({
-        data: {
-          type: 'PAYMENT_RECEIVED',
-          title: 'New Client Payment',
-          message: `${lead.companyName} paid $${amountTotal / 100} - convert to client`,
-          metadata: { 
-            leadId: lead.id,
-            clientId: client.id,
-            amount: amountTotal / 100,
-          },
-        },
-      })
-
-      // 🚀 Dispatch webhook for immediate payment processing
-      await dispatchWebhook(WebhookEvents.PAYMENT_RECEIVED(
-        lead.id,
-        client.id,
-        amountTotal / 100,
-        'stripe'
-      ))
-
-      // Queue onboarding email sequence
-      try {
-        await triggerOnboardingSequence(client.id)
-      } catch (err) {
-        console.error('Onboarding email sequence failed to queue:', err)
-      }
-
-      // ── CLOSE ENGINE: Post-Payment Processing ──
-      try {
-        const conversation = await prisma.closeEngineConversation.findUnique({
-          where: { leadId: lead.id },
-        })
-
-        if (conversation && ['PAYMENT_SENT', 'PENDING_APPROVAL'].includes(conversation.stage)) {
-          // 1. Complete the conversation
-          await prisma.closeEngineConversation.update({
-            where: { id: conversation.id },
-            data: {
-              stage: 'COMPLETED',
-              completedAt: new Date(),
-            },
-          })
-
-          // 1b. Log CLOSE_ENGINE_COMPLETED event
-          await prisma.leadEvent.create({
-            data: {
-              leadId: lead.id,
-              eventType: 'CLOSE_ENGINE_COMPLETED',
-              metadata: {
-                conversationId: conversation.id,
-                entryPoint: conversation.entryPoint,
-                amount: amountTotal / 100,
-              },
-            },
-          })
-
-          // 2. Copy autonomy level to client
-          if (clientId) {
-            await prisma.client.update({
-              where: { id: clientId },
-              data: { autonomyLevel: conversation.autonomyLevel },
-            })
-          }
-
-          // 3. Send welcome message via SMS (~2.5 min delay after payment)
-          const { getSystemMessage } = await import('@/lib/system-messages')
-          const { text: welcomeMessage, enabled: welcomeEnabled } = await getSystemMessage('welcome_after_payment', { firstName: lead.firstName || 'there' })
-
-          if (welcomeEnabled) {
-            const { sendSMSViaProvider } = await import('@/lib/sms-provider')
-
-            setTimeout(async () => {
-              try {
-                await sendSMSViaProvider({
-                  to: lead.phone,
-                  message: welcomeMessage,
-                  leadId: lead.id,
-                  clientId: clientId,
-                  trigger: 'close_engine_welcome',
-                  aiGenerated: true,
-                  aiDelaySeconds: 150,
-                  conversationType: 'post_client',
-                  sender: 'clawdbot',
-                })
-              } catch (smsErr) {
-                console.error('[Stripe Webhook] Welcome SMS failed:', smsErr)
-              }
-            }, 150 * 1000)
-          }
-
-          // 4. Enhanced notification
-          await prisma.notification.create({
-            data: {
-              type: 'PAYMENT_RECEIVED',
-              title: '🎉 AI Close Engine — New Client!',
-              message: `${lead.companyName} paid $${amountTotal / 100} via Close Engine (${conversation.entryPoint})`,
-              metadata: {
-                leadId: lead.id,
-                clientId,
-                conversationId: conversation.id,
-                entryPoint: conversation.entryPoint,
-                amount: amountTotal / 100,
-              },
-            },
-          })
-
-          console.log(`[CloseEngine] Payment complete: ${lead.companyName}, conversation ${conversation.id} → COMPLETED`)
-        }
-      } catch (closeEngineErr) {
-        console.error('[Stripe Webhook] Close Engine post-payment processing failed:', closeEngineErr)
-        // Don't fail the webhook if Close Engine processing fails
-      }
-    }
+    return
   }
 
-  // Create revenue record (only if we have a client)
-  if (clientId) {
-    const config = await getPricingConfig()
-    const amountDollars = amountTotal / 100
+  console.log(`[Stripe Webhook] Matched lead: ${lead.id} (${lead.companyName})`)
 
-    let revenue
-    if (amountDollars >= config.firstMonthTotal * 0.9) {
-      // First month combined — split into build + hosting revenue
-      await prisma.revenue.create({
-        data: { clientId, type: 'SITE_BUILD', amount: config.siteBuildFee, status: 'PAID', recurring: false, product: 'Website Setup' }
-      })
-      revenue = await prisma.revenue.create({
-        data: { clientId, type: 'HOSTING_MONTHLY', amount: config.monthlyHosting, status: 'PAID', recurring: true, product: 'Monthly Hosting' }
-      })
-    } else {
-      revenue = await prisma.revenue.create({
-        data: { clientId, type: 'HOSTING_MONTHLY', amount: amountDollars, status: 'PAID', recurring: true, product: 'Monthly Hosting' }
-      })
-    }
-
-    // Process commission automatically
-    try {
-      await processRevenueCommission(revenue.id)
-    } catch (err) {
-      console.error('Commission processing failed:', err)
-      // Don't fail the webhook if commission fails
-    }
+  // ── Step 2: Check for duplicate — skip if lead already PAID ──
+  if (lead.status === 'PAID') {
+    console.log(`[Stripe Webhook] Lead ${lead.id} already PAID — skipping duplicate`)
+    return
   }
 
-  // Generic payment notification
-  await prisma.notification.create({
+  // ── Step 3: Create Client from Lead ──
+  const webhookConfig = await getPricingConfig()
+  const stripeCustomerId = session.customer ? String(session.customer) : null
+
+  const client = await prisma.client.create({
     data: {
-      type: 'PAYMENT_RECEIVED',
-      title: 'Payment Received',
-      message: `Stripe payment: $${amountTotal / 100}`,
-      metadata: { 
+      companyName: lead.companyName,
+      contactName: [lead.firstName, lead.lastName].filter(Boolean).join(' ') || null,
+      phone: lead.phone,
+      email: lead.email,
+      industry: lead.industry,
+      siteUrl: lead.previewUrl || '',
+      hostingStatus: 'ACTIVE',
+      monthlyRevenue: webhookConfig.monthlyHosting,
+      stripeCustomerId,
+      leadId: lead.id,
+      repId: lead.assignedToId,
+    },
+  })
+
+  console.log(`[Stripe Webhook] Client created: ${client.id} for ${lead.companyName}`)
+
+  // ── Step 4: Update Lead status to PAID ──
+  await prisma.lead.update({
+    where: { id: lead.id },
+    data: { status: 'PAID' },
+  })
+
+  // ── Step 5: Log PAYMENT_RECEIVED event ──
+  await prisma.leadEvent.create({
+    data: {
+      leadId: lead.id,
+      eventType: 'PAYMENT_RECEIVED',
+      metadata: {
         sessionId: session.id,
-        amount: amountTotal / 100,
+        clientId: client.id,
+        amount: amountDollars,
+        stripeCustomerId,
       },
     },
   })
 
-  console.log(`Payment processed: $${amountTotal / 100}`)
+  // ── Step 6: Create Revenue records ──
+  let revenue
+  if (amountDollars >= webhookConfig.firstMonthTotal * 0.9) {
+    // First month combined — split into site build + first hosting
+    await prisma.revenue.create({
+      data: { clientId: client.id, type: 'SITE_BUILD', amount: webhookConfig.siteBuildFee, status: 'PAID', recurring: false, product: 'Website Setup' },
+    })
+    revenue = await prisma.revenue.create({
+      data: { clientId: client.id, type: 'HOSTING_MONTHLY', amount: webhookConfig.monthlyHosting, status: 'PAID', recurring: true, product: 'Monthly Hosting' },
+    })
+  } else {
+    revenue = await prisma.revenue.create({
+      data: { clientId: client.id, type: 'HOSTING_MONTHLY', amount: amountDollars, status: 'PAID', recurring: true, product: 'Monthly Hosting' },
+    })
+  }
+
+  // ── Step 7: Process commission ──
+  try {
+    await processRevenueCommission(revenue.id)
+  } catch (err) {
+    console.error('[Stripe Webhook] Commission processing failed:', err)
+  }
+
+  // ── Step 8: Create notification ──
+  await prisma.notification.create({
+    data: {
+      type: 'PAYMENT_RECEIVED',
+      title: 'New Client Payment',
+      message: `${lead.companyName} paid $${amountDollars} — client created`,
+      metadata: {
+        leadId: lead.id,
+        clientId: client.id,
+        amount: amountDollars,
+      },
+    },
+  })
+
+  // ── Step 9: Dispatch webhook to Clawdbot ──
+  try {
+    await dispatchWebhook(WebhookEvents.PAYMENT_RECEIVED(
+      lead.id,
+      client.id,
+      amountDollars,
+      'stripe'
+    ))
+  } catch (err) {
+    console.error('[Stripe Webhook] Webhook dispatch failed:', err)
+  }
+
+  // ── Step 10: Queue onboarding email sequence ──
+  try {
+    await triggerOnboardingSequence(client.id)
+  } catch (err) {
+    console.error('[Stripe Webhook] Onboarding email sequence failed:', err)
+  }
+
+  // ── Step 11: Send confirmation SMS ──
+  try {
+    const { getSystemMessage } = await import('@/lib/system-messages')
+    const { text: welcomeMessage, enabled: welcomeEnabled } = await getSystemMessage('welcome_after_payment', {
+      firstName: lead.firstName || 'there',
+    })
+
+    if (welcomeEnabled && lead.phone) {
+      const { sendSMSViaProvider } = await import('@/lib/sms-provider')
+      await sendSMSViaProvider({
+        to: lead.phone,
+        message: welcomeMessage,
+        leadId: lead.id,
+        clientId: client.id,
+        trigger: 'welcome_after_payment',
+        aiGenerated: true,
+        conversationType: 'post_client',
+        sender: 'clawdbot',
+      })
+      console.log(`[Stripe Webhook] Welcome SMS sent to ${lead.phone}`)
+    }
+  } catch (smsErr) {
+    console.error('[Stripe Webhook] Welcome SMS failed:', smsErr)
+  }
+
+  // ── Step 12: Close Engine post-payment processing ──
+  try {
+    const conversation = await prisma.closeEngineConversation.findUnique({
+      where: { leadId: lead.id },
+    })
+
+    if (conversation && ['PAYMENT_SENT', 'PENDING_APPROVAL'].includes(conversation.stage)) {
+      await prisma.closeEngineConversation.update({
+        where: { id: conversation.id },
+        data: { stage: 'COMPLETED', completedAt: new Date() },
+      })
+
+      await prisma.leadEvent.create({
+        data: {
+          leadId: lead.id,
+          eventType: 'CLOSE_ENGINE_COMPLETED',
+          metadata: {
+            conversationId: conversation.id,
+            entryPoint: conversation.entryPoint,
+            amount: amountDollars,
+          },
+        },
+      })
+
+      // Copy autonomy level to client
+      await prisma.client.update({
+        where: { id: client.id },
+        data: { autonomyLevel: conversation.autonomyLevel },
+      })
+
+      // Enhanced Close Engine notification
+      await prisma.notification.create({
+        data: {
+          type: 'CLOSE_ENGINE',
+          title: 'AI Close Engine — New Client!',
+          message: `${lead.companyName} paid $${amountDollars} via Close Engine (${conversation.entryPoint})`,
+          metadata: {
+            leadId: lead.id,
+            clientId: client.id,
+            conversationId: conversation.id,
+            entryPoint: conversation.entryPoint,
+            amount: amountDollars,
+          },
+        },
+      })
+
+      console.log(`[Stripe Webhook] Close Engine completed: ${lead.companyName}, conversation ${conversation.id} → COMPLETED`)
+    }
+  } catch (closeEngineErr) {
+    console.error('[Stripe Webhook] Close Engine post-payment processing failed:', closeEngineErr)
+  }
+
+  console.log(`[Stripe Webhook] Payment fully processed: ${lead.companyName} → $${amountDollars}`)
 }
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
@@ -295,7 +325,28 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
       },
     })
 
-    // Process commission automatically  
+    // Log PAYMENT_RECEIVED event on the lead
+    if (client.leadId) {
+      try {
+        await prisma.leadEvent.create({
+          data: {
+            leadId: client.leadId,
+            eventType: 'PAYMENT_RECEIVED',
+            metadata: {
+              invoiceId: invoice.id,
+              clientId: client.id,
+              amount,
+              type: 'HOSTING_MONTHLY',
+              stripeCustomerId: customerId,
+            },
+          },
+        })
+      } catch (err) {
+        console.error('[Stripe Webhook] LeadEvent creation failed:', err)
+      }
+    }
+
+    // Process commission automatically
     try {
       await processRevenueCommission(revenue.id)
     } catch (err) {
