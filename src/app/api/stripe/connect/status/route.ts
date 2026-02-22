@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
-import { getStripe } from '@/lib/stripe'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +34,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    const { getStripe } = await import('@/lib/stripe')
     const stripe = getStripe()
     const account = await stripe.accounts.retrieve(user.stripeConnectId)
 

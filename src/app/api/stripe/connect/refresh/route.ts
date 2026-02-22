@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
-import { getStripe } from '@/lib/stripe'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,6 +35,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const { getStripe } = await import('@/lib/stripe')
     const stripe = getStripe()
     const basePath = user.portalType === 'PART_TIME' ? '/part-time' : '/reps'
     const baseUrl = process.env.BASE_URL || 'https://app.brightautomations.net'
