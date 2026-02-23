@@ -69,6 +69,13 @@ export function useTwilioDevice() {
 
   const makeCall = useCallback(async (params: { To: string; leadId?: string; callId?: string }) => {
     if (!deviceRef.current) throw new Error('Device not initialized')
+    // Kill any lingering SDK call before connecting (auto-dial race condition:
+    // SSE says call ended but SDK hasn't fired its internal disconnect yet)
+    if (deviceRef.current.isBusy) {
+      console.warn('[TwilioDevice] Device still busy — disconnecting old call before new connect')
+      deviceRef.current.disconnectAll()
+      await new Promise(resolve => setTimeout(resolve, 150))
+    }
     const call = await deviceRef.current.connect({ params })
     call.on('disconnect', () => setActiveCall(null))
     call.on('cancel', () => setActiveCall(null))
