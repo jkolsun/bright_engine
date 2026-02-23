@@ -30,11 +30,9 @@ export async function enrichLead(leadId: string): Promise<EnrichmentResult> {
     },
   })
 
-  // 250 credits/month ÷ 30 days ≈ 8/day on free plan
-  // Adjust this number when plan is upgraded:
-  // $50 plan = 5,000/month → 166/day
-  // $130 plan = 30,000/month → 1,000/day
-  const DAILY_SERPAPI_LIMIT = 8
+  // Safety cap to prevent runaway API costs
+  // Override via SERPAPI_DAILY_LIMIT env var
+  const DAILY_SERPAPI_LIMIT = parseInt(process.env.SERPAPI_DAILY_LIMIT || '200', 10)
 
   if (todayUsage >= DAILY_SERPAPI_LIMIT) {
     console.log(`[ENRICHMENT] Daily SerpAPI limit reached (${todayUsage}/${DAILY_SERPAPI_LIMIT}). Skipping enrichment for lead ${leadId}.`)
