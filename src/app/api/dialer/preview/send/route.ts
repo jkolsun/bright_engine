@@ -39,11 +39,12 @@ export async function POST(request: NextRequest) {
     const toNumber = await getLeadSmsNumber(leadId)
     const rep = await prisma.user.findUnique({
       where: { id: session.userId },
-      select: { name: true },
+      select: { name: true, twilioNumber1: true },
     })
 
     await sendSMS({
       to: toNumber,
+      fromNumber: rep?.twilioNumber1 || undefined,
       message: `Check out the website I built for ${lead.companyName}: ${previewUrl}`,
       leadId,
       sender: `rep:${rep?.name || session.userId}`,

@@ -22,6 +22,7 @@ export function getFromNumber() {
 
 export interface SendSMSOptions {
   to: string
+  fromNumber?: string // Send from a specific Twilio number (passed through to provider)
   message: string
   leadId?: string
   clientId?: string
@@ -36,6 +37,7 @@ export interface SendSMSOptions {
 export async function sendSMS(options: SendSMSOptions) {
   return sendSMSViaProvider({
     to: options.to,
+    fromNumber: options.fromNumber,
     message: options.message,
     leadId: options.leadId,
     clientId: options.clientId,
