@@ -306,6 +306,26 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
                   {lead.buildReadinessScore}/100 ready
                 </span>
               )}
+              {(() => {
+                const hoursSinceUpdate = (Date.now() - new Date(lead.updatedAt).getTime()) / (1000 * 60 * 60)
+                if (hoursSinceUpdate > 48) {
+                  return (
+                    <Badge className="bg-red-100 text-red-700 border-red-200 text-xs">
+                      <AlertTriangle size={10} className="mr-1" />
+                      Stuck — {Math.floor(hoursSinceUpdate / 24)}d+
+                    </Badge>
+                  )
+                }
+                if (hoursSinceUpdate > 24) {
+                  return (
+                    <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 text-xs">
+                      <Clock size={10} className="mr-1" />
+                      Stale — {Math.floor(hoursSinceUpdate)}h+
+                    </Badge>
+                  )
+                }
+                return null
+              })()}
               <span className="text-xs text-gray-400">
                 {formatTimeAgo(lead.updatedAt)}
               </span>

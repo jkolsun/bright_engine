@@ -111,12 +111,17 @@ export async function PUT(
 
     const newVersion = lead.siteEditVersion + 1
 
+    // Auto-advance buildStep based on current state
+    let nextBuildStep = lead.buildStep
+    if (lead.buildStep === 'QA_REVIEW') nextBuildStep = 'EDITING'
+    else if (lead.buildStep === 'BUILDING' && html.length > 500) nextBuildStep = 'QA_REVIEW'
+
     const updated = await prisma.lead.update({
       where: { id },
       data: {
         siteHtml: html,
         siteEditVersion: newVersion,
-        buildStep: lead.buildStep === 'QA_REVIEW' ? 'EDITING' : lead.buildStep,
+        buildStep: nextBuildStep,
       },
       select: { id: true, siteHtml: true, siteEditVersion: true },
     })

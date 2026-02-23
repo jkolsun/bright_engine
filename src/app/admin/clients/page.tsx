@@ -23,7 +23,7 @@ import {
   Star,
   ArrowLeft, Phone, Mail,
   CheckCircle, Eye, X, Trash2, MessageSquare,
-  RefreshCw
+  RefreshCw, Edit3
 } from 'lucide-react'
 
 // ─── Types ───
@@ -555,7 +555,14 @@ export default function ClientsPage() {
                             <input type="checkbox" className="rounded" checked={selectedClients.has(client.id)} onChange={() => toggleSelectClient(client.id)} />
                           </td>
                           <td className="p-4 cursor-pointer" onClick={() => { setSelectedClient(client); setViewMode('profile'); setProfileTab('overview') }}>
-                            <div className="font-medium text-gray-900">{client.companyName}</div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-900">{client.companyName}</span>
+                              {pendingEdits > 0 && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
+                                  <Edit3 size={10} />{pendingEdits}
+                                </span>
+                              )}
+                            </div>
                             <div className="text-sm text-gray-500">
                               {contact && <span>{contact}</span>}
                               {location && <span className="ml-2 text-gray-400">- {location}</span>}

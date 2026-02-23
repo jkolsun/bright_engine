@@ -532,6 +532,48 @@ export async function processCloseEngineInbound(
     claudeResponse.nextStage = CONVERSATION_STAGES.PAYMENT_SENT
   }
 
+  // 3.55 EDIT_LOOP: if Claude detected an edit request, create EditRequest and route to handler
+  if (
+    context.conversation.stage === 'EDIT_LOOP' &&
+    claudeResponse.extractedData &&
+    (claudeResponse.extractedData as Record<string, unknown>).editRequest
+  ) {
+    try {
+      const editDescription = String((claudeResponse.extractedData as Record<string, unknown>).editRequest)
+      // Look up client by leadId since context.lead doesn't include relations
+      const clientForEdit = await prisma.client.findFirst({
+        where: { leadId: lead.id },
+        select: { id: true },
+      })
+      const clientId = clientForEdit?.id || ''
+      if (!clientId) {
+        console.warn(`[CloseEngine] EDIT_LOOP: No client found for lead ${lead.id} — skipping EditRequest`)
+        return
+      }
+      const editReq = await prisma.editRequest.create({
+        data: {
+          client: { connect: { id: clientId } },
+          lead: { connect: { id: lead.id } },
+          requestText: inboundMessage,
+          requestChannel: 'SMS',
+          aiInterpretation: editDescription,
+          complexityTier: 'medium',
+          status: 'new',
+        },
+      })
+      const { handleEditRequest } = await import('./edit-request-handler')
+      handleEditRequest({
+        clientId,
+        editRequestId: editReq.id,
+        instruction: editDescription,
+        complexity: 'medium',
+      }).catch(err => console.error('[CloseEngine] Edit handler failed:', err))
+      console.log(`[CloseEngine] EDIT_LOOP: Created EditRequest ${editReq.id} for ${lead.companyName}`)
+    } catch (err) {
+      console.error('[CloseEngine] Failed to create EditRequest in EDIT_LOOP:', err)
+    }
+  }
+
   // 3.6 Safety net: if stage is PENDING_APPROVAL (or any invalid payment-adjacent stage
   // from a previous hallucination) but no pending PAYMENT_LINK approval exists,
   // re-trigger the payment flow.

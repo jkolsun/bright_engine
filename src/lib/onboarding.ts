@@ -139,6 +139,12 @@ export async function advanceOnboarding(clientId: string, toStep?: number) {
   if (nextStep < 0 || nextStep > 7) throw new Error(`Invalid step: ${nextStep}`)
   if (nextStep <= client.onboardingStep && toStep === undefined) return client
 
+  // Validate step order — only allow advancing by exactly 1 step (no skipping)
+  if (toStep !== undefined && toStep !== client.onboardingStep + 1) {
+    console.warn(`[Onboarding] Rejecting out-of-order advance: ${client.onboardingStep} → ${toStep} for ${client.companyName}`)
+    return client
+  }
+
   const updated = await prisma.client.update({
     where: { id: clientId },
     data: { onboardingStep: nextStep },
@@ -161,11 +167,18 @@ export async function advanceOnboarding(clientId: string, toStep?: number) {
     }).catch(err => console.error('[Onboarding] Non-critical write failed:', err))
   }
 
-  // When reaching COMPLETE, set siteLiveDate and trigger post-launch sequences
+  // When reaching COMPLETE, set siteLiveDate only if buildStep confirms the site is actually live
   if (nextStep === ONBOARDING_STEPS.COMPLETE) {
+    // Check if the site is actually launched before setting siteLiveDate
+    const lead = client.leadId ? await prisma.lead.findUnique({
+      where: { id: client.leadId },
+      select: { buildStep: true },
+    }) : null
+    const isActuallyLive = lead?.buildStep === 'LAUNCHED' || lead?.buildStep === 'LIVE' || lead?.buildStep === 'LAUNCHING'
+
     await prisma.client.update({
       where: { id: clientId },
-      data: { siteLiveDate: updated.siteLiveDate || new Date() },
+      data: { siteLiveDate: updated.siteLiveDate || (isActuallyLive ? new Date() : undefined) },
     })
 
     try {

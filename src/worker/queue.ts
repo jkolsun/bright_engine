@@ -604,6 +604,29 @@ export async function scheduleCloseEngineExpireStalled() {
   }
 }
 
+export async function schedulePendingStateEscalation() {
+  const queue = getMonitoringQueue()
+  if (!queue || !isRedisAvailable) {
+    console.warn('Monitoring queue unavailable, skipping pending state escalation')
+    return null
+  }
+
+  try {
+    return await queue.add(
+      'pending-state-escalation',
+      {},
+      {
+        repeat: {
+          every: 2 * 60 * 60 * 1000, // Every 2 hours
+        },
+      }
+    )
+  } catch (err) {
+    console.warn('Failed to schedule pending state escalation:', err)
+    return null
+  }
+}
+
 export async function addImportProcessingJob(data: {
   jobId: string
   leadIds: string[]

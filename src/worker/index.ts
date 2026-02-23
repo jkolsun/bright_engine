@@ -509,6 +509,10 @@ async function startWorkers() {
             await closeEngineExpireStalled()
             break
 
+          case 'pending-state-escalation':
+            await pendingStateEscalation()
+            break
+
           default:
             console.log(`Unknown monitoring job: ${job.name}`)
         }
@@ -563,6 +567,10 @@ async function startWorkers() {
       console.error(`Monitoring job ${job?.id} failed:`, err)
     })
 
+    // Schedule recurring monitoring jobs
+    const { schedulePendingStateEscalation } = await import('./queue')
+    await schedulePendingStateEscalation()
+
     console.log('Workers started successfully')
     console.log('- Enrichment worker')
     console.log('- Preview worker')
@@ -570,7 +578,7 @@ async function startWorkers() {
     console.log('- Script worker')
     console.log('- Distribution worker')
     console.log('- Sequence worker')
-    console.log('- Monitoring worker')
+    console.log('- Monitoring worker (+ pending state escalation every 2h)')
 
     // Graceful shutdown
     const gracefulShutdown = async () => {
@@ -1351,6 +1359,137 @@ async function closeEngineExpireStalled() {
   }
 }
 
+// ============================================
+// PENDING STATE ESCALATION
+// ============================================
+
+async function pendingStateEscalation() {
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+  const seventyTwoHoursAgo = new Date(Date.now() - 72 * 60 * 60 * 1000)
+
+  // 1. Stale Approvals (PENDING > 24h → reminder, > 72h → critical)
+  const pendingApprovals = await prisma.approval.findMany({
+    where: { status: 'PENDING', createdAt: { lt: twentyFourHoursAgo } },
+  })
+
+  for (const approval of pendingApprovals) {
+    const isCritical = approval.createdAt < seventyTwoHoursAgo
+    const hoursStale = Math.round((Date.now() - approval.createdAt.getTime()) / (1000 * 60 * 60))
+    // Approval doesn't have a relation to Lead — look up by leadId
+    let companyName = 'Unknown'
+    if (approval.leadId) {
+      const lead = await prisma.lead.findUnique({ where: { id: approval.leadId }, select: { companyName: true } })
+      if (lead) companyName = lead.companyName
+    }
+    const title = isCritical ? 'CRITICAL: Approval Stalled' : 'Approval Pending 24h+'
+    const message = `${companyName} — ${approval.gate} approval pending for ${hoursStale}h`
+
+    // Dedup: skip if we already notified in the last 12h for this approval
+    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000)
+    const existing = await prisma.notification.findFirst({
+      where: {
+        type: isCritical ? 'ESCALATION' : 'DAILY_AUDIT',
+        metadata: { path: ['approvalId'], equals: approval.id },
+        createdAt: { gte: twelveHoursAgo },
+      },
+    })
+    if (existing) continue
+
+    await prisma.notification.create({
+      data: {
+        type: isCritical ? 'ESCALATION' : 'DAILY_AUDIT',
+        title,
+        message,
+        metadata: { approvalId: approval.id, gate: approval.gate, hoursStale },
+      },
+    })
+
+    if (isCritical) {
+      const { notifyAdmin } = await import('../lib/notifications')
+      await notifyAdmin('escalation', title, message)
+    }
+  }
+
+  // 2. Stale EditRequests (status 'new' > 24h)
+  const staleEdits = await prisma.editRequest.findMany({
+    where: { status: 'new', createdAt: { lt: twentyFourHoursAgo } },
+    include: { client: { select: { companyName: true } } },
+  })
+
+  for (const edit of staleEdits) {
+    const isCritical = edit.createdAt < seventyTwoHoursAgo
+    const hoursStale = Math.round((Date.now() - edit.createdAt.getTime()) / (1000 * 60 * 60))
+
+    const existing = await prisma.notification.findFirst({
+      where: {
+        type: isCritical ? 'ESCALATION' : 'DAILY_AUDIT',
+        metadata: { path: ['editRequestId'], equals: edit.id },
+        createdAt: { gte: new Date(Date.now() - 12 * 60 * 60 * 1000) },
+      },
+    })
+    if (existing) continue
+
+    const title = isCritical ? 'CRITICAL: Edit Request Stalled' : 'Edit Request Pending 24h+'
+    const message = `${edit.client?.companyName || 'Unknown'} — "${edit.requestText.slice(0, 80)}" unprocessed for ${hoursStale}h`
+
+    await prisma.notification.create({
+      data: {
+        type: isCritical ? 'ESCALATION' : 'DAILY_AUDIT',
+        title,
+        message,
+        metadata: { editRequestId: edit.id, hoursStale },
+      },
+    })
+
+    if (isCritical) {
+      const { notifyAdmin } = await import('../lib/notifications')
+      await notifyAdmin('escalation', title, message)
+    }
+  }
+
+  // 3. Stale PendingActions (status 'PENDING' > 24h)
+  const stalePending = await prisma.pendingAction.findMany({
+    where: { status: 'PENDING', createdAt: { lt: twentyFourHoursAgo } },
+    include: { lead: { select: { companyName: true } } },
+  })
+
+  for (const action of stalePending) {
+    const isCritical = action.createdAt < seventyTwoHoursAgo
+    const hoursStale = Math.round((Date.now() - action.createdAt.getTime()) / (1000 * 60 * 60))
+
+    const existing = await prisma.notification.findFirst({
+      where: {
+        type: isCritical ? 'ESCALATION' : 'DAILY_AUDIT',
+        metadata: { path: ['pendingActionId'], equals: action.id },
+        createdAt: { gte: new Date(Date.now() - 12 * 60 * 60 * 1000) },
+      },
+    })
+    if (existing) continue
+
+    const title = isCritical ? 'CRITICAL: Pending Action Stalled' : 'Pending Action 24h+'
+    const message = `${action.lead?.companyName || 'Unknown'} — ${action.type} action pending for ${hoursStale}h`
+
+    await prisma.notification.create({
+      data: {
+        type: isCritical ? 'ESCALATION' : 'DAILY_AUDIT',
+        title,
+        message,
+        metadata: { pendingActionId: action.id, type: action.type, hoursStale },
+      },
+    })
+
+    if (isCritical) {
+      const { notifyAdmin } = await import('../lib/notifications')
+      await notifyAdmin('escalation', title, message)
+    }
+  }
+
+  const total = pendingApprovals.length + staleEdits.length + stalePending.length
+  if (total > 0) {
+    console.log(`[PendingEscalation] Found ${pendingApprovals.length} stale approvals, ${staleEdits.length} stale edits, ${stalePending.length} stale actions`)
+  }
+}
+
 // ══════════════════════════════════════════════
 // ONBOARDING WORKER HANDLERS
 // ══════════════════════════════════════════════
@@ -1458,6 +1597,16 @@ async function handleOnboardingDnsCheck(clientId: string) {
     return
   }
 
+  // Maximum retry count — stop infinite DNS check loops
+  const dnsCheckCount = (onboarding.data.dnsCheckCount as number) || 0
+  if (dnsCheckCount >= 20) {
+    console.log(`[Onboarding] DNS check limit reached (${dnsCheckCount}) for ${clientId}`)
+    const { notifyAdmin } = await import('../lib/notifications')
+    await notifyAdmin('escalation', 'DNS Setup Stalled', `${onboarding.companyName} — DNS not configured after ${dnsCheckCount} checks. Manual intervention needed.`)
+    return
+  }
+  await updateOnboarding(clientId, { dnsCheckCount: dnsCheckCount + 1 })
+
   const { checkDomain, verifyDomain } = await import('../lib/vercel')
   const domainStatus = await checkDomain(onboarding.customDomain)
 
@@ -1475,6 +1624,25 @@ async function handleOnboardingDnsCheck(clientId: string) {
           domainStatus: 'verified',
         },
       })
+
+      // Update buildStep to LAUNCHED if not already past it
+      const clientForBuild = await prisma.client.findUnique({
+        where: { id: clientId },
+        select: { leadId: true },
+      })
+      if (clientForBuild?.leadId) {
+        const leadForStep = await prisma.lead.findUnique({
+          where: { id: clientForBuild.leadId },
+          select: { buildStep: true },
+        })
+        if (leadForStep?.buildStep !== 'LAUNCHED' && leadForStep?.buildStep !== 'LIVE') {
+          await prisma.lead.update({
+            where: { id: clientForBuild.leadId },
+            data: { buildStep: 'LAUNCHED' },
+          })
+          console.log(`[Onboarding] Updated buildStep to LAUNCHED for lead ${clientForBuild.leadId}`)
+        }
+      }
 
       // Send go-live SMS
       const client = await prisma.client.findUnique({
