@@ -3,7 +3,7 @@ import { useDialer } from './DialerProvider'
 import { Phone, SkipForward } from 'lucide-react'
 
 export function AutoDialBanner() {
-  const { autoDialBanner, autoDialState, handleSwapToNewCall } = useDialer()
+  const { autoDialBanner, bannerUrgent, handleSwapToNewCall } = useDialer()
 
   if (!autoDialBanner) return null
 
@@ -31,24 +31,23 @@ export function AutoDialBanner() {
     )
   }
 
-  // Connected mode — prominent, clickable
+  // Connected mode — prominent, clickable. Escalates after grace period.
   if (autoDialBanner.type === 'connected') {
-    const isUrgent = autoDialState === 'CONNECTED_PENDING_SWAP'
     return (
       <button
         onClick={handleSwapToNewCall}
         className={`w-full border-b px-4 py-2.5 flex items-center gap-2 transition-colors ${
-          isUrgent
-            ? 'bg-green-100 border-green-300 animate-pulse'
+          bannerUrgent
+            ? 'bg-amber-100 border-amber-400 animate-pulse'
             : 'bg-green-50 border-green-200'
         } hover:bg-green-200`}
       >
-        <Phone className="w-4 h-4 text-green-600" />
-        <span className="text-sm text-green-800 font-semibold">
-          CONNECTED: {autoDialBanner.leadName}
+        <Phone className={`w-4 h-4 ${bannerUrgent ? 'text-amber-600' : 'text-green-600'}`} />
+        <span className={`text-sm font-semibold ${bannerUrgent ? 'text-amber-900' : 'text-green-800'}`}>
+          {bannerUrgent ? 'WAITING: ' : 'CONNECTED: '}{autoDialBanner.leadName}
         </span>
-        <span className="text-xs text-green-600 ml-auto">
-          Click to switch over
+        <span className={`text-xs ml-auto ${bannerUrgent ? 'text-amber-700 font-semibold' : 'text-green-600'}`}>
+          {bannerUrgent ? 'Switch now — caller waiting!' : 'Click to switch over'}
         </span>
       </button>
     )

@@ -44,6 +44,7 @@ interface DialerContextValue {
   // Auto-dial
   autoDialState: AutoDialState
   autoDialBanner: AutoDialBanner | null
+  bannerUrgent: boolean
   handleAutoDialNext: () => Promise<void>
   handleSwapToNewCall: () => void
 }
@@ -67,7 +68,9 @@ export function DialerProvider({ children }: { children: ReactNode }) {
   const [autoDialState, setAutoDialState] = useState<AutoDialState>('IDLE')
   const [pendingCall, setPendingCall] = useState<PendingCall | null>(null)
   const [autoDialBanner, setAutoDialBanner] = useState<AutoDialBanner | null>(null)
+  const [bannerUrgent, setBannerUrgent] = useState(false)
   const graceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastCalledLeadIdRef = useRef<string | null>(null)
 
   // Refs for accessing latest state in callbacks
   const currentCallRef = useRef<DialerCall | null>(null)
@@ -130,12 +133,12 @@ export function DialerProvider({ children }: { children: ReactNode }) {
             leadName: pending.leadName,
             leadId: pending.leadId,
           })
-          // Start grace timer — 10 seconds for rep to finish disposing previous call
+          // Start grace timer — after 10s, escalate banner urgency (do NOT auto-swap)
+          setBannerUrgent(false)
           if (graceTimerRef.current) clearTimeout(graceTimerRef.current)
           graceTimerRef.current = setTimeout(() => {
-            // After grace period, auto-swap if still pending
             if (autoDialStateRef.current === 'CONNECTED_PENDING_SWAP') {
-              handleSwapToNewCallInternal()
+              setBannerUrgent(true)
             }
           }, 10000)
         } else if (['NO_ANSWER', 'FAILED', 'BUSY', 'COMPLETED'].includes(newStatus)) {
@@ -152,14 +155,15 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     const q = queueRef.current
     const currentId = currentCallRef.current?.leadId
     const pendingId = pendingCallRef.current?.leadId
+    const lastId = lastCalledLeadIdRef.current
 
     // Search Fresh leads first
     for (const lead of q.freshLeads) {
-      if (lead.id !== currentId && lead.id !== pendingId) return lead
+      if (lead.id !== currentId && lead.id !== pendingId && lead.id !== lastId) return lead
     }
     // Then Retry leads
     for (const lead of q.retryLeads) {
-      if (lead.id !== currentId && lead.id !== pendingId) return lead
+      if (lead.id !== currentId && lead.id !== pendingId && lead.id !== lastId) return lead
     }
     return null
   }, [])
@@ -194,6 +198,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       setAutoDialState('IDLE')
       setPendingCall(null)
       setAutoDialBanner(null)
+      setBannerUrgent(false)
     }
   }, [getNextLeadToDial])
 
@@ -204,6 +209,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       setAutoDialState('IDLE')
       setPendingCall(null)
       setAutoDialBanner(null)
+      setBannerUrgent(false)
       return
     }
 
@@ -264,6 +270,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       setAutoDialState('IDLE')
       setPendingCall(null)
       setAutoDialBanner(null)
+      setBannerUrgent(false)
     }
   }, [getNextLeadToDial, twilioDevice, autoDispositionAndChain])
 
@@ -285,6 +292,10 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       clearTimeout(graceTimerRef.current)
       graceTimerRef.current = null
     }
+
+    // Track previous lead so getNextLeadToDial skips it
+    const prevLeadId = currentCallRef.current?.leadId
+    if (prevLeadId) lastCalledLeadIdRef.current = prevLeadId
 
     // Promote pending call to current call
     setCurrentCall({
@@ -310,6 +321,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     setPendingCall(null)
     setAutoDialState('IDLE')
     setAutoDialBanner(null)
+    setBannerUrgent(false)
   }, [timer])
 
   // Public: swap to the new connected call (called from banner click or DispositionTree)
@@ -374,7 +386,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     <DialerContext.Provider value={{
       session: sessionHook, twilioDevice, sse, queue, timer,
       currentCall, setCurrentCall, dial, hangup,
-      autoDialState, autoDialBanner, handleAutoDialNext, handleSwapToNewCall,
+      autoDialState, autoDialBanner, bannerUrgent, handleAutoDialNext, handleSwapToNewCall,
     }}>
       {children}
     </DialerContext.Provider>
