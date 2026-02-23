@@ -613,6 +613,13 @@ async function sendAdaptiveTouchpoint(clientId: string, touchpointDay: number, n
 
   if (!client || !client.lead) return
 
+  // Re-check DNC status right before sending (may have changed since job was queued)
+  const freshLead = await prisma.lead.findUnique({ where: { id: client.lead.id }, select: { dncAt: true } })
+  if (freshLead?.dncAt) {
+    console.log(`[Sequence] Skipping day ${touchpointDay} — lead ${client.lead.id} is now DNC`)
+    return
+  }
+
   if (!canSendMessage(client.lead.timezone || 'America/New_York')) return
 
   try {
@@ -653,6 +660,13 @@ async function sendAdaptiveTouchpointWithMessage(clientId: string, message: stri
   })
 
   if (!client || !client.lead) return
+
+  // Re-check DNC status right before sending (may have changed since job was queued)
+  const freshLead = await prisma.lead.findUnique({ where: { id: client.lead.id }, select: { dncAt: true } })
+  if (freshLead?.dncAt) {
+    console.log(`[Sequence] Skipping AI touchpoint — lead ${client.lead.id} is now DNC`)
+    return
+  }
 
   if (!canSendMessage(client.lead.timezone || 'America/New_York')) return
 

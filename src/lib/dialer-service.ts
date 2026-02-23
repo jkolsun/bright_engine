@@ -806,7 +806,7 @@ export async function createLeadFromManualDial(params: {
 // DNC Management
 // ============================================
 
-export async function markDNC(leadId: string, repId: string) {
+export async function markDNC(leadId: string, repId: string, reason?: string) {
   const lead = await prisma.lead.findUnique({
     where: { id: leadId },
     select: { phone: true, companyName: true },
@@ -816,7 +816,12 @@ export async function markDNC(leadId: string, repId: string) {
   // Update lead
   await prisma.lead.update({
     where: { id: leadId },
-    data: { dncAt: new Date(), status: 'DO_NOT_CONTACT' },
+    data: {
+      dncAt: new Date(),
+      status: 'DO_NOT_CONTACT',
+      dncReason: reason || 'Manual DNC by rep',
+      dncAddedBy: repId,
+    },
   })
 
   // Upsert DoNotCall record

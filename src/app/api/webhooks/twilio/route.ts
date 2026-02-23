@@ -286,6 +286,30 @@ export async function POST(request: NextRequest) {
       mediaTypes,
     })
 
+    // Auto-DNC on STOP keywords
+    const stopKeywords = ['STOP', 'UNSUBSCRIBE', 'CANCEL', 'QUIT', 'OPTOUT', 'OPT OUT']
+    if (stopKeywords.includes(body.trim().toUpperCase())) {
+      if (lead) {
+        await prisma.lead.update({
+          where: { id: lead.id },
+          data: { dncAt: new Date(), status: 'DO_NOT_CONTACT', dncReason: 'STOP keyword received', dncAddedBy: 'system' },
+        })
+        await prisma.notification.create({
+          data: {
+            type: 'CLIENT_TEXT',
+            title: 'Auto-DNC — STOP Received',
+            message: `${lead.firstName} ${lead.lastName} (${lead.companyName}) texted "${body.trim()}" — auto-marked DNC`,
+            metadata: { leadId: lead.id, keyword: body.trim() },
+          },
+        })
+        console.log(`[Twilio] Auto-DNC: Lead ${lead.id} sent STOP keyword`)
+      }
+      return new NextResponse(
+        '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+        { headers: { 'Content-Type': 'text/xml' } }
+      )
+    }
+
     // Check for escalation triggers
     const shouldEscalate = await checkForEscalation(body)
 

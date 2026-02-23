@@ -146,6 +146,8 @@ model Lead {
   secondaryPhone         String?                  @map("secondary_phone")
   smsPreferredNumber     String?                  @default("primary") @map("sms_preferred_number")
   dncAt                  DateTime?                @map("dnc_at")
+  dncReason              String?                  @map("dnc_reason")
+  dncAddedBy             String?                  @map("dnc_added_by")
   ownerRepId             String?                  @map("owner_rep_id")
   activities             Activity[]
   buildStatus            BuildStatus?
