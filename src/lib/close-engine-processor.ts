@@ -23,7 +23,8 @@ import {
   checkEscalation,
   MODELS,
 } from './close-engine-prompts'
-import { getAnthropicClient } from './anthropic'
+import { getAnthropicClient, calculateApiCost } from './anthropic'
+import { isConversationEnder, getSmartChatSettings } from './message-batcher'
 
 // ============================================
 // sendCloseEngineMessage() — SMS with email fallback
@@ -80,6 +81,18 @@ export async function sendCloseEngineMessage(options: CloseEngineMessageOptions)
 
   // 2. SMS failed — try email fallback
   console.warn(`[CloseEngine] SMS failed for ${to} (${smsResult.error}), attempting email fallback...`)
+
+  // DNC check before email fallback
+  if (leadId) {
+    const leadForDnc = await prisma.lead.findUnique({
+      where: { id: leadId },
+      select: { dncAt: true, email: true },
+    })
+    if (leadForDnc?.dncAt) {
+      console.log(`[CloseEngine] Skipping email fallback — lead ${leadId} is DNC`)
+      return { success: false, channel: 'NONE' as const, fallbackUsed: false, error: 'Lead is DNC' }
+    }
+  }
 
   // Look up email if not provided
   let emailAddress = toEmail
@@ -191,11 +204,17 @@ Write ONE text message. 1-2 sentences max. Casual and human. Do not include quot
       .trim()
 
     if (aiText && aiText.length > 10 && aiText.length < 500) {
-      firstMessage = aiText
+      const rejection = checkFirstMessageQuality(aiText, lead.previewUrl || null)
+      if (rejection) {
+        console.warn(`[CloseEngine] First message rejected for ${lead.companyName}: ${rejection}. Using template fallback.`)
+        // firstMessage stays as template
+      } else {
+        firstMessage = aiText
+      }
     }
 
     await prisma.apiCost.create({
-      data: { service: 'anthropic', operation: 'close_engine_first_message', cost: 0.01 },
+      data: { service: 'anthropic', operation: 'close_engine_first_message', cost: calculateApiCost(aiResponse.usage, 0.01) },
     }).catch(err => console.error('[CloseEngine] API cost write failed:', err))
   } catch (aiError) {
     console.warn('[CloseEngine] AI first message generation failed, using template:', aiError)
@@ -285,6 +304,7 @@ export async function processCloseEngineInbound(
       enrichedMessage = `${inboundMessage} ${imageContext}`.trim()
     } catch (err) {
       console.error('[CloseEngine] AI Vision failed:', err)
+      enrichedMessage = `${inboundMessage} [Client sent an image attachment]`.trim()
     }
   }
 
@@ -375,7 +395,7 @@ export async function processCloseEngineInbound(
       data: {
         service: 'anthropic',
         operation: `close_engine_${context.conversation.stage.toLowerCase()}`,
-        cost: 0.03,
+        cost: calculateApiCost(apiResponse.usage, 0.03),
       },
     }).catch(err => console.error('[CloseEngine] API cost write failed:', err))
   } catch (apiError) {
@@ -777,8 +797,6 @@ export async function shouldAIRespond(
   lastOutboundContent: string | null,
   stage?: string,
 ): Promise<boolean> {
-  const { isConversationEnder, getSmartChatSettings } = require('./message-batcher')
-
   // Check if conversation-ender detection is enabled in settings
   const settings = await getSmartChatSettings()
   if (!settings.conversationEnderEnabled) {
@@ -863,17 +881,36 @@ export function parseClaudeResponse(raw: string): ClaudeCloseResponse {
       escalateReason: parsed.escalateReason || null,
     }
   } catch {
-    // If JSON parse fails, treat raw text as the reply
-    console.warn('[CloseEngine] Failed to parse Claude JSON, using raw text')
-    return {
-      replyText: raw.substring(0, 300),
+    // JSON parse failed — try regex extraction of individual fields before falling back
+    console.warn('[CloseEngine] Failed to parse Claude JSON, attempting regex extraction')
+
+    const replyMatch = raw.match(/"replyText"\s*:\s*"((?:[^"\\]|\\.)*)"/)
+    const stageMatch = raw.match(/"nextStage"\s*:\s*"([^"]*)"/)
+    const escalateMatch = raw.match(/"escalate"\s*:\s*(true|false)/)
+    const readyMatch = raw.match(/"readyToBuild"\s*:\s*(true|false)/)
+    const questionMatch = raw.match(/"questionAsked"\s*:\s*"((?:[^"\\]|\\.)*)"/)
+    const escalateReasonMatch = raw.match(/"escalateReason"\s*:\s*"((?:[^"\\]|\\.)*)"/)
+
+    const extracted = {
+      replyText: replyMatch ? replyMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n') : raw.substring(0, 300),
       extractedData: null,
-      nextStage: null,
-      questionAsked: null,
-      readyToBuild: false,
-      escalate: false,
-      escalateReason: null,
+      nextStage: stageMatch ? stageMatch[1] : null,
+      questionAsked: questionMatch ? questionMatch[1] : null,
+      readyToBuild: readyMatch ? readyMatch[1] === 'true' : false,
+      escalate: escalateMatch ? escalateMatch[1] === 'true' : false,
+      escalateReason: escalateReasonMatch ? escalateReasonMatch[1] : null,
     }
+
+    if (replyMatch || stageMatch || escalateMatch || readyMatch) {
+      console.log('[CloseEngine] Regex extraction recovered fields:', {
+        hasReply: !!replyMatch,
+        hasStage: !!stageMatch,
+        hasEscalate: !!escalateMatch,
+        hasReady: !!readyMatch,
+      })
+    }
+
+    return extracted
   }
 }
 
@@ -971,4 +1008,41 @@ export function stripPaymentUrls(text: string): string {
   }
   // Clean up leftover whitespace and empty lines
   return cleaned.replace(/\n\s*\n/g, '\n').replace(/\s{2,}/g, ' ').trim()
+}
+
+// ============================================
+// First Message Quality Gate
+// ============================================
+
+const FORBIDDEN_WORDS = [
+  'ai', 'bot', 'automated', 'language model', 'claude', 'artificial',
+  'discount', 'free trial',
+]
+
+/**
+ * Checks if an AI-generated first message is safe to send.
+ * Returns null if OK, or a rejection reason string if the message should be rejected.
+ */
+function checkFirstMessageQuality(message: string, previewUrl: string | null): string | null {
+  const lower = message.toLowerCase()
+
+  // Check for forbidden words
+  for (const word of FORBIDDEN_WORDS) {
+    // Word boundary check to avoid false positives (e.g. "wait" matching "ai")
+    const regex = new RegExp(`\\b${word}\\b`, 'i')
+    if (regex.test(lower)) {
+      return `Contains forbidden word: "${word}"`
+    }
+  }
+
+  // Check for URLs that aren't the preview URL
+  const urls = message.match(/https?:\/\/\S+/gi)
+  if (urls) {
+    for (const url of urls) {
+      if (previewUrl && url.startsWith(previewUrl)) continue
+      return `Contains non-preview URL: "${url}"`
+    }
+  }
+
+  return null
 }

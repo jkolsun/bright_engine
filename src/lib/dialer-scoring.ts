@@ -19,19 +19,6 @@ interface ScoringResult {
   coachingNotes: string[]
 }
 
-// Cache table existence checks
-let _callsTableExists: boolean | null = null
-let _callScoringTableExists: boolean | null = null
-
-async function tableExists(tableName: string): Promise<boolean> {
-  try {
-    await prisma.$queryRawUnsafe(`SELECT 1 FROM "${tableName}" LIMIT 1`)
-    return true
-  } catch {
-    return false
-  }
-}
-
 /**
  * Calculate weekly scoring for a rep
  */
@@ -39,20 +26,14 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
   const start = weekStart || getMonday(new Date())
   const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000)
 
-  if (_callsTableExists === null) _callsTableExists = await tableExists('calls')
-  if (_callScoringTableExists === null) _callScoringTableExists = await tableExists('call_scoring')
-
-  // Get calls from Call table if it exists
-  let calls: any[] = []
-  if (_callsTableExists) {
-    try {
-      calls = await (prisma as any).call.findMany({
-        where: { repId, createdAt: { gte: start, lt: end }, status: 'completed' },
-      })
-    } catch {
-      _callsTableExists = false
-    }
-  }
+  // Get calls from DialerCall table
+  const calls = await prisma.dialerCall.findMany({
+    where: {
+      repId,
+      startedAt: { gte: start, lt: end },
+      status: { in: ['COMPLETED', 'CONNECTED'] },
+    },
+  })
 
   // Also check Activity table (always exists)
   const activities = await prisma.activity.findMany({
@@ -67,13 +48,13 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
   // --- Calculate each metric ---
 
   // 1. Connect-to-Interest Rate (/15)
-  const totalConversations = calls.filter((c: any) =>
-    ['interested', 'not_interested', 'callback'].includes(c.outcome || '')
+  const totalConversations = calls.filter(c =>
+    ['interested', 'not_interested', 'callback'].includes(c.dispositionResult || '')
   ).length + activities.filter(a =>
     ['INTERESTED', 'NOT_INTERESTED', 'CALLBACK', 'CONNECTED'].includes(a.callDisposition || '')
   ).length
 
-  const interested = calls.filter((c: any) => c.outcome === 'interested').length +
+  const interested = calls.filter(c => c.dispositionResult === 'interested').length +
     activities.filter(a => a.callDisposition === 'INTERESTED').length
 
   const connectToInterestRate = totalConversations > 0 ? interested / totalConversations : 0
@@ -81,7 +62,7 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
 
   // 2. Interest-to-Close Rate (/15) — check if interested leads became clients
   const interestedLeadIds = [
-    ...calls.filter((c: any) => c.outcome === 'interested').map((c: any) => c.leadId),
+    ...calls.filter(c => c.dispositionResult === 'interested').map(c => c.leadId),
     ...activities.filter(a => a.callDisposition === 'INTERESTED').map(a => a.leadId),
   ]
 
@@ -113,41 +94,37 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
 
   // 4. Call Duration Sweet Spot (/5) — 2-4 min ideal
   const durations = [
-    ...calls.filter((c: any) => c.durationSeconds).map((c: any) => c.durationSeconds),
+    ...calls.filter(c => c.duration).map(c => c.duration!),
     ...activities.filter(a => a.durationSeconds).map(a => a.durationSeconds!),
   ]
   let durationScore = 0
   if (durations.length > 0) {
-    const avgDur = durations.reduce((a: number, b: number) => a + b, 0) / durations.length
+    const avgDur = durations.reduce((a, b) => a + b, 0) / durations.length
     if (avgDur >= 120 && avgDur <= 240) durationScore = 5
     else if (avgDur >= 90 && avgDur <= 300) durationScore = 3
     else if (avgDur >= 60) durationScore = 1
   }
 
   // 5. Callback Show Rate (/5)
-  const callbackCalls = calls.filter((c: any) => c.outcome === 'callback' && c.callbackDate)
+  const callbackCalls = calls.filter(c => c.dispositionResult === 'callback')
   let callbackShowRate = 0
   let callbackShowScore = 3 // Neutral default
-  if (callbackCalls.length > 0 && _callsTableExists) {
-    try {
-      const callbackLeadIds = callbackCalls.map((c: any) => c.leadId)
-      const followUps = await (prisma as any).call.count({
-        where: {
-          leadId: { in: callbackLeadIds },
-          repId,
-          createdAt: { gt: start },
-          outcome: { in: ['interested', 'not_interested', 'callback'] },
-        },
-      })
-      callbackShowRate = followUps / callbackCalls.length
-      callbackShowScore = Math.min(5, Math.round(callbackShowRate * 5))
-    } catch {
-      _callsTableExists = false
-    }
+  if (callbackCalls.length > 0) {
+    const callbackLeadIds = callbackCalls.map(c => c.leadId)
+    const followUps = await prisma.dialerCall.count({
+      where: {
+        leadId: { in: callbackLeadIds },
+        repId,
+        startedAt: { gt: start },
+        dispositionResult: { in: ['interested', 'not_interested', 'callback'] },
+      },
+    })
+    callbackShowRate = followUps / callbackCalls.length
+    callbackShowScore = Math.min(5, Math.round(callbackShowRate * 5))
   }
 
   // 6. DNC Rate (/5 — lower is better)
-  const dncCount = calls.filter((c: any) => c.outcome === 'dnc').length
+  const dncCount = calls.filter(c => c.dispositionResult === 'dnc').length
   const dncRate = totalDials > 0 ? dncCount / totalDials : 0
   const dncScore = dncRate === 0 ? 5 : dncRate < 0.02 ? 4 : dncRate < 0.05 ? 3 : dncRate < 0.1 ? 1 : 0
 
@@ -171,7 +148,6 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
   if (interestToCloseRate < 0.3 && interested > 3) {
     coachingNotes.push('High interest but low close rate. Text the preview every time. Ask "want me to make it live?"')
   }
-  // Preview-specific coaching (3 metrics)
   if (previewSendRate < 0.8 && totalConversations > 5) {
     coachingNotes.push('You\'re not sending the preview on every call. The preview IS the pitch — send it in the first 30 seconds, every time.')
   }
@@ -185,7 +161,7 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
     coachingNotes.push('You\'re crushing it. High preview send rate AND strong close rate. Keep this exact flow going.')
   }
   if (durations.length > 5) {
-    const avgDur = durations.reduce((a: number, b: number) => a + b, 0) / durations.length
+    const avgDur = durations.reduce((a, b) => a + b, 0) / durations.length
     if (avgDur < 60) {
       coachingNotes.push(`Calls averaging ${Math.round(avgDur)} seconds. Not getting past the opener. Slow down.`)
     }
@@ -200,29 +176,27 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
     coachingNotes.push('Great week! Keep up the momentum. You\'re in the top tier.')
   }
 
-  // Save to database (only if call_scoring table exists)
-  const avgDuration = durations.length > 0 ? Math.round(durations.reduce((a: number, b: number) => a + b, 0) / durations.length) : 0
-  if (_callScoringTableExists) {
-    try {
-      await (prisma as any).callScoring.upsert({
-        where: { repId_weekStart: { repId, weekStart: start } },
-        create: {
-          repId, weekStart: start,
-          connectToInterest: connectToInterestRate, interestToClose: interestToCloseRate,
-          previewSendRate, previewToOpenRate, openToCloseRate,
-          avgDuration, callbackShowRate, dncRate, volumeScore, totalScore,
-          coachingNotes: coachingNotes.join('\n'),
-        },
-        update: {
-          connectToInterest: connectToInterestRate, interestToClose: interestToCloseRate,
-          previewSendRate, previewToOpenRate, openToCloseRate,
-          avgDuration, callbackShowRate, dncRate, volumeScore, totalScore,
-          coachingNotes: coachingNotes.join('\n'),
-        },
-      })
-    } catch {
-      _callScoringTableExists = false
-    }
+  // Save to CallScoring table
+  const avgDuration = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0
+  try {
+    await prisma.callScoring.upsert({
+      where: { repId_weekStart: { repId, weekStart: start } },
+      create: {
+        repId, weekStart: start,
+        connectToInterest: connectToInterestRate, interestToClose: interestToCloseRate,
+        previewSendRate, previewToOpenRate, openToCloseRate,
+        avgDuration, callbackShowRate, dncRate, volumeScore, totalScore,
+        coachingNotes: coachingNotes.join('\n'),
+      },
+      update: {
+        connectToInterest: connectToInterestRate, interestToClose: interestToCloseRate,
+        previewSendRate, previewToOpenRate, openToCloseRate,
+        avgDuration, callbackShowRate, dncRate, volumeScore, totalScore,
+        coachingNotes: coachingNotes.join('\n'),
+      },
+    })
+  } catch (err) {
+    console.error('[Scoring] Failed to save CallScoring:', err)
   }
 
   return {
@@ -237,21 +211,17 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
  * Get the most recent coaching tip for a rep
  */
 export async function getCoachingTip(repId: string): Promise<string | null> {
-  if (_callScoringTableExists === null) _callScoringTableExists = await tableExists('call_scoring')
-
-  if (_callScoringTableExists) {
-    try {
-      const latestScoring = await (prisma as any).callScoring.findFirst({
-        where: { repId },
-        orderBy: { weekStart: 'desc' },
-      })
-      if (latestScoring?.coachingNotes) {
-        const notes = latestScoring.coachingNotes.split('\n').filter(Boolean)
-        return notes[0] || null
-      }
-    } catch {
-      _callScoringTableExists = false
+  try {
+    const latestScoring = await prisma.callScoring.findFirst({
+      where: { repId },
+      orderBy: { weekStart: 'desc' },
+    })
+    if (latestScoring?.coachingNotes) {
+      const notes = latestScoring.coachingNotes.split('\n').filter(Boolean)
+      return notes[0] || null
     }
+  } catch (err) {
+    console.error('[Scoring] Failed to fetch coaching tip:', err)
   }
 
   // Fallback: generate a tip based on today's stats

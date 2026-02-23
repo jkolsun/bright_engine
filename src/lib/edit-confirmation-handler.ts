@@ -10,7 +10,7 @@
 
 import type Anthropic from '@anthropic-ai/sdk'
 import { prisma } from './db'
-import { getAnthropicClient } from './anthropic'
+import { getAnthropicClient, calculateApiCost } from './anthropic'
 
 const HAIKU_MODEL = 'claude-haiku-4-5-20251001'
 
@@ -54,18 +54,24 @@ async function classifyConfirmationResponse(
 ): Promise<'confirm' | 'undo' | 'more_edits' | 'unrelated'> {
   try {
     const anthropic = getAnthropicClient()
-    const response = await anthropic.messages.create({
-      model: HAIKU_MODEL,
-      max_tokens: 50,
-      system: `You classify client responses to a website edit confirmation. The client was shown their updated site and asked if they want more changes before going live.
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Classification timeout')), 10000)
+    )
+    const response = await Promise.race([
+      anthropic.messages.create({
+        model: HAIKU_MODEL,
+        max_tokens: 50,
+        system: `You classify client responses to a website edit confirmation. The client was shown their updated site and asked if they want more changes before going live.
 
 Respond with ONLY one word:
 - "confirm" if they approve/like it/want to go live (e.g. "looks good", "perfect", "push it", "yes", "love it", "that works")
 - "undo" if they want to revert/go back (e.g. "undo", "go back", "revert", "I don't like it", "change it back")
 - "more_edits" if they want additional changes (e.g. "can you also...", "one more thing", "change the color too", "make X bigger")
 - "unrelated" if the message is not about the edit at all (e.g. "what time do you close", "how much is hosting")`,
-      messages: [{ role: 'user', content: message }],
-    })
+        messages: [{ role: 'user', content: message }],
+      }),
+      timeoutPromise,
+    ])
 
     const text = response.content
       .filter((block): block is Anthropic.TextBlock => block.type === 'text')
@@ -73,6 +79,15 @@ Respond with ONLY one word:
       .join('')
       .trim()
       .toLowerCase()
+
+    // Log API cost inside this function where response is in scope
+    await prisma.apiCost.create({
+      data: {
+        service: 'anthropic',
+        operation: 'edit_confirmation_classify',
+        cost: calculateApiCost(response.usage, 0.001, 'haiku'),
+      },
+    }).catch(err => console.error('[EditConfirmation] API cost write failed:', err))
 
     if (['confirm', 'undo', 'more_edits', 'unrelated'].includes(text)) {
       return text as 'confirm' | 'undo' | 'more_edits' | 'unrelated'
@@ -121,15 +136,6 @@ async function confirmAndPush(
       data: { buildStep: 'QA_REVIEW' },
     })
   }
-
-  // Log API cost for the classification call
-  await prisma.apiCost.create({
-    data: {
-      service: 'anthropic',
-      operation: 'edit_confirmation_classify',
-      cost: 0.001,
-    },
-  }).catch(err => console.error('[EditConfirmation] API cost write failed:', err))
 
   console.log(`[EditConfirmation] Edit confirmed and pushed to build queue for client ${clientId}`)
 

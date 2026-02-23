@@ -8,6 +8,7 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import { prisma } from './db'
+import { calculateApiCost } from './anthropic'
 
 const AI_MODEL = 'claude-opus-4-6'
 
@@ -354,12 +355,12 @@ export async function applyAiEdit(params: {
       }
     }
 
-    // Log API cost
+    // Log API cost (Opus — uses sonnet rates as approximation, with usage-based when available)
     await prisma.apiCost.create({
       data: {
         service: 'anthropic',
         operation: 'site_editor_ai_edit',
-        cost: 0.03,
+        cost: calculateApiCost(response.usage, 0.03),
       },
     }).catch(err => console.error('[AISiteEditor] API cost write failed:', err))
 

@@ -61,6 +61,24 @@ interface HistoryItem {
 type CallPhase = 'idle' | 'dialing' | 'connected' | 'on_hold' | 'disposing'
 type Disposition = 'interested' | 'callback' | 'not_interested' | 'voicemail' | 'no_answer' | 'bad_number'
 
+interface SessionStats {
+  dials: number
+  connects: number
+  previewsSent: number
+  interested: number
+  notInterested: number
+  callbacks: number
+  voicemails: number
+  noAnswer: number
+  badNumber: number
+}
+
+const EMPTY_STATS: SessionStats = {
+  dials: 0, connects: 0, previewsSent: 0,
+  interested: 0, notInterested: 0, callbacks: 0,
+  voicemails: 0, noAnswer: 0, badNumber: 0,
+}
+
 const TERMINAL_OUTCOMES = ['interested', 'not_interested', 'bad_number']
 const OUTCOME_ICONS: Record<string, { icon: string; color: string }> = {
   interested: { icon: '✓', color: 'text-green-500' },
@@ -153,7 +171,7 @@ function TopBar({
   setDialerMode: (m: 'power' | 'single') => void
   callPhase: CallPhase
   callTimer: number
-  sessionStats: { dials: number; connects: number; previewsSent: number }
+  sessionStats: SessionStats
   sessionActive: boolean
   onStartSession: () => void
   onEndSession: () => void
@@ -989,7 +1007,7 @@ function DispositionPanel({
 function EndOfSessionScreen({
   sessionStats, basePath, onClose,
 }: {
-  sessionStats: { dials: number; connects: number; previewsSent: number }
+  sessionStats: SessionStats
   basePath: string
   onClose: () => void
 }) {
@@ -1006,7 +1024,7 @@ function EndOfSessionScreen({
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Session Complete</h2>
         <p className="text-gray-500 text-sm mb-6">Great work! Here&apos;s your session summary.</p>
 
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="bg-gray-50 rounded-lg p-3">
             <div className="text-2xl font-bold text-gray-900">{sessionStats.dials}</div>
             <div className="text-xs text-gray-500">Total Dials</div>
@@ -1019,6 +1037,46 @@ function EndOfSessionScreen({
             <div className="text-2xl font-bold text-gray-900">{sessionStats.previewsSent}</div>
             <div className="text-xs text-gray-500">Previews Sent</div>
           </div>
+        </div>
+
+        {/* Disposition Breakdown */}
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {sessionStats.interested > 0 && (
+            <div className="bg-green-50 rounded-lg p-2">
+              <div className="text-lg font-bold text-green-700">{sessionStats.interested}</div>
+              <div className="text-[10px] text-green-600">Interested</div>
+            </div>
+          )}
+          {sessionStats.callbacks > 0 && (
+            <div className="bg-blue-50 rounded-lg p-2">
+              <div className="text-lg font-bold text-blue-700">{sessionStats.callbacks}</div>
+              <div className="text-[10px] text-blue-600">Callbacks</div>
+            </div>
+          )}
+          {sessionStats.notInterested > 0 && (
+            <div className="bg-gray-50 rounded-lg p-2">
+              <div className="text-lg font-bold text-gray-700">{sessionStats.notInterested}</div>
+              <div className="text-[10px] text-gray-500">Not Interested</div>
+            </div>
+          )}
+          {sessionStats.voicemails > 0 && (
+            <div className="bg-orange-50 rounded-lg p-2">
+              <div className="text-lg font-bold text-orange-700">{sessionStats.voicemails}</div>
+              <div className="text-[10px] text-orange-600">Voicemails</div>
+            </div>
+          )}
+          {sessionStats.noAnswer > 0 && (
+            <div className="bg-gray-50 rounded-lg p-2">
+              <div className="text-lg font-bold text-gray-600">{sessionStats.noAnswer}</div>
+              <div className="text-[10px] text-gray-500">No Answer</div>
+            </div>
+          )}
+          {sessionStats.badNumber > 0 && (
+            <div className="bg-red-50 rounded-lg p-2">
+              <div className="text-lg font-bold text-red-700">{sessionStats.badNumber}</div>
+              <div className="text-[10px] text-red-600">Bad Number</div>
+            </div>
+          )}
         </div>
 
         <div className="bg-teal-50 rounded-lg p-3 mb-6">
@@ -1074,7 +1132,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // ----- Stats -----
-  const [sessionStats, setSessionStats] = useState({ dials: 0, connects: 0, previewsSent: 0 })
+  const [sessionStats, setSessionStats] = useState<SessionStats>({ ...EMPTY_STATS })
 
   // ----- UI State -----
   const [callNotes, setCallNotes] = useState('')
@@ -1089,6 +1147,9 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   const [notInterestedReason, setNotInterestedReason] = useState('')
   const [dncChecked, setDncChecked] = useState(false)
   const [vmSubChoice, setVmSubChoice] = useState<'left' | 'no_vm' | null>(null)
+
+  // ----- Auto-dial pending (NEW-M7) -----
+  const [autoDialPending, setAutoDialPending] = useState(false)
 
   // ----- Lead History & Script -----
   const [leadHistory, setLeadHistory] = useState<HistoryItem[]>([])
@@ -1135,11 +1196,12 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         const activityData = await activityRes.json()
         const stats = activityData.stats
         if (stats) {
-          setSessionStats({
+          setSessionStats(prev => ({
+            ...prev,
             dials: stats.dials || 0,
             connects: stats.conversations || 0,
             previewsSent: stats.previewLinksSent || 0,
-          })
+          }))
         }
       }
     } catch (err) {
@@ -1302,6 +1364,37 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   }, [toast])
 
   // ============================================
+  // SESSION STATS PERSISTENCE (NEW-M4)
+  // ============================================
+
+  useEffect(() => {
+    if (!sessionId || !sessionActive) return
+    const timeout = setTimeout(() => {
+      fetch('/api/dialer/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update-stats',
+          sessionId,
+          stats: sessionStats,
+        }),
+      }).catch(() => {})
+    }, 2000)
+    return () => clearTimeout(timeout)
+  }, [sessionStats, sessionId, sessionActive])
+
+  // ============================================
+  // AUTO-DIAL AFTER STATE FLUSH (NEW-M7)
+  // ============================================
+
+  useEffect(() => {
+    if (autoDialPending && callPhase === 'idle' && queue.length > 0) {
+      setAutoDialPending(false)
+      handleDialRef.current()
+    }
+  }, [autoDialPending, callPhase, queue])
+
+  // ============================================
   // HANDLERS
   // ============================================
 
@@ -1445,7 +1538,21 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
     // Safety timeout: if still dialing after 45 seconds, reset to idle
     // (prevents rep being stuck on "Ringing..." forever)
     setTimeout(() => {
-      setCallPhase(prev => prev === 'dialing' ? 'idle' : prev)
+      setCallPhase(prev => {
+        if (prev === 'dialing') {
+          // Also end the server-side call record
+          if (activeCallId) {
+            fetch('/api/dialer/call/end', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ callId: activeCallId }),
+            }).catch(err => console.warn('[DialerCore] Safety timeout end-call failed:', err))
+          }
+          setActiveCallId(null)
+          return 'idle'
+        }
+        return prev
+      })
     }, 45000)
   }, [processing, callPhase, queue, currentIndex, isPartTime, sessionId])
 
@@ -1469,6 +1576,15 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           callDisposition: 'CONNECTED',
         }),
       }).catch(err => console.warn('[DialerCore] Activity log failed:', err))
+    }
+
+    // Server-side verification: update DialerCall connectedAt timestamp
+    if (activeCallId && !activeCallId.startsWith('call-')) {
+      fetch('/api/dialer/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callId: activeCallId, outcome: 'connected', leadId: currentLead?.id }),
+      }).catch(err => console.warn('[DialerCore] Connect log failed:', err))
     }
   }
 
@@ -1569,6 +1685,26 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
   const handleDisposition = async (type: Disposition, extra?: Record<string, unknown>) => {
     if (processing || !currentLead) return
+
+    // Validate callback date before proceeding
+    if (type === 'callback') {
+      const cbDate = extra?.callbackDate as string | undefined
+      const cbTime = extra?.callbackTime as string | undefined
+      if (!cbDate) {
+        showToast('Invalid callback date', 'error')
+        return
+      }
+      const parsed = new Date(`${cbDate}T${cbTime || '09:00'}:00`)
+      if (isNaN(parsed.getTime())) {
+        showToast('Invalid callback date', 'error')
+        return
+      }
+      if (parsed.getTime() < Date.now()) {
+        showToast('Callback date must be in the future', 'error')
+        return
+      }
+    }
+
     setProcessing(true)
 
     const lead = currentLead
@@ -1671,7 +1807,17 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       // 6. Update local state
       setQueueResults(prev => ({ ...prev, [lead.id]: outcome }))
 
-      // connects already incremented by handleConnect() — no double-count needed
+      // 6b. Track disposition breakdown
+      setSessionStats(prev => {
+        const updated = { ...prev }
+        if (type === 'interested') updated.interested += 1
+        else if (type === 'not_interested') updated.notInterested += 1
+        else if (type === 'callback') updated.callbacks += 1
+        else if (type === 'voicemail') updated.voicemails += 1
+        else if (type === 'no_answer') updated.noAnswer += 1
+        else if (type === 'bad_number') updated.badNumber += 1
+        return updated
+      })
 
       // 7. Queue management
       const isTerminal = TERMINAL_OUTCOMES.includes(type)
@@ -1697,11 +1843,9 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       setActiveCallId(null)
       setCallNotes('')
 
-      // 9. Auto-advance (Bug Fix 3)
+      // 9. Auto-advance — use flag so useEffect fires after React state flush
       if (dialerMode === 'power' && sessionActive && newQueue.length > 0 && newIndex < newQueue.length) {
-        setTimeout(() => {
-          handleDialRef.current()
-        }, 500)
+        setAutoDialPending(true)
       }
 
     } catch (err) {

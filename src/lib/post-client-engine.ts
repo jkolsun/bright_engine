@@ -15,7 +15,7 @@ import { getPricingConfig } from './pricing-config'
 import { updateOnboarding, advanceOnboarding, createOnboardingApproval, getOnboardingFlowSettings } from './onboarding'
 import { handleEditRequest } from './edit-request-handler'
 import { handleEditConfirmation } from './edit-confirmation-handler'
-import { getAnthropicClient } from './anthropic'
+import { getAnthropicClient, calculateApiCost } from './anthropic'
 
 const POST_CLIENT_MODEL = 'claude-haiku-4-5-20251001'
 
@@ -34,6 +34,12 @@ export async function processPostClientInbound(
     include: { lead: true, analytics: true, revenue: true },
   })
   if (!client || !client.lead) return
+
+  // DNC check — don't send AI replies to DNC leads/clients
+  if (client.lead.dncAt) {
+    console.log(`[PostClient] Skipping AI response — client ${clientId} lead is DNC`)
+    return
+  }
 
   // ── Check for pending edit confirmation BEFORE normal AI processing ──
   const pendingEdit = await prisma.editRequest.findFirst({
@@ -402,7 +408,7 @@ export async function processPostClientInbound(
       data: {
         service: 'anthropic',
         operation: 'post_client_chat',
-        cost: 0.003,
+        cost: calculateApiCost(apiResponse.usage, 0.003, 'haiku'),
       },
     }).catch(err => console.error('[PostClient] API cost write failed:', err))
   } catch (apiError) {
@@ -471,7 +477,7 @@ export async function generateTouchpointMessage(
       data: {
         service: 'anthropic',
         operation: `post_client_touchpoint_${touchpointType}`,
-        cost: 0.002,
+        cost: calculateApiCost(response.usage, 0.002, 'haiku'),
       },
     }).catch(err => console.error('[PostClient] API cost write failed:', err))
 

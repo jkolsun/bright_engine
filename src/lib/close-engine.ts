@@ -169,6 +169,19 @@ export async function triggerCloseEngine(options: {
 // transitionStage()
 // ============================================
 
+// Valid stage transitions — reject anything not in this map
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  INITIATED: ['QUALIFYING'],
+  QUALIFYING: ['COLLECTING_INFO', 'BUILDING', 'STALLED'],
+  COLLECTING_INFO: ['BUILDING', 'STALLED'],
+  BUILDING: ['PREVIEW_SENT', 'STALLED'],
+  PREVIEW_SENT: ['EDIT_LOOP', 'PENDING_APPROVAL', 'PAYMENT_SENT', 'STALLED'],
+  EDIT_LOOP: ['PREVIEW_SENT', 'PENDING_APPROVAL', 'PAYMENT_SENT', 'STALLED'],
+  PENDING_APPROVAL: ['PAYMENT_SENT', 'STALLED'],
+  PAYMENT_SENT: ['COMPLETED', 'STALLED'],
+  STALLED: ['QUALIFYING', 'CLOSED_LOST'],
+}
+
 export async function transitionStage(
   conversationId: string,
   newStage: string
@@ -182,6 +195,13 @@ export async function transitionStage(
   }
 
   const oldStage = conversation.stage
+
+  // Validate transition
+  const allowed = VALID_TRANSITIONS[oldStage]
+  if (allowed && !allowed.includes(newStage)) {
+    console.error(`[CloseEngine] Invalid stage transition: ${oldStage} → ${newStage} (conversation ${conversationId}). Allowed: [${allowed.join(', ')}]`)
+    return // Skip invalid transition
+  }
 
   // Build timestamp updates
   const timestamps: Record<string, Date> = {}

@@ -13,8 +13,8 @@ let _stripeInstance: any = null
 function initStripe() {
   if (!_stripeInstance) {
     const { default: StripeSdk } = require('stripe')
-    const key = process.env.STRIPE_SECRET_KEY || 'build-placeholder'
-    if (key === 'build-placeholder') {
+    const key = process.env.STRIPE_SECRET_KEY
+    if (!key) {
       throw new Error('STRIPE_SECRET_KEY not configured')
     }
     _stripeInstance = new StripeSdk(key, { apiVersion: '2023-10-16' })
@@ -97,7 +97,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true })
   } catch (error) {
     console.error('Webhook processing error:', error)
-    return NextResponse.json({ error: 'Processing failed' }, { status: 500 })
+    // Return 200 so Stripe does not retry — these are application-level errors, not transient failures
+    return NextResponse.json({ error: 'Processing failed', received: true }, { status: 200 })
   }
 }
 
@@ -250,20 +251,28 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
   }
 
-  // ── Step 6: Create Revenue records ──
+  // ── Step 6: Create Revenue records (idempotent via stripePaymentId unique constraint) ──
   let revenue
-  if (amountDollars >= webhookConfig.firstMonthTotal * 0.9) {
-    // First month combined — split into site build + first hosting
-    await prisma.revenue.create({
-      data: { clientId: client.id, type: 'SITE_BUILD', amount: webhookConfig.siteBuildFee, status: 'PAID', recurring: false, product: 'Website Setup' },
-    })
-    revenue = await prisma.revenue.create({
-      data: { clientId: client.id, type: 'HOSTING_MONTHLY', amount: webhookConfig.monthlyHosting, status: 'PAID', recurring: true, product: 'Monthly Hosting' },
-    })
-  } else {
-    revenue = await prisma.revenue.create({
-      data: { clientId: client.id, type: 'HOSTING_MONTHLY', amount: amountDollars, status: 'PAID', recurring: true, product: 'Monthly Hosting' },
-    })
+  try {
+    if (amountDollars >= webhookConfig.firstMonthTotal * 0.9) {
+      // First month combined — split into site build + first hosting
+      await prisma.revenue.create({
+        data: { clientId: client.id, type: 'SITE_BUILD', amount: webhookConfig.siteBuildFee, status: 'PAID', recurring: false, product: 'Website Setup', stripePaymentId: `${session.id}_setup` },
+      })
+      revenue = await prisma.revenue.create({
+        data: { clientId: client.id, type: 'HOSTING_MONTHLY', amount: webhookConfig.monthlyHosting, status: 'PAID', recurring: true, product: 'Monthly Hosting', stripePaymentId: session.id },
+      })
+    } else {
+      revenue = await prisma.revenue.create({
+        data: { clientId: client.id, type: 'HOSTING_MONTHLY', amount: amountDollars, status: 'PAID', recurring: true, product: 'Monthly Hosting', stripePaymentId: session.id },
+      })
+    }
+  } catch (err: any) {
+    if (err?.code === 'P2002') {
+      console.log(`[Stripe Webhook] Duplicate webhook detected — Revenue already exists for session ${session.id}`)
+      return
+    }
+    throw err
   }
 
   // ── Step 7: Process commission ──
@@ -303,8 +312,19 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       amountDollars,
       'stripe'
     ))
-  } catch (err) {
+  } catch (err: any) {
     console.error('[Stripe Webhook] Webhook dispatch failed:', err)
+    try {
+      await prisma.failedWebhook.create({
+        data: {
+          source: 'stripe_checkout',
+          payload: { leadId: lead.id, clientId: client.id, amount: amountDollars, sessionId: session.id },
+          error: err?.message || String(err),
+        },
+      })
+    } catch (fwErr) {
+      console.error('[Stripe Webhook] FailedWebhook record creation failed:', fwErr)
+    }
   }
 
   // ── Step 10: Queue onboarding email sequence ──
@@ -408,16 +428,26 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   })
 
   if (client) {
-    // Record monthly hosting payment
-    const revenue = await prisma.revenue.create({
-      data: {
-        clientId: client.id,
-        type: 'HOSTING_MONTHLY',
-        amount,
-        recurring: true,
-        status: 'PAID',
-      },
-    })
+    // Record monthly hosting payment (idempotent via stripePaymentId unique constraint)
+    let revenue
+    try {
+      revenue = await prisma.revenue.create({
+        data: {
+          clientId: client.id,
+          type: 'HOSTING_MONTHLY',
+          amount,
+          recurring: true,
+          status: 'PAID',
+          stripePaymentId: invoice.id,
+        },
+      })
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        console.log(`[Stripe Webhook] Duplicate webhook detected — Revenue already exists for invoice ${invoice.id}`)
+        return
+      }
+      throw err
+    }
 
     // Log PAYMENT_RECEIVED event on the lead
     if (client.leadId) {
@@ -546,7 +576,7 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
   // Mark revenue as refunded
   await prisma.revenue.update({
     where: { id: revenue.id },
-    data: { status: 'REFUNDED' as any },
+    data: { status: 'REFUNDED' },
   })
 
   // Find linked commission
