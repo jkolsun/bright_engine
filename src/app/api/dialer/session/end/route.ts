@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { verifySession } from '@/lib/session'
-import { endSession } from '@/lib/dialer-service'
+import { endSession, mergeClientStats } from '@/lib/dialer-service'
 
 export async function POST(request: NextRequest) {
   const sessionCookie = request.cookies.get('session')?.value
@@ -12,10 +12,16 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { sessionId } = await request.json()
+    const { sessionId, stats } = await request.json()
     if (!sessionId) {
       return NextResponse.json({ error: 'sessionId is required' }, { status: 400 })
     }
+
+    // Merge client-side stats before ending (NEW-M4/L1 fix)
+    if (stats && typeof stats === 'object') {
+      await mergeClientStats(sessionId, stats)
+    }
+
     const dialerSession = await endSession(sessionId)
     return NextResponse.json(dialerSession)
   } catch (err) {

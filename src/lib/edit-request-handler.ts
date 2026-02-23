@@ -22,10 +22,10 @@ export async function handleEditRequest(params: {
 }): Promise<void> {
   const { clientId, editRequestId, instruction, complexity } = params
 
-  // Load client with lead
+  // Load client with lead (include siteEditVersion for optimistic locking — BUG B.1)
   const client = await prisma.client.findUnique({
     where: { id: clientId },
-    include: { lead: true },
+    include: { lead: { select: { id: true, phone: true, siteHtml: true, companyName: true, firstName: true, siteEditVersion: true } } },
   })
   if (!client || !client.lead) {
     console.error(`[EditHandler] Client ${clientId} not found or has no lead`)
@@ -75,15 +75,18 @@ export async function handleEditRequest(params: {
  */
 async function applyEdit(
   client: { id: string; companyName: string },
-  lead: { id: string; phone: string; siteHtml?: string | null; companyName: string },
+  lead: { id: string; phone: string; siteHtml?: string | null; companyName: string; siteEditVersion?: number },
   editRequestId: string,
   instruction: string,
-): Promise<{ html: string; summary: string } | null> {
+): Promise<{ html: string; summary: string; baseVersion: number } | null> {
   if (!lead.siteHtml) {
     console.error(`[EditHandler] No siteHtml for lead ${lead.id} — cannot auto-edit`)
     await escalateAsFailed(client, lead, editRequestId, 'No site HTML available for auto-editing')
     return null
   }
+
+  // Capture the version we're editing against for optimistic locking (BUG B.1 fix)
+  const baseVersion = lead.siteEditVersion ?? 0
 
   // Mark as AI editing (both status fields synced)
   await prisma.editRequest.update({
@@ -107,19 +110,30 @@ async function applyEdit(
     return null
   }
 
-  return result
+  return { ...result, baseVersion }
 }
 
 // ─── Simple Edit: AI auto-applies + auto-pushes ──────────────────
 
 async function handleSimpleEdit(
   client: { id: string; companyName: string; stagingUrl?: string | null },
-  lead: { id: string; phone: string; siteHtml?: string | null; companyName: string; firstName: string },
+  lead: { id: string; phone: string; siteHtml?: string | null; companyName: string; firstName: string; siteEditVersion?: number },
   editRequestId: string,
   instruction: string,
 ): Promise<void> {
   const result = await applyEdit(client, lead, editRequestId, instruction)
   if (!result) return
+
+  // Optimistic locking: verify version hasn't changed since we read the HTML (BUG B.1 fix)
+  const currentLead = await prisma.lead.findUnique({
+    where: { id: lead.id },
+    select: { siteEditVersion: true },
+  })
+  if (currentLead && currentLead.siteEditVersion !== result.baseVersion) {
+    console.warn(`[EditHandler] Version conflict for ${client.companyName}: expected v${result.baseVersion}, found v${currentLead.siteEditVersion}. Re-queuing.`)
+    await escalateAsFailed(client, lead, editRequestId, 'Concurrent edit detected — please retry')
+    return
+  }
 
   // Auto-push: update site HTML + mark as approved + push to build queue
   await prisma.editRequest.update({
@@ -134,10 +148,10 @@ async function handleSimpleEdit(
     },
   })
 
-  // Update lead's siteHtml
+  // Update lead's siteHtml + increment version
   await prisma.lead.update({
     where: { id: lead.id },
-    data: { siteHtml: result.html, buildStep: 'QA_REVIEW' },
+    data: { siteHtml: result.html, buildStep: 'QA_REVIEW', siteEditVersion: result.baseVersion + 1 },
   })
 
   // Notify client
@@ -168,12 +182,23 @@ async function handleSimpleEdit(
 
 async function handleMediumEdit(
   client: { id: string; companyName: string; stagingUrl?: string | null },
-  lead: { id: string; phone: string; siteHtml?: string | null; companyName: string; firstName: string },
+  lead: { id: string; phone: string; siteHtml?: string | null; companyName: string; firstName: string; siteEditVersion?: number },
   editRequestId: string,
   instruction: string,
 ): Promise<void> {
   const result = await applyEdit(client, lead, editRequestId, instruction)
   if (!result) return
+
+  // Optimistic locking: verify version hasn't changed since we read the HTML (BUG B.1 fix)
+  const currentLead = await prisma.lead.findUnique({
+    where: { id: lead.id },
+    select: { siteEditVersion: true },
+  })
+  if (currentLead && currentLead.siteEditVersion !== result.baseVersion) {
+    console.warn(`[EditHandler] Version conflict for ${client.companyName}: expected v${result.baseVersion}, found v${currentLead.siteEditVersion}. Re-queuing.`)
+    await escalateAsFailed(client, lead, editRequestId, 'Concurrent edit detected — please retry')
+    return
+  }
 
   // Save AI edit but DON'T push — wait for admin approval
   await prisma.editRequest.update({
@@ -186,10 +211,10 @@ async function handleMediumEdit(
     },
   })
 
-  // Update lead's siteHtml so staging preview shows the change
+  // Update lead's siteHtml so staging preview shows the change + increment version
   await prisma.lead.update({
     where: { id: lead.id },
-    data: { siteHtml: result.html },
+    data: { siteHtml: result.html, siteEditVersion: result.baseVersion + 1 },
   })
 
   // Notify admin
@@ -225,7 +250,7 @@ async function handleMediumEdit(
 
 async function handleComplexEdit(
   client: { id: string; companyName: string; stagingUrl?: string | null },
-  lead: { id: string; phone: string; siteHtml?: string | null; companyName: string; firstName: string },
+  lead: { id: string; phone: string; siteHtml?: string | null; companyName: string; firstName: string; siteEditVersion?: number },
   editRequestId: string,
   instruction: string,
 ): Promise<void> {

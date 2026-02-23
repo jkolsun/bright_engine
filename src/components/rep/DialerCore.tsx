@@ -1381,15 +1381,14 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   useEffect(() => {
     if (!sessionId || !sessionActive) return
     const timeout = setTimeout(() => {
-      fetch('/api/dialer/settings', {
-        method: 'POST',
+      fetch('/api/dialer/session/settings', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'update-stats',
           sessionId,
           stats: sessionStats,
         }),
-      }).catch(() => {})
+      }).catch(err => console.warn('[DialerCore] Stats sync failed:', err))
     }, 2000)
     return () => clearTimeout(timeout)
   }, [sessionStats, sessionId, sessionActive])
@@ -1443,21 +1442,21 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
     }
 
     try {
-      const res = await fetch('/api/dialer/settings', {
+      const res = await fetch('/api/dialer/session/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'start', mode: dialerMode }),
+        body: JSON.stringify({ autoDialEnabled: dialerMode === 'power' }),
       })
       if (!res.ok) {
         showToast('Failed to start session — check your connection and try again', 'error')
         return
       }
       const data = await res.json()
-      if (!data.session?.id) {
+      if (!data.id) {
         showToast('Failed to start session — no session ID returned', 'error')
         return
       }
-      setSessionId(data.session.id)
+      setSessionId(data.id)
       setSessionActive(true)
       showToast('Session started')
       // Auto-dial first lead in power mode
@@ -1473,10 +1472,10 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   const handleEndSession = async () => {
     try {
       if (sessionId) {
-        await fetch('/api/dialer/settings', {
+        await fetch('/api/dialer/session/end', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'end', sessionId }),
+          body: JSON.stringify({ sessionId, stats: sessionStats }),
         })
       }
     } catch (err) {

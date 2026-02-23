@@ -163,6 +163,39 @@ export async function updateSessionSettings(sessionId: string, autoDialEnabled: 
   })
 }
 
+/**
+ * Merge client-side session stats into the DialerSessionNew record.
+ * Uses Math.max to avoid decrementing if server already has higher values
+ * from concurrent updates. (NEW-M4/L1 fix)
+ */
+export async function mergeClientStats(
+  sessionId: string,
+  stats: Record<string, number>,
+) {
+  const current = await prisma.dialerSessionNew.findUnique({
+    where: { id: sessionId },
+    select: {
+      totalCalls: true, connectedCalls: true, voicemails: true, noAnswers: true,
+      previewsSent: true, callbacksScheduled: true, interestedCount: true, notInterestedCount: true,
+    },
+  })
+  if (!current) return null
+
+  return prisma.dialerSessionNew.update({
+    where: { id: sessionId },
+    data: {
+      totalCalls: Math.max(current.totalCalls, stats.dials ?? 0),
+      connectedCalls: Math.max(current.connectedCalls, stats.connects ?? 0),
+      voicemails: Math.max(current.voicemails, stats.voicemails ?? 0),
+      noAnswers: Math.max(current.noAnswers, stats.noAnswer ?? 0),
+      previewsSent: Math.max(current.previewsSent, stats.previewsSent ?? 0),
+      callbacksScheduled: Math.max(current.callbacksScheduled, stats.callbacks ?? 0),
+      interestedCount: Math.max(current.interestedCount, stats.interested ?? 0),
+      notInterestedCount: Math.max(current.notInterestedCount, stats.notInterested ?? 0),
+    },
+  })
+}
+
 // ============================================
 // Call Operations
 // ============================================

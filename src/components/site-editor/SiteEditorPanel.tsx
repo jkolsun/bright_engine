@@ -64,6 +64,7 @@ export default function SiteEditorPanel({
 
   // Save state
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
+  const [siteVersion, setSiteVersion] = useState<number>(0)
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
 
   // Panel visibility
@@ -149,6 +150,7 @@ export default function SiteEditorPanel({
           setHtml(loadData.html)
           setOriginalHtml(loadData.html)
           setDebouncedHtml(loadData.html)
+          if (typeof loadData.version === 'number') setSiteVersion(loadData.version)
           setIsLoading(false)
           return
         }
@@ -211,14 +213,23 @@ export default function SiteEditorPanel({
       const res = await fetch(`/api/site-editor/${leadId}/save`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html: htmlToSave }),
+        body: JSON.stringify({ html: htmlToSave, expectedVersion: siteVersion }),
       })
-      setSaveStatus(res.ok ? 'saved' : 'error')
-      if (res.ok) onRefresh()
+      if (res.ok) {
+        const data = await res.json()
+        if (typeof data.version === 'number') setSiteVersion(data.version)
+        setSaveStatus('saved')
+        onRefresh()
+      } else if (res.status === 409) {
+        setSaveStatus('error')
+        alert('Version conflict — someone else saved while you were editing. Please close and re-open the editor.')
+      } else {
+        setSaveStatus('error')
+      }
     } catch {
       setSaveStatus('error')
     }
-  }, [leadId, onRefresh])
+  }, [leadId, onRefresh, siteVersion])
 
   // Monaco onChange — update state + debounced auto-save
   const handleHtmlChange = useCallback((newHtml: string) => {
