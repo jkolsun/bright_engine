@@ -31,7 +31,26 @@ export async function GET(
           orderBy: { createdAt: 'desc' },
           take: 50
         },
-        client: true
+        client: true,
+        upsellTags: {
+          where: { removedAt: null },
+          select: { id: true, productName: true, productPrice: true, taggedAt: true, addedByRepId: true },
+          orderBy: { taggedAt: 'desc' },
+        },
+        dialerCalls: {
+          select: {
+            id: true, status: true, dispositionResult: true, notes: true,
+            duration: true, connectedAt: true, startedAt: true,
+            wasRecommended: true, previewSentDuringCall: true, previewSentChannel: true,
+            rep: { select: { name: true } },
+          },
+          orderBy: { startedAt: 'desc' },
+          take: 20,
+        },
+        callbackSchedules: {
+          select: { id: true, scheduledAt: true, completedAt: true, status: true, notes: true, rep: { select: { name: true } } },
+          orderBy: { scheduledAt: 'desc' },
+        },
       }
     })
 

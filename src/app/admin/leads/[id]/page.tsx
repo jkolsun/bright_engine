@@ -345,8 +345,20 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
                       <div key={event.id} className="flex gap-4">
                         <div className="w-3 h-3 rounded-full bg-blue-600 flex-shrink-0 mt-2" />
                         <div className="flex-1">
-                          <p className="font-medium text-gray-900">{event.eventType}</p>
-                          <p className="text-sm text-gray-600 mt-1">{event.description || event.toStage}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-900">{event.eventType}</p>
+                            {event.eventType === 'CALL_MADE' && (event.metadata as any)?.disposition && (
+                              <DispositionBadge result={(event.metadata as any).disposition} />
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {event.description || event.toStage}
+                            {event.eventType === 'CALL_MADE' && (event.metadata as any)?.connected && ' (Connected)'}
+                            {event.eventType === 'CALL_MADE' && (event.metadata as any)?.duration && ` — ${Math.floor((event.metadata as any).duration / 60)}m${(event.metadata as any).duration % 60}s`}
+                          </p>
+                          {event.eventType === 'REP_NOTE' && (event.metadata as any)?.text && (
+                            <p className="text-sm text-gray-500 mt-1 italic">"{(event.metadata as any).text}"</p>
+                          )}
                           <p className="text-xs text-gray-500 mt-2">
                             {new Date(event.createdAt).toLocaleString()}
                           </p>
@@ -564,10 +576,79 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
               )}
             </Card>
 
-            {/* Upsells Pitched */}
+            {/* Call History */}
+            {lead.dialerCalls && lead.dialerCalls.length > 0 && (
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Call History</h3>
+                <div className="space-y-3">
+                  {lead.dialerCalls.map((call: any) => (
+                    <div key={call.id} className="p-3 bg-gray-50 rounded-lg text-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Phone size={14} className="text-gray-500" />
+                          <span className="font-medium text-gray-800">{call.rep?.name || 'Unknown'}</span>
+                          {call.connectedAt ? (
+                            <span className="text-xs text-green-600 font-medium">Connected</span>
+                          ) : (
+                            <span className="text-xs text-gray-400">Not Connected</span>
+                          )}
+                        </div>
+                        {call.dispositionResult && <DispositionBadge result={call.dispositionResult} />}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                        <span>{new Date(call.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        {call.duration && <span>{Math.floor(call.duration / 60)}m{call.duration % 60}s</span>}
+                        {call.previewSentDuringCall && <span className="text-blue-500">Preview sent via {call.previewSentChannel || 'sms'}</span>}
+                      </div>
+                      {call.notes && <p className="text-xs text-gray-500 mt-1.5 pl-5 italic">"{call.notes}"</p>}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Upsell Tags */}
+            {lead.upsellTags && lead.upsellTags.length > 0 && (
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Upsell Tags</h3>
+                <div className="flex flex-wrap gap-2">
+                  {lead.upsellTags.map((tag: any) => (
+                    <span key={tag.id} className="inline-flex items-center gap-1 px-2.5 py-1 bg-teal-50 text-teal-700 rounded-md text-xs font-medium">
+                      <Package size={12} /> {tag.productName} (${tag.productPrice})
+                    </span>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Scheduled Callbacks */}
+            {lead.callbackSchedules && lead.callbackSchedules.length > 0 && (
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Callbacks</h3>
+                <div className="space-y-2">
+                  {lead.callbackSchedules.map((cb: any) => (
+                    <div key={cb.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm">
+                      <div>
+                        <span className="font-medium text-gray-800">
+                          {new Date(cb.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {cb.rep?.name && <span className="text-gray-500 ml-2">by {cb.rep.name}</span>}
+                      </div>
+                      <Badge variant="outline" className={
+                        cb.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                        cb.status === 'MISSED' ? 'bg-red-100 text-red-700' :
+                        'bg-amber-100 text-amber-700'
+                      }>{cb.status}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Upsells Pitched (from events) */}
             {lead.events?.some((e: any) => e.eventType === 'UPSELL_PITCHED' || e.eventType === 'UPSELL_LINK_SENT') && (
               <Card className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Upsells</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Upsells Pitched</h3>
                 <div className="space-y-2">
                   {lead.events.filter((e: any) => e.eventType === 'UPSELL_PITCHED' || e.eventType === 'UPSELL_LINK_SENT').map((e: any) => {
                     const meta = typeof e.metadata === 'string' ? JSON.parse(e.metadata) : (e.metadata || {})
@@ -606,6 +687,25 @@ function StatusBadge({ status }: { status: string }) {
   }
   const { label, variant } = config[status] || { label: status, variant: 'default' }
   return <Badge variant={variant}>{label}</Badge>
+}
+
+function DispositionBadge({ result }: { result: string }) {
+  const colors: Record<string, string> = {
+    WANTS_TO_MOVE_FORWARD: 'bg-green-100 text-green-700',
+    CALLBACK: 'bg-teal-100 text-teal-700',
+    WANTS_CHANGES: 'bg-blue-100 text-blue-700',
+    WILL_LOOK_LATER: 'bg-amber-100 text-amber-700',
+    NOT_INTERESTED: 'bg-gray-100 text-gray-600',
+    VOICEMAIL: 'bg-gray-100 text-gray-600',
+    NO_ANSWER: 'bg-gray-100 text-gray-600',
+    DNC: 'bg-red-100 text-red-700',
+    WRONG_NUMBER: 'bg-red-100 text-red-700',
+  }
+  return (
+    <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-semibold ${colors[result] || 'bg-gray-100 text-gray-600'}`}>
+      {result.replace(/_/g, ' ')}
+    </span>
+  )
 }
 
 function EngagementPanel({ leadId }: { leadId: string }) {

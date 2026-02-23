@@ -15,7 +15,7 @@ export function DispositionTree() {
   const [callbackTime, setCallbackTime] = useState('09:00')
   const [dncChecked, setDncChecked] = useState(false)
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
-  const [queuedDisposition, setQueuedDisposition] = useState<string | null>(null)
+  const [queuedDisposition, setQueuedDisposition] = useState<{ result: string; extra?: Record<string, unknown> } | null>(null)
 
   const isOnCall = !!currentCall && ['INITIATED', 'RINGING', 'CONNECTED'].includes(currentCall.status)
   const callEnded = !!currentCall && ['COMPLETED', 'VOICEMAIL', 'NO_ANSWER', 'BUSY', 'FAILED'].includes(currentCall.status)
@@ -42,7 +42,7 @@ export function DispositionTree() {
   // If disposition was queued during call and call just ended, auto-submit
   useEffect(() => {
     if (callEnded && queuedDisposition) {
-      submitDisposition(queuedDisposition)
+      submitDisposition(queuedDisposition.result, queuedDisposition.extra)
     }
   }, [callEnded, queuedDisposition])
 
@@ -87,8 +87,8 @@ export function DispositionTree() {
 
   const handleDisposition = useCallback((result: string, extra?: Record<string, unknown>) => {
     if (isOnCall) {
-      // Call still active — queue the disposition, don't submit yet
-      setQueuedDisposition(result)
+      // Call still active — queue the disposition (preserve extra for callbacks)
+      setQueuedDisposition({ result, extra })
     } else {
       // Call ended — submit immediately
       submitDisposition(result, extra)
@@ -154,7 +154,7 @@ export function DispositionTree() {
               Use This
             </button>
           </div>
-          {queuedDisposition === topRec.outcome && isOnCall && (
+          {queuedDisposition?.result === topRec.outcome && isOnCall && (
             <div className="mt-2 text-xs text-purple-500 font-medium">Queued — will submit when call ends</div>
           )}
         </div>
@@ -180,7 +180,7 @@ export function DispositionTree() {
         {queuedDisposition && isOnCall && (
           <div className="mb-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
             <span className="text-xs text-amber-700 font-medium">
-              Queued: {queuedDisposition.replace(/_/g, ' ')}
+              Queued: {queuedDisposition.result.replace(/_/g, ' ')}
             </span>
             <button
               onClick={() => setQueuedDisposition(null)}

@@ -284,6 +284,25 @@ function formatEnrichedPhotos(photos: unknown): string {
   return '0'
 }
 
+function formatCallHistory(calls: Array<{ dispositionResult?: string | null; notes?: string | null; connectedAt?: string | null; duration?: number | null; startedAt: string }> | undefined): string {
+  if (!calls || calls.length === 0) return ''
+  const lines = calls.map(c => {
+    const date = new Date(c.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    const connected = c.connectedAt ? 'Connected' : 'Not connected'
+    const dur = c.duration ? `${Math.floor(c.duration / 60)}m${c.duration % 60}s` : ''
+    const dispo = c.dispositionResult?.replace(/_/g, ' ') || 'No disposition'
+    const notes = c.notes ? ` Notes: "${c.notes}"` : ''
+    return `- ${date}: ${connected}${dur ? `, ${dur}` : ''}, ${dispo}${notes}`
+  })
+  return `\n[CALL HISTORY]\nRep calls to this lead:\n${lines.join('\n')}\n`
+}
+
+function formatUpsellTags(tags: Array<{ productName: string; productPrice: number }> | undefined): string {
+  if (!tags || tags.length === 0) return ''
+  const lines = tags.map(t => `- ${t.productName} ($${t.productPrice})`)
+  return `\n[UPSELLS DISCUSSED]\n${lines.join('\n')}\n`
+}
+
 // ============================================
 // buildPreClientSystemPrompt()
 // ============================================
@@ -401,6 +420,8 @@ ${formatCollectedData(collectedData)}
 
 Questions Already Asked:
 ${formatQuestionsAsked(questionsAsked)}
+${formatCallHistory((lead as any).dialerCalls)}
+${formatUpsellTags((lead as any).upsellTags)}
 ${learningContext}
 [CONVERSATION HISTORY]
 ${formatMessages(messages)}

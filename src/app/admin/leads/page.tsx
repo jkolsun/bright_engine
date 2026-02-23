@@ -122,6 +122,7 @@ function LeadsPageInner() {
   // Expanded lead row state
   const [expandedLead, setExpandedLead] = useState<string | null>(null)
   const [expandedLeadEvents, setExpandedLeadEvents] = useState<Record<string, any[]>>({})
+  const [expandedLeadData, setExpandedLeadData] = useState<Record<string, any>>({})
   const [refreshing, setRefreshing] = useState(false)
 
   // View mode & pagination
@@ -160,6 +161,7 @@ function LeadsPageInner() {
       if (res.ok) {
         const data = await res.json()
         setExpandedLeadEvents(prev => ({ ...prev, [leadId]: data.lead?.events || [] }))
+        setExpandedLeadData(prev => ({ ...prev, [leadId]: data.lead }))
       } else {
         setExpandedLeadEvents(prev => ({ ...prev, [leadId]: [] }))
       }
@@ -1576,6 +1578,38 @@ function LeadsPageInner() {
                                     )
                                   })()}
                                 </div>
+
+                                {/* Call & Upsell Summary */}
+                                {(() => {
+                                  const ld = expandedLeadData[lead.id]
+                                  if (!ld) return null
+                                  const lastCall = ld.dialerCalls?.[0]
+                                  const upsellCount = ld.upsellTags?.length || 0
+                                  if (!lastCall && !upsellCount) return null
+                                  return (
+                                    <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                                      <h4 className="font-semibold text-gray-900 text-sm mb-2">Rep Activity</h4>
+                                      {lastCall && (
+                                        <div className="flex items-center gap-2 text-xs text-gray-600 mb-1">
+                                          <span>Last call:</span>
+                                          <span className="font-medium">{new Date(lastCall.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                          {lastCall.dispositionResult && (
+                                            <span className={`px-1.5 py-0.5 rounded font-semibold text-[10px] ${
+                                              ['WANTS_TO_MOVE_FORWARD', 'CALLBACK', 'WANTS_CHANGES'].includes(lastCall.dispositionResult)
+                                                ? 'bg-green-100 text-green-700'
+                                                : ['DNC', 'WRONG_NUMBER'].includes(lastCall.dispositionResult)
+                                                  ? 'bg-red-100 text-red-700'
+                                                  : 'bg-gray-100 text-gray-600'
+                                            }`}>{lastCall.dispositionResult.replace(/_/g, ' ')}</span>
+                                          )}
+                                        </div>
+                                      )}
+                                      {upsellCount > 0 && (
+                                        <p className="text-xs text-teal-600 font-medium">{upsellCount} upsell{upsellCount !== 1 ? 's' : ''} tagged</p>
+                                      )}
+                                    </div>
+                                  )
+                                })()}
 
                               </div>
                             </div>

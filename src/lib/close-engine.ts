@@ -244,6 +244,17 @@ export async function getConversationContext(conversationId: string): Promise<Co
 
   const lead = await prisma.lead.findUnique({
     where: { id: conversation.leadId },
+    include: {
+      dialerCalls: {
+        select: { dispositionResult: true, notes: true, connectedAt: true, duration: true, startedAt: true },
+        orderBy: { startedAt: 'desc' },
+        take: 5,
+      },
+      upsellTags: {
+        where: { removedAt: null },
+        select: { productName: true, productPrice: true },
+      },
+    },
   })
 
   if (!lead) {
