@@ -72,6 +72,8 @@ export function DialerProvider({ children }: { children: ReactNode }) {
   const graceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastCalledLeadIdRef = useRef<string | null>(null)
   const dialRef = useRef<((leadId: string, phone?: string) => Promise<void>) | null>(null)
+  const wasConnectedRef = useRef(false)
+  const autoDispositionAndChainRef = useRef<((callId: string, leadId: string, result: string) => Promise<void>) | null>(null)
 
   // Refs for accessing latest state in callbacks
   const currentCallRef = useRef<DialerCall | null>(null)
@@ -117,8 +119,28 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       // Update currentCall if it matches
       if (call && data.callId === call.id) {
         setCurrentCall(prev => prev ? { ...prev, status: data.status, amdResult: data.amdResult } : null)
-        if (data.status === 'CONNECTED') timer.start()
-        if (['COMPLETED', 'FAILED', 'NO_ANSWER', 'BUSY'].includes(data.status)) timer.stop()
+        // Sync ref immediately so subsequent SSE events see the latest status
+        currentCallRef.current = { ...call, status: data.status, amdResult: data.amdResult }
+
+        if (data.status === 'CONNECTED') {
+          wasConnectedRef.current = true
+          timer.start()
+        }
+        if (['COMPLETED', 'FAILED', 'NO_ANSWER', 'BUSY'].includes(data.status)) {
+          timer.stop()
+
+          // Auto-skip for non-overlap: if auto-dial is ON and rep never connected, auto-disposition and chain
+          if (
+            sessionRef.current?.autoDialEnabled &&
+            !wasConnectedRef.current
+          ) {
+            console.log('[AutoDial] Non-overlap auto-skip:', data.status, 'for call', call.id)
+            setCurrentCall(null)
+            currentCallRef.current = null
+            wasConnectedRef.current = false
+            autoDispositionAndChainRef.current?.(call.id, call.leadId, 'NO_ANSWER')
+          }
+        }
       }
 
       // Update pendingCall if it matches (auto-dial overlap)
@@ -143,8 +165,8 @@ export function DialerProvider({ children }: { children: ReactNode }) {
             }
           }, 10000)
         } else if (['NO_ANSWER', 'FAILED', 'BUSY', 'COMPLETED'].includes(newStatus)) {
-          // Background call didn't connect — auto-disposition and chain to next
-          autoDispositionAndChain(pending.callId, pending.leadId, newStatus === 'BUSY' ? 'NO_ANSWER' : newStatus === 'COMPLETED' ? 'NO_ANSWER' : newStatus)
+          // Background call didn't connect — auto-disposition and chain to next (use ref to avoid stale closure)
+          autoDispositionAndChainRef.current?.(pending.callId, pending.leadId, newStatus === 'BUSY' ? 'NO_ANSWER' : newStatus === 'COMPLETED' ? 'NO_ANSWER' : newStatus)
         }
       }
     })
@@ -227,14 +249,22 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     // NON-OVERLAP: No active call → use dial() which sets currentCall properly
     // This gives the rep the full active call UI (hangup, notes, disposition)
     if (!currentCallRef.current) {
+      if (!dialRef.current) {
+        console.error('[AutoDial] dialRef.current is null — dial function not initialized')
+        setAutoDialState('IDLE')
+        setAutoDialBanner(null)
+        setBannerUrgent(false)
+        return
+      }
       try {
-        await dialRef.current!(targetLead.id, targetLead.phone)
+        console.log('[AutoDial] NON-OVERLAP: calling dial() for', targetLead.companyName, targetLead.id)
+        await dialRef.current(targetLead.id, targetLead.phone)
         // dial() succeeded — clear auto-dial banner, call is now the active currentCall
         setAutoDialState('IDLE')
         setAutoDialBanner(null)
         setBannerUrgent(false)
       } catch (err) {
-        console.warn('[AutoDial] Non-overlap dial failed:', err)
+        console.error('[AutoDial] Non-overlap dial failed:', err)
         setAutoDialState('IDLE')
         setAutoDialBanner(null)
         setBannerUrgent(false)
@@ -354,9 +384,17 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ leadId, sessionId: sessionHook.session.id, phone }),
     })
     const data = await res.json()
+    console.log('[DialerProvider] dial() initiate response:', data.error ? `ERROR: ${data.error}` : `OK callId=${data.callId}`)
     if (data.error) throw new Error(data.error)
 
-    setCurrentCall({ id: data.callId, leadId, repId: '', status: 'INITIATED', direction: 'OUTBOUND', startedAt: new Date().toISOString(), wasRecommended: false, previewSentDuringCall: false, previewOpenedDuringCall: false, ctaClickedDuringCall: false, vmDropped: false } as any)
+    const newCall = { id: data.callId, leadId, repId: '', status: 'INITIATED', direction: 'OUTBOUND', startedAt: new Date().toISOString(), wasRecommended: false, previewSentDuringCall: false, previewOpenedDuringCall: false, ctaClickedDuringCall: false, vmDropped: false } as any
+    setCurrentCall(newCall)
+    currentCallRef.current = newCall  // Sync ref immediately for SSE listener
+    wasConnectedRef.current = false   // Reset connected tracker for new call
+    console.log('[DialerProvider] dial() setCurrentCall called, callId:', data.callId)
+
+    // Increment totalCalls stat optimistically
+    sessionHook.incrementStat('totalCalls')
 
     // Connect via Twilio SDK — makeCall returns the Call object (verified in useTwilioDevice.ts)
     const call = await twilioDevice.makeCall({ To: data.phoneToCall, leadId, callId: data.callId })
@@ -366,21 +404,26 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     if (call) {
       call.on('accept', () => {
         setCurrentCall(prev => prev ? { ...prev, status: 'CONNECTED' } : null)
+        if (currentCallRef.current) currentCallRef.current = { ...currentCallRef.current, status: 'CONNECTED' }
+        wasConnectedRef.current = true
         timer.start()
       })
       call.on('disconnect', () => {
         setCurrentCall(prev => prev ? { ...prev, status: 'COMPLETED' } : null)
+        if (currentCallRef.current) currentCallRef.current = { ...currentCallRef.current, status: 'COMPLETED' }
         timer.stop()
       })
       call.on('cancel', () => {
         setCurrentCall(prev => prev ? { ...prev, status: 'FAILED' } : null)
+        if (currentCallRef.current) currentCallRef.current = { ...currentCallRef.current, status: 'FAILED' }
         timer.stop()
       })
     }
   }, [sessionHook.session, twilioDevice])
 
-  // Keep dialRef in sync so handleAutoDialNextInternal can call dial() without forward-reference issues
+  // Keep refs in sync so SSE listener and handleAutoDialNextInternal avoid stale closures
   useEffect(() => { dialRef.current = dial }, [dial])
+  useEffect(() => { autoDispositionAndChainRef.current = autoDispositionAndChain }, [autoDispositionAndChain])
 
   const hangup = useCallback(async () => {
     twilioDevice.hangup()

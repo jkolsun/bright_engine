@@ -1071,9 +1071,10 @@ function formatPhoneDisplay(phone: string): string {
 }
 
 function PhoneAssignmentsSection() {
-  const [reps, setReps] = useState<{ id: string; name: string; status: string; assignedDialerPhone?: string | null }[]>([])
+  const [reps, setReps] = useState<{ id: string; name: string; status: string; assignedDialerPhone?: string | null; twilioNumber2?: string | null }[]>([])
   const [availableNumbers, setAvailableNumbers] = useState<string[]>([])
-  const [assignments, setAssignments] = useState<Record<string, string>>({}) // repId → phone
+  const [assignments1, setAssignments1] = useState<Record<string, string>>({}) // repId → primary phone
+  const [assignments2, setAssignments2] = useState<Record<string, string>>({}) // repId → rotation phone
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -1094,11 +1095,14 @@ function PhoneAssignmentsSection() {
         const activeReps = (data.reps || []).filter((r: any) => r.status === 'ACTIVE')
         setReps(activeReps)
         // Initialize assignments from current rep data
-        const current: Record<string, string> = {}
+        const primary: Record<string, string> = {}
+        const rotation: Record<string, string> = {}
         for (const rep of activeReps) {
-          if (rep.assignedDialerPhone) current[rep.id] = rep.assignedDialerPhone
+          if (rep.assignedDialerPhone) primary[rep.id] = rep.assignedDialerPhone
+          if (rep.twilioNumber2) rotation[rep.id] = rep.twilioNumber2
         }
-        setAssignments(current)
+        setAssignments1(primary)
+        setAssignments2(rotation)
       }
       if (numbersRes.ok) {
         const data = await numbersRes.json()
@@ -1108,14 +1112,19 @@ function PhoneAssignmentsSection() {
     finally { setLoading(false) }
   }
 
-  const handleAssign = (repId: string, phone: string) => {
-    setAssignments(prev => {
+  const handleAssign1 = (repId: string, phone: string) => {
+    setAssignments1(prev => {
       const updated = { ...prev }
-      if (!phone) {
-        delete updated[repId]
-      } else {
-        updated[repId] = phone
-      }
+      if (!phone) { delete updated[repId] } else { updated[repId] = phone }
+      return updated
+    })
+    setSaved(false)
+  }
+
+  const handleAssign2 = (repId: string, phone: string) => {
+    setAssignments2(prev => {
+      const updated = { ...prev }
+      if (!phone) { delete updated[repId] } else { updated[repId] = phone }
       return updated
     })
     setSaved(false)
@@ -1123,23 +1132,33 @@ function PhoneAssignmentsSection() {
 
   const getAssignedTo = (phone: string, excludeRepId: string): string | null => {
     for (const rep of reps) {
-      if (rep.id !== excludeRepId && assignments[rep.id] === phone) return rep.name
+      if (rep.id !== excludeRepId) {
+        if (assignments1[rep.id] === phone) return rep.name
+        if (assignments2[rep.id] === phone) return rep.name
+      }
     }
+    // Also check same rep's other slot
     return null
+  }
+
+  const isSameRepDuplicate = (phone: string, repId: string, slot: 'primary' | 'rotation'): boolean => {
+    if (!phone) return false
+    if (slot === 'primary') return assignments2[repId] === phone
+    return assignments1[repId] === phone
   }
 
   const handleSave = async () => {
     setSaving(true)
     try {
-      // Update each rep's assigned phone (also set twilioNumber1 so the dialer can use it for caller ID)
       await Promise.all(
         reps.map(rep =>
           fetch(`/api/users/${rep.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              assignedDialerPhone: assignments[rep.id] || null,
-              twilioNumber1: assignments[rep.id] || null,
+              assignedDialerPhone: assignments1[rep.id] || null,
+              twilioNumber1: assignments1[rep.id] || null,
+              twilioNumber2: assignments2[rep.id] || null,
             }),
           })
         )
@@ -1166,43 +1185,70 @@ function PhoneAssignmentsSection() {
         ) : (
           <div className="space-y-3">
             {reps.map((rep) => {
-              const assigned = assignments[rep.id] || ''
+              const primary = assignments1[rep.id] || ''
+              const rotation = assignments2[rep.id] || ''
               return (
                 <div
                   key={rep.id}
                   className={`p-4 rounded-lg border ${
-                    assigned ? 'border-teal-200 bg-teal-50/50' : 'border-gray-200 bg-gray-50'
+                    primary ? 'border-teal-200 bg-teal-50/50' : 'border-gray-200 bg-gray-50'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm">
-                        {rep.name.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="font-medium text-gray-900 text-sm">{rep.name}</span>
-                      {assigned && (
-                        <Badge variant="secondary" className="text-xs bg-teal-100 text-teal-700">
-                          <Phone className="w-3 h-3 mr-1" />
-                          Assigned
-                        </Badge>
-                      )}
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm">
+                      {rep.name.charAt(0).toUpperCase()}
                     </div>
-                    <select
-                      value={assigned}
-                      onChange={(e) => handleAssign(rep.id, e.target.value)}
-                      className="text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white min-w-[200px]"
-                    >
-                      <option value="">Unassigned</option>
-                      {availableNumbers.map((num) => {
-                        const takenBy = getAssignedTo(num, rep.id)
-                        return (
-                          <option key={num} value={num} disabled={!!takenBy}>
-                            {formatPhoneDisplay(num)}{takenBy ? ` (${takenBy})` : ''}
-                          </option>
-                        )
-                      })}
-                    </select>
+                    <span className="font-medium text-gray-900 text-sm">{rep.name}</span>
+                    {primary && (
+                      <Badge variant="secondary" className="text-xs bg-teal-100 text-teal-700">
+                        <Phone className="w-3 h-3 mr-1" />
+                        {rotation ? '2 Numbers' : 'Assigned'}
+                      </Badge>
+                    )}
                   </div>
+                  <div className="flex gap-3 ml-10">
+                    <div className="flex-1">
+                      <label className="text-xs text-gray-500 font-medium mb-1 block">Primary</label>
+                      <select
+                        value={primary}
+                        onChange={(e) => handleAssign1(rep.id, e.target.value)}
+                        className="w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white"
+                      >
+                        <option value="">Unassigned</option>
+                        {availableNumbers.map((num) => {
+                          const takenBy = getAssignedTo(num, rep.id)
+                          const sameRepDup = isSameRepDuplicate(num, rep.id, 'primary')
+                          return (
+                            <option key={num} value={num} disabled={!!takenBy || sameRepDup}>
+                              {formatPhoneDisplay(num)}{takenBy ? ` (${takenBy})` : sameRepDup ? ' (rotation)' : ''}
+                            </option>
+                          )
+                        })}
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-gray-500 font-medium mb-1 block">Rotation</label>
+                      <select
+                        value={rotation}
+                        onChange={(e) => handleAssign2(rep.id, e.target.value)}
+                        className="w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white"
+                      >
+                        <option value="">None</option>
+                        {availableNumbers.map((num) => {
+                          const takenBy = getAssignedTo(num, rep.id)
+                          const sameRepDup = isSameRepDuplicate(num, rep.id, 'rotation')
+                          return (
+                            <option key={num} value={num} disabled={!!takenBy || sameRepDup}>
+                              {formatPhoneDisplay(num)}{takenBy ? ` (${takenBy})` : sameRepDup ? ' (primary)' : ''}
+                            </option>
+                          )
+                        })}
+                      </select>
+                    </div>
+                  </div>
+                  {primary && rotation && (
+                    <p className="text-xs text-gray-400 mt-2 ml-10">Alternates between both numbers to prevent spam flags.</p>
+                  )}
                 </div>
               )
             })}

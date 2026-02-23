@@ -50,6 +50,13 @@ export function useDialerSession() {
     setSession(null)
   }, [])
 
+  const incrementStat = useCallback((field: string, amount = 1) => {
+    setSession(prev => {
+      if (!prev) return null
+      return { ...prev, [field]: ((prev as any)[field] || 0) + amount }
+    })
+  }, [])
+
   const toggleAutoDial = useCallback(async (enabled: boolean) => {
     if (!session) return
     const res = await fetch('/api/dialer/session/settings', {
@@ -61,5 +68,5 @@ export function useDialerSession() {
     setSession(prev => prev ? { ...prev, autoDialEnabled: enabled } : null)
   }, [session])
 
-  return { session, setSession, sessionRecap, clearRecap, loading, fetchCurrent, startSession, endSession, toggleAutoDial }
+  return { session, setSession, sessionRecap, clearRecap, loading, fetchCurrent, startSession, endSession, incrementStat, toggleAutoDial }
 }

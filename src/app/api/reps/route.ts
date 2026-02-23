@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
           email: rep.email,
           phone: rep.phone,
           assignedDialerPhone: rep.assignedDialerPhone,
+          twilioNumber2: rep.twilioNumber2,
           status: rep.status,
           portalType: rep.portalType,
           createdAt: rep.createdAt,

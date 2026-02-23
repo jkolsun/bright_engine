@@ -7,7 +7,7 @@ import type { Recommendation } from '@/types/dialer'
 type Layer1 = 'connected' | 'voicemail' | 'no_answer' | 'bad_number'
 
 export function DispositionTree() {
-  const { currentCall, queue, setCurrentCall, autoDialState, handleAutoDialNext, handleSwapToNewCall } = useDialer()
+  const { currentCall, queue, setCurrentCall, session, autoDialState, handleAutoDialNext, handleSwapToNewCall } = useDialer()
   const [layer, setLayer] = useState<'L1' | 'L2'>('L1')
   const [l1Choice, setL1Choice] = useState<Layer1 | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -62,6 +62,13 @@ export function DispositionTree() {
           wasRecommended: isRecommended,
         }),
       })
+
+      // 1b. Increment session stats optimistically
+      if (l1Choice === 'connected') session.incrementStat('connectedCalls')
+      if (['WANTS_TO_MOVE_FORWARD', 'INTERESTED_VERBAL'].includes(result)) session.incrementStat('interestedCount')
+      if (['NOT_INTERESTED', 'DNC'].includes(result)) session.incrementStat('notInterestedCount')
+      if (result === 'NO_ANSWER') session.incrementStat('noAnswers')
+      if (result === 'VOICEMAIL') session.incrementStat('voicemails')
 
       // 2. If CALLBACK with date, also schedule the callback (existing endpoint)
       if (result === 'CALLBACK' && extra?.callbackAt) {

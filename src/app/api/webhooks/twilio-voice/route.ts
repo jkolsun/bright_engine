@@ -44,15 +44,36 @@ export async function POST(request: NextRequest) {
     const identityMatch = from?.match(/rep-(.+)/)
     const repId = identityMatch ? identityMatch[1] : null
 
-    // Look up rep's twilioNumber1 for caller ID
+    // Look up rep's numbers for caller ID rotation
     let callerId = process.env.TWILIO_PHONE_NUMBER || ''
     if (repId) {
       const rep = await prisma.user.findUnique({
         where: { id: repId },
-        select: { twilioNumber1: true },
+        select: { twilioNumber1: true, twilioNumber2: true },
       })
       if (rep?.twilioNumber1) {
         callerId = rep.twilioNumber1
+        // Alternate caller ID: odd session call count → number1, even → number2
+        if (rep.twilioNumber2 && callId) {
+          try {
+            const dialerCall = await prisma.dialerCall.findUnique({
+              where: { id: callId },
+              select: { sessionId: true },
+            })
+            if (dialerCall?.sessionId) {
+              const callCount = await prisma.dialerCall.count({
+                where: { sessionId: dialerCall.sessionId, direction: 'OUTBOUND' },
+              })
+              // Even count → number2 (0-indexed: call 0=num1, 1=num2, 2=num1...)
+              if (callCount % 2 === 0) {
+                callerId = rep.twilioNumber2
+              }
+            }
+          } catch (err) {
+            // Fall through to twilioNumber1 on any error
+            console.warn('[TwilioVoice] Number rotation query failed:', err)
+          }
+        }
       }
     }
 
@@ -74,9 +95,9 @@ export async function POST(request: NextRequest) {
 
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Dial callerId="${escXml(callerId)}" answerOnBridge="true"
+  <Dial callerId="${escXml(callerId)}" answerOnBridge="true" timeout="30"
         statusCallback="${escXml(statusCallbackUrl)}"
-        statusCallbackEvent="initiated ringing answered completed"
+        statusCallbackEvent="initiated ringing answered completed no-answer busy failed"
         statusCallbackMethod="POST">
     <Number
       machineDetection="DetectMessageEnd"
