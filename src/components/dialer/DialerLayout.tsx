@@ -6,6 +6,7 @@ import { CallGuidePanel } from './CallGuidePanel'
 import { CallControls } from './CallControls'
 import { InboundCallBanner } from './InboundCallBanner'
 import { SessionRecap } from './SessionRecap'
+import { AutoDialBanner } from './AutoDialBanner'
 
 function DialerContent() {
   const { session, queue } = useDialer()
@@ -23,6 +24,7 @@ function DialerContent() {
   return (
     <div className="flex flex-col h-[calc(100vh-64px)]">
       <InboundCallBanner />
+      <AutoDialBanner />
       <div className="flex flex-1 overflow-hidden">
         {/* Left: Queue (20%) */}
         <div className="w-[20%] min-w-[260px] border-r border-gray-200 overflow-y-auto bg-gray-50">

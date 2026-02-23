@@ -740,6 +740,81 @@ export async function cancelCallback(callbackId: string) {
 }
 
 // ============================================
+// Auto-Disposition (predictive dialer chaining)
+// ============================================
+
+/**
+ * Lightweight disposition for auto-dial chaining.
+ * Used when auto-dialer skips a no-answer/VM/busy call without rep interaction.
+ * Does NOT change lead status, trigger close engine, or create callbacks.
+ */
+export async function autoDisposition(callId: string, result: string) {
+  const call = await prisma.dialerCall.findUnique({
+    where: { id: callId },
+    select: { id: true, repId: true, leadId: true, sessionId: true, connectedAt: true },
+  })
+  if (!call) throw new Error('Call not found')
+
+  // Update DialerCall with disposition
+  await prisma.dialerCall.update({
+    where: { id: callId },
+    data: {
+      dispositionResult: result,
+      status: result === 'VOICEMAIL' ? 'VOICEMAIL' : result === 'NO_ANSWER' ? 'NO_ANSWER' : 'COMPLETED',
+      endedAt: new Date(),
+    },
+  })
+
+  // Update session stats
+  if (call.sessionId) {
+    const sessionUpdate: Record<string, unknown> = {}
+    if (result === 'VOICEMAIL') sessionUpdate.voicemails = { increment: 1 }
+    if (result === 'NO_ANSWER') sessionUpdate.noAnswers = { increment: 1 }
+    if (Object.keys(sessionUpdate).length > 0) {
+      await prisma.dialerSessionNew.update({
+        where: { id: call.sessionId },
+        data: sessionUpdate,
+      }).catch(() => {})
+    }
+  }
+
+  // Create LeadEvent for audit trail
+  await prisma.leadEvent.create({
+    data: {
+      leadId: call.leadId,
+      eventType: 'CALL_MADE',
+      actor: `system:auto-dial`,
+      metadata: {
+        source: 'dialer',
+        disposition: result,
+        callType: 'outbound',
+        repId: call.repId,
+        callId: call.id,
+        connected: false,
+        autoDispositioned: true,
+      },
+    },
+  }).catch(err => console.error('[DialerService] Auto-disposition LeadEvent failed:', err))
+
+  // Push SSE
+  const sseEvent = {
+    type: 'DISPOSITION_LOGGED' as const,
+    data: {
+      callId: call.id,
+      leadId: call.leadId,
+      disposition: result,
+      connected: false,
+      autoDispositioned: true,
+    },
+    timestamp: new Date().toISOString(),
+  }
+  pushToRep(call.repId, sseEvent)
+  pushToAllAdmins({ ...sseEvent, data: { ...sseEvent.data, repId: call.repId } })
+
+  return { success: true }
+}
+
+// ============================================
 // Manual Dial (no lead)
 // ============================================
 

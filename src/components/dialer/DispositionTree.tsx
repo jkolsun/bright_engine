@@ -7,7 +7,7 @@ import type { Recommendation } from '@/types/dialer'
 type Layer1 = 'connected' | 'voicemail' | 'no_answer' | 'bad_number'
 
 export function DispositionTree() {
-  const { currentCall, queue, setCurrentCall } = useDialer()
+  const { currentCall, queue, setCurrentCall, autoDialState, handleAutoDialNext, handleSwapToNewCall } = useDialer()
   const [layer, setLayer] = useState<'L1' | 'L2'>('L1')
   const [l1Choice, setL1Choice] = useState<Layer1 | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -79,14 +79,24 @@ export function DispositionTree() {
       // 3. Move lead between queue tabs based on disposition
       queue.moveLeadAfterDisposition(currentCall.leadId, result)
 
-      // 4. Clear call state and advance queue
+      // 4. Clear call state
       setCurrentCall(null)
       setQueuedDisposition(null)
-      queue.selectNext()
+
+      // 5. Auto-dial: if a pending call is already connected, swap to it.
+      //    If waiting for disposition, fire the next auto-dial.
+      //    Otherwise just advance the queue manually.
+      if (autoDialState === 'CONNECTED_PENDING_SWAP') {
+        handleSwapToNewCall()
+      } else {
+        queue.selectNext()
+        // Fire auto-dial after disposition (non-blocking)
+        handleAutoDialNext()
+      }
     } finally {
       setSubmitting(false)
     }
-  }, [currentCall, recommendations, queue])
+  }, [currentCall, recommendations, queue, autoDialState, handleAutoDialNext, handleSwapToNewCall])
 
   const handleDisposition = useCallback((result: string, extra?: Record<string, unknown>) => {
     if (isOnCall) {
