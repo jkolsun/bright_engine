@@ -123,13 +123,26 @@ export function useDialerQueue() {
 
   // Move a lead between tab arrays after disposition
   const moveLeadAfterDisposition = useCallback((leadId: string, dispositionResult: string) => {
+    console.log('[DiagBug1] moveLeadAfterDisposition called', {
+      leadId: leadId.slice(-6),
+      dispositionResult,
+      freshCountBefore: freshLeads.length,
+      retryCountBefore: retryLeads.length,
+    })
+
     // Step 1: Remove lead from whichever array it's in
     let removedLead: QueueLead | null = null
 
     setFreshLeads(prev => {
       const found = prev.find(l => l.id === leadId)
       if (found) removedLead = found
-      return prev.filter(l => l.id !== leadId)
+      const filtered = prev.filter(l => l.id !== leadId)
+      console.log('[DiagBug1] setFreshLeads executing', {
+        prevCount: prev.length,
+        filteredCount: filtered.length,
+        removedThisLead: prev.length !== filtered.length,
+      })
+      return filtered
     })
     setRetryLeads(prev => {
       const found = prev.find(l => l.id === leadId)

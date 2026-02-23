@@ -135,6 +135,12 @@ export function DialerProvider({ children }: { children: ReactNode }) {
             !wasConnectedRef.current
           ) {
             console.log('[AutoDial] Non-overlap auto-skip:', data.status, 'for call', call.id)
+            console.log('[DiagBug1] SSE triggering auto-skip (non-overlap)', {
+              callId: call.id.slice(-6),
+              leadId: call.leadId.slice(-6),
+              status: data.status,
+              wasConnected: wasConnectedRef.current,
+            })
             setCurrentCall(null)
             currentCallRef.current = null
             wasConnectedRef.current = false
@@ -166,6 +172,11 @@ export function DialerProvider({ children }: { children: ReactNode }) {
           }, 10000)
         } else if (['NO_ANSWER', 'FAILED', 'BUSY', 'COMPLETED'].includes(newStatus)) {
           // Background call didn't connect — auto-disposition and chain to next (use ref to avoid stale closure)
+          console.log('[DiagBug1] SSE triggering auto-skip (overlap/pending)', {
+            callId: pending.callId.slice(-6),
+            leadId: pending.leadId.slice(-6),
+            status: newStatus,
+          })
           autoDispositionAndChainRef.current?.(pending.callId, pending.leadId, newStatus === 'BUSY' ? 'NO_ANSWER' : newStatus === 'COMPLETED' ? 'NO_ANSWER' : newStatus)
         }
       }
@@ -180,14 +191,31 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     const pendingId = pendingCallRef.current?.leadId
     const lastId = lastCalledLeadIdRef.current
 
+    console.log('[DiagBug1] getNextLeadToDial called', {
+      freshCount: q.freshLeads.length,
+      retryCount: q.retryLeads.length,
+      freshIds: q.freshLeads.map(l => l.id.slice(-6)),
+      retryIds: q.retryLeads.map(l => l.id.slice(-6)),
+      skipCurrentId: currentId?.slice(-6),
+      skipPendingId: pendingId?.slice(-6),
+      skipLastId: lastId?.slice(-6),
+    })
+
     // Search Fresh leads first
     for (const lead of q.freshLeads) {
-      if (lead.id !== currentId && lead.id !== pendingId && lead.id !== lastId) return lead
+      if (lead.id !== currentId && lead.id !== pendingId && lead.id !== lastId) {
+        console.log('[DiagBug1] getNextLeadToDial → FOUND LEAD:', lead.id.slice(-6), lead.companyName)
+        return lead
+      }
     }
     // Then Retry leads
     for (const lead of q.retryLeads) {
-      if (lead.id !== currentId && lead.id !== pendingId && lead.id !== lastId) return lead
+      if (lead.id !== currentId && lead.id !== pendingId && lead.id !== lastId) {
+        console.log('[DiagBug1] getNextLeadToDial → FOUND LEAD:', lead.id.slice(-6), lead.companyName)
+        return lead
+      }
     }
+    console.log('[DiagBug1] getNextLeadToDial → RETURNING NULL (queue should stop)')
     return null
   }, [])
 
@@ -206,6 +234,12 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     // Chain — dial next
     setAutoDialState('CHAINING')
     const nextLead = getNextLeadToDial()
+    console.log('[DiagBug1] autoDispositionAndChain result', {
+      disposedLeadId: leadId.slice(-6),
+      disposedResult: result,
+      nextLeadFound: nextLead ? nextLead.id.slice(-6) : 'NULL — STOPPING',
+      autoDialState: autoDialStateRef.current,
+    })
     if (nextLead) {
       setAutoDialBanner({
         type: 'chaining',
