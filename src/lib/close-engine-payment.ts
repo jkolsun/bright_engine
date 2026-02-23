@@ -26,7 +26,7 @@ export async function generatePaymentLink(leadId: string): Promise<string> {
     where: { leadId },
   })
 
-  const pricingConfig = await getPricingConfig()
+  const pricingConfig = await getPricingConfig({ forceRefresh: true })
 
   const stripe = getStripe()
   const session = await stripe.checkout.sessions.create({

@@ -41,9 +41,9 @@ const CACHE_TTL = 60_000 // 1 minute
  * Get current pricing by reading the core product (isCore=true) from the Products table.
  * Caches for 60 seconds. Falls back to defaults if no core product exists.
  */
-export async function getPricingConfig(): Promise<PricingConfig> {
+export async function getPricingConfig(options?: { forceRefresh?: boolean }): Promise<PricingConfig> {
   const now = Date.now()
-  if (cachedConfig && (now - cacheTime) < CACHE_TTL) return cachedConfig
+  if (!options?.forceRefresh && cachedConfig && (now - cacheTime) < CACHE_TTL) return cachedConfig
 
   try {
     const coreProduct = await prisma.upsellProduct.findFirst({

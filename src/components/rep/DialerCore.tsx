@@ -94,7 +94,7 @@ const DEFAULT_SCRIPT: Record<string, string> = {
   opener: `"Hey {{firstName}}, this is [YOUR NAME] with Bright Automations. Real quick — I actually already put together a new website for {{companyName}}. Want me to text you the link so you can see it while we talk?"\n\n[SEND PREVIEW — press P]`,
   hook_bad_website: `"I pulled up your current site and honestly it's not cutting it on mobile. What I built loads fast, looks professional, and has your reviews right on the homepage."`,
   hook_no_website: `"I searched for {{industry}} in {{city}} and couldn't find {{companyName}} online. That means customers can't find you either. I already built you a site — let me text it over."`,
-  pitch: `WAIT FOR THEM TO OPEN IT (10-15 sec)\n\n"You see it? That's a full site — your services, your reviews, everything's already on there. How's it look?"\n\nIF POSITIVE:\n"Want it live? I can have it up today. It's $149 to go live and $39/month after the first month."\n\nIF QUESTIONS:\n"What would you want different?" (note the edit)`,
+  pitch: "WAIT FOR THEM TO OPEN IT (10-15 sec)\n\n\"You see it? That's a full site — your services, your reviews, everything's already on there. How's it look?\"\n\nIF POSITIVE:\n\"Want it live? I can have it up today. It's ${{firstMonthTotal}} to go live and ${{monthlyHosting}}/month after the first month.\"\n\nIF QUESTIONS:\n\"What would you want different?\" (note the edit)",
   close: `"Already have a site" → "Pull yours up next to this one. Which one would you call?"\n"Too expensive" → "It's less than one service call. And the first month is included."\n"Need to think" → "Preview link stays active. Take a look later and text us when ready."\n"Can you change [X]?" → "Absolutely. We'll update that before it goes live. Want to lock it in?"`,
 }
 
@@ -138,9 +138,15 @@ function formatRelative(dateStr: string): string {
   return date.toLocaleDateString()
 }
 
-function personalizeScript(text: string, lead: Lead | null, repName: string): string {
-  if (!lead) return text
-  return text
+function personalizeScript(text: string, lead: Lead | null, repName: string, pricing?: { firstMonthTotal: number; monthlyHosting: number }): string {
+  let result = text
+  if (pricing) {
+    result = result
+      .replace(/\{\{firstMonthTotal\}\}/g, String(pricing.firstMonthTotal))
+      .replace(/\{\{monthlyHosting\}\}/g, String(pricing.monthlyHosting))
+  }
+  if (!lead) return result
+  return result
     .replace(/\{\{firstName\}\}/g, lead.firstName || 'there')
     .replace(/\{\{companyName\}\}/g, lead.companyName || 'your company')
     .replace(/\{\{industry\}\}/g, lead.industry || 'your industry')
@@ -508,13 +514,14 @@ function InfoCard({ label, value, extra, icon, valueClass }: {
 }
 
 function CallScriptPanel({
-  script, expanded, setExpanded, lead, userName,
+  script, expanded, setExpanded, lead, userName, pricing,
 }: {
   script: Record<string, string>
   expanded: boolean
   setExpanded: (v: boolean) => void
   lead: Lead | null
   userName: string
+  pricing?: { firstMonthTotal: number; monthlyHosting: number }
 }) {
   const sections = [
     { key: 'opener', label: 'Opener' },
@@ -545,7 +552,7 @@ function CallScriptPanel({
                   <ChevronDown size={12} className="text-gray-400 group-open:rotate-180 transition-transform" />
                 </summary>
                 <div className="px-4 py-2 text-sm text-gray-700 whitespace-pre-wrap bg-white leading-relaxed">
-                  {personalizeScript(content, lead, userName)}
+                  {personalizeScript(content, lead, userName, pricing)}
                 </div>
               </details>
             )
@@ -1155,6 +1162,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   const [leadHistory, setLeadHistory] = useState<HistoryItem[]>([])
   const [callScript, setCallScript] = useState<Record<string, string>>(DEFAULT_SCRIPT)
   const [scriptExpanded, setScriptExpanded] = useState(false)
+  const [dialerPricing, setDialerPricing] = useState<{ firstMonthTotal: number; monthlyHosting: number }>({ firstMonthTotal: 188, monthlyHosting: 39 })
 
   // ----- Preview Status -----
   const [previewStatus, setPreviewStatus] = useState<PreviewStatus>({ sent: false, opened: false, viewDuration: 0, ctaClicked: false })
@@ -1276,6 +1284,9 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   useEffect(() => {
     loadQueue()
     loadCallScript()
+    fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => {
+      if (d?.firstMonthTotal && d?.monthlyHosting) setDialerPricing({ firstMonthTotal: d.firstMonthTotal, monthlyHosting: d.monthlyHosting })
+    }).catch(() => {})
   }, [loadQueue, loadCallScript])
 
   // Lead change: load history, reset per-call state
@@ -2070,6 +2081,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
                 setExpanded={setScriptExpanded}
                 lead={currentLead}
                 userName={userName}
+                pricing={dialerPricing}
               />
 
               {/* Notes Section (always visible) */}

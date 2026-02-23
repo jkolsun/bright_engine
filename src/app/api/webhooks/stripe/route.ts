@@ -167,9 +167,38 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   console.log(`[Stripe Webhook] Matched lead: ${lead.id} (${lead.companyName})`)
 
-  // ── Step 2: Check for duplicate — skip if lead already PAID ──
+  // ── Step 2: Check for duplicate vs upsell ──
   if (lead.status === 'PAID') {
-    console.log(`[Stripe Webhook] Lead ${lead.id} already PAID — skipping duplicate`)
+    // Lead already paid — this is an upsell payment, not a duplicate
+    const existingClient = await prisma.client.findFirst({
+      where: { leadId: lead.id },
+    })
+    if (existingClient) {
+      console.log(`[Stripe Webhook] Lead ${lead.id} already PAID — processing as upsell for client ${existingClient.id}`)
+      try {
+        const upsellRevenue = await prisma.revenue.create({
+          data: {
+            clientId: existingClient.id,
+            type: 'SITE_BUILD',
+            amount: amountDollars,
+            status: 'PAID',
+            recurring: false,
+            product: session.metadata?.product || 'Upsell',
+            stripePaymentId: session.id,
+          },
+        })
+        await processRevenueCommission(upsellRevenue.id)
+        console.log(`[Stripe Webhook] Upsell revenue ${upsellRevenue.id} created — $${amountDollars}`)
+      } catch (err: any) {
+        if (err?.code === 'P2002') {
+          console.log(`[Stripe Webhook] Duplicate upsell webhook — Revenue already exists for session ${session.id}`)
+        } else {
+          console.error('[Stripe Webhook] Upsell revenue creation failed:', err)
+        }
+      }
+    } else {
+      console.log(`[Stripe Webhook] Lead ${lead.id} already PAID but no client found — skipping`)
+    }
     return
   }
 

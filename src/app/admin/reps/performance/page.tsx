@@ -14,9 +14,13 @@ export default function RepPerformancePage() {
   const [loading, setLoading] = useState(true)
   const [allLeads, setAllLeads] = useState<any[]>([])
   const [allCommissions, setAllCommissions] = useState<any[]>([])
+  const [siteBuildFee, setSiteBuildFee] = useState(0)
 
   useEffect(() => {
     loadRepPerformance()
+    fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => {
+      if (d?.siteBuildFee) setSiteBuildFee(d.siteBuildFee)
+    }).catch(() => {})
   }, [])
 
   const loadRepPerformance = async () => {
@@ -44,7 +48,7 @@ export default function RepPerformancePage() {
     const assigned = allLeads.filter((l: any) => (l.ownerRepId || l.assignedToId) === rep.id)
     const closed = assigned.filter((l: any) => l.status === 'PAID')
     const hot = assigned.filter((l: any) => l.status === 'HOT_LEAD')
-    const revenue = closed.length * 149
+    const revenue = closed.length * siteBuildFee
     const commission = allCommissions
       .filter((c: any) => c.repId === rep.id && c.status !== 'REJECTED')
       .reduce((sum: number, c: any) => sum + (c.amount || 0), 0)

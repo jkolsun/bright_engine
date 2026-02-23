@@ -156,7 +156,6 @@ export async function processRevenueCommission(revenueId: string) {
                 id: true,
                 ownerRepId: true,
                 assignedToId: true,
-                assignedTo: true,
               }
             }
           }
@@ -168,11 +167,10 @@ export async function processRevenueCommission(revenueId: string) {
 
     // Prefer ownerRepId (dialer-set) over assignedToId (import-set)
     const lead = revenue.client?.lead
-    const repUser = lead?.assignedTo
-    const ownerRepId = lead?.ownerRepId ?? null
+    const repUserId = lead?.ownerRepId || lead?.assignedToId || null
 
     // Handle unassigned leads — cannot create Commission with null repId
-    if (!repUser && !ownerRepId) {
+    if (!repUserId) {
       const companyName = revenue.client?.companyName || 'Unknown Company'
       console.warn(`[Commission] No rep assigned for revenue ${revenueId} (${companyName}) — skipping commission`)
 
@@ -191,10 +189,10 @@ export async function processRevenueCommission(revenueId: string) {
       })
 
       // Log event on the lead if available
-      if (revenue.client?.lead?.id) {
+      if (lead?.id) {
         await prisma.leadEvent.create({
           data: {
-            leadId: revenue.client.lead.id,
+            leadId: lead.id,
             eventType: 'PAYMENT_RECEIVED',
             metadata: {
               revenueId,
@@ -208,8 +206,7 @@ export async function processRevenueCommission(revenueId: string) {
       return null
     }
 
-    // Gap 1: Prefer ownerRepId (dialer-set) over assignedToId
-    const repId = ownerRepId || repUser!.id
+    const repId = repUserId
     const calculation = await calculateCommission({
       repId,
       clientId: revenue.clientId!,
