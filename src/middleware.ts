@@ -168,8 +168,7 @@ export async function middleware(request: NextRequest) {
   // Admin-only API routes (but diagnostics is checked inside the route)
   const adminOnlyPaths = [
     '/api/admin/',
-    '/api/users',
-    '/api/cleanup', 
+    '/api/cleanup',
     '/api/clients/delete',
     '/api/leads/delete',
     '/api/activity/delete',
