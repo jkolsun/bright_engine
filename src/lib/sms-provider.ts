@@ -14,6 +14,7 @@ import { prisma } from './db'
 
 export interface SMSSendOptions {
   to: string
+  fromNumber?: string    // Send from a specific Twilio number (e.g., rep's twilioNumber1). When omitted, uses Messaging Service or TWILIO_PHONE_NUMBER.
   message: string
   leadId?: string
   clientId?: string

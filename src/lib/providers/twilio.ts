@@ -29,13 +29,29 @@ export class TwilioProvider implements SMSProvider {
     try {
       const client = this.getClient()
       const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID
+
+      // Determine the "from" source — 3-tier priority:
+      // 1. Explicit fromNumber (e.g., rep's personal Twilio number for manual texts)
+      // 2. Messaging Service (A2P compliant for automated/system messages)
+      // 3. System phone number (TWILIO_PHONE_NUMBER env var)
+      let fromConfig: { from: string } | { messagingServiceSid: string }
+
+      if (options.fromNumber) {
+        // Rep or specific caller requested a specific from-number.
+        // Use it directly — bypasses Messaging Service intentionally.
+        fromConfig = { from: options.fromNumber }
+      } else if (messagingServiceSid) {
+        // No specific number requested — use Messaging Service for A2P compliance
+        fromConfig = { messagingServiceSid }
+      } else {
+        // No Messaging Service configured — use system number directly
+        fromConfig = { from: process.env.TWILIO_PHONE_NUMBER! }
+      }
+
       const message = await client.messages.create({
         body: options.message,
         to: options.to,
-        // Use Messaging Service (A2P compliant) if configured, otherwise fall back to direct number
-        ...(messagingServiceSid
-          ? { messagingServiceSid }
-          : { from: process.env.TWILIO_PHONE_NUMBER! }),
+        ...fromConfig,
       })
 
       return { success: true, sid: message.sid }
