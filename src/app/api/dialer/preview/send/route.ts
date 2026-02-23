@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     const lead = await prisma.lead.findUnique({
       where: { id: leadId },
-      select: { companyName: true, previewUrl: true, previewId: true, phone: true },
+      select: { companyName: true, previewUrl: true, previewId: true, phone: true, email: true, firstName: true },
     })
 
     if (!lead) {
@@ -36,29 +36,71 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No preview available for this lead' }, { status: 400 })
     }
 
-    const toNumber = await getLeadSmsNumber(leadId)
     const rep = await prisma.user.findUnique({
       where: { id: session.userId },
       select: { name: true, twilioNumber1: true },
     })
 
-    await sendSMS({
-      to: toNumber,
-      fromNumber: rep?.twilioNumber1 || undefined,
-      message: `Check out the website I built for ${lead.companyName}: ${previewUrl}`,
-      leadId,
-      sender: `rep:${rep?.name || session.userId}`,
-      trigger: 'dialer_preview',
-    })
+    if (channel === 'email') {
+      // Email preview path
+      if (!lead.email) {
+        return NextResponse.json({ error: 'Lead has no email address' }, { status: 400 })
+      }
 
-    // Update DialerCall if callId provided
+      const { sendEmail, wrapPreviewHtml } = await import('@/lib/resend')
+      const previewHtml = wrapPreviewHtml({
+        recipientName: lead.firstName || 'there',
+        companyName: lead.companyName,
+        previewUrl,
+      })
+
+      await sendEmail({
+        to: lead.email,
+        subject: 'Your Website Preview is Ready',
+        html: previewHtml,
+        leadId,
+        sender: `rep:${rep?.name || session.userId}`,
+        trigger: 'dialer_preview_email',
+      })
+
+      await prisma.leadEvent.create({
+        data: {
+          leadId,
+          eventType: 'PREVIEW_SENT_EMAIL',
+          actor: `rep:${rep?.name}`,
+          metadata: { source: 'dialer', previewUrl, channel: 'email' },
+        },
+      })
+    } else {
+      // SMS preview path (existing behavior)
+      const toNumber = await getLeadSmsNumber(leadId)
+
+      await sendSMS({
+        to: toNumber,
+        fromNumber: rep?.twilioNumber1 || undefined,
+        message: `Check out the website I built for ${lead.companyName}: ${previewUrl}`,
+        leadId,
+        sender: `rep:${rep?.name || session.userId}`,
+        trigger: 'dialer_preview',
+      })
+
+      await prisma.leadEvent.create({
+        data: {
+          leadId,
+          eventType: 'PREVIEW_SENT_SMS',
+          actor: `rep:${rep?.name}`,
+          metadata: { source: 'dialer', previewUrl },
+        },
+      })
+    }
+
+    // Update DialerCall if callId provided (both channels)
     if (callId) {
       await prisma.dialerCall.update({
         where: { id: callId },
         data: { previewSentDuringCall: true, previewSentChannel: channel || 'sms' },
       })
 
-      // Update session counter
       const call = await prisma.dialerCall.findUnique({
         where: { id: callId },
         select: { sessionId: true },
@@ -70,16 +112,6 @@ export async function POST(request: NextRequest) {
         }).catch(err => console.error('[DialerPreview] Session preview count update failed:', err))
       }
     }
-
-    // Create LeadEvent
-    await prisma.leadEvent.create({
-      data: {
-        leadId,
-        eventType: 'PREVIEW_SENT_SMS',
-        actor: `rep:${rep?.name}`,
-        metadata: { source: 'dialer', previewUrl },
-      },
-    })
 
     return NextResponse.json({ success: true, previewUrl })
   } catch (error) {

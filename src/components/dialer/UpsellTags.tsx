@@ -10,6 +10,15 @@ export function UpsellTags({ leadId }: { leadId: string }) {
   const [products, setProducts] = useState<UpsellProduct[]>([])
   const [showPicker, setShowPicker] = useState(false)
 
+  // Load existing tags when lead changes
+  useEffect(() => {
+    if (!leadId) { setTags([]); return }
+    fetch(`/api/dialer/upsell/tag?leadId=${leadId}`)
+      .then(r => r.ok ? r.json() : { tags: [] })
+      .then(data => setTags(data.tags || []))
+      .catch(() => setTags([]))
+  }, [leadId])
+
   useEffect(() => {
     // Fetch products once
     fetch('/api/upsell-products/pitch-notes').then(r => r.json()).then(d => setProducts(d.products || [])).catch(err => console.warn('[UpsellTags] Pitch notes fetch failed:', err))

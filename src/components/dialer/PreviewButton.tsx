@@ -2,12 +2,14 @@
 import { useState } from 'react'
 import { useDialer } from './DialerProvider'
 import type { QueueLead } from '@/types/dialer'
-import { Send, ExternalLink } from 'lucide-react'
+import { Send, Mail, ExternalLink } from 'lucide-react'
 
 export function PreviewButton({ lead }: { lead: QueueLead }) {
   const { currentCall } = useDialer()
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  const [sentEmail, setSentEmail] = useState(false)
 
   const handleSend = async () => {
     setSending(true)
@@ -22,6 +24,22 @@ export function PreviewButton({ lead }: { lead: QueueLead }) {
     } catch {} finally { setSending(false) }
   }
 
+  const handleSendEmail = async () => {
+    setSendingEmail(true)
+    try {
+      const res = await fetch('/api/dialer/preview/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId: lead.id, callId: currentCall?.id, channel: 'email' }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setSentEmail(true)
+        setTimeout(() => setSentEmail(false), 3000)
+      }
+    } catch {} finally { setSendingEmail(false) }
+  }
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4">
       <h3 className="text-sm font-semibold text-gray-900 mb-2">Preview</h3>
@@ -33,6 +51,14 @@ export function PreviewButton({ lead }: { lead: QueueLead }) {
         >
           <Send className="w-3 h-3" />
           {sent ? 'Sent!' : sending ? 'Sending...' : 'Text Preview'}
+        </button>
+        <button
+          onClick={handleSendEmail}
+          disabled={sendingEmail || !lead.email || (!lead.previewUrl && !lead.previewId)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 disabled:opacity-50"
+        >
+          <Mail className="w-3 h-3" />
+          {sentEmail ? 'Sent!' : sendingEmail ? 'Sending...' : 'Email Preview'}
         </button>
         {(lead.previewUrl || lead.previewId) && (
           <a
