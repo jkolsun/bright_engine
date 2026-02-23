@@ -7,14 +7,33 @@ export function useTwilioDevice() {
   const [activeCall, setActiveCall] = useState<any>(null)
   const [deviceState, setDeviceState] = useState<'unregistered' | 'registering' | 'registered' | 'error'>('unregistered')
   const [isMuted, setIsMuted] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const deviceRef = useRef<any>(null)
 
   const initialize = useCallback(async () => {
     try {
       setDeviceState('registering')
+      setErrorMessage(null)
+
       // Fetch token
       const tokenRes = await fetch('/api/dialer/token', { method: 'POST' })
+
+      if (!tokenRes.ok) {
+        const errorData = await tokenRes.json().catch(() => ({ error: 'Unknown error' }))
+        const msg = errorData.error || `Token request failed (${tokenRes.status})`
+        console.error('[TwilioDevice] Token fetch failed:', msg)
+        setErrorMessage(msg)
+        setDeviceState('error')
+        return
+      }
+
       const { token } = await tokenRes.json()
+
+      if (!token) {
+        setErrorMessage('No token received from server')
+        setDeviceState('error')
+        return
+      }
 
       // Dynamic import (client-side only)
       const { Device } = await import('@twilio/voice-sdk')
@@ -24,9 +43,13 @@ export function useTwilioDevice() {
         closeProtection: true,
       })
 
-      newDevice.on('registered', () => setDeviceState('registered'))
+      newDevice.on('registered', () => {
+        setDeviceState('registered')
+        setErrorMessage(null)
+      })
       newDevice.on('error', (err: any) => {
         console.error('[TwilioDevice] Error:', err)
+        setErrorMessage(err?.message || 'Twilio device error')
         setDeviceState('error')
       })
       newDevice.on('incoming', (call: any) => {
@@ -39,6 +62,7 @@ export function useTwilioDevice() {
       setDevice(newDevice)
     } catch (err) {
       console.error('[TwilioDevice] Init failed:', err)
+      setErrorMessage((err as Error)?.message || 'Failed to initialize dialer')
       setDeviceState('error')
     }
   }, [])
@@ -81,7 +105,7 @@ export function useTwilioDevice() {
   }, [destroy])
 
   return {
-    device, activeCall, deviceState, isMuted,
+    device, activeCall, deviceState, isMuted, errorMessage,
     initialize, makeCall, hangup, toggleMute, destroy,
   }
 }

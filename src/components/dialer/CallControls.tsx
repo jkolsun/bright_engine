@@ -91,6 +91,19 @@ export function CallControls() {
                 Dial
               </button>
 
+              {/* Device status — show when dialer has a problem */}
+              {twilioDevice.deviceState === 'error' && (
+                <span className="text-xs text-red-500 max-w-[200px] truncate" title={twilioDevice.errorMessage || 'Dialer error'}>
+                  Dialer error — contact admin
+                </span>
+              )}
+              {twilioDevice.deviceState === 'registering' && (
+                <span className="text-xs text-amber-500 animate-pulse">Connecting dialer...</span>
+              )}
+              {twilioDevice.deviceState === 'unregistered' && (
+                <span className="text-xs text-gray-400">Dialer not connected</span>
+              )}
+
               <button
                 onClick={() => queue.selectNext()}
                 className="p-3 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
