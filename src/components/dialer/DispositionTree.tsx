@@ -76,7 +76,10 @@ export function DispositionTree() {
         }).catch(err => console.warn('[Disposition] Callback schedule failed:', err))
       }
 
-      // 3. Clear call state and advance queue
+      // 3. Move lead between queue tabs based on disposition
+      queue.moveLeadAfterDisposition(currentCall.leadId, result)
+
+      // 4. Clear call state and advance queue
       setCurrentCall(null)
       setQueuedDisposition(null)
       queue.selectNext()

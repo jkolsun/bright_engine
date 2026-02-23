@@ -115,6 +115,51 @@ export function useDialerQueue() {
     setCallbacks(prev => prev.filter(cb => cb.id !== callbackId))
   }, [])
 
+  // Terminal dispositions → Called tab
+  const TERMINAL_DISPOSITIONS = [
+    'WANTS_TO_MOVE_FORWARD', 'NOT_INTERESTED', 'DNC', 'WRONG_NUMBER',
+    'DISCONNECTED', 'WANTS_CHANGES', 'WILL_LOOK_LATER', 'INTERESTED_VERBAL',
+  ]
+
+  // Move a lead between tab arrays after disposition
+  const moveLeadAfterDisposition = useCallback((leadId: string, dispositionResult: string) => {
+    // Step 1: Remove lead from whichever array it's in
+    let removedLead: QueueLead | null = null
+
+    setFreshLeads(prev => {
+      const found = prev.find(l => l.id === leadId)
+      if (found) removedLead = found
+      return prev.filter(l => l.id !== leadId)
+    })
+    setRetryLeads(prev => {
+      const found = prev.find(l => l.id === leadId)
+      if (found && !removedLead) removedLead = found
+      return prev.filter(l => l.id !== leadId)
+    })
+    setCalledLeads(prev => prev.filter(l => l.id !== leadId))
+
+    // Step 2: Insert into the correct destination
+    if (TERMINAL_DISPOSITIONS.includes(dispositionResult)) {
+      // Terminal → Called tab (front of list, most recent first)
+      setCalledLeads(prev => {
+        const lead = removedLead
+        if (!lead) return prev
+        return [{ ...lead, lastDisposition: dispositionResult } as any, ...prev]
+      })
+    }
+    // NO_ANSWER / VOICEMAIL → removed from Fresh, on cooldown, will appear in Retry later
+
+    if (dispositionResult === 'CALLBACK') {
+      // Callback → lead goes to Called (disposition is terminal for this call), also refresh callbacks list
+      setCalledLeads(prev => {
+        const lead = removedLead
+        if (!lead) return prev
+        return [{ ...lead, lastDisposition: 'CALLBACK' } as any, ...prev]
+      })
+      fetchCallbacks()
+    }
+  }, [fetchCallbacks])
+
   return {
     activeTab, setActiveTab,
     leads, freshLeads, retryLeads, calledLeads,
@@ -122,6 +167,6 @@ export function useDialerQueue() {
     selectedLeadId, setSelectedLeadId, selectedLead,
     searchQuery, setSearchQuery,
     refresh, fetchFresh, fetchRetry, fetchCalled, fetchCallbacks, fetchMissed,
-    selectNext, selectPrev, removeCallback,
+    selectNext, selectPrev, removeCallback, moveLeadAfterDisposition,
   }
 }
