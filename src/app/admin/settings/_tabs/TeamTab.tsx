@@ -1131,13 +1131,16 @@ function PhoneAssignmentsSection() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      // Update each rep's assigned phone
+      // Update each rep's assigned phone (also set twilioNumber1 so the dialer can use it for caller ID)
       await Promise.all(
         reps.map(rep =>
           fetch(`/api/users/${rep.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ assignedDialerPhone: assignments[rep.id] || null }),
+            body: JSON.stringify({
+              assignedDialerPhone: assignments[rep.id] || null,
+              twilioNumber1: assignments[rep.id] || null,
+            }),
           })
         )
       )

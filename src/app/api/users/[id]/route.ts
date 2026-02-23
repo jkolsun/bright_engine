@@ -97,6 +97,8 @@ export async function PATCH(
         ...(data.commissionRate !== undefined && { commissionRate: data.commissionRate }),
         ...(data.dailyLeadCap !== undefined && { dailyLeadCap: data.dailyLeadCap }),
         ...(data.assignedDialerPhone !== undefined && { assignedDialerPhone: data.assignedDialerPhone }),
+        ...(data.twilioNumber1 !== undefined && { twilioNumber1: data.twilioNumber1 }),
+        ...(data.twilioNumber2 !== undefined && { twilioNumber2: data.twilioNumber2 }),
         ...(data.onboardingComplete !== undefined && { onboardingComplete: data.onboardingComplete }),
         ...(data.onboardingCompletedAt !== undefined && { onboardingCompletedAt: data.onboardingCompletedAt ? new Date(data.onboardingCompletedAt) : null }),
         ...(data.outboundVmUrl !== undefined && { outboundVmUrl: data.outboundVmUrl }),
