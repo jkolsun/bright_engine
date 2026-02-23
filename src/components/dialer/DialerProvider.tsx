@@ -377,6 +377,8 @@ export function DialerProvider({ children }: { children: ReactNode }) {
 
   const dial = useCallback(async (leadId: string, phone?: string) => {
     if (!sessionHook.session) return
+    // Clear ref immediately so SSE listener doesn't match old call events during transition
+    currentCallRef.current = null
     // Call API to initiate
     const res = await fetch('/api/dialer/call/initiate', {
       method: 'POST',

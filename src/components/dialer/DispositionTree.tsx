@@ -86,9 +86,13 @@ export function DispositionTree() {
       // 3. Move lead between queue tabs based on disposition
       queue.moveLeadAfterDisposition(currentCall.leadId, result)
 
-      // 4. Clear call state
-      setCurrentCall(null)
+      // 4. Clear call state — skip setCurrentCall(null) when auto-dial will overwrite it
+      //    to prevent React batching null+newCall causing components to unmount
       setQueuedDisposition(null)
+      const autoDialWillTakeOver = autoDialState === 'CONNECTED_PENDING_SWAP' || !!session.session?.autoDialEnabled
+      if (!autoDialWillTakeOver) {
+        setCurrentCall(null)
+      }
 
       // 5. Auto-dial: if a pending call is already connected, swap to it.
       //    If waiting for disposition, fire the next auto-dial.
