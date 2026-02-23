@@ -170,73 +170,73 @@ export async function getEnrichmentQueue() {
   return enrichmentQueue
 }
 
-export function getPreviewQueue() {
-  getQueues()
+export async function getPreviewQueue() {
+  await getQueues()
   return previewQueue
 }
 
-export function getPersonalizationQueue() {
-  getQueues()
+export async function getPersonalizationQueue() {
+  await getQueues()
   return personalizationQueue
 }
 
-export function getScriptQueue() {
-  getQueues()
+export async function getScriptQueue() {
+  await getQueues()
   return scriptQueue
 }
 
-export function getDistributionQueue() {
-  getQueues()
+export async function getDistributionQueue() {
+  await getQueues()
   return distributionQueue
 }
 
-export function getSequenceQueue() {
-  getQueues()
+export async function getSequenceQueue() {
+  await getQueues()
   return sequenceQueue
 }
 
-export function getImportQueue() {
-  getQueues()
+export async function getImportQueue() {
+  await getQueues()
   return importQueue
 }
 
-export function getMonitoringQueue() {
-  getQueues()
+export async function getMonitoringQueue() {
+  await getQueues()
   return monitoringQueue
 }
 
-export function getEnrichmentEvents() {
-  getQueues()
+export async function getEnrichmentEvents() {
+  await getQueues()
   return enrichmentEvents
 }
 
-export function getPreviewEvents() {
-  getQueues()
+export async function getPreviewEvents() {
+  await getQueues()
   return previewEvents
 }
 
-export function getPersonalizationEvents() {
-  getQueues()
+export async function getPersonalizationEvents() {
+  await getQueues()
   return personalizationEvents
 }
 
-export function getScriptEvents() {
-  getQueues()
+export async function getScriptEvents() {
+  await getQueues()
   return scriptEvents
 }
 
-export function getDistributionEvents() {
-  getQueues()
+export async function getDistributionEvents() {
+  await getQueues()
   return distributionEvents
 }
 
-export function getSequenceEvents() {
-  getQueues()
+export async function getSequenceEvents() {
+  await getQueues()
   return sequenceEvents
 }
 
-export function getMonitoringEvents() {
-  getQueues()
+export async function getMonitoringEvents() {
+  await getQueues()
   return monitoringEvents
 }
 
@@ -305,7 +305,7 @@ export type DelayedMessageJobData =
  * original request lifecycle.
  */
 export async function addDelayedMessageJob(data: DelayedMessageJobData, delayMs: number) {
-  const queue = getSequenceQueue()
+  const queue = await getSequenceQueue()
   if (!queue || !isRedisAvailable) {
     console.warn('[QUEUE] Sequence queue unavailable for delayed message — message may be lost on serverless')
     return null
@@ -374,7 +374,7 @@ export async function addPreviewGenerationJob(data: {
   leadId: string
   clientId?: string
 }) {
-  const queue = getPreviewQueue()
+  const queue = await getPreviewQueue()
   if (!queue) {
     console.warn('Preview queue unavailable, skipping job for lead:', data.leadId)
     return null
@@ -405,7 +405,7 @@ export async function addPreviewGenerationJob(data: {
 }
 
 export async function addPersonalizationJob(data: { leadId: string }) {
-  const queue = getPersonalizationQueue()
+  const queue = await getPersonalizationQueue()
   if (!queue || !isRedisAvailable) {
     console.warn('Personalization queue unavailable, skipping job for lead:', data.leadId)
     return null
@@ -430,7 +430,7 @@ export async function addPersonalizationJob(data: { leadId: string }) {
 }
 
 export async function addScriptGenerationJob(data: { leadId: string }) {
-  const queue = getScriptQueue()
+  const queue = await getScriptQueue()
   if (!queue || !isRedisAvailable) {
     console.warn('Script queue unavailable, skipping job for lead:', data.leadId)
     return null
@@ -458,7 +458,7 @@ export async function addDistributionJob(data: {
   leadId: string
   channel: 'INSTANTLY' | 'REP_QUEUE' | 'BOTH'
 }) {
-  const queue = getDistributionQueue()
+  const queue = await getDistributionQueue()
   if (!queue || !isRedisAvailable) {
     console.warn('Distribution queue unavailable, skipping job for lead:', data.leadId)
     return null
@@ -487,7 +487,7 @@ export async function addSequenceJob(
   data: any,
   delayMs?: number
 ) {
-  const queue = getSequenceQueue()
+  const queue = await getSequenceQueue()
   if (!queue || !isRedisAvailable) {
     console.warn('Sequence queue unavailable, skipping job:', type)
     return null
@@ -510,7 +510,7 @@ export async function addSequenceJob(
 }
 
 export async function scheduleHotLeadMonitoring() {
-  const queue = getMonitoringQueue()
+  const queue = await getMonitoringQueue()
   if (!queue || !isRedisAvailable) {
     console.warn('Monitoring queue unavailable, skipping hot leads check')
     return null
@@ -536,7 +536,7 @@ export async function scheduleHotLeadMonitoring() {
 // ── Close Engine Scheduling ──
 
 export async function scheduleCloseEngineStallCheck() {
-  const queue = getMonitoringQueue()
+  const queue = await getMonitoringQueue()
   if (!queue || !isRedisAvailable) {
     console.warn('Monitoring queue unavailable, skipping close engine stall check')
     return null
@@ -559,7 +559,7 @@ export async function scheduleCloseEngineStallCheck() {
 }
 
 export async function scheduleCloseEnginePaymentFollowUp() {
-  const queue = getMonitoringQueue()
+  const queue = await getMonitoringQueue()
   if (!queue || !isRedisAvailable) {
     console.warn('Monitoring queue unavailable, skipping close engine payment follow-up')
     return null
@@ -582,7 +582,7 @@ export async function scheduleCloseEnginePaymentFollowUp() {
 }
 
 export async function scheduleCloseEngineExpireStalled() {
-  const queue = getMonitoringQueue()
+  const queue = await getMonitoringQueue()
   if (!queue || !isRedisAvailable) {
     console.warn('Monitoring queue unavailable, skipping close engine expire stalled')
     return null
@@ -605,7 +605,7 @@ export async function scheduleCloseEngineExpireStalled() {
 }
 
 export async function schedulePendingStateEscalation() {
-  const queue = getMonitoringQueue()
+  const queue = await getMonitoringQueue()
   if (!queue || !isRedisAvailable) {
     console.warn('Monitoring queue unavailable, skipping pending state escalation')
     return null
@@ -629,7 +629,7 @@ export async function schedulePendingStateEscalation() {
 
 // BUG P.2: Schedule daily notification cleanup
 export async function scheduleNotificationCleanup() {
-  const queue = getMonitoringQueue()
+  const queue = await getMonitoringQueue()
   if (!queue || !isRedisAvailable) {
     console.warn('Monitoring queue unavailable, skipping notification cleanup')
     return null
@@ -653,7 +653,7 @@ export async function scheduleNotificationCleanup() {
 
 // NEW-L23: Schedule failed webhook retry every 30 minutes
 export async function scheduleFailedWebhookRetry() {
-  const queue = getMonitoringQueue()
+  const queue = await getMonitoringQueue()
   if (!queue || !isRedisAvailable) {
     console.warn('Monitoring queue unavailable, skipping failed webhook retry')
     return null
@@ -680,7 +680,7 @@ export async function addImportProcessingJob(data: {
   leadIds: string[]
   options: { enrichment: boolean; preview: boolean; personalization: boolean }
 }) {
-  const queue = getImportQueue()
+  const queue = await getImportQueue()
   if (!queue) {
     console.warn('Import queue unavailable, cannot process import')
     return null
