@@ -18,6 +18,7 @@ import {
   X,
   Loader2,
 } from 'lucide-react'
+import { DialerProvider } from '@/components/dialer/DialerProvider'
 
 export const dynamic = 'force-dynamic'
 
@@ -193,7 +194,9 @@ export default function PartTimeLayout({
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto pb-20 md:pb-0">
-        {children}
+        <DialerProvider>
+          {children}
+        </DialerProvider>
       </main>
 
       {/* Mobile Bottom Nav */}

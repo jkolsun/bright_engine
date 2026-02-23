@@ -1,14 +1,21 @@
 'use client'
-import { DialerProvider, useDialer } from './DialerProvider'
+import { useDialer } from './DialerProvider'
 import { QueuePanel } from './QueuePanel'
 import { LeadCard } from './LeadCard'
 import { CallGuidePanel } from './CallGuidePanel'
 import { CallControls } from './CallControls'
 import { InboundCallBanner } from './InboundCallBanner'
+import { SessionRecap } from './SessionRecap'
 
 function DialerContent() {
   const { session, queue } = useDialer()
 
+  // Recap mode — session just ended, show summary
+  if (session.sessionRecap) {
+    return <SessionRecap />
+  }
+
+  // No session — show start screen
   if (!session.session) {
     return <SessionStart />
   }
@@ -58,10 +65,7 @@ function SessionStart() {
   )
 }
 
+// Provider is now in the rep/part-time layout — this just renders content
 export default function DialerLayout() {
-  return (
-    <DialerProvider>
-      <DialerContent />
-    </DialerProvider>
-  )
+  return <DialerContent />
 }

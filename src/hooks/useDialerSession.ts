@@ -4,6 +4,7 @@ import type { DialerSession } from '@/types/dialer'
 
 export function useDialerSession() {
   const [session, setSession] = useState<DialerSession | null>(null)
+  const [sessionRecap, setSessionRecap] = useState<DialerSession | null>(null)
   const [loading, setLoading] = useState(false)
 
   const fetchCurrent = useCallback(async () => {
@@ -32,14 +33,22 @@ export function useDialerSession() {
     if (!session) return
     setLoading(true)
     try {
-      await fetch('/api/dialer/session/end', {
+      const res = await fetch('/api/dialer/session/end', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: session.id }),
       })
+      const data = await res.json()
+      // Store the response for the recap screen instead of discarding
+      setSessionRecap(data)
       setSession(null)
     } finally { setLoading(false) }
   }, [session])
+
+  const clearRecap = useCallback(() => {
+    setSessionRecap(null)
+    setSession(null)
+  }, [])
 
   const toggleAutoDial = useCallback(async (enabled: boolean) => {
     if (!session) return
@@ -52,5 +61,5 @@ export function useDialerSession() {
     setSession(prev => prev ? { ...prev, autoDialEnabled: enabled } : null)
   }, [session])
 
-  return { session, setSession, loading, fetchCurrent, startSession, endSession, toggleAutoDial }
+  return { session, setSession, sessionRecap, clearRecap, loading, fetchCurrent, startSession, endSession, toggleAutoDial }
 }
