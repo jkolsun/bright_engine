@@ -643,7 +643,8 @@ export async function addImportProcessingJob(data: {
       'process-import',
       data,
       {
-        attempts: 1,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
         removeOnComplete: true,
       }
     )

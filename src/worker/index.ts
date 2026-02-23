@@ -1,5 +1,6 @@
 import { Worker } from 'bullmq'
 import Redis from 'ioredis'
+import http from 'http'
 import { enrichLead } from '../lib/serpapi'
 import { fetchSerperResearch } from '../lib/serper'
 import { generatePersonalization } from '../lib/personalization'
@@ -12,7 +13,7 @@ import { prisma } from '../lib/db'
 import { sendSMS } from '../lib/twilio'
 import { sendEmail, getEmailTemplate, triggerReferralSequence } from '../lib/resend'
 import { routeAndSend } from '../lib/channel-router'
-import { canSendMessage } from '../lib/utils'
+import { canSendMessage, getTimezoneFromState } from '../lib/utils'
 import { addPreviewGenerationJob, addPersonalizationJob, addScriptGenerationJob, addDistributionJob, getSharedConnection, type DelayedMessageJobData } from './queue'
 
 // ── Delayed Message Handler (fixes BUG 8.1, NEW-C1, NEW-C9) ──
@@ -93,6 +94,16 @@ async function startWorkers() {
         const { leadId } = job.data
         const stepStart = Date.now()
 
+        // Dedup: skip if already enriched (BUG 9.4)
+        const existingLead = await prisma.lead.findUnique({
+          where: { id: leadId },
+          select: { enrichedAddress: true, enrichedRating: true, enrichedServices: true },
+        })
+        if (existingLead?.enrichedAddress || existingLead?.enrichedRating || (existingLead?.enrichedServices && Array.isArray(existingLead.enrichedServices) && (existingLead.enrichedServices as unknown[]).length > 0)) {
+          console.log(`[ENRICHMENT] Lead ${leadId} already enriched — skipping`)
+          return { success: true, skipped: true }
+        }
+
         // Mark build started
         await prisma.lead.update({
           where: { id: leadId },
@@ -111,7 +122,7 @@ async function startWorkers() {
         return { success: true }
       },
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-      { connection }
+      { connection, concurrency: 2 }
     )
     
     console.log('[WORKER-INIT] Enrichment worker created successfully')
@@ -567,12 +578,45 @@ async function startWorkers() {
       console.error(`Monitoring job ${job?.id} failed:`, err)
     })
 
+    // BUG 9.6: Redis disconnect alert
+    connection.on('error', async (err) => {
+      console.error('[Worker] Redis connection error:', err)
+      await prisma.notification.create({
+        data: {
+          type: 'DAILY_AUDIT',
+          title: 'Redis Connection Error',
+          message: `Worker Redis disconnected: ${err.message}`,
+          metadata: { timestamp: Date.now() },
+        },
+      }).catch(() => {})
+    })
+
     // Schedule recurring monitoring jobs
     const { schedulePendingStateEscalation } = await import('./queue')
     await schedulePendingStateEscalation()
 
+    // BUG 9.5: Worker health check endpoint
+    const healthPort = parseInt(process.env.WORKER_HEALTH_PORT || '3001', 10)
+    const healthServer = http.createServer((req, res) => {
+      if (req.url === '/health') {
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({
+          status: 'ok',
+          workers: 7,
+          uptime: process.uptime(),
+          redis: connection?.status || 'unknown',
+        }))
+      } else {
+        res.writeHead(404)
+        res.end()
+      }
+    })
+    healthServer.listen(healthPort, () => {
+      console.log(`[Worker] Health check endpoint listening on port ${healthPort}`)
+    })
+
     console.log('Workers started successfully')
-    console.log('- Enrichment worker')
+    console.log('- Enrichment worker (concurrency: 2)')
     console.log('- Preview worker')
     console.log('- Personalization worker')
     console.log('- Script worker')
@@ -628,7 +672,7 @@ async function sendAdaptiveTouchpoint(clientId: string, touchpointDay: number, n
     return
   }
 
-  if (!canSendMessage(client.lead.timezone || 'America/New_York')) return
+  if (!canSendMessage(client.lead.timezone || getTimezoneFromState(client.lead.state || '') || 'America/New_York')) return
 
   try {
     // Load custom guidance from settings if available
@@ -676,7 +720,7 @@ async function sendAdaptiveTouchpointWithMessage(clientId: string, message: stri
     return
   }
 
-  if (!canSendMessage(client.lead.timezone || 'America/New_York')) return
+  if (!canSendMessage(client.lead.timezone || getTimezoneFromState(client.lead.state || '') || 'America/New_York')) return
 
   try {
     await routeAndSend({
@@ -1234,7 +1278,7 @@ async function closeEngineStallCheck() {
     if (lastNudge) continue
 
     // Respect timezone: only nudge 8 AM - 9 PM
-    if (!canSendMessage(conv.lead.timezone || 'America/New_York')) continue
+    if (!canSendMessage(conv.lead.timezone || getTimezoneFromState(conv.lead.state || '') || 'America/New_York')) continue
 
     if (lastInbound.createdAt < seventyTwoHoursAgo) {
       // 72+ hours — mark STALLED
@@ -1292,7 +1336,7 @@ async function closeEnginePaymentFollowUp() {
     if (existingFollowUp) continue // Already sent
 
     // Respect timezone
-    if (!canSendMessage(conv.lead.timezone || 'America/New_York')) continue
+    if (!canSendMessage(conv.lead.timezone || getTimezoneFromState(conv.lead.state || '') || 'America/New_York')) continue
 
     // Send
     try {
@@ -1549,6 +1593,15 @@ async function handleOnboardingGbpPrompt(clientId: string) {
   // Only send if still at domain collection step (haven't moved past it yet)
   if (!onboarding || onboarding.onboardingStep !== 2) {
     console.log(`[Onboarding] Skipping GBP prompt — client ${clientId} not at step 2`)
+    return
+  }
+
+  // NEW-M14: Dedup — skip if GBP prompt already sent for this client
+  const alreadySent = await prisma.message.findFirst({
+    where: { clientId, trigger: 'onboarding_gbp_prompt' },
+  })
+  if (alreadySent) {
+    console.log(`[Onboarding] GBP prompt already sent for client ${clientId} — skipping`)
     return
   }
 

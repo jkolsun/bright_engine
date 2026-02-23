@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const host = request.headers.get('host') || ''
     const publicUrl = `${proto}://${host}/api/webhooks/twilio`
     const isValid = await provider.validateWebhookSignature(request, publicUrl)
-    if (!isValid && process.env.NODE_ENV === 'production') {
+    if (!isValid && process.env.SKIP_TWILIO_VERIFY !== 'true') {
       console.error('Invalid Twilio signature')
       return NextResponse.json(
         { error: 'Invalid signature' },

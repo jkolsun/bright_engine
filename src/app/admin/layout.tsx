@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Hammer,
   Wallet,
+  Activity,
 } from 'lucide-react'
 import { BriefingModal } from '@/components/admin/BriefingModal'
 
@@ -114,6 +115,9 @@ export default function AdminLayout({
           </NavLink>
           <NavLink href="/admin/build-queue" icon={<Hammer size={20} />} badge={buildQueueBadge}>
             Build Queue
+          </NavLink>
+          <NavLink href="/admin/queue-status" icon={<Activity size={20} />}>
+            Queue Status
           </NavLink>
           <NavLink href="/admin/outbound" icon={<Target size={20} />}>
             Sales Rep Tracker
