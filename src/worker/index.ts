@@ -524,6 +524,14 @@ async function startWorkers() {
             await pendingStateEscalation()
             break
 
+          case 'notification-cleanup':
+            await cleanupOldNotifications()
+            break
+
+          case 'failed-webhook-retry':
+            await retryFailedWebhooks()
+            break
+
           default:
             console.log(`Unknown monitoring job: ${job.name}`)
         }
@@ -592,8 +600,10 @@ async function startWorkers() {
     })
 
     // Schedule recurring monitoring jobs
-    const { schedulePendingStateEscalation } = await import('./queue')
+    const { schedulePendingStateEscalation, scheduleNotificationCleanup, scheduleFailedWebhookRetry } = await import('./queue')
     await schedulePendingStateEscalation()
+    await scheduleNotificationCleanup()
+    await scheduleFailedWebhookRetry()
 
     // BUG 9.5: Worker health check endpoint
     const healthPort = parseInt(process.env.WORKER_HEALTH_PORT || '3001', 10)
@@ -665,6 +675,12 @@ async function sendAdaptiveTouchpoint(clientId: string, touchpointDay: number, n
 
   if (!client || !client.lead) return
 
+  // BUG S.1: Skip post-launch messages if site isn't actually live yet
+  if (client.hostingStatus !== 'ACTIVE') {
+    console.log(`[Sequence] Skipping day ${touchpointDay} — client ${clientId} hostingStatus is ${client.hostingStatus}, not ACTIVE`)
+    return
+  }
+
   // Re-check DNC status right before sending (may have changed since job was queued)
   const freshLead = await prisma.lead.findUnique({ where: { id: client.lead.id }, select: { dncAt: true } })
   if (freshLead?.dncAt) {
@@ -712,6 +728,12 @@ async function sendAdaptiveTouchpointWithMessage(clientId: string, message: stri
   })
 
   if (!client || !client.lead) return
+
+  // BUG S.1: Skip post-launch messages if site isn't actually live yet
+  if (client.hostingStatus !== 'ACTIVE') {
+    console.log(`[Sequence] Skipping AI touchpoint — client ${clientId} hostingStatus is ${client.hostingStatus}, not ACTIVE`)
+    return
+  }
 
   // Re-check DNC status right before sending (may have changed since job was queued)
   const freshLead = await prisma.lead.findUnique({ where: { id: client.lead.id }, select: { dncAt: true } })
@@ -797,6 +819,12 @@ async function sendWinBackDay7(clientId: string) {
   })
 
   if (!client || !client.lead) return
+
+  // BUG S.3: Skip win-back if client has reactivated
+  if (client.hostingStatus === 'ACTIVE') {
+    console.log(`[Sequence] Skipping win-back — client ${clientId} has reactivated (status: ACTIVE)`)
+    return
+  }
 
   await routeAndSend({
     clientId: client.id,
@@ -1018,6 +1046,12 @@ async function sendWinBackDay7Email(clientId: string) {
   })
   if (!client || !client.lead || !client.lead.email) return
 
+  // BUG S.3: Skip win-back if client has reactivated
+  if (client.hostingStatus === 'ACTIVE') {
+    console.log(`[Sequence] Skipping win-back email day 7 — client ${clientId} reactivated`)
+    return
+  }
+
   const template = await getEmailTemplate('win_back_day_7', {
     first_name: client.lead.firstName,
     company_name: client.companyName,
@@ -1040,6 +1074,12 @@ async function sendWinBackDay14Email(clientId: string) {
   })
   if (!client || !client.lead || !client.lead.email) return
 
+  // BUG S.3: Skip win-back if client has reactivated
+  if (client.hostingStatus === 'ACTIVE') {
+    console.log(`[Sequence] Skipping win-back email day 14 — client ${clientId} reactivated`)
+    return
+  }
+
   const template = await getEmailTemplate('win_back_day_14', {
     first_name: client.lead.firstName,
     company_name: client.companyName,
@@ -1061,6 +1101,12 @@ async function sendWinBackDay30Email(clientId: string) {
     include: { lead: true },
   })
   if (!client || !client.lead || !client.lead.email) return
+
+  // BUG S.3: Skip win-back if client has reactivated
+  if (client.hostingStatus === 'ACTIVE') {
+    console.log(`[Sequence] Skipping win-back email day 30 — client ${clientId} reactivated`)
+    return
+  }
 
   const template = await getEmailTemplate('win_back_day_30', {
     first_name: client.lead.firstName,
@@ -1770,6 +1816,112 @@ async function handleOnboardingDnsCheck(clientId: string) {
   }
 
   console.log(`[Onboarding] DNS not verified for ${onboarding.customDomain} — re-queued check`)
+}
+
+// ============================================
+// BUG P.2: NOTIFICATION AUTO-CLEANUP
+// Deletes read notifications older than 30 days
+// Keeps unread notifications for 90 days
+// ============================================
+
+// NEW-L23: Retry failed webhooks (max 3 retries, last 24h)
+async function retryFailedWebhooks() {
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+
+  const failedWebhooks = await prisma.failedWebhook.findMany({
+    where: {
+      retryCount: { lt: 3 },
+      createdAt: { gte: twentyFourHoursAgo },
+    },
+    orderBy: { createdAt: 'asc' },
+    take: 20,
+  })
+
+  if (failedWebhooks.length === 0) return
+
+  let retried = 0
+  let succeeded = 0
+
+  for (const webhook of failedWebhooks) {
+    try {
+      const payload = webhook.payload as Record<string, any>
+
+      // Re-dispatch webhook based on source type
+      if (webhook.source.startsWith('stripe')) {
+        const { dispatchWebhook, WebhookEvents } = await import('../lib/webhook-dispatcher')
+        await dispatchWebhook(WebhookEvents.PAYMENT_RECEIVED(
+          payload.leadId,
+          payload.clientId,
+          payload.amount || 0,
+          'stripe_retry'
+        ))
+      } else if (webhook.source === 'resend') {
+        // Resend webhooks are informational — just log and clear
+        console.log(`[WebhookRetry] Clearing resend webhook ${webhook.id} — informational only`)
+      } else {
+        console.warn(`[WebhookRetry] Unknown webhook source: ${webhook.source}, incrementing retry`)
+      }
+
+      // Success — delete the failed record
+      await prisma.failedWebhook.delete({ where: { id: webhook.id } })
+      succeeded++
+    } catch (err) {
+      // Increment retry count
+      await prisma.failedWebhook.update({
+        where: { id: webhook.id },
+        data: {
+          retryCount: webhook.retryCount + 1,
+          error: err instanceof Error ? err.message : String(err),
+        },
+      })
+    }
+    retried++
+  }
+
+  if (retried > 0) {
+    console.log(`[WebhookRetry] Retried ${retried} webhooks: ${succeeded} succeeded, ${retried - succeeded} failed`)
+
+    // Notify admin if any failed after 3 retries
+    const exhausted = await prisma.failedWebhook.count({
+      where: { retryCount: { gte: 3 }, createdAt: { gte: twentyFourHoursAgo } },
+    })
+    if (exhausted > 0) {
+      await prisma.notification.create({
+        data: {
+          type: 'ESCALATION',
+          title: 'Failed Webhooks — Retries Exhausted',
+          message: `${exhausted} webhook(s) failed after 3 retries. Manual intervention needed.`,
+          metadata: { exhaustedCount: exhausted },
+        },
+      })
+    }
+  }
+}
+
+async function cleanupOldNotifications() {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+
+  // Delete read notifications older than 30 days
+  const deletedRead = await prisma.notification.deleteMany({
+    where: {
+      read: true,
+      createdAt: { lt: thirtyDaysAgo },
+    },
+  })
+
+  // Delete unread notifications older than 90 days
+  const deletedUnread = await prisma.notification.deleteMany({
+    where: {
+      read: false,
+      createdAt: { lt: ninetyDaysAgo },
+    },
+  })
+
+  const total = deletedRead.count + deletedUnread.count
+  if (total > 0) {
+    console.log(`[NotificationCleanup] Deleted ${deletedRead.count} read (30d+) and ${deletedUnread.count} unread (90d+) notifications`)
+  }
 }
 
 export { startWorkers }

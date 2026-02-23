@@ -2,14 +2,15 @@
 
 import { formatCurrency } from '@/lib/utils'
 import { 
-  TrendingUp, 
-  Users, 
+  TrendingUp,
+  Users,
   DollarSign,
   AlertCircle,
   CheckCircle,
-  Clock,
+  Loader2,
   Zap,
   Eye,
+  Bell,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -58,7 +59,7 @@ export default function DashboardPage() {
     return (
       <div className="p-8 flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <Clock size={48} className="text-gray-400 mx-auto mb-4 animate-spin" />
+          <Loader2 size={48} className="text-gray-400 mx-auto mb-4 animate-spin" />
           <p className="text-gray-600">Loading dashboard...</p>
         </div>
       </div>
@@ -200,6 +201,13 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ))}
+            {hotLeads.length >= 5 && (
+              <div className="text-center pt-3 border-t border-red-100 mt-3">
+                <Link href="/admin/leads?status=HOT_LEAD" className="text-sm text-red-600 hover:text-red-700 font-medium">
+                  View all hot leads &rarr;
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </Card>
@@ -207,7 +215,13 @@ export default function DashboardPage() {
       {/* Notifications */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Bell size={20} className="text-gray-400" />
+            Recent Activity
+          </h3>
+          <Link href="/admin/notifications">
+            <Button variant="ghost" size="sm">View All</Button>
+          </Link>
         </div>
         {notifications.length === 0 ? (
           <p className="text-gray-500 text-center py-8">No recent notifications</p>

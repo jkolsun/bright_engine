@@ -43,6 +43,8 @@ export default function RevenuePage() {
   const mrr = stats?.mrr || 0
   const arr = mrr * 12
   const activeClients = stats?.activeClients || 0
+  // BUG K.3: Use paying clients count (excludes $0) for avg revenue calculation
+  const payingClients = stats?.payingClients || activeClients
 
   return (
     <div className="p-8 space-y-6">
@@ -86,7 +88,7 @@ export default function RevenuePage() {
             <Calendar size={20} className="text-amber-600" />
           </div>
           <div className="text-3xl font-bold text-gray-900">
-            {activeClients > 0 ? formatCurrency(Math.round(mrr / activeClients)) : '$0'}
+            {payingClients > 0 ? formatCurrency(Math.round(mrr / payingClients)) : '$0'}
           </div>
           <div className="text-sm text-gray-500 mt-2">Per month</div>
         </Card>
@@ -96,7 +98,11 @@ export default function RevenuePage() {
       <Card className="p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Transactions</h3>
         {transactions.length === 0 ? (
-          <p className="text-gray-500 text-center py-12">No transactions yet</p>
+          <div className="text-center py-12">
+            <DollarSign size={48} className="mx-auto mb-3 text-gray-300" />
+            <h4 className="text-lg font-semibold text-gray-700 mb-1">No transactions yet</h4>
+            <p className="text-sm text-gray-500">Revenue transactions will appear here as clients make payments.</p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">

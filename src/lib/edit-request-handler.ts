@@ -143,7 +143,7 @@ async function handleSimpleEdit(
   // Notify client
   await sendSMSViaProvider({
     to: lead.phone,
-    message: `Done! I made that change and it's going live now`,
+    message: `Done! I made that change — it's been applied to your preview!`,
     clientId: client.id,
     trigger: 'edit_simple_auto_pushed',
     aiGenerated: true,
@@ -382,7 +382,7 @@ export async function pushEditToBuildQueue(editRequestId: string): Promise<void>
   if (editRequest.client?.lead?.phone) {
     await sendSMSViaProvider({
       to: editRequest.client.lead.phone,
-      message: `Your changes have been made and are going live now!`,
+      message: `Your changes have been made and applied to your preview!`,
       clientId: editRequest.clientId,
       trigger: 'edit_approved_pushed',
       aiGenerated: true,

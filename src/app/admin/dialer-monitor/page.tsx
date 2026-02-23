@@ -78,18 +78,8 @@ export default function DialerMonitorPage() {
     }
   }
 
-  const handleListen = async (repId: string) => {
-    // In production: join conference as muted listener
-    alert(`Listen mode: Would connect to ${repId}'s active call in listen-only mode. Requires Twilio Conference API.`)
-  }
-
-  const handleWhisper = async (repId: string) => {
-    alert(`Whisper mode: Would connect to ${repId}'s call — rep hears you, lead doesn't. Requires Twilio Conference coaching.`)
-  }
-
-  const handleBarge = async (repId: string) => {
-    alert(`Barge mode: Would join ${repId}'s call as full participant. Both rep and lead hear you.`)
-  }
+  // BUG 10.5/U.8: Listen/Whisper/Barge are not yet implemented — show disabled "Coming Soon" buttons instead of alert()
+  const monitoringEnabled = false
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60)
@@ -252,30 +242,33 @@ export default function DialerMonitorPage() {
                   </div>
                 </div>
 
-                {/* Admin Actions */}
+                {/* Admin Actions — BUG 10.5/U.8: Disabled "Coming Soon" until Twilio Conference is connected */}
                 {rep.status === 'on_call' && (
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                      onClick={() => handleListen(rep.repId)}
+                      className="text-gray-400 border-gray-200 cursor-not-allowed"
+                      disabled
+                      title="Coming Soon — Requires Twilio Conference API"
                     >
                       <Headphones size={14} className="mr-1" /> Listen
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-purple-600 border-purple-200 hover:bg-purple-50"
-                      onClick={() => handleWhisper(rep.repId)}
+                      className="text-gray-400 border-gray-200 cursor-not-allowed"
+                      disabled
+                      title="Coming Soon — Requires Twilio Conference API"
                     >
                       <VolumeX size={14} className="mr-1" /> Whisper
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-red-600 border-red-200 hover:bg-red-50"
-                      onClick={() => handleBarge(rep.repId)}
+                      className="text-gray-400 border-gray-200 cursor-not-allowed"
+                      disabled
+                      title="Coming Soon — Requires Twilio Conference API"
                     >
                       <Volume2 size={14} className="mr-1" /> Barge
                     </Button>
@@ -314,7 +307,7 @@ export default function DialerMonitorPage() {
           </div>
         </div>
         <p className="text-xs text-gray-400 mt-3">
-          All monitoring features use Twilio Conference API. Connect your Twilio account in Settings to enable.
+          All monitoring features use Twilio Conference API. These features are coming soon — connect your Twilio account in Settings to enable when ready.
         </p>
       </Card>
     </div>

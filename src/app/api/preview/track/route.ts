@@ -6,6 +6,9 @@ import { pushToRep, pushToAllAdmins } from '@/lib/dialer-events'
 
 export const dynamic = 'force-dynamic'
 
+// BUG NEW-L8: Bot user-agent detection — filter out crawlers/bots from analytics
+const BOT_UA_REGEX = /bot|crawl|spider|slurp|mediapartners|facebookexternalhit|bingpreview|linkedinbot|twitterbot|whatsapp|telegram|preview|headless|phantom|puppeteer|lighthouse|pagespeed|gtmetrix|pingdom|uptimerobot/i
+
 // In-memory rate limiter: max 100 events per IP per hour
 const ipCounts = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT = 100
@@ -28,6 +31,12 @@ const VALID_EVENTS = ['page_view', 'time_on_page', 'cta_click', 'call_click', 'c
 // POST /api/preview/track - Track preview analytics events
 export async function POST(request: NextRequest) {
   try {
+    // NEW-L8: Filter bot traffic before processing
+    const userAgent = request.headers.get('user-agent') || ''
+    if (BOT_UA_REGEX.test(userAgent)) {
+      return NextResponse.json({ success: true, filtered: 'bot' })
+    }
+
     // Rate limit by IP
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
     if (isRateLimited(ip)) {
@@ -35,6 +44,13 @@ export async function POST(request: NextRequest) {
     }
 
     const { previewId, event, duration, metadata } = await request.json()
+
+    // BUG R.1: Extract UTM params and referrer for source attribution
+    const url = new URL(request.url)
+    const utmSource = url.searchParams.get('utm_source') || metadata?.utm_source || null
+    const utmMedium = url.searchParams.get('utm_medium') || metadata?.utm_medium || null
+    const utmCampaign = url.searchParams.get('utm_campaign') || metadata?.utm_campaign || null
+    const referrer = request.headers.get('referer') || metadata?.referrer || null
 
     if (!previewId || !event) {
       return NextResponse.json(
@@ -90,7 +106,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create event
+    // Create event (BUG R.1: include UTM/referrer for source attribution)
     await prisma.leadEvent.create({
       data: {
         leadId: lead.id,
@@ -99,6 +115,10 @@ export async function POST(request: NextRequest) {
           ...metadata,
           duration,
           event,
+          ...(utmSource && { utm_source: utmSource }),
+          ...(utmMedium && { utm_medium: utmMedium }),
+          ...(utmCampaign && { utm_campaign: utmCampaign }),
+          ...(referrer && { referrer }),
         },
         actor: 'client',
       }

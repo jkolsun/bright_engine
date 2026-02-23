@@ -250,13 +250,15 @@ export default function ClientsPage() {
     return matchesSearch && matchesStatus && matchesTag
   })
 
+  // BUG K.1: Use API-computed MRR (includes upsells) with local fallback
+  const localMRR = clients.filter(c => c.hostingStatus === 'ACTIVE').reduce((sum, c) => sum + (c.monthlyRevenue || 0), 0)
   const stats = {
     total: clients.length,
     active: clients.filter(c => c.hostingStatus === 'ACTIVE').length,
     atRisk: clients.filter(c => getHealthScore(c) < 50 && c.hostingStatus === 'ACTIVE').length,
     onboarding: clients.filter(c => (c.onboardingStep > 0 && c.onboardingStep < 7) || (!c.siteUrl && !c.siteLiveDate && c.hostingStatus === 'ACTIVE')).length,
     failedPayment: clients.filter(c => c.hostingStatus === 'FAILED_PAYMENT' || c.hostingStatus === 'GRACE_PERIOD').length,
-    totalMRR: clients.filter(c => c.hostingStatus === 'ACTIVE').reduce((sum, c) => sum + (c.monthlyRevenue || 0), 0),
+    totalMRR: overviewStats.stats?.mrr || localMRR,
     deactivated: clients.filter(c => c.hostingStatus === 'DEACTIVATED').length,
     cancelled: clients.filter(c => c.hostingStatus === 'CANCELLED').length,
   }

@@ -1,6 +1,22 @@
 import { prisma } from './db'
 import { generatePreviewId } from './utils'
 
+// BUG Q.2: Configurable preview expiration (default 7 days)
+const DEFAULT_PREVIEW_EXPIRATION_DAYS = 7
+
+async function getPreviewExpirationDays(): Promise<number> {
+  try {
+    const setting = await prisma.settings.findFirst({
+      where: { key: 'preview_expiration_days' },
+    })
+    if (setting?.value) {
+      const days = typeof setting.value === 'string' ? parseInt(setting.value as string, 10) : Number(setting.value)
+      if (!isNaN(days) && days > 0) return days
+    }
+  } catch { /* use default */ }
+  return DEFAULT_PREVIEW_EXPIRATION_DAYS
+}
+
 /**
  * Preview Generation Service
  * Creates live preview URLs for leads
@@ -36,7 +52,8 @@ export async function generatePreview(
   if (existingLead.previewId && existingLead.previewUrl) {
     // Just ensure expiration is set
     if (!existingLead.previewExpiresAt) {
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      const days = await getPreviewExpirationDays()
+      const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
       await prisma.lead.update({
         where: { id: leadId },
         data: { previewExpiresAt: expiresAt }
@@ -60,7 +77,7 @@ export async function generatePreview(
     return {
       previewId: existingLead.previewId,
       previewUrl: existingLead.previewUrl,
-      expiresAt: existingLead.previewExpiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: existingLead.previewExpiresAt || new Date(Date.now() + (await getPreviewExpirationDays()) * 24 * 60 * 60 * 1000),
     }
   }
 
@@ -71,8 +88,9 @@ export async function generatePreview(
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'
   const previewUrl = `${baseUrl}/preview/${previewId}`
 
-  // Preview expires in 7 days (per Operating Manual + banner text)
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+  // BUG Q.2: Configurable preview expiration (reads from Settings table)
+  const expirationDays = await getPreviewExpirationDays()
+  const expiresAt = new Date(Date.now() + expirationDays * 24 * 60 * 60 * 1000)
 
   // Store in database
   const lead = await prisma.lead.update({

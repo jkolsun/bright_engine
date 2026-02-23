@@ -83,23 +83,48 @@ export async function GET(request: NextRequest) {
     const active = allClients.filter(c => c.hostingStatus === 'ACTIVE')
     // MRR from actual PAID revenue (not projected client.monthlyRevenue)
     const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
-    const recentPaidRevenue = await prisma.revenue.findMany({
-      where: {
-        type: 'HOSTING_MONTHLY',
-        status: 'PAID',
-        createdAt: { gte: sixtyDaysAgo },
-        client: { hostingStatus: 'ACTIVE', deletedAt: null },
-      },
-      orderBy: { createdAt: 'desc' },
-      select: { clientId: true, amount: true },
-    })
+    const [recentPaidRevenue, recentUpsellRevenue] = await Promise.all([
+      prisma.revenue.findMany({
+        where: {
+          type: 'HOSTING_MONTHLY',
+          status: 'PAID',
+          createdAt: { gte: sixtyDaysAgo },
+          client: { hostingStatus: 'ACTIVE', deletedAt: null },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { clientId: true, amount: true },
+      }),
+      // BUG K.1: Include recurring upsell revenue in MRR
+      prisma.revenue.findMany({
+        where: {
+          type: 'UPSELL',
+          status: 'PAID',
+          recurring: true,
+          createdAt: { gte: sixtyDaysAgo },
+          client: { hostingStatus: 'ACTIVE', deletedAt: null },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { clientId: true, amount: true, product: true },
+      }),
+    ])
     const latestPerClient = new Map<string, number>()
     for (const r of recentPaidRevenue) {
       if (r.clientId && !latestPerClient.has(r.clientId)) {
         latestPerClient.set(r.clientId, r.amount)
       }
     }
-    const mrr = Array.from(latestPerClient.values()).reduce((sum, amt) => sum + amt, 0)
+    const hostingMRR = Array.from(latestPerClient.values()).reduce((sum, amt) => sum + amt, 0)
+
+    // BUG K.1: Dedupe upsell by client+product and sum
+    const latestUpsellPerClient = new Map<string, number>()
+    for (const r of recentUpsellRevenue) {
+      const key = `${r.clientId}-${r.product || ''}`
+      if (!latestUpsellPerClient.has(key)) {
+        latestUpsellPerClient.set(key, r.amount)
+      }
+    }
+    const upsellMRR = Array.from(latestUpsellPerClient.values()).reduce((sum, amt) => sum + amt, 0)
+    const mrr = hostingMRR + upsellMRR
     const avgLtv = active.length > 0
       ? Math.round(active.reduce((sum, c) => {
           const months = Math.max(1, Math.ceil((Date.now() - new Date(c.createdAt).getTime()) / (1000 * 60 * 60 * 24 * 30)))

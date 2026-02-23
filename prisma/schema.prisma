@@ -1195,6 +1195,7 @@ enum NotificationType {
   DAILY_AUDIT
   SITE_QA_READY
   CLOSE_ENGINE
+  SYSTEM_ALERT       // BUG P.3: Used by Clawdbot notifications route
 }
 
 enum ClawdbotActionType {

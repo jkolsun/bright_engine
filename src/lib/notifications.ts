@@ -1,5 +1,5 @@
 /**
- * Admin SMS notification helper.
+ * Admin SMS notification helper + notification deduplication (BUG P.1).
  * Reads the admin phone from company_info settings and sends SMS alerts
  * for high-priority events (hot leads, payments, escalations).
  *
@@ -8,8 +8,49 @@
 
 import { prisma } from './db'
 import { sendSMSViaProvider } from './sms-provider'
+import type { NotificationType as PrismaNotificationType } from '@prisma/client'
 
 type NotificationType = 'hot_lead' | 'payment' | 'escalation' | 'edit_request' | 'domain_verified' | 'approval'
+
+/**
+ * BUG P.1: Create a notification with deduplication.
+ * Checks for an existing notification with the same type and metadata dedupKey
+ * within the last hour before creating a new one.
+ *
+ * @param data - Standard notification fields (type, title, message, metadata)
+ * @param dedupKey - The metadata key path to check for duplicates (e.g., 'leadId', 'clientId')
+ * @param dedupWindowMs - Time window for dedup check (default: 1 hour)
+ */
+export async function createNotificationDeduped(
+  data: {
+    type: PrismaNotificationType
+    title: string
+    message: string
+    metadata?: Record<string, unknown>
+  },
+  dedupKey?: string,
+  dedupWindowMs: number = 60 * 60 * 1000, // 1 hour default
+) {
+  try {
+    // If a dedupKey is provided, check for existing recent notification
+    if (dedupKey && data.metadata && data.metadata[dedupKey] !== undefined) {
+      const windowStart = new Date(Date.now() - dedupWindowMs)
+      const existing = await prisma.notification.findFirst({
+        where: {
+          type: data.type,
+          metadata: { path: [dedupKey], equals: data.metadata[dedupKey] as any },
+          createdAt: { gte: windowStart },
+        },
+      })
+      if (existing) return existing // Skip duplicate
+    }
+
+    return await prisma.notification.create({ data: data as any })
+  } catch (err) {
+    console.error('[createNotificationDeduped] Failed:', err)
+    return null
+  }
+}
 
 /**
  * Send an SMS notification to the admin phone number.

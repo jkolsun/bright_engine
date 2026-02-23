@@ -131,11 +131,17 @@ export async function GET(request: NextRequest) {
     // Count total clients for dashboard (exclude soft-deleted)
     const totalClients = await prisma.client.count({ where: { deletedAt: null } })
 
+    // BUG K.3: Count paying clients (active with monthlyRevenue > 0) for avg revenue calc
+    const payingClients = await prisma.client.count({
+      where: { hostingStatus: 'ACTIVE', deletedAt: null, monthlyRevenue: { gt: 0 } },
+    })
+
     return NextResponse.json({
       // Flat keys that the dashboard expects
       totalLeads,
       hotLeads: pipeline.hotLead,
       activeClients,
+      payingClients,
       totalClients,
       mrr: totalMRR,
       todayRevenue: todayStats.revenue,

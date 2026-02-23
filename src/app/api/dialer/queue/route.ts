@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifySession } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,30 +18,36 @@ export async function GET(request: NextRequest) {
 
     const targetRepId = (session.role === 'ADMIN' && repId) ? repId : session.userId
 
-    const leads = await prisma.lead.findMany({
-      where: {
-        OR: [
-          { ownerRepId: targetRepId },
-          { assignedToId: targetRepId },
-        ],
-        status: { notIn: ['CLOSED_LOST', 'DO_NOT_CONTACT'] },
-        dncAt: null,
-      },
-      select: {
-        id: true, companyName: true, firstName: true, lastName: true,
-        phone: true, secondaryPhone: true, email: true, status: true, priority: true,
-        city: true, state: true, industry: true, ownerRepId: true,
-        previewId: true, previewUrl: true,
-        _count: { select: { dialerCalls: true } },
-      },
-      orderBy: [
-        { priority: 'desc' },
-        { updatedAt: 'desc' },
+    const whereClause: Prisma.LeadWhereInput = {
+      OR: [
+        { ownerRepId: targetRepId },
+        { assignedToId: targetRepId },
       ],
-      take: 100,
-    })
+      status: { notIn: ['CLOSED_LOST', 'DO_NOT_CONTACT'] },
+      dncAt: null,
+    }
 
-    return NextResponse.json({ leads })
+    // NEW-L7: Run count + query in parallel for hasMore flag
+    const [leads, totalCount] = await Promise.all([
+      prisma.lead.findMany({
+        where: whereClause,
+        select: {
+          id: true, companyName: true, firstName: true, lastName: true,
+          phone: true, secondaryPhone: true, email: true, status: true, priority: true,
+          city: true, state: true, industry: true, ownerRepId: true,
+          previewId: true, previewUrl: true,
+          _count: { select: { dialerCalls: true } },
+        },
+        orderBy: [
+          { priority: 'desc' },
+          { updatedAt: 'desc' },
+        ],
+        take: 100,
+      }),
+      prisma.lead.count({ where: whereClause }),
+    ])
+
+    return NextResponse.json({ leads, hasMore: totalCount > 100, totalCount })
   } catch (error) {
     console.error('[Dialer Queue API] GET error:', error)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

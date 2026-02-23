@@ -627,6 +627,54 @@ export async function schedulePendingStateEscalation() {
   }
 }
 
+// BUG P.2: Schedule daily notification cleanup
+export async function scheduleNotificationCleanup() {
+  const queue = getMonitoringQueue()
+  if (!queue || !isRedisAvailable) {
+    console.warn('Monitoring queue unavailable, skipping notification cleanup')
+    return null
+  }
+
+  try {
+    return await queue.add(
+      'notification-cleanup',
+      {},
+      {
+        repeat: {
+          every: 24 * 60 * 60 * 1000, // Once per day
+        },
+      }
+    )
+  } catch (err) {
+    console.warn('Failed to schedule notification cleanup:', err)
+    return null
+  }
+}
+
+// NEW-L23: Schedule failed webhook retry every 30 minutes
+export async function scheduleFailedWebhookRetry() {
+  const queue = getMonitoringQueue()
+  if (!queue || !isRedisAvailable) {
+    console.warn('Monitoring queue unavailable, skipping failed webhook retry')
+    return null
+  }
+
+  try {
+    return await queue.add(
+      'failed-webhook-retry',
+      {},
+      {
+        repeat: {
+          every: 30 * 60 * 1000, // Every 30 minutes
+        },
+      }
+    )
+  } catch (err) {
+    console.warn('Failed to schedule webhook retry:', err)
+    return null
+  }
+}
+
 export async function addImportProcessingJob(data: {
   jobId: string
   leadIds: string[]

@@ -706,7 +706,11 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                 </h3>
                 {awaitingApproval.length > 1 && (
                   <button
-                    onClick={() => handleBatchApprove(awaitingApproval.map((r: any) => r.id))}
+                    onClick={() => {
+                      if (confirm(`Approve and push all ${awaitingApproval.length} pending edits?`)) {
+                        handleBatchApprove(awaitingApproval.map((r: any) => r.id))
+                      }
+                    }}
                     className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
                   >
                     Approve All
@@ -736,7 +740,11 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                       </div>
                       <div className="flex gap-2 mt-3">
                         <button
-                          onClick={() => handleEditAction(req.id, 'approved')}
+                          onClick={() => {
+                            if (confirm(`Approve and push edit for ${req.client?.companyName}?\n\nAI applied: "${(req.editSummary || '').replace('[AI attempt] ', '')}"\n\nThis will push the changes to the build queue.`)) {
+                              handleEditAction(req.id, 'approved')
+                            }
+                          }}
                           className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-1.5 font-medium"
                         >
                           <CheckCircle size={14} /> Approve & Push
@@ -760,7 +768,11 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                           </button>
                         )}
                         <button
-                          onClick={() => handleEditAction(req.id, 'rejected')}
+                          onClick={() => {
+                            if (confirm(`Reject edit request for ${req.client?.companyName}?\n\nRequest: "${req.requestText}"\n\nThis cannot be undone.`)) {
+                              handleEditAction(req.id, 'rejected')
+                            }
+                          }}
                           className="px-3 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
                         >
                           <X size={14} /> Reject
@@ -832,7 +844,11 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                           {processingIds.has(req.id) ? 'Processing...' : 'Let AI Try'}
                         </button>
                         <button
-                          onClick={() => handleEditAction(req.id, 'rejected')}
+                          onClick={() => {
+                            if (confirm(`Dismiss edit request for ${req.client?.companyName}?\n\nRequest: "${req.requestText}"`)) {
+                              handleEditAction(req.id, 'rejected')
+                            }
+                          }}
                           className="px-3 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
                         >
                           <X size={14} /> Dismiss
@@ -899,7 +915,11 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                           {processingIds.has(req.id) ? 'Retrying...' : 'Retry AI'}
                         </button>
                         <button
-                          onClick={() => handleEditAction(req.id, 'rejected')}
+                          onClick={() => {
+                            if (confirm(`Dismiss failed edit for ${req.client?.companyName}?\n\nRequest: "${req.requestText}"`)) {
+                              handleEditAction(req.id, 'rejected')
+                            }
+                          }}
                           className="px-3 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
                         >
                           <X size={14} /> Dismiss

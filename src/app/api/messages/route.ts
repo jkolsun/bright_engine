@@ -6,11 +6,12 @@ import { sendEmail } from '@/lib/resend'
 
 export const dynamic = 'force-dynamic'
 
-// GET /api/messages - List messages
+// GET /api/messages - List messages with pagination + incremental polling (BUG M.3)
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const limit = parseInt(searchParams.get('limit') || '50')
   const offset = parseInt(searchParams.get('offset') || '0')
+  const after = searchParams.get('after') // ISO timestamp for incremental polling
 
   try {
     // Authentication check - admin or rep access
@@ -19,8 +20,16 @@ export async function GET(request: NextRequest) {
     if (!session || !['ADMIN', 'REP'].includes(session.role)) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
+
+    // BUG M.3: If `after` is provided, only fetch messages created after that timestamp
+    const where: any = {}
+    if (after) {
+      where.createdAt = { gt: new Date(after) }
+    }
+
     const [messages, total] = await Promise.all([
       prisma.message.findMany({
+        where,
         include: {
           lead: {
             select: {
@@ -44,9 +53,9 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { createdAt: 'desc' },
         take: limit,
-        skip: offset,
+        skip: after ? 0 : offset, // No offset when doing incremental poll
       }),
-      prisma.message.count()
+      prisma.message.count(after ? { where } : undefined)
     ])
 
     return NextResponse.json({ messages, total })

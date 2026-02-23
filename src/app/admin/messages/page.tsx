@@ -137,6 +137,11 @@ function MessagesPageInner() {
   const [chatSearch, setChatSearch] = useState('')
   const [chatSearchResults, setChatSearchResults] = useState<any[]>([])
 
+  // BUG M.3: Pagination + incremental polling state
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const latestMessageRef = useRef<string | null>(null) // timestamp of newest message for incremental poll
+
   // Auto-scroll refs
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const prevMessageCountRef = useRef(0)
@@ -193,11 +198,11 @@ function MessagesPageInner() {
     } catch { setBuildStatus(null) }
   }, [])
 
-  // Adaptive polling: 3s in conversation view, 10s in inbox
+  // BUG M.3: Adaptive polling with incremental message fetching
   useEffect(() => {
     const interval = viewMode === 'conversation' ? 3000 : 10000
     refreshRef.current = setInterval(() => {
-      loadMessages()
+      pollNewMessages() // Only fetch new messages since last poll
       loadCloseConversations()
       if (conversationDetail) loadConversationDetail(conversationDetail.id)
       // Auto-refresh build status when viewing a close-engine conversation
@@ -228,17 +233,69 @@ function MessagesPageInner() {
     } catch { setTwilioStatus('disconnected') }
   }
 
+  // BUG M.3: Load initial page of messages (50), track newest timestamp for incremental polling
   const loadMessages = async () => {
     try {
-      const res = await fetch('/api/messages?limit=200')
+      const res = await fetch('/api/messages?limit=50')
       if (res.ok) {
         const data = await res.json()
-        setMessages(data.messages || [])
+        const msgs = data.messages || []
+        setMessages(msgs)
+        setHasMore(msgs.length >= 50)
+        if (msgs.length > 0) {
+          latestMessageRef.current = msgs[0].createdAt // msgs are desc-ordered, first is newest
+        }
       }
     } catch (error) {
       console.error('Failed to load messages:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // BUG M.3: Incremental poll — only fetch messages newer than the latest we have
+  const pollNewMessages = async () => {
+    if (!latestMessageRef.current) return loadMessages()
+    try {
+      const res = await fetch(`/api/messages?limit=50&after=${encodeURIComponent(latestMessageRef.current)}`)
+      if (res.ok) {
+        const data = await res.json()
+        const newMsgs = data.messages || []
+        if (newMsgs.length > 0) {
+          setMessages(prev => {
+            const existingIds = new Set(prev.map((m: any) => m.id))
+            const unique = newMsgs.filter((m: any) => !existingIds.has(m.id))
+            const merged = [...unique, ...prev]
+            return merged
+          })
+          latestMessageRef.current = newMsgs[0].createdAt
+        }
+      }
+    } catch (error) {
+      console.error('Failed to poll messages:', error)
+    }
+  }
+
+  // BUG M.3: Load older messages for pagination
+  const loadMoreMessages = async () => {
+    if (loadingMore || !hasMore) return
+    setLoadingMore(true)
+    try {
+      const res = await fetch(`/api/messages?limit=50&offset=${messages.length}`)
+      if (res.ok) {
+        const data = await res.json()
+        const older = data.messages || []
+        setHasMore(older.length >= 50)
+        setMessages(prev => {
+          const existingIds = new Set(prev.map((m: any) => m.id))
+          const unique = older.filter((m: any) => !existingIds.has(m.id))
+          return [...prev, ...unique]
+        })
+      }
+    } catch (error) {
+      console.error('Failed to load more messages:', error)
+    } finally {
+      setLoadingMore(false)
     }
   }
 
@@ -393,11 +450,17 @@ function MessagesPageInner() {
   }
 
   // ─── Group messages into conversations (for Post-Client and All tabs) ───
+  // BUG M.2 fix: Use clientId or leadId as grouping key (not phone) to prevent collisions
   const groupedConversations = (() => {
     const convMap = new Map<string, any>()
 
     messages.forEach(msg => {
-      const key = msg.clientId || msg.leadId || msg.recipient || msg.id
+      // BUG M.2: Group by clientId or leadId to avoid phone-based collisions
+      const key = msg.clientId
+        ? `client-${msg.clientId}`
+        : msg.leadId
+        ? `lead-${msg.leadId}`
+        : `msg-${msg.id}`
       if (!convMap.has(key)) {
         const isClient = !!msg.clientId
         const name = msg.client?.companyName || (msg.lead ? `${msg.lead.firstName} ${msg.lead.lastName || ''}`.trim() : msg.recipient || 'Unknown')
@@ -436,6 +499,14 @@ function MessagesPageInner() {
   })()
 
   const postClientConvs = groupedConversations.filter(c => c.conversationType === 'post_client')
+
+  // BUG M.1 fix: Unified conversation count for All tab combines close-engine + post-client
+  // Close-engine conversations already counted via closeConversations.length
+  // Post-client conversations counted via postClientConvs.length
+  // All tab = close-engine count + post-client count (deduplicated)
+  const closeLeadIds = new Set(closeConversations.map((c: any) => c.leadId))
+  const uniquePostClientConvs = postClientConvs.filter(c => !closeLeadIds.has(c.leadId))
+  const allConversationCount = closeConversations.length + uniquePostClientConvs.length
 
   // Deep-link: auto-open conversation from ?leadId= or ?clientId= URL params
   useEffect(() => {
@@ -1101,7 +1172,7 @@ function MessagesPageInner() {
         {[
           { key: 'pre_client' as const, label: 'Pre-Client', count: closeConversations.length },
           { key: 'post_client' as const, label: 'Post-Client', count: postClientConvs.length },
-          { key: 'all' as const, label: 'All', count: groupedConversations.length },
+          { key: 'all' as const, label: 'All', count: allConversationCount },
         ].map(tab => (
           <button
             key={tab.key}
@@ -1330,6 +1401,15 @@ function MessagesPageInner() {
                   {(filteredConvs as any[]).filter((c: any) => !c.aiHandling && !c.escalated).map((conv: any) => (
                     <ConversationCard key={conv.key} conversation={conv} onClick={() => { setSelectedConversation(conv); setViewMode('conversation') }} variant="default" />
                   ))}
+                </div>
+              )}
+
+              {/* BUG M.3: Load More button */}
+              {hasMore && (
+                <div className="text-center pt-4">
+                  <Button variant="outline" size="sm" disabled={loadingMore} onClick={loadMoreMessages}>
+                    {loadingMore ? 'Loading...' : 'Load More Conversations'}
+                  </Button>
                 </div>
               )}
             </div>

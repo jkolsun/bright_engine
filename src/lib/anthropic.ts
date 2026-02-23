@@ -37,6 +37,36 @@ export function calculateApiCost(
   return (usage.input_tokens * rates.input + usage.output_tokens * rates.output) / 1_000_000
 }
 
+// BUG 15.8: Per-lead AI rate limiting (max 5 calls per lead per minute)
+const AI_RATE_LIMIT = 5
+const AI_RATE_WINDOW_MS = 60 * 1000
+const leadCallCounts = new Map<string, { count: number; resetAt: number }>()
+
+export function checkAiRateLimit(leadId: string): { allowed: boolean; remaining: number } {
+  const now = Date.now()
+  const entry = leadCallCounts.get(leadId)
+
+  if (!entry || now > entry.resetAt) {
+    leadCallCounts.set(leadId, { count: 1, resetAt: now + AI_RATE_WINDOW_MS })
+    return { allowed: true, remaining: AI_RATE_LIMIT - 1 }
+  }
+
+  if (entry.count >= AI_RATE_LIMIT) {
+    return { allowed: false, remaining: 0 }
+  }
+
+  entry.count++
+  return { allowed: true, remaining: AI_RATE_LIMIT - entry.count }
+}
+
+// Cleanup stale entries every 5 minutes
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, entry] of leadCallCounts) {
+    if (now > entry.resetAt) leadCallCounts.delete(key)
+  }
+}, 5 * 60 * 1000)
+
 // Register invalidator so admin API key changes take effect everywhere
 try {
   const { registerClientInvalidator } = require('./api-keys')

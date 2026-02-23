@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { formatCurrency } from '@/lib/utils'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Phone,
   Target,
@@ -37,6 +37,7 @@ import {
   Award,
   ChevronRight,
   PhoneCall,
+  RefreshCw,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -65,8 +66,29 @@ export default function RepsPage() {
   const [commissionRate, setCommissionRate] = useState(75)
   const [productPrice, setProductPrice] = useState(188)
 
+  // BUG O.1: Auto-refresh state
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [secondsAgo, setSecondsAgo] = useState(0)
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const tickIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
   useEffect(() => {
     loadRepData()
+
+    // Auto-refresh every 60 seconds
+    refreshIntervalRef.current = setInterval(() => {
+      loadRepData()
+    }, 60000)
+
+    // Update "seconds ago" counter every second
+    tickIntervalRef.current = setInterval(() => {
+      setSecondsAgo(prev => prev + 1)
+    }, 1000)
+
+    return () => {
+      if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current)
+      if (tickIntervalRef.current) clearInterval(tickIntervalRef.current)
+    }
   }, [])
 
   const loadRepData = async () => {
@@ -155,6 +177,8 @@ export default function RepsPage() {
       console.error('Failed to load rep data:', error)
     } finally {
       setLoading(false)
+      setLastUpdated(new Date())
+      setSecondsAgo(0)
     }
   }
 
@@ -232,7 +256,15 @@ export default function RepsPage() {
           <h1 className="text-3xl font-bold text-gray-900">
             Welcome back, {repData.name?.split(' ')[0] || repData.name}
           </h1>
-          <p className="text-gray-500 mt-1 text-sm">{todayDate}</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-gray-500 text-sm">{todayDate}</p>
+            {lastUpdated && (
+              <span className="text-xs text-gray-400 flex items-center gap-1">
+                <RefreshCw size={10} className={secondsAgo < 2 ? 'animate-spin' : ''} />
+                Updated {secondsAgo < 5 ? 'just now' : `${secondsAgo}s ago`}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex gap-3">
           <Link href="/reps/dialer?mode=single">
