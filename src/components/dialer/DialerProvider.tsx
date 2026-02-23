@@ -71,6 +71,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
   const [bannerUrgent, setBannerUrgent] = useState(false)
   const graceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastCalledLeadIdRef = useRef<string | null>(null)
+  const dialRef = useRef<((leadId: string, phone?: string) => Promise<void>) | null>(null)
 
   // Refs for accessing latest state in callbacks
   const currentCallRef = useRef<DialerCall | null>(null)
@@ -220,8 +221,29 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       leadId: targetLead.id,
     })
 
+    // Select lead immediately so LeadCard swaps before the API roundtrip
+    queueRef.current.setSelectedLeadId(targetLead.id)
+
+    // NON-OVERLAP: No active call → use dial() which sets currentCall properly
+    // This gives the rep the full active call UI (hangup, notes, disposition)
+    if (!currentCallRef.current) {
+      try {
+        await dialRef.current!(targetLead.id, targetLead.phone)
+        // dial() succeeded — clear auto-dial banner, call is now the active currentCall
+        setAutoDialState('IDLE')
+        setAutoDialBanner(null)
+        setBannerUrgent(false)
+      } catch (err) {
+        console.warn('[AutoDial] Non-overlap dial failed:', err)
+        setAutoDialState('IDLE')
+        setAutoDialBanner(null)
+        setBannerUrgent(false)
+      }
+      return
+    }
+
+    // OVERLAP: Active call exists → background dial into pendingCall
     try {
-      // Initiate the call via API
       const res = await fetch('/api/dialer/call/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -234,12 +256,10 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       const data = await res.json()
       if (data.error) {
         console.warn('[AutoDial] Initiate failed:', data.error)
-        // Skip this lead, try next
         autoDispositionAndChain(data.callId || '', targetLead.id, 'FAILED')
         return
       }
 
-      // Set as pending call (background call during overlap)
       const newPending: PendingCall = {
         callId: data.callId,
         leadId: targetLead.id,
@@ -248,7 +268,6 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       }
       setPendingCall(newPending)
 
-      // Connect via Twilio SDK
       const call = await twilioDevice.makeCall({ To: data.phoneToCall, leadId: targetLead.id, callId: data.callId })
 
       if (call) {
@@ -262,9 +281,6 @@ export function DialerProvider({ children }: { children: ReactNode }) {
         call.on('disconnect', () => updatePendingStatus('COMPLETED'))
         call.on('cancel', () => updatePendingStatus('FAILED'))
       }
-
-      // Select the lead in queue so LeadCard shows it when we swap
-      queueRef.current.setSelectedLeadId(targetLead.id)
     } catch (err) {
       console.error('[AutoDial] Failed to dial next:', err)
       setAutoDialState('IDLE')
@@ -362,6 +378,9 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       })
     }
   }, [sessionHook.session, twilioDevice])
+
+  // Keep dialRef in sync so handleAutoDialNextInternal can call dial() without forward-reference issues
+  useEffect(() => { dialRef.current = dial }, [dial])
 
   const hangup = useCallback(async () => {
     twilioDevice.hangup()
