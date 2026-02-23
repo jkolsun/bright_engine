@@ -78,6 +78,7 @@ export async function GET(request: NextRequest) {
           previewUrl: true,
           folderId: true,
           assignedToId: true,
+          ownerRepId: true,
           assignedTo: { select: { id: true, name: true } },
           enrichedRating: true,
           enrichedReviews: true,

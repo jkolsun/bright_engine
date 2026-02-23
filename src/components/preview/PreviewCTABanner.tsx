@@ -11,7 +11,7 @@ export default function PreviewCTABanner({ previewId }: { previewId: string }) {
   useEffect(() => {
     const wasDismissed = sessionStorage.getItem(`cta_dismissed_${previewId}`)
     if (wasDismissed) setDismissed(true)
-    fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => { if (d?.firstMonthTotal) setBannerPrice(d.firstMonthTotal) }).catch(() => {})
+    fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => { if (d?.firstMonthTotal) setBannerPrice(d.firstMonthTotal) }).catch(err => console.warn('[PreviewCTA] Pricing fetch failed:', err))
   }, [previewId])
 
   useEffect(() => {

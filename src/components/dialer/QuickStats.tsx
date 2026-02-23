@@ -7,7 +7,7 @@ export function QuickStats({ lead }: { lead: QueueLead }) {
   const [previewStatus, setPreviewStatus] = useState<any>(null)
 
   useEffect(() => {
-    fetch(`/api/dialer/preview/status?leadId=${lead.id}`).then(r => r.json()).then(setPreviewStatus).catch(() => {})
+    fetch(`/api/dialer/preview/status?leadId=${lead.id}`).then(r => r.json()).then(setPreviewStatus).catch(err => console.warn('[QuickStats] Preview status fetch failed:', err))
   }, [lead.id])
 
   const stats = [

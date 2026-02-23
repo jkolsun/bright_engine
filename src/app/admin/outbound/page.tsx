@@ -48,7 +48,7 @@ export default function SalesRepTrackerPage() {
             setEngagementScores(scoresMap)
           }
         })
-        .catch(() => {})
+        .catch(err => console.warn('[Outbound] Engagement score fetch failed:', err))
     }, 30000)
     return () => clearInterval(interval)
   }, [])

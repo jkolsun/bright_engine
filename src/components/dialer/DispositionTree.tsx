@@ -29,7 +29,7 @@ export function DispositionTree() {
     fetch(`/api/dialer/recommendation?callId=${currentCall.id}&leadId=${queue.selectedLeadId}`)
       .then(r => r.json())
       .then(data => setRecommendations(data.recommendations || []))
-      .catch(() => {})
+      .catch(err => console.warn('[DispositionTree] Recommendation fetch failed:', err))
   }, [currentCall?.id, queue.selectedLeadId])
 
   const node = TREE[step]

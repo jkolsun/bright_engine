@@ -152,8 +152,11 @@ export async function processRevenueCommission(revenueId: string) {
         client: {
           include: {
             lead: {
-              include: {
-                assignedTo: true
+              select: {
+                id: true,
+                ownerRepId: true,
+                assignedToId: true,
+                assignedTo: true,
               }
             }
           }
@@ -163,10 +166,10 @@ export async function processRevenueCommission(revenueId: string) {
 
     if (!revenue) return null
 
-    // Gap 1: Use ownerRepId (dialer) OR assignedToId (original) for commission
+    // Prefer ownerRepId (dialer-set) over assignedToId (import-set)
     const lead = revenue.client?.lead
     const repUser = lead?.assignedTo
-    const ownerRepId = (lead as any)?.ownerRepId as string | null
+    const ownerRepId = lead?.ownerRepId ?? null
 
     // Handle unassigned leads — cannot create Commission with null repId
     if (!repUser && !ownerRepId) {
@@ -245,21 +248,28 @@ export async function getRepCommissionSummary(repId: string) {
 
     const summary = {
       pending: { count: 0, amount: 0 },
+      approved: { count: 0, amount: 0 },
       paid: { count: 0, amount: 0 },
+      rejected: { count: 0, amount: 0 },
       total: { count: 0, amount: 0 }
     }
 
     stats.forEach(stat => {
       if (stat.status === 'PENDING') {
         summary.pending = { count: stat._count, amount: stat._sum.amount || 0 }
+      } else if (stat.status === 'APPROVED') {
+        summary.approved = { count: stat._count, amount: stat._sum.amount || 0 }
       } else if (stat.status === 'PAID') {
         summary.paid = { count: stat._count, amount: stat._sum.amount || 0 }
+      } else if (stat.status === 'REJECTED') {
+        summary.rejected = { count: stat._count, amount: stat._sum.amount || 0 }
       }
     })
 
+    // Total = everything except REJECTED
     summary.total = {
-      count: summary.pending.count + summary.paid.count,
-      amount: summary.pending.amount + summary.paid.amount
+      count: summary.pending.count + summary.approved.count + summary.paid.count,
+      amount: summary.pending.amount + summary.approved.amount + summary.paid.amount
     }
 
     return { commissions, summary }

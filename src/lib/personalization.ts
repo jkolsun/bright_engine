@@ -687,7 +687,7 @@ export async function generatePersonalization(
               operation: 'personalization',
               cost: result.tokensCost,
             },
-          }).catch(() => {}) // non-fatal
+          }).catch(err => console.error('[Personalization] API cost write failed:', err))
 
           return result
         }

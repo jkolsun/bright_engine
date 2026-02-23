@@ -99,7 +99,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ callId: currentCall.id }),
-      }).catch(() => {})
+      }).catch(err => console.warn('[DialerProvider] Call end API failed:', err))
     }
   }, [currentCall, twilioDevice])
 

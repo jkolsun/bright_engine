@@ -8,18 +8,11 @@
  * - Undo: Revert to pre-edit HTML
  */
 
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
 import { prisma } from './db'
+import { getAnthropicClient } from './anthropic'
 
 const HAIKU_MODEL = 'claude-haiku-4-5-20251001'
-
-let _anthropicClient: Anthropic | null = null
-function getAnthropicClient(): Anthropic {
-  if (!_anthropicClient) {
-    _anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  }
-  return _anthropicClient
-}
 
 export async function handleEditConfirmation(params: {
   clientId: string
@@ -136,7 +129,7 @@ async function confirmAndPush(
       operation: 'edit_confirmation_classify',
       cost: 0.001,
     },
-  }).catch(() => {})
+  }).catch(err => console.error('[EditConfirmation] API cost write failed:', err))
 
   console.log(`[EditConfirmation] Edit confirmed and pushed to build queue for client ${clientId}`)
 

@@ -13,7 +13,34 @@ import { sendSMS } from '../lib/twilio'
 import { sendEmail, getEmailTemplate, triggerReferralSequence } from '../lib/resend'
 import { routeAndSend } from '../lib/channel-router'
 import { canSendMessage } from '../lib/utils'
-import { addPreviewGenerationJob, addPersonalizationJob, addScriptGenerationJob, addDistributionJob, getSharedConnection } from './queue'
+import { addPreviewGenerationJob, addPersonalizationJob, addScriptGenerationJob, addDistributionJob, getSharedConnection, type DelayedMessageJobData } from './queue'
+
+// ── Delayed Message Handler (fixes BUG 8.1, NEW-C1, NEW-C9) ──
+async function handleDelayedMessage(data: DelayedMessageJobData) {
+  switch (data.type) {
+    case 'close-engine-message': {
+      const { sendCloseEngineMessage } = await import('../lib/close-engine-processor')
+      await sendCloseEngineMessage(data.options)
+      if (data.postSendTransition) {
+        const { transitionStage } = await import('../lib/close-engine')
+        await transitionStage(data.postSendTransition.conversationId, data.postSendTransition.stage)
+      }
+      break
+    }
+    case 'sms-message': {
+      const { sendSMSViaProvider } = await import('../lib/sms-provider')
+      await sendSMSViaProvider(data.options)
+      break
+    }
+    case 'payment-link': {
+      const { sendPaymentLink } = await import('../lib/close-engine-payment')
+      await sendPaymentLink(data.conversationId)
+      break
+    }
+    default:
+      console.error('[Worker] Unknown delayed message type:', (data as any).type)
+  }
+}
 
 async function startWorkers() {
   try {
@@ -70,7 +97,7 @@ async function startWorkers() {
         await prisma.lead.update({
           where: { id: leadId },
           data: { buildStep: 'ENRICHMENT', buildStartedAt: new Date(), buildError: null, buildCompletedAt: null },
-        }).catch(() => {})
+        }).catch(err => console.error('[Worker] Build step update failed:', err))
 
         await enrichLead(leadId)
 
@@ -78,7 +105,7 @@ async function startWorkers() {
         await prisma.lead.update({
           where: { id: leadId },
           data: { buildEnrichmentMs: Date.now() - stepStart },
-        }).catch(() => {})
+        }).catch(err => console.error('[Worker] Enrichment timing write failed:', err))
 
         console.log(`✅ [ENRICHMENT] Completed job ${job.id} for lead ${leadId}`)
         return { success: true }
@@ -105,9 +132,9 @@ async function startWorkers() {
         console.log(`Processing preview job: ${job.id}`)
         const { leadId } = job.data
         const stepStart = Date.now()
-        await prisma.lead.update({ where: { id: leadId }, data: { buildStep: 'PREVIEW' } }).catch(() => {})
+        await prisma.lead.update({ where: { id: leadId }, data: { buildStep: 'PREVIEW' } }).catch(err => console.error('[Worker] Build step update failed:', err))
         const result = await generatePreview({ leadId })
-        await prisma.lead.update({ where: { id: leadId }, data: { buildPreviewMs: Date.now() - stepStart } }).catch(() => {})
+        await prisma.lead.update({ where: { id: leadId }, data: { buildPreviewMs: Date.now() - stepStart } }).catch(err => console.error('[Worker] Preview timing write failed:', err))
         return result
       },
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
@@ -121,12 +148,12 @@ async function startWorkers() {
         console.log(`Processing personalization job: ${job.id}`)
         const { leadId } = job.data
         const stepStart = Date.now()
-        await prisma.lead.update({ where: { id: leadId }, data: { buildStep: 'PERSONALIZATION' } }).catch(() => {})
+        await prisma.lead.update({ where: { id: leadId }, data: { buildStep: 'PERSONALIZATION' } }).catch(err => console.error('[Worker] Build step update failed:', err))
         // Step 1: Serper web research (enhances quality, non-fatal if fails)
         try { await fetchSerperResearch(leadId) } catch (e) { console.warn('Serper research failed, continuing:', e) }
         // Step 2: AI personalization (required)
         const result = await generatePersonalization(leadId)
-        await prisma.lead.update({ where: { id: leadId }, data: { buildPersonalizationMs: Date.now() - stepStart } }).catch(() => {})
+        await prisma.lead.update({ where: { id: leadId }, data: { buildPersonalizationMs: Date.now() - stepStart } }).catch(err => console.error('[Worker] Personalization timing write failed:', err))
         return { success: true, result }
       },
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
@@ -140,9 +167,9 @@ async function startWorkers() {
         console.log(`Processing script job: ${job.id}`)
         const { leadId } = job.data
         const stepStart = Date.now()
-        await prisma.lead.update({ where: { id: leadId }, data: { buildStep: 'SCRIPTS' } }).catch(() => {})
+        await prisma.lead.update({ where: { id: leadId }, data: { buildStep: 'SCRIPTS' } }).catch(err => console.error('[Worker] Build step update failed:', err))
         const script = await generateRepScript(leadId)
-        await prisma.lead.update({ where: { id: leadId }, data: { buildScriptsMs: Date.now() - stepStart } }).catch(() => {})
+        await prisma.lead.update({ where: { id: leadId }, data: { buildScriptsMs: Date.now() - stepStart } }).catch(err => console.error('[Worker] Scripts timing write failed:', err))
         return { success: !!script }
       },
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
@@ -156,9 +183,9 @@ async function startWorkers() {
         console.log(`Processing distribution job: ${job.id}`)
         const { leadId, channel } = job.data
         const stepStart = Date.now()
-        await prisma.lead.update({ where: { id: leadId }, data: { buildStep: 'DISTRIBUTION' } }).catch(() => {})
+        await prisma.lead.update({ where: { id: leadId }, data: { buildStep: 'DISTRIBUTION' } }).catch(err => console.error('[Worker] Build step update failed:', err))
         const result = await distributeLead({ leadId, channel: channel || 'BOTH' })
-        await prisma.lead.update({ where: { id: leadId }, data: { buildDistributionMs: Date.now() - stepStart } }).catch(() => {})
+        await prisma.lead.update({ where: { id: leadId }, data: { buildDistributionMs: Date.now() - stepStart } }).catch(err => console.error('[Worker] Distribution timing write failed:', err))
         return result
       },
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
@@ -191,7 +218,7 @@ async function startWorkers() {
         await prisma.lead.update({
           where: { id: leadId },
           data: { buildStep: 'COMPLETE', buildCompletedAt: new Date() },
-        }).catch(() => {})
+        }).catch(err => console.error('[Worker] Build complete update failed:', err))
 
         // Run readiness check — with enrichment + personalization done, score should be 70+
         try {
@@ -218,7 +245,7 @@ async function startWorkers() {
         await prisma.lead.update({
           where: { id: leadId },
           data: { buildStep: 'COMPLETE', buildCompletedAt: new Date() },
-        }).catch(() => {})
+        }).catch(err => console.error('[Worker] Build complete update failed:', err))
         try { await calculateEngagementScore(leadId) } catch (e) { console.warn('Engagement calc failed:', e) }
 
         // Run readiness check for import leads too — auto-transition to QA if ready
@@ -254,7 +281,7 @@ async function startWorkers() {
 
         const updateProgress = async () => {
           if (redisConn) {
-            await redisConn.set(`import:${jobId}`, JSON.stringify(progress), 'EX', 3600).catch(() => {})
+            await redisConn.set(`import:${jobId}`, JSON.stringify(progress), 'EX', 3600).catch(err => console.error('[Worker] Redis progress write failed:', err))
           }
         }
 
@@ -328,7 +355,7 @@ async function startWorkers() {
             message: `Processed ${progress.processed} leads: ${progress.processed - progress.failed} succeeded, ${progress.failed} failed`,
             metadata: { jobId, total: progress.total, failed: progress.failed },
           },
-        }).catch(() => {})
+        }).catch(err => console.error('[Worker] Import notification create failed:', err))
 
         console.log(`[IMPORT] Job ${jobId} complete: ${progress.processed}/${progress.total}, ${progress.failed} failed`)
         return { success: true }
@@ -429,6 +456,11 @@ async function startWorkers() {
             await sendReferralDay180Email(job.data.clientId)
             break
 
+          // ── Delayed message sends (BullMQ replaces setTimeout — serverless-safe) ──
+          case 'send-delayed-message':
+            await handleDelayedMessage(job.data as DelayedMessageJobData)
+            break
+
           // ── Onboarding sequences ──
           case 'onboarding-advance-to-domain':
             await handleOnboardingAdvanceToDomain(job.data.clientId)
@@ -491,35 +523,35 @@ async function startWorkers() {
     enrichmentWorker.on('failed', async (job, err) => {
       console.error(`Enrichment job ${job?.id} failed:`, err)
       if (job?.data?.leadId) {
-        await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `ENRICHMENT: ${err.message}` } }).catch(() => {})
+        await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `ENRICHMENT: ${err.message}` } }).catch(e => console.error('[Worker] Build error write failed:', e))
       }
     })
 
     previewWorker.on('failed', async (job, err) => {
       console.error(`Preview job ${job?.id} failed:`, err)
       if (job?.data?.leadId) {
-        await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `PREVIEW: ${err.message}` } }).catch(() => {})
+        await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `PREVIEW: ${err.message}` } }).catch(e => console.error('[Worker] Build error write failed:', e))
       }
     })
 
     personalizationWorker.on('failed', async (job, err) => {
       console.error(`Personalization job ${job?.id} failed:`, err)
       if (job?.data?.leadId) {
-        await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `PERSONALIZATION: ${err.message}` } }).catch(() => {})
+        await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `PERSONALIZATION: ${err.message}` } }).catch(e => console.error('[Worker] Build error write failed:', e))
       }
     })
 
     scriptWorker.on('failed', async (job, err) => {
       console.error(`Script job ${job?.id} failed:`, err)
       if (job?.data?.leadId) {
-        await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `SCRIPTS: ${err.message}` } }).catch(() => {})
+        await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `SCRIPTS: ${err.message}` } }).catch(e => console.error('[Worker] Build error write failed:', e))
       }
     })
 
     distributionWorker.on('failed', async (job, err) => {
       console.error(`Distribution job ${job?.id} failed:`, err)
       if (job?.data?.leadId) {
-        await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `DISTRIBUTION: ${err.message}` } }).catch(() => {})
+        await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `DISTRIBUTION: ${err.message}` } }).catch(e => console.error('[Worker] Build error write failed:', e))
       }
     })
 

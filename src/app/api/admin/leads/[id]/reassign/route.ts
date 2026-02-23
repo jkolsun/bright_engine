@@ -53,10 +53,10 @@ export async function PATCH(
     const oldRepName = lead.assignedTo?.name || 'Unassigned'
     const adminId = (session as any).id || (session as any).userId
 
-    // Update lead assignment
+    // Update lead assignment (also clear ownerRepId so new assignment takes precedence)
     await prisma.lead.update({
       where: { id },
-      data: { assignedToId: newRepId },
+      data: { assignedToId: newRepId, ownerRepId: null },
     })
 
     // Create LeadEvent

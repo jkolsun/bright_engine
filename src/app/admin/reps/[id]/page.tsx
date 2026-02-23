@@ -57,7 +57,9 @@ export default function RepDetailPage({ params }: RepDetailPageProps) {
 
   const closedDeals = leads.filter((l: any) => l.status === 'PAID').length
   const hotLeads = leads.filter((l: any) => l.priority === 'HOT').length
-  const totalCommission = commissions.reduce((sum: number, c: any) => sum + (c.amount || 0), 0)
+  const totalCommission = commissions
+    .filter((c: any) => c.status !== 'REJECTED')
+    .reduce((sum: number, c: any) => sum + (c.amount || 0), 0)
   const pendingCommission = commissions
     .filter((c: any) => c.status === 'PENDING')
     .reduce((sum: number, c: any) => sum + (c.amount || 0), 0)

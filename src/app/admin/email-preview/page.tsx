@@ -173,7 +173,7 @@ export default function EmailPreviewPage() {
 
   useEffect(() => {
     fetchLeads()
-    fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => { if (d?.firstMonthTotal) setEmailPrice(d.firstMonthTotal) }).catch(() => {})
+    fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => { if (d?.firstMonthTotal) setEmailPrice(d.firstMonthTotal) }).catch(err => console.warn('[EmailPreview] Pricing fetch failed:', err))
   }, [])
 
   const fetchLeads = async () => {

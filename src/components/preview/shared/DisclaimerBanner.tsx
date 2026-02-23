@@ -12,7 +12,7 @@ export default function DisclaimerBanner({ variant, companyName }: { variant: Te
     fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => {
       if (d?.previewBannerText) setBannerText(d.previewBannerText)
       else if (d?.firstMonthTotal) setBannerText(`$${d.firstMonthTotal} to get started`)
-    }).catch(() => {})
+    }).catch(err => console.warn('[DisclaimerBanner] Pricing fetch failed:', err))
   }, [])
 
   if (!visible) return null

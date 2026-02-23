@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
         await prisma.dialerSessionNew.update({
           where: { id: call.sessionId },
           data: { previewsSent: { increment: 1 } },
-        }).catch(() => {})
+        }).catch(err => console.error('[DialerPreview] Session preview count update failed:', err))
       }
     }
 

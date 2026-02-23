@@ -152,7 +152,7 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
                 setSaveStatus('saved')
                 setLastSavedAt(new Date().toLocaleTimeString())
               }
-            }).catch(() => {})
+            }).catch(err => console.warn('[SiteEditor] Auto-save failed:', err))
           }
         }, 3000)
       }

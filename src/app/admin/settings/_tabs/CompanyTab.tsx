@@ -94,6 +94,42 @@ export default function CompanyTab() {
             setProducts(data2.products || [])
           }
         }
+
+        // One-time fix: correct Review Widget price from $29 to $69
+        const reviewWidget = loadedProducts.find((p: any) => p.name === 'Review Widget' && p.price === 29)
+        if (reviewWidget) {
+          await fetch(`/api/upsell-products/${reviewWidget.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              price: 69,
+              aiProductSummary: 'Review widget \u2014 $69/mo, shows Google reviews on your site',
+            }),
+          })
+          const res3 = await fetch(`/api/upsell-products?_t=${Date.now()}`)
+          if (res3.ok) {
+            const data3 = await res3.json()
+            setProducts(data3.products || [])
+          }
+        }
+
+        // One-time fix: correct Social Page from one-time to recurring
+        const socialPage = loadedProducts.find((p: any) => p.name === 'Social Page' && !p.recurring)
+        if (socialPage) {
+          await fetch(`/api/upsell-products/${socialPage.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              recurring: true,
+              aiProductSummary: 'Social media management \u2014 $99/mo',
+            }),
+          })
+          const res4 = await fetch(`/api/upsell-products?_t=${Date.now()}`)
+          if (res4.ok) {
+            const data4 = await res4.json()
+            setProducts(data4.products || [])
+          }
+        }
       }
     } catch { /* ignore */ }
     finally { setProductsLoading(false) }
@@ -128,9 +164,9 @@ export default function CompanyTab() {
     const upsells = [
       { name: 'Annual Hosting Plan', price: 399, recurring: false, stripeLink: 'https://buy.stripe.com/3cI5kw3eqfRm7lid367wA08', aiProductSummary: 'Annual hosting \u2014 $399/yr (save $69 vs monthly)', aiPitchInstructions: 'Pitch after 3 months of active monthly hosting. Mention they save $69/yr. Only pitch to clients who are happy and engaged.', minClientAgeDays: 90, maxPitchesPerClient: 2, sortOrder: 1 },
       { name: 'GBP Optimization', price: 49, recurring: false, stripeLink: 'https://buy.stripe.com/fZu3coeX8ax2fROfbe7wA09', aiProductSummary: 'Google Business Profile setup \u2014 $49 one-time', sortOrder: 2 },
-      { name: 'Review Widget', price: 29, recurring: true, stripeLink: 'https://buy.stripe.com/fZu00c02e34AgVS3sw7wA0a', aiProductSummary: 'Review widget \u2014 $29/mo, shows Google reviews on your site', sortOrder: 3 },
+      { name: 'Review Widget', price: 69, recurring: true, stripeLink: 'https://buy.stripe.com/fZu00c02e34AgVS3sw7wA0a', aiProductSummary: 'Review widget \u2014 $69/mo, shows Google reviews on your site', sortOrder: 3 },
       { name: 'SEO Updates', price: 59, recurring: true, stripeLink: 'https://buy.stripe.com/14A9AM5my7kQ20Yd367wA0b', aiProductSummary: 'Monthly SEO optimization \u2014 $59/mo', sortOrder: 4 },
-      { name: 'Social Page', price: 99, recurring: false, stripeLink: 'https://buy.stripe.com/fZeV6aGS20w8pm4wA7wA0c', aiProductSummary: 'Social media page setup \u2014 $99 one-time', sortOrder: 5 },
+      { name: 'Social Page', price: 99, recurring: true, stripeLink: 'https://buy.stripe.com/fZeV6aGS20w8pm4wA7wA0c', aiProductSummary: 'Social media management \u2014 $99/mo', sortOrder: 5 },
     ]
     for (const u of upsells) {
       await fetch('/api/upsell-products', {

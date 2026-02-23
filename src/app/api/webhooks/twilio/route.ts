@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
             reactionToId: originalMessageId || null,
             reactionEmoji: reaction.reactionEmoji,
           },
-        }).catch(() => {})
+        }).catch(err => console.error('[TwilioWebhook] Reaction update failed:', err))
       }
 
       // Route reaction to AI with translated context

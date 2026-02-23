@@ -185,7 +185,7 @@ Return ONLY the JSON with changed fields and _summary.`
         operation: 'build_queue_edit',
         cost: 0.02,
       },
-    }).catch(() => {})
+    }).catch(err => console.error('[BuildQueueEdit] API cost write failed:', err))
 
     return NextResponse.json({
       success: true,

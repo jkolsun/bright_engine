@@ -88,7 +88,7 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
     fetch(`/api/commissions?clientId=${lead.client.id}`)
       .then(r => r.ok ? r.json() : { commissions: [] })
       .then(d => setCommissions(d.commissions || []))
-      .catch(() => {})
+      .catch(err => console.warn('[LeadDetail] Commissions fetch failed:', err))
   }, [lead?.client?.id])
 
   const handleAddContact = async () => {

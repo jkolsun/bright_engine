@@ -165,7 +165,7 @@ export async function generateRetentionMessage(
     // Log API cost
     await prisma.apiCost.create({
       data: { service: 'anthropic', operation: 'retention_message', cost },
-    }).catch(() => {})
+    }).catch(err => console.error('[Retention] API cost write failed:', err))
 
     return { message, cost }
   } catch (error) {

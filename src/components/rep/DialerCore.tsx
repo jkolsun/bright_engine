@@ -1175,7 +1175,9 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           }
         }
       }
-    } catch {}
+    } catch (err) {
+      console.warn('[DialerCore] Failed to load call script:', err)
+    }
     console.warn('[DialerCore] No call script found in settings, using hardcoded default')
     setCallScript(DEFAULT_SCRIPT)
   }, [])
@@ -1275,7 +1277,9 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
               }
             })
           }
-        } catch { /* silent */ }
+        } catch (err) {
+          console.warn('[DialerCore] Preview poll failed:', err)
+        }
       }
       poll()
       previewPollRef.current = setInterval(poll, 5000)
@@ -1330,7 +1334,9 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           return
         }
       }
-    } catch { /* proceed if check fails */ }
+    } catch (err) {
+      console.warn('[DialerCore] VM approval check failed:', err)
+    }
 
     try {
       const res = await fetch('/api/dialer/settings', {
@@ -1338,13 +1344,16 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'start', mode: dialerMode }),
       })
-      if (res.ok) {
-        const data = await res.json()
-        setSessionId(data.session?.id || `session-${Date.now()}`)
-      } else {
-        // API failed but we still want the session to work locally
-        setSessionId(`session-${Date.now()}`)
+      if (!res.ok) {
+        showToast('Failed to start session — check your connection and try again', 'error')
+        return
       }
+      const data = await res.json()
+      if (!data.session?.id) {
+        showToast('Failed to start session — no session ID returned', 'error')
+        return
+      }
+      setSessionId(data.session.id)
       setSessionActive(true)
       showToast('Session started')
       // Auto-dial first lead in power mode
@@ -1352,13 +1361,8 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         setTimeout(() => handleDialRef.current(), 300)
       }
     } catch (err) {
-      // Even if the API is down, let the rep start dialing
-      setSessionId(`session-${Date.now()}`)
-      setSessionActive(true)
-      showToast('Session started (offline mode)', 'success')
-      if (dialerMode === 'power' && queue.length > 0) {
-        setTimeout(() => handleDialRef.current(), 300)
-      }
+      console.error('[DialerCore] Session start failed:', err)
+      showToast('Failed to start session — check your connection and try again', 'error')
     }
   }
 
@@ -1371,10 +1375,12 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           body: JSON.stringify({ action: 'end', sessionId }),
         })
       }
-    } catch { /* silent */ }
+    } catch (err) {
+      console.warn('[DialerCore] End session API failed:', err)
+      showToast('Action failed — check connection', 'error')
+    }
     setSessionActive(false)
     setSessionId(null)
-    showToast('Session ended')
   }
 
   const handleDial = useCallback(async () => {
@@ -1389,7 +1395,6 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
     setProcessing(true)
     setCallPhase('dialing')
-    setActiveCallId(`call-${Date.now()}`)
     setSessionStats(prev => ({ ...prev, dials: prev.dials + 1 }))
 
     try {
@@ -1406,6 +1411,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
       if (isPartTime) {
         // Part-time: open native dialer via tel: link
+        // activeCallId stays null — dispositions will use unlinked flag
         window.open(`tel:${leadToDial.phone}`, '_self')
       } else {
         // Full-time: initiate via Twilio API
@@ -1420,10 +1426,12 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           })
           if (dialRes.ok) {
             const dialData = await dialRes.json()
+            // Only set callId from server — never generate fake client-side IDs
             if (dialData.callId) setActiveCallId(dialData.callId)
           }
         } catch {
           // Fall back to tel: link if API fails
+          // activeCallId stays null — dispositions will use unlinked flag
           window.open(`tel:${leadToDial.phone}`, '_self')
         }
       }
@@ -1460,7 +1468,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           activityType: 'CALL',
           callDisposition: 'CONNECTED',
         }),
-      }).catch(() => {})
+      }).catch(err => console.warn('[DialerCore] Activity log failed:', err))
     }
   }
 
@@ -1473,7 +1481,11 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ callId: activeCallId, action: 'hold' }),
         })
-      } catch { /* silent */ }
+      } catch (err) {
+        console.warn('[DialerCore] Hold failed:', err)
+        setCallPhase('connected')
+        showToast('Action failed — check connection', 'error')
+      }
     } else if (callPhase === 'on_hold') {
       setCallPhase('connected')
       try {
@@ -1482,7 +1494,11 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ callId: activeCallId, action: 'resume' }),
         })
-      } catch { /* silent */ }
+      } catch (err) {
+        console.warn('[DialerCore] Resume failed:', err)
+        setCallPhase('on_hold')
+        showToast('Action failed — check connection', 'error')
+      }
     }
   }
 
@@ -1497,7 +1513,11 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           body: JSON.stringify({ callId: activeCallId }),
         })
       }
-    } catch { /* silent */ }
+    } catch (err) {
+      console.warn('[DialerCore] Hangup failed:', err)
+      showToast('Action failed — check connection', 'error')
+      return
+    }
 
     // If we were dialing (no connection), just go back to idle
     if (callPhase === 'dialing') {
@@ -1569,7 +1589,8 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          callId: activeCallId || `call-${Date.now()}`,
+          callId: activeCallId || undefined,
+          unlinked: !activeCallId,
           outcome,
           leadId: lead.id,
           notes: callNotes.trim() || undefined,
@@ -1639,7 +1660,8 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            callId: activeCallId || `call-${Date.now()}`,
+            callId: activeCallId || undefined,
+            leadId: lead.id,
             callbackDate: `${extra.callbackDate}T${extra.callbackTime || '09:00'}:00`,
             notes: callNotes.trim() || undefined,
           }),

@@ -41,12 +41,12 @@ export default function RepPerformancePage() {
 
   // Calculate rep stats
   const repStats = (rep: any) => {
-    const assigned = allLeads.filter((l: any) => l.assignedToId === rep.id)
+    const assigned = allLeads.filter((l: any) => (l.ownerRepId || l.assignedToId) === rep.id)
     const closed = assigned.filter((l: any) => l.status === 'PAID')
     const hot = assigned.filter((l: any) => l.status === 'HOT_LEAD')
     const revenue = closed.length * 149
     const commission = allCommissions
-      .filter((c: any) => c.repId === rep.id)
+      .filter((c: any) => c.repId === rep.id && c.status !== 'REJECTED')
       .reduce((sum: number, c: any) => sum + (c.amount || 0), 0)
     return { assignedLeads: assigned.length, hotLeads: hot.length, closedDeals: closed.length, totalRevenue: revenue, commission }
   }

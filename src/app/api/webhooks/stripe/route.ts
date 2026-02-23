@@ -188,7 +188,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       monthlyRevenue: webhookConfig.monthlyHosting,
       stripeCustomerId,
       leadId: lead.id,
-      repId: lead.assignedToId,
+      repId: lead.ownerRepId || lead.assignedToId,
     },
   })
 
@@ -226,14 +226,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   })
 
   // ── Step 5b: Increment rep's daily close counter ──
-  if (lead.assignedToId) {
+  const responsibleRepId = lead.ownerRepId || lead.assignedToId
+  if (responsibleRepId) {
     try {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       await prisma.repActivity.upsert({
-        where: { repId_date: { repId: lead.assignedToId, date: today } },
+        where: { repId_date: { repId: responsibleRepId, date: today } },
         create: {
-          repId: lead.assignedToId,
+          repId: responsibleRepId,
           date: today,
           closes: 1,
           paymentsClosed: 1,
@@ -243,7 +244,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           paymentsClosed: { increment: 1 },
         },
       })
-      console.log(`[Stripe Webhook] RepActivity close incremented for rep ${lead.assignedToId}`)
+      console.log(`[Stripe Webhook] RepActivity close incremented for rep ${responsibleRepId}`)
     } catch (err) {
       console.error('[Stripe Webhook] RepActivity update failed:', err)
     }
@@ -531,7 +532,7 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
     include: {
       client: {
         include: {
-          lead: { select: { assignedToId: true } },
+          lead: { select: { assignedToId: true, ownerRepId: true } },
         },
       },
     },

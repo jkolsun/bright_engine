@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     dispatchWebhook({
       type: 'dialer.upsell_tagged',
       data: { leadId, productId, productName: product.name, repId: session.userId },
-    }).catch(() => {})
+    }).catch(err => console.error('[DialerUpsell] Webhook dispatch failed:', err))
 
     return NextResponse.json(tag)
   } catch (error) {

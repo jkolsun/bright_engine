@@ -85,11 +85,12 @@ async function handleHotEngagement(data: any) {
   }
 
   // Create high-priority task for rep if assigned
-  if (lead.assignedToId && urgencyScore >= 70) {
+  const engagementRepId = lead.ownerRepId || lead.assignedToId
+  if (engagementRepId && urgencyScore >= 70) {
     await prisma.repTask.create({
       data: {
         leadId,
-        repId: lead.assignedToId,
+        repId: engagementRepId,
         taskType: 'URGENT_FOLLOWUP',
         priority: 'URGENT',
         dueAt: new Date(), // Due immediately
@@ -121,8 +122,9 @@ async function handlePaymentReceived(data: any) {
 
   console.log(`🎉 Payment received: $${amount} from ${lead?.companyName}`)
   
-  // Send congratulations to assigned rep
-  if (lead?.assignedToId) {
+  // Send congratulations to responsible rep
+  const paymentRepId = lead?.ownerRepId || lead?.assignedToId
+  if (paymentRepId) {
     // TODO: Send notification to rep about their commission
   }
   
@@ -147,11 +149,12 @@ async function handleStalledLead(data: any) {
   console.log(`⚠️ Stalled lead: ${lead?.companyName} (${daysSinceActivity} days inactive)`)
   
   // Create re-engagement task
-  if (lead?.assignedToId) {
+  const stalledRepId = lead?.ownerRepId || lead?.assignedToId
+  if (stalledRepId) {
     await prisma.repTask.create({
       data: {
         leadId,
-        repId: lead.assignedToId,
+        repId: stalledRepId,
         taskType: 'RE_ENGAGEMENT',
         priority: 'MEDIUM',
         dueAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Due tomorrow

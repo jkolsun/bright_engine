@@ -9,7 +9,7 @@ export function CallGuidePanel() {
   const [showAiNotes, setShowAiNotes] = useState(false)
 
   useEffect(() => {
-    fetch('/api/admin/settings/call-guide').then(r => r.json()).then(d => setGuide(d.content)).catch(() => {})
+    fetch('/api/admin/settings/call-guide').then(r => r.json()).then(d => setGuide(d.content)).catch(err => console.warn('[CallGuidePanel] Call guide fetch failed:', err))
   }, [])
 
   const lead = queue.selectedLead

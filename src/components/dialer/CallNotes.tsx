@@ -16,7 +16,7 @@ export function CallNotes() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ callId: currentCall.id, notes }),
-      }).catch(() => {})
+      }).catch(err => console.warn('[CallNotes] Note save failed:', err))
     }, 2000)
     return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current) }
   }, [notes, currentCall?.id])

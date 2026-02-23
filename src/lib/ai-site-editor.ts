@@ -361,7 +361,7 @@ export async function applyAiEdit(params: {
         operation: 'site_editor_ai_edit',
         cost: 0.03,
       },
-    }).catch(() => {})
+    }).catch(err => console.error('[AISiteEditor] API cost write failed:', err))
 
     return { html: modifiedHtml, summary }
   } catch (error) {

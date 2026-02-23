@@ -306,7 +306,7 @@ export async function getRepStats(repId: string, period: 'today' | 'week' | 'mon
   })
 
   const commissions = await prisma.commission.findMany({
-    where: { repId, createdAt: { gte: startDate }, status: { in: ['APPROVED', 'PAID'] } },
+    where: { repId, createdAt: { gte: startDate }, status: { not: 'REJECTED' } },
   })
 
   return {

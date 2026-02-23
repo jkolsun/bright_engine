@@ -158,7 +158,7 @@ export async function advanceOnboarding(clientId: string, toStep?: number) {
           stepLabel: STEP_LABELS[nextStep],
         },
       },
-    }).catch(() => {}) // Non-fatal
+    }).catch(err => console.error('[Onboarding] Non-critical write failed:', err))
   }
 
   // When reaching COMPLETE, set siteLiveDate and trigger post-launch sequences

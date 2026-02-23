@@ -6,7 +6,7 @@
  * for cost-optimized retention, upsell, and support conversations.
  */
 
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
 import { prisma } from './db'
 import { sendSMSViaProvider } from './sms-provider'
 import { buildPostClientSystemPrompt } from './close-engine-prompts'
@@ -15,16 +15,9 @@ import { getPricingConfig } from './pricing-config'
 import { updateOnboarding, advanceOnboarding, createOnboardingApproval, getOnboardingFlowSettings } from './onboarding'
 import { handleEditRequest } from './edit-request-handler'
 import { handleEditConfirmation } from './edit-confirmation-handler'
+import { getAnthropicClient } from './anthropic'
 
 const POST_CLIENT_MODEL = 'claude-haiku-4-5-20251001'
-
-let _anthropicClient: Anthropic | null = null
-function getAnthropicClient(): Anthropic {
-  if (!_anthropicClient) {
-    _anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  }
-  return _anthropicClient
-}
 
 // ============================================
 // processPostClientInbound()
@@ -56,21 +49,19 @@ export async function processPostClientInbound(
     if (confirmResult.handled && confirmResult.replyText) {
       // Send the confirmation reply, skip normal AI processing
       const delay = calculateDelay(confirmResult.replyText.length, 'standard')
-      setTimeout(async () => {
-        try {
-          await sendSMSViaProvider({
-            to: client.lead!.phone,
-            message: confirmResult.replyText!,
-            clientId,
-            trigger: 'edit_confirmation_response',
-            aiGenerated: true,
-            aiDelaySeconds: delay,
-            conversationType: 'post_client',
-            sender: 'clawdbot',
-          })
-        } catch (err) {
-          console.error('[PostClient] Edit confirmation send failed:', err)
-        }
+      const { addDelayedMessageJob } = await import('@/worker/queue')
+      await addDelayedMessageJob({
+        type: 'sms-message',
+        options: {
+          to: client.lead!.phone,
+          message: confirmResult.replyText!,
+          clientId,
+          trigger: 'edit_confirmation_response',
+          aiGenerated: true,
+          aiDelaySeconds: delay,
+          conversationType: 'post_client',
+          sender: 'clawdbot',
+        },
       }, delay * 1000)
       return
     }
@@ -391,21 +382,19 @@ export async function processPostClientInbound(
 
     const delay = calculateDelay(parsed.replyText.length, 'standard')
 
-    setTimeout(async () => {
-      try {
-        await sendSMSViaProvider({
-          to: client.lead!.phone,
-          message: parsed.replyText,
-          clientId,
-          trigger: `post_client_${parsed.intent?.toLowerCase() || 'general'}`,
-          aiGenerated: true,
-          aiDelaySeconds: delay,
-          conversationType: 'post_client',
-          sender: 'clawdbot',
-        })
-      } catch (err) {
-        console.error('[PostClient] Send failed:', err)
-      }
+    const { addDelayedMessageJob: addReplyJob } = await import('@/worker/queue')
+    await addReplyJob({
+      type: 'sms-message',
+      options: {
+        to: client.lead!.phone,
+        message: parsed.replyText,
+        clientId,
+        trigger: `post_client_${parsed.intent?.toLowerCase() || 'general'}`,
+        aiGenerated: true,
+        aiDelaySeconds: delay,
+        conversationType: 'post_client',
+        sender: 'clawdbot',
+      },
     }, delay * 1000)
 
     // Log API cost (Haiku is ~10x cheaper than Sonnet)
@@ -415,7 +404,7 @@ export async function processPostClientInbound(
         operation: 'post_client_chat',
         cost: 0.003,
       },
-    }).catch(() => {})
+    }).catch(err => console.error('[PostClient] API cost write failed:', err))
   } catch (apiError) {
     console.error('[PostClient] Haiku API failed:', apiError)
     await prisma.notification.create({
@@ -484,7 +473,7 @@ export async function generateTouchpointMessage(
         operation: `post_client_touchpoint_${touchpointType}`,
         cost: 0.002,
       },
-    }).catch(() => {})
+    }).catch(err => console.error('[PostClient] API cost write failed:', err))
 
     return text
   } catch (err) {

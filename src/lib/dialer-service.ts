@@ -493,7 +493,7 @@ export async function logDisposition(params: {
       connected: isConnected,
       companyName: call.lead.companyName,
     },
-  }).catch(() => {})
+  }).catch(err => console.error('[DialerService] Webhook dispatch failed:', err))
 
   if (isInterested) {
     dispatchWebhook({
@@ -505,7 +505,7 @@ export async function logDisposition(params: {
         disposition: result,
         companyName: call.lead.companyName,
       },
-    }).catch(() => {})
+    }).catch(err => console.error('[DialerService] Webhook dispatch failed:', err))
   }
 
   // 10. Trigger Close Engine for WANTS_TO_MOVE_FORWARD (Bug 8 dedup built into triggerCloseEngine)
@@ -657,7 +657,7 @@ export async function scheduleCallback(params: {
       await prisma.dialerSessionNew.update({
         where: { id: call.sessionId },
         data: { callbacksScheduled: { increment: 1 } },
-      }).catch(() => {})
+      }).catch(err => console.error('[DialerService] Session callback count update failed:', err))
     }
   }
 
@@ -674,7 +674,7 @@ export async function scheduleCallback(params: {
         callId,
       },
     },
-  }).catch(() => {})
+  }).catch(err => console.error('[DialerService] Callback event write failed:', err))
 
   // Push SSE
   const sseEvent = {
@@ -732,7 +732,7 @@ export async function manualDial(repId: string, phone: string, sessionId?: strin
     await prisma.dialerSessionNew.update({
       where: { id: sessionId },
       data: { totalCalls: { increment: 1 } },
-    }).catch(() => {})
+    }).catch(err => console.error('[DialerService] Session call count update failed:', err))
   }
 
   return { phoneToCall: phone, repId, sessionId }
@@ -835,13 +835,13 @@ export async function markDNC(leadId: string, repId: string) {
       actor: `rep:${repId}`,
       metadata: { source: 'dialer', action: 'dnc_applied' },
     },
-  }).catch(() => {})
+  }).catch(err => console.error('[DialerService] DNC event write failed:', err))
 
   // Dispatch webhook
   dispatchWebhook({
     type: 'dialer.dnc',
     data: { leadId, phone: lead.phone, repId, companyName: lead.companyName },
-  }).catch(() => {})
+  }).catch(err => console.error('[DialerService] Webhook dispatch failed:', err))
 
   return { success: true }
 }

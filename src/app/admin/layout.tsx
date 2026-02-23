@@ -49,7 +49,7 @@ export default function AdminLayout({
           const data = await buildRes.json()
           setBuildQueueBadge((data.badgeCount || 0) + (data.editBadgeCount || 0))
         }
-      } catch { /* silent */ }
+      } catch (err) { console.warn('[AdminLayout] Badge count fetch failed:', err) }
     }
     fetchCounts()
     const interval = setInterval(fetchCounts, 10_000)

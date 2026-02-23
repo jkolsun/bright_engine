@@ -12,7 +12,7 @@ export function UpsellTags({ leadId }: { leadId: string }) {
 
   useEffect(() => {
     // Fetch products once
-    fetch('/api/upsell-products/pitch-notes').then(r => r.json()).then(d => setProducts(d.products || [])).catch(() => {})
+    fetch('/api/upsell-products/pitch-notes').then(r => r.json()).then(d => setProducts(d.products || [])).catch(err => console.warn('[UpsellTags] Pitch notes fetch failed:', err))
   }, [])
 
   const addTag = async (productId: string) => {

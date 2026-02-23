@@ -43,7 +43,7 @@ export default function RepsPage() {
   const filteredReps = filter === 'all' ? reps : reps.filter(r => r.portalType === filter)
 
   const getRepStats = (rep: any) => {
-    const assigned = leads.filter(l => l.assignedToId === rep.id)
+    const assigned = leads.filter(l => (l.ownerRepId || l.assignedToId) === rep.id)
     const closed = assigned.filter(l => l.status === 'PAID')
     const totalComm = commissions
       .filter(c => c.repId === rep.id || c.rep?.id === rep.id)
@@ -107,7 +107,7 @@ export default function RepsPage() {
 
       // Reassign leads if a target rep is selected
       if (reassignTo) {
-        const repLeads = leads.filter(l => l.assignedToId === deactivateRep.id && l.status !== 'PAID' && l.status !== 'CLOSED_LOST')
+        const repLeads = leads.filter(l => (l.ownerRepId || l.assignedToId) === deactivateRep.id && l.status !== 'PAID' && l.status !== 'CLOSED_LOST')
         for (const lead of repLeads) {
           try {
             await fetch(`/api/admin/leads/${lead.id}/reassign`, {
@@ -254,8 +254,8 @@ export default function RepsPage() {
 
       {/* Deactivation Dialog */}
       {deactivateRep && (() => {
-        const repLeads = leads.filter(l => l.assignedToId === deactivateRep.id && l.status !== 'PAID' && l.status !== 'CLOSED_LOST')
-        const repClients = leads.filter(l => l.assignedToId === deactivateRep.id && l.status === 'PAID')
+        const repLeads = leads.filter(l => (l.ownerRepId || l.assignedToId) === deactivateRep.id && l.status !== 'PAID' && l.status !== 'CLOSED_LOST')
+        const repClients = leads.filter(l => (l.ownerRepId || l.assignedToId) === deactivateRep.id && l.status === 'PAID')
         const repComm = commissions.filter(c => c.repId === deactivateRep.id || c.rep?.id === deactivateRep.id)
         const pendingComm = repComm.filter(c => c.status === 'PENDING').reduce((s: number, c: any) => s + (c.amount || 0), 0)
         const otherActiveReps = reps.filter(r => r.status === 'ACTIVE' && r.id !== deactivateRep.id)

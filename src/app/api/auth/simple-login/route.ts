@@ -119,7 +119,7 @@ async function handleLogin(request: NextRequest): Promise<Response> {
     void prisma.user.update({
       where: { id: user.id },
       data: { lastSeenAt: new Date() },
-    }).catch(() => {})
+    }).catch(err => console.error('[Auth] lastSeenAt update failed:', err))
 
     // Determine redirect URL based on user role and portal type
     const redirectUrl = user.role === 'ADMIN'

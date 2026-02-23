@@ -6,7 +6,7 @@
  * checks autonomy, and sends replies via SMS with email fallback.
  */
 
-import Anthropic from '@anthropic-ai/sdk'
+import type Anthropic from '@anthropic-ai/sdk'
 import type { Prisma } from '@prisma/client'
 import { prisma } from './db'
 import { sendSMSViaProvider } from './sms-provider'
@@ -23,25 +23,7 @@ import {
   checkEscalation,
   MODELS,
 } from './close-engine-prompts'
-
-// ============================================
-// Anthropic Client (lazy singleton)
-// ============================================
-
-let anthropicClient: Anthropic | null = null
-
-// Register invalidator so admin API key changes take effect
-try {
-  const { registerClientInvalidator } = require('./api-keys')
-  registerClientInvalidator(() => { anthropicClient = null })
-} catch { /* api-keys module may not be loaded yet */ }
-
-function getAnthropicClient(): Anthropic {
-  if (!anthropicClient) {
-    anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  }
-  return anthropicClient
-}
+import { getAnthropicClient } from './anthropic'
 
 // ============================================
 // sendCloseEngineMessage() — SMS with email fallback
@@ -140,7 +122,7 @@ export async function sendCloseEngineMessage(options: CloseEngineMessageOptions)
           trigger,
         },
       },
-    }).catch(() => {}) // Non-critical
+    }).catch(err => console.error('[CloseEngine] Non-critical write failed:', err))
   }
 
   return {
@@ -214,7 +196,7 @@ Write ONE text message. 1-2 sentences max. Casual and human. Do not include quot
 
     await prisma.apiCost.create({
       data: { service: 'anthropic', operation: 'close_engine_first_message', cost: 0.01 },
-    }).catch(() => {})
+    }).catch(err => console.error('[CloseEngine] API cost write failed:', err))
   } catch (aiError) {
     console.warn('[CloseEngine] AI first message generation failed, using template:', aiError)
     // Fall back to template — already set above
@@ -253,33 +235,29 @@ Write ONE text message. 1-2 sentences max. Casual and human. Do not include quot
   const isCta = context.conversation.entryPoint === 'PREVIEW_CTA'
   const delay = calculateDelay(firstMessage.length, isCta ? 'first_message_cta' : 'first_message')
 
-  // Schedule delayed send with email fallback
-  setTimeout(async () => {
-    try {
-      await sendCloseEngineMessage({
-        to: lead.phone,
-        toEmail: lead.email || undefined,
-        message: firstMessage,
-        leadId: lead.id,
-        trigger: 'close_engine_first_message',
-        aiDelaySeconds: delay,
-        conversationType: 'pre_client',
-        emailSubject: `${lead.companyName} — your new website`,
-        aiDecisionLog: {
-          trigger: context.conversation.entryPoint,
-          messageType: isCta ? 'first_message_cta' : 'first_message',
-          templateUsed: template !== firstMessage ? 'ai_adapted' : 'template_fallback',
-          delaySeconds: delay,
-          leadStatus: lead.status,
-          leadPriority: lead.priority,
-        },
-      })
-
-      // Transition to QUALIFYING
-      await transitionStage(conversationId, CONVERSATION_STAGES.QUALIFYING)
-    } catch (err) {
-      console.error('[CloseEngine] Failed to send first message:', err)
-    }
+  // Schedule delayed send via BullMQ (serverless-safe — replaces setTimeout)
+  const { addDelayedMessageJob } = await import('@/worker/queue')
+  await addDelayedMessageJob({
+    type: 'close-engine-message',
+    options: {
+      to: lead.phone,
+      toEmail: lead.email || undefined,
+      message: firstMessage,
+      leadId: lead.id,
+      trigger: 'close_engine_first_message',
+      aiDelaySeconds: delay,
+      conversationType: 'pre_client',
+      emailSubject: `${lead.companyName} — your new website`,
+      aiDecisionLog: {
+        trigger: context.conversation.entryPoint,
+        messageType: isCta ? 'first_message_cta' : 'first_message',
+        templateUsed: template !== firstMessage ? 'ai_adapted' : 'template_fallback',
+        delaySeconds: delay,
+        leadStatus: lead.status,
+        leadPriority: lead.priority,
+      },
+    },
+    postSendTransition: { conversationId, stage: CONVERSATION_STAGES.QUALIFYING },
   }, delay * 1000)
 }
 
@@ -399,7 +377,7 @@ export async function processCloseEngineInbound(
         operation: `close_engine_${context.conversation.stage.toLowerCase()}`,
         cost: 0.03,
       },
-    }).catch(() => {}) // Non-critical
+    }).catch(err => console.error('[CloseEngine] API cost write failed:', err))
   } catch (apiError) {
     console.error('[CloseEngine] Anthropic API failed:', apiError)
     await prisma.notification.create({
@@ -438,7 +416,7 @@ export async function processCloseEngineInbound(
 
     // Re-check readiness score after new data is stored
     const { checkAndTransitionToQA } = await import('./build-readiness')
-    await checkAndTransitionToQA(lead.id).catch(() => {})
+    await checkAndTransitionToQA(lead.id).catch(err => console.error('[CloseEngine] QA transition check failed:', err))
 
     // Auto-update BuildStatus from extracted data
     try {
@@ -670,35 +648,39 @@ export async function processCloseEngineInbound(
         },
       })
     } else {
-      // FULL_AUTO or SEMI_AUTO — send the conversational reply immediately
-      setTimeout(async () => {
-        try {
-          await sendCloseEngineMessage({
-            to: lead.phone,
-            toEmail: lead.email || undefined,
-            message: claudeResponse.replyText,
-            leadId: lead.id,
-            trigger: `close_engine_${context.conversation.stage.toLowerCase()}`,
-            aiDelaySeconds: delay,
-            conversationType: 'pre_client',
-            emailSubject: `${lead.companyName} — next steps`,
-            aiDecisionLog,
-          })
-        } catch (err) {
-          console.error('[CloseEngine] Failed to send pre-payment reply:', err)
-        }
+      // FULL_AUTO or SEMI_AUTO — schedule conversational reply via BullMQ (serverless-safe)
+      const { addDelayedMessageJob } = await import('@/worker/queue')
+      await addDelayedMessageJob({
+        type: 'close-engine-message',
+        options: {
+          to: lead.phone,
+          toEmail: lead.email || undefined,
+          message: claudeResponse.replyText,
+          leadId: lead.id,
+          trigger: `close_engine_${context.conversation.stage.toLowerCase()}`,
+          aiDelaySeconds: delay,
+          conversationType: 'pre_client',
+          emailSubject: `${lead.companyName} — next steps`,
+          aiDecisionLog,
+        },
       }, delay * 1000)
+
+      // Schedule payment link AFTER the conversational reply (NEW-C9 fix)
+      // Client receives context message first, then payment link 10s later
+      await addDelayedMessageJob({
+        type: 'payment-link',
+        conversationId,
+      }, (delay + 10) * 1000)
     }
 
-    // Action 2: Generate Stripe link and route through payment approval
-    // sendPaymentLink() handles its own autonomy check — generates the Stripe URL,
-    // and either sends directly (FULL_AUTO) or creates a PAYMENT_LINK approval
-    // with the actual Stripe URL in metadata.
-    try {
-      const { sendPaymentLink } = await import('./close-engine-payment')
-      await sendPaymentLink(conversationId)
-    } catch (err) {
-      console.error('[CloseEngine] Failed to process payment link:', err)
+    // MANUAL mode: payment link goes through approval immediately (admin controls timing)
+    if (replyAutonomy.requiresApproval) {
+      try {
+        const { sendPaymentLink } = await import('./close-engine-payment')
+        await sendPaymentLink(conversationId)
+      } catch (err) {
+        console.error('[CloseEngine] Failed to process payment link:', err)
+      }
     }
 
     // Track question if applicable, then return
@@ -741,23 +723,21 @@ export async function processCloseEngineInbound(
     return
   }
 
-  // 10. Send reply with email fallback
-  setTimeout(async () => {
-    try {
-      await sendCloseEngineMessage({
-        to: lead.phone,
-        toEmail: lead.email || undefined,
-        message: claudeResponse.replyText,
-        leadId: lead.id,
-        trigger: `close_engine_${context.conversation.stage.toLowerCase()}`,
-        aiDelaySeconds: delay,
-        conversationType: 'pre_client',
-        emailSubject: `${lead.companyName} — your new website`,
-        aiDecisionLog,
-      })
-    } catch (err) {
-      console.error('[CloseEngine] Failed to send reply:', err)
-    }
+  // 10. Schedule reply via BullMQ (serverless-safe — replaces setTimeout)
+  const { addDelayedMessageJob: addReplyJob } = await import('@/worker/queue')
+  await addReplyJob({
+    type: 'close-engine-message',
+    options: {
+      to: lead.phone,
+      toEmail: lead.email || undefined,
+      message: claudeResponse.replyText,
+      leadId: lead.id,
+      trigger: `close_engine_${context.conversation.stage.toLowerCase()}`,
+      aiDelaySeconds: delay,
+      conversationType: 'pre_client',
+      emailSubject: `${lead.companyName} — your new website`,
+      aiDecisionLog,
+    },
   }, delay * 1000)
 
   // Track question asked

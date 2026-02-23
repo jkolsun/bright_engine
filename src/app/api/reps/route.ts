@@ -52,10 +52,13 @@ export async function GET(request: NextRequest) {
           }
         })
 
-        // Get all-time closes
+        // Get all-time closes (check both ownerRepId and assignedToId)
         const totalCloses = await prisma.lead.count({
           where: {
-            assignedToId: rep.id,
+            OR: [
+              { ownerRepId: rep.id },
+              { assignedToId: rep.id, ownerRepId: null },
+            ],
             status: 'PAID'
           }
         })

@@ -251,6 +251,83 @@ export const getMonitoringQueueRef = () => monitoringQueue
 
 // Helper to add jobs - gracefully handle if Redis unavailable
 
+// ── Delayed Message Job Types (fixes BUG 8.1, NEW-C1, NEW-C9) ──
+
+export interface DelayedCloseEngineMessage {
+  type: 'close-engine-message'
+  options: {
+    to: string
+    toEmail?: string
+    message: string
+    leadId: string
+    trigger: string
+    aiGenerated?: boolean
+    aiDelaySeconds?: number
+    conversationType?: string
+    sender?: string
+    aiDecisionLog?: Record<string, unknown>
+    emailSubject?: string
+  }
+  postSendTransition?: { conversationId: string; stage: string }
+}
+
+export interface DelayedSmsMessage {
+  type: 'sms-message'
+  options: {
+    to: string
+    message: string
+    leadId?: string
+    clientId?: string
+    trigger: string
+    aiGenerated?: boolean
+    aiDelaySeconds?: number
+    conversationType?: string
+    sender?: string
+    aiDecisionLog?: Record<string, unknown>
+  }
+}
+
+export interface DelayedPaymentLink {
+  type: 'payment-link'
+  conversationId: string
+}
+
+export type DelayedMessageJobData =
+  | DelayedCloseEngineMessage
+  | DelayedSmsMessage
+  | DelayedPaymentLink
+
+/**
+ * Queue a delayed message send via BullMQ instead of setTimeout.
+ * On serverless (Vercel, Railway), setTimeout fires after the function returns
+ * and the container shuts down — messages are silently dropped. BullMQ delayed
+ * jobs persist in Redis and are processed by the worker regardless of the
+ * original request lifecycle.
+ */
+export async function addDelayedMessageJob(data: DelayedMessageJobData, delayMs: number) {
+  const queue = getSequenceQueue()
+  if (!queue || !isRedisAvailable) {
+    console.warn('[QUEUE] Sequence queue unavailable for delayed message — message may be lost on serverless')
+    return null
+  }
+
+  try {
+    return await queue.add(
+      'send-delayed-message',
+      data,
+      {
+        delay: delayMs,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: true,
+      }
+    )
+  } catch (err) {
+    console.error('[QUEUE] Failed to add delayed message job:', err)
+    return null
+  }
+}
+
 /**
  * Phase 2 Import Pipeline Job Functions
  * Order: Enrichment → Preview → Personalization → Scripts → Distribution

@@ -28,7 +28,7 @@ export function InboundCallBanner() {
     if (twilioDevice.activeCall) {
       twilioDevice.activeCall.accept()
     }
-    fetch('/api/dialer/inbound/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callId: inboundCall.callId }) }).catch(() => {})
+    fetch('/api/dialer/inbound/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callId: inboundCall.callId }) }).catch(err => console.warn('[InboundCall] Accept API failed:', err))
     setInboundCall(null)
   }
 
@@ -36,7 +36,7 @@ export function InboundCallBanner() {
     if (twilioDevice.activeCall) {
       twilioDevice.activeCall.reject()
     }
-    fetch('/api/dialer/inbound/decline', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callId: inboundCall.callId, callSid: inboundCall.callSid }) }).catch(() => {})
+    fetch('/api/dialer/inbound/decline', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callId: inboundCall.callId, callSid: inboundCall.callSid }) }).catch(err => console.warn('[InboundCall] Decline API failed:', err))
     setInboundCall(null)
   }
 

@@ -871,7 +871,7 @@ function CommissionsSection() {
       .then((d) => {
         if (d?.siteBuildFee) setBuildFee(d.siteBuildFee)
       })
-      .catch(() => {})
+      .catch(err => console.warn('[TeamTab] Pricing fetch failed:', err))
   }, [])
 
   const loadReps = async () => {
