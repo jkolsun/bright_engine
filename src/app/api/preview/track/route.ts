@@ -6,14 +6,47 @@ import { pushToRep, pushToAllAdmins } from '@/lib/dialer-events'
 
 export const dynamic = 'force-dynamic'
 
+// In-memory rate limiter: max 100 events per IP per hour
+const ipCounts = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT = 100
+const RATE_WINDOW_MS = 60 * 60 * 1000 // 1 hour
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now()
+  const entry = ipCounts.get(ip)
+  if (!entry || now > entry.resetAt) {
+    ipCounts.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS })
+    return false
+  }
+  entry.count++
+  return entry.count > RATE_LIMIT
+}
+
+// Known valid event types
+const VALID_EVENTS = ['page_view', 'time_on_page', 'cta_click', 'call_click', 'contact_form', 'return_visit', 'scroll_depth']
+
 // POST /api/preview/track - Track preview analytics events
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit by IP
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+    if (isRateLimited(ip)) {
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
+    }
+
     const { previewId, event, duration, metadata } = await request.json()
 
     if (!previewId || !event) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      )
+    }
+
+    // Validate event is from known list
+    if (!VALID_EVENTS.includes(event)) {
+      return NextResponse.json(
+        { error: 'Invalid event type' },
         { status: 400 }
       )
     }

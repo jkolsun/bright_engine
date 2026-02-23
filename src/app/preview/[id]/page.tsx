@@ -29,18 +29,39 @@ export default async function PreviewPage({ params }: { params: { id: string } }
     cleanHtml = cleanHtml.replace(/\bABOUT_P[0-9]:\s*/gi, '')
     cleanHtml = cleanHtml.replace(/\bVP[0-9]_(TITLE|DESC)\b:?\s*/gi, '')
 
-    const headMatch = cleanHtml.match(/<head[^>]*>([\s\S]*?)<\/head>/i)
-    const bodyMatch = cleanHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
-    const headContent = headMatch?.[1] || ''
-    const bodyContent = bodyMatch?.[1] || cleanHtml
-    // Tracking script
-    const trackScript = `<script>fetch('/api/preview/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({previewId:'${lead.previewId || params.id}',event:'page_view'})})</script>`
-    // Kill the DisclaimerBanner overlay + any stray CTA banners — CSS hides, script removes
+    // Inject noindex + tracking script + overlay cleanup into the HTML
+    const previewId = lead.previewId || params.id
+    const noindex = '<meta name="robots" content="noindex, nofollow">'
+    const trackScript = `<script>fetch('/api/preview/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({previewId:'${previewId}',event:'page_view'})})</script>`
     const killOverlay = `<style>.fixed.inset-0[class*="z-[9999"]{display:none!important}.fixed.bottom-0[class*="bg-\\[#0D7377"]{display:none!important}</style><script>document.querySelectorAll('div').forEach(function(e){if(e.className&&(e.className.indexOf('z-[9999]')!==-1||(e.className.indexOf('fixed')!==-1&&e.className.indexOf('bg-[#0D7377')!==-1)))e.remove()})</script>`
+
+    // Inject into <head> if it exists, otherwise prepend
+    if (/<head[^>]*>/i.test(cleanHtml)) {
+      cleanHtml = cleanHtml.replace(/<head([^>]*)>/i, `<head$1>${noindex}${killOverlay}`)
+    } else {
+      cleanHtml = `${noindex}${killOverlay}${cleanHtml}`
+    }
+    // Append tracking script before </body> or at end
+    if (/<\/body>/i.test(cleanHtml)) {
+      cleanHtml = cleanHtml.replace(/<\/body>/i, `${trackScript}</body>`)
+    } else {
+      cleanHtml += trackScript
+    }
+
+    // Serve inside a sandboxed iframe to prevent XSS from siteHtml accessing parent cookies/session
     return (
       <html lang="en">
-        <head dangerouslySetInnerHTML={{ __html: headContent + killOverlay }} />
-        <body dangerouslySetInnerHTML={{ __html: bodyContent + trackScript }} />
+        <head>
+          <meta name="robots" content="noindex, nofollow" />
+        </head>
+        <body style={{ margin: 0, padding: 0, overflow: 'hidden' }}>
+          <iframe
+            srcDoc={cleanHtml}
+            sandbox="allow-scripts allow-same-origin"
+            style={{ width: '100%', height: '100vh', border: 'none' }}
+            title={`Preview for ${lead.companyName}`}
+          />
+        </body>
       </html>
     )
   }
@@ -62,6 +83,7 @@ export default async function PreviewPage({ params }: { params: { id: string } }
       <head>
         <title>{lead.companyName} | Professional Services</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="noindex, nofollow" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />

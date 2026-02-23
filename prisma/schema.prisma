@@ -170,6 +170,8 @@ model Lead {
   dialerCalls            DialerCall[]             @relation("DialerCalls")
   upsellTags             UpsellTag[]              @relation("LeadUpsellTags")
   callbackSchedules      CallbackSchedule[]       @relation("LeadCallbacks")
+  siteEditVersion        Int                      @default(0) @map("site_edit_version")
+  siteVersions           SiteVersion[]
 
   @@index([status])
   @@index([assignedToId])
@@ -1440,4 +1442,17 @@ model CallbackSchedule {
 
   @@index([repId, status, scheduledAt])
   @@map("callback_schedules")
+}
+
+model SiteVersion {
+  id        String   @id @default(cuid())
+  leadId    String   @map("lead_id")
+  html      String
+  source    String   // "manual_save" | "pre_regenerate" | "pre_rebuild" | "ai_edit"
+  version   Int
+  createdAt DateTime @default(now()) @map("created_at")
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, version])
+  @@map("site_versions")
 }

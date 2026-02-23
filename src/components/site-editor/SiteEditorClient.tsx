@@ -35,6 +35,7 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
   const [snapshotError, setSnapshotError] = useState<string | null>(null)
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
+  const [siteVersion, setSiteVersion] = useState(0)
 
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
   const htmlRef = useRef(html)
@@ -86,6 +87,7 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
         if (loadData.html) {
           setHtml(loadData.html)
           setOriginalHtml(loadData.html)
+          if (typeof loadData.version === 'number') setSiteVersion(loadData.version)
           setIsLoading(false)
           return
         }
@@ -128,13 +130,18 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
       const res = await fetch(`/api/site-editor/${props.leadId}/save`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html: htmlToSave }),
+        body: JSON.stringify({ html: htmlToSave, expectedVersion: siteVersion }),
       })
       const data = await res.json()
       if (res.ok && data.success) {
         setSaveStatus('saved')
         setLastSavedAt(new Date().toLocaleTimeString())
-        console.log(`[Save] Confirmed: ${data.size} chars saved at ${data.savedAt}`)
+        if (typeof data.version === 'number') setSiteVersion(data.version)
+        console.log(`[Save] Confirmed: ${data.size} chars saved at ${data.savedAt} (v${data.version})`)
+      } else if (res.status === 409) {
+        setSaveStatus('error')
+        alert('Version conflict — someone else saved while you were editing. Please reload the page to get the latest version.')
+        console.error('[Save] Version conflict:', data)
       } else {
         setSaveStatus('error')
         console.error('[Save] Failed:', data.error)
@@ -151,6 +158,7 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
               if (d.success) {
                 setSaveStatus('saved')
                 setLastSavedAt(new Date().toLocaleTimeString())
+                if (typeof d.version === 'number') setSiteVersion(d.version)
               }
             }).catch(err => console.warn('[SiteEditor] Auto-save failed:', err))
           }
@@ -159,7 +167,7 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
     } catch {
       setSaveStatus('error')
     }
-  }, [props.leadId])
+  }, [props.leadId, siteVersion])
 
   // Debounced auto-save (3 second delay)
   const handleHtmlChange = useCallback((newHtml: string) => {
@@ -215,16 +223,18 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
   }, [saveHtml])
 
   const handleRegenerate = useCallback(async () => {
-    if (!confirm('Regenerate from template? This will replace the current HTML with a fresh snapshot.')) return
+    if (!confirm('Regenerate from template? This will replace the current HTML with a fresh snapshot. A backup of your current version will be saved.')) return
     setIsRegenerating(true)
     try {
-      // Clear siteHtml first so snapshot route generates fresh
-      await fetch(`/api/site-editor/${props.leadId}/save`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html: '' }),
-      })
-      // Force regenerate
+      // Save a backup of the current HTML before regenerating
+      if (htmlRef.current && htmlRef.current.length > 100) {
+        await fetch(`/api/site-editor/${props.leadId}/save-version`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ html: htmlRef.current, source: 'pre_regenerate' }),
+        })
+      }
+      // Force regenerate (snapshot route handles generating fresh HTML)
       const res = await fetch(`/api/site-editor/${props.leadId}/snapshot`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -234,7 +244,10 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
       if (res.ok && data.html) {
         setHtml(data.html)
         setOriginalHtml(data.html)
-        setSaveStatus('saved')
+        setSaveStatus('unsaved')
+        // Auto-save the new snapshot
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = setTimeout(() => saveHtml(data.html), 1000)
       } else {
         alert(data.error || 'Failed to regenerate snapshot')
       }
@@ -243,7 +256,7 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
     } finally {
       setIsRegenerating(false)
     }
-  }, [props.leadId])
+  }, [props.leadId, saveHtml])
 
   const handleReset = useCallback(() => {
     if (confirm('Reset to original HTML? Your changes will be lost.')) {

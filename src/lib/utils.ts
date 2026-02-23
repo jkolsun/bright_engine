@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { randomBytes } from 'crypto'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -82,8 +83,8 @@ export function getTimezoneFromState(state: string): string {
 }
 
 export function generatePreviewId(): string {
-  // Generate unique preview ID
-  return `prv_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+  // Generate cryptographically random preview ID (not guessable)
+  return `prv_${randomBytes(16).toString('hex')}`
 }
 
 export function parseWebsite(website: string): string {

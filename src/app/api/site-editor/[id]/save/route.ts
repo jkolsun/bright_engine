@@ -29,6 +29,7 @@ export async function GET(
         buildStep: true,
         previewId: true,
         siteHtml: true,
+        siteEditVersion: true,
         buildReadinessScore: true,
       },
     })
@@ -55,6 +56,7 @@ export async function GET(
       previewId: lead.previewId,
       hasHtml: !!cleanHtml,
       html: cleanHtml,
+      version: lead.siteEditVersion,
     })
   } catch (error) {
     console.error('[Site Editor Load] Error:', error)
@@ -78,7 +80,7 @@ export async function PUT(
     }
 
     const { id } = await context.params
-    const { html } = await request.json()
+    const { html, expectedVersion } = await request.json()
 
     if (typeof html !== 'string') {
       return NextResponse.json({ error: 'HTML content required' }, { status: 400 })
@@ -91,20 +93,32 @@ export async function PUT(
 
     const lead = await prisma.lead.findUnique({
       where: { id },
-      select: { id: true, buildStep: true },
+      select: { id: true, buildStep: true, siteEditVersion: true },
     })
 
     if (!lead) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     }
 
+    // Optimistic locking: if caller sends expectedVersion, reject if it doesn't match
+    if (typeof expectedVersion === 'number' && expectedVersion !== lead.siteEditVersion) {
+      return NextResponse.json({
+        error: 'Version conflict — someone else saved while you were editing. Please reload.',
+        currentVersion: lead.siteEditVersion,
+        expectedVersion,
+      }, { status: 409 })
+    }
+
+    const newVersion = lead.siteEditVersion + 1
+
     const updated = await prisma.lead.update({
       where: { id },
       data: {
         siteHtml: html,
+        siteEditVersion: newVersion,
         buildStep: lead.buildStep === 'QA_REVIEW' ? 'EDITING' : lead.buildStep,
       },
-      select: { id: true, siteHtml: true },
+      select: { id: true, siteHtml: true, siteEditVersion: true },
     })
 
     // Verify the save actually committed — strict length check
@@ -113,7 +127,12 @@ export async function PUT(
       return NextResponse.json({ error: 'Save verification failed — please try again' }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, savedAt: new Date().toISOString(), size: updated.siteHtml.length })
+    return NextResponse.json({
+      success: true,
+      savedAt: new Date().toISOString(),
+      size: updated.siteHtml.length,
+      version: updated.siteEditVersion,
+    })
   } catch (error) {
     console.error('[Save] Error:', error)
     return NextResponse.json({ error: 'Failed to save' }, { status: 500 })

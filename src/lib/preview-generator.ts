@@ -1,4 +1,5 @@
 import { prisma } from './db'
+import { generatePreviewId } from './utils'
 
 /**
  * Preview Generation Service
@@ -64,7 +65,7 @@ export async function generatePreview(
   }
 
   // Generate new preview ID only if none exists
-  const previewId = `prv_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
+  const previewId = generatePreviewId()
 
   // Build preview URL (must be live and accessible)
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
+import { saveSiteVersion } from '@/lib/site-versioning'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +50,11 @@ export async function POST(
         hasEdits: true,
         htmlSize: lead.siteHtml.length,
       }, { status: 409 })
+    }
+
+    // Save a version backup before destroying siteHtml
+    if (lead.siteHtml && lead.siteHtml.length > 100) {
+      await saveSiteVersion(lead.id, lead.siteHtml, 'pre_rebuild')
     }
 
     // Clear cached siteHtml and reset build timing
