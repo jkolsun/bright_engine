@@ -38,14 +38,35 @@ export async function POST(request: NextRequest) {
     const validRows = parsedLeads.filter(p => p.isValid)
     const created: { id: string; name: string; company: string }[] = []
     let skipped = 0
+    const batchPhones = new Set<string>()
 
     for (const row of validRows) {
-      // Check for duplicates
+      // Normalize phone for comparison (last 10 digits)
+      const normalizedPhone = row.phone?.replace(/\D/g, '').slice(-10) || ''
+
+      // Check intra-batch duplicate
+      if (normalizedPhone && batchPhones.has(normalizedPhone)) {
+        skipped++
+        continue
+      }
+
+      // Build phone variants for broader matching
+      const phoneVariants: string[] = []
+      if (row.phone) {
+        phoneVariants.push(row.phone)
+        if (normalizedPhone.length === 10) {
+          phoneVariants.push(`+1${normalizedPhone}`)
+          phoneVariants.push(`1${normalizedPhone}`)
+          phoneVariants.push(normalizedPhone)
+        }
+      }
+
+      // Check for duplicates in database
       const existing = await prisma.lead.findFirst({
         where: {
           OR: [
             ...(row.email ? [{ email: row.email }] : []),
-            ...(row.phone ? [{ phone: row.phone }] : []),
+            ...(phoneVariants.length > 0 ? [{ phone: { in: phoneVariants } }] : []),
           ],
         },
       })
@@ -54,6 +75,8 @@ export async function POST(request: NextRequest) {
         skipped++
         continue
       }
+
+      if (normalizedPhone) batchPhones.add(normalizedPhone)
 
       const lead = await prisma.lead.create({
         data: {

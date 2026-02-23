@@ -144,18 +144,54 @@ export async function DELETE(
       )
     }
 
-    // Soft delete: mark as INACTIVE
+    // 1. Reassign active leads back to unassigned pool
+    const terminalStatuses = ['CLOSED_LOST', 'DO_NOT_CONTACT', 'PAID']
+    const reassigned = await prisma.lead.updateMany({
+      where: {
+        assignedToId: userId,
+        status: { notIn: terminalStatuses as any },
+      },
+      data: { assignedToId: null },
+    })
+
+    // Also unassign owned leads
+    const ownedReassigned = await prisma.lead.updateMany({
+      where: {
+        ownerRepId: userId,
+        status: { notIn: terminalStatuses as any },
+      },
+      data: { ownerRepId: null },
+    })
+
+    const totalReassigned = reassigned.count + ownedReassigned.count
+
+    // 2. End any active dialer sessions
+    await prisma.dialerSessionNew.updateMany({
+      where: { repId: userId, isActive: true },
+      data: { isActive: false, endedAt: new Date() },
+    })
+
+    // 3. Soft delete: mark as INACTIVE
     const updated = await prisma.user.update({
       where: { id: userId },
+      data: { status: 'INACTIVE' },
+    })
+
+    // 4. Create admin notification
+    await prisma.notification.create({
       data: {
-        status: 'INACTIVE'
-      }
+        type: 'DAILY_AUDIT',
+        title: 'Rep Deactivated',
+        message: `Rep ${user.name} deactivated — ${totalReassigned} leads returned to unassigned pool`,
+        metadata: { userId, repName: user.name, leadsReassigned: totalReassigned },
+      },
     })
 
     return NextResponse.json({
       success: true,
-      message: 'User deleted successfully',
-      user: updated
+      message: `User deactivated. ${totalReassigned} leads returned to unassigned pool.`,
+      user: updated,
+      leadsReassigned: totalReassigned,
     })
   } catch (error) {
     console.error('Error deleting user:', error)

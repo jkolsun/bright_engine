@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const amountTotal = session.amount_total || 0
-  const amountDollars = amountTotal / 100
+  const amountDollars = Math.round(amountTotal) / 100
 
   console.log(`[Stripe Webhook] checkout.session.completed — session=${session.id}, amount=$${amountDollars}, client_reference_id=${session.client_reference_id}, customer=${session.customer}, email=${session.customer_details?.email}`)
 
@@ -206,6 +206,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const webhookConfig = await getPricingConfig()
   const stripeCustomerId = session.customer ? String(session.customer) : null
 
+  // Build enrichment snapshot from lead data (BUG N.1)
+  const enrichedData: Record<string, unknown> = {}
+  if (lead.enrichedAddress) enrichedData.address = lead.enrichedAddress
+  if (lead.enrichedRating) enrichedData.rating = lead.enrichedRating
+  if (lead.enrichedReviews) enrichedData.reviews = lead.enrichedReviews
+  if (lead.enrichedServices) enrichedData.services = lead.enrichedServices
+  if (lead.enrichedPhotos) enrichedData.photos = lead.enrichedPhotos
+  if (lead.enrichedHours) enrichedData.hours = lead.enrichedHours
+
   const client = await prisma.client.create({
     data: {
       companyName: lead.companyName,
@@ -219,6 +228,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       stripeCustomerId,
       leadId: lead.id,
       repId: lead.ownerRepId || lead.assignedToId,
+      enrichedData: Object.keys(enrichedData).length > 0 ? enrichedData as any : undefined,
+      source: lead.closeEntryPoint || lead.source || null,
+      notes: lead.notes || null,
+      tags: lead.services ? ['website'] : [],
     },
   })
 
@@ -449,7 +462,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   console.log('Processing invoice.payment_succeeded:', invoice.id)
 
   const customerId = invoice.customer as string
-  const amount = (invoice.amount_paid || 0) / 100
+  const amount = Math.round(invoice.amount_paid || 0) / 100
 
   // Find client by Stripe customer ID
   const client = await prisma.client.findUnique({
@@ -577,7 +590,7 @@ function safeParseJSON(str: string | null): Record<string, any> {
 }
 
 async function handleChargeRefunded(charge: Stripe.Charge) {
-  const refundAmount = (charge.amount_refunded || 0) / 100
+  const refundAmount = Math.round(charge.amount_refunded || 0) / 100
   console.log(`[Stripe Webhook] charge.refunded — $${refundAmount}`)
 
   // Find the Revenue record via stripePaymentId
@@ -609,14 +622,14 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
   })
 
   // Find linked commission
-  const commission = await prisma.commission.findFirst({
+  const commission = revenue.clientId ? await prisma.commission.findFirst({
     where: {
       clientId: revenue.clientId,
       amount: { gt: 0 },
       status: { in: ['PENDING', 'APPROVED', 'PAID'] },
     },
     orderBy: { createdAt: 'desc' },
-  })
+  }) : null
 
   if (!commission) {
     console.log('[Stripe Webhook] No commission linked to refunded revenue')

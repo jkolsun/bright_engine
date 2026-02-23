@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     // Dedupe to most recent payment per client
     const latestPerClient = new Map<string, number>()
     for (const r of recentHostingRevenue) {
-      if (!latestPerClient.has(r.clientId)) {
+      if (r.clientId && !latestPerClient.has(r.clientId)) {
         latestPerClient.set(r.clientId, r.amount)
       }
     }

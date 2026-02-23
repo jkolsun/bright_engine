@@ -15,6 +15,46 @@ import TeamTab from './_tabs/TeamTab'
 import ApiKeysTab from './_tabs/ApiKeysTab'
 import DiagnosticsTab from './_tabs/DiagnosticsTab'
 
+// ── Settings Table Key Registry (BUG 15.1 audit) ──
+// All Settings keys stored in the `settings` table (key → value Json):
+//
+// COMPANY & CONFIG:
+//   company_info        → Company name, phone, address (used in notifications.ts)
+//   globalAutoPush      → Auto-push toggle for build pipeline (build-status, close-engine, post-client)
+//   products            → Product catalog (system-test)
+//   payment_links       → Stripe payment link URLs (settings/payment-links)
+//
+// AI & MESSAGING:
+//   ai_handler          → AI handler config: escalation triggers, autonomy (close-engine, twilio webhook, ai-settings)
+//   smart_chat          → SmartChat batching config (smart-chat, message-batcher)
+//   automated_messages  → Automated message templates (automated-messages)
+//   system_messages     → System message templates (system-messages)
+//   email_templates     → Email template overrides (resend)
+//   close_engine_scenarios → Close engine conversation scenarios (close-engine-prompts)
+//   channel_routing     → Channel routing rules: SMS vs email logic (channel-router)
+//
+// INSTANTLY / OUTBOUND:
+//   instantly_campaigns → Cached Instantly campaign data (instantly, distribution, store-campaigns)
+//   instantly_webhook   → Instantly webhook config (instantly)
+//
+// SEQUENCES & RETENTION:
+//   client_sequences    → Client retention sequences (retention-messages, worker, upsell-products)
+//   onboarding_flow     → Onboarding flow config (onboarding)
+//
+// REP MANAGEMENT:
+//   targets             → Global sales targets (rep-config)
+//   rep_targets         → Per-rep target overrides (rep-config)
+//   personalization     → Rep personalization settings (rep-config)
+//   rep_onboarding_enabled → Rep onboarding gate toggle (auth/me)
+//   call_guide_content  → Call guide markdown content (settings/call-guide)
+//   defaultVoicemailUrl → Default voicemail URL (settings/voicemail)
+//
+// SECURITY:
+//   api_keys            → Encrypted API keys (api-keys)
+//
+// NOTE: No overlap found between Settings table keys and direct model fields.
+// Each key is unique to its purpose and only stored in the Settings table.
+
 // ── Types ──
 type TabId = 'company' | 'communication' | 'targets' | 'team' | 'api' | 'diagnostics'
 

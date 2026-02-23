@@ -89,25 +89,45 @@ export async function POST(request: NextRequest) {
       const emails = validRows.map(r => r.parsed.email).filter(Boolean)
       const phones = validRows.map(r => r.parsed.phone).filter(Boolean)
 
+      // Build normalized phone variants for broader matching
+      const phoneVariants: string[] = []
+      for (const p of phones) {
+        const digits = p.replace(/\D/g, '')
+        phoneVariants.push(p)
+        if (digits.length >= 10) {
+          phoneVariants.push(`+1${digits.slice(-10)}`)
+          phoneVariants.push(`1${digits.slice(-10)}`)
+          phoneVariants.push(digits.slice(-10))
+        }
+      }
+      const uniquePhoneVariants = [...new Set(phoneVariants)]
+
       const existingLeads = await prisma.lead.findMany({
         where: {
           OR: [
             ...(emails.length > 0 ? [{ email: { in: emails } }] : []),
-            ...(phones.length > 0 ? [{ phone: { in: phones } }] : []),
+            ...(uniquePhoneVariants.length > 0 ? [{ phone: { in: uniquePhoneVariants } }] : []),
           ],
         },
         select: { email: true, phone: true },
       })
 
       const existingEmails = new Set(existingLeads.map(l => l.email?.toLowerCase()).filter(Boolean))
-      const existingPhones = new Set(existingLeads.map(l => l.phone).filter(Boolean))
+      const existingPhones = new Set(existingLeads.map(l => l.phone?.replace(/\D/g, '').slice(-10)).filter(Boolean))
+
+      // Track phones seen within this batch to prevent intra-batch duplicates
+      const batchPhones = new Set<string>()
 
       // Filter out duplicates
       const newRows = validRows.filter(row => {
+        const normalizedPhone = row.parsed.phone?.replace(/\D/g, '').slice(-10) || ''
         const isDuplicate = (row.parsed.email && existingEmails.has(row.parsed.email.toLowerCase())) ||
-                           (row.parsed.phone && existingPhones.has(row.parsed.phone))
+                           (normalizedPhone && existingPhones.has(normalizedPhone)) ||
+                           (normalizedPhone && batchPhones.has(normalizedPhone))
         if (isDuplicate) {
           skippedLeads.push({ firstName: row.parsed.firstName, companyName: row.parsed.companyName, email: row.parsed.email, reason: 'Already exists' })
+        } else if (normalizedPhone) {
+          batchPhones.add(normalizedPhone)
         }
         return !isDuplicate
       })

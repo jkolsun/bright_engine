@@ -46,13 +46,11 @@ model User {
   inboundVmApproved        Boolean                   @default(false) @map("inbound_vm_approved")
   activities               Activity[]
   callScorings             CallScoring[]             @relation("RepScoring")
-  calls                    Call[]                    @relation("RepCalls")
   channelPerformance       ChannelPerformance[]
   clawdbotActivities       ClawdbotActivity[]
   clientsAsRep             Client[]                  @relation("ClientRep")
   closeEngineConversations CloseEngineConversation[] @relation("CloseEngineRep")
   commissions              Commission[]
-  dialerSessions           DialerSession[]           @relation("DialerSessions")
   assignedLeads            Lead[]                    @relation("AssignedLeads")
   messages                 Message[]
   outboundEvents           OutboundEvent[]           @relation("RepOutboundEvents")
@@ -151,7 +149,6 @@ model Lead {
   ownerRepId             String?                  @map("owner_rep_id")
   activities             Activity[]
   buildStatus            BuildStatus?
-  calls                  Call[]
   clawdbotActivities     ClawdbotActivity[]
   client                 Client?
   closeConversation      CloseEngineConversation?
@@ -266,6 +263,8 @@ model Client {
   vercelDomainId       String?            @map("vercel_domain_id")
   onboardingData       Json?              @map("onboarding_data")
   onboardingStep       Int                @default(0) @map("onboarding_step")
+  enrichedData         Json?              @map("enriched_data")
+  source               String?
   clawdbotActivities   ClawdbotActivity[]
   analytics            ClientAnalytics?
   lead                 Lead?              @relation(fields: [leadId], references: [id], onDelete: Cascade)
@@ -304,6 +303,10 @@ model ClientAnalytics {
   @@map("client_analytics")
 }
 
+// Message ownership rules:
+// - Pre-client messages (close engine): leadId is set, clientId is null
+// - Post-client messages: clientId is set, leadId may also be set for cross-reference
+// - Queries should filter by the appropriate ID based on context
 model Message {
   id               String           @id @default(cuid())
   leadId           String?          @map("lead_id")
@@ -409,7 +412,7 @@ model Commission {
 
 model Revenue {
   id              String        @id @default(cuid())
-  clientId        String        @map("client_id")
+  clientId        String?       @map("client_id")
   type            RevenueType
   product         String?
   amount          Float
@@ -417,7 +420,7 @@ model Revenue {
   stripePaymentId String?       @unique @map("stripe_payment_id")
   status          PaymentStatus @default(PENDING)
   createdAt       DateTime      @default(now()) @map("created_at")
-  client          Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client          Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   @@index([clientId])
   @@index([type])
@@ -638,38 +641,6 @@ model InstantlySyncChange {
   @@map("instantly_sync_changes")
 }
 
-model Call {
-  id                 String    @id @default(cuid())
-  leadId             String    @map("lead_id")
-  repId              String    @map("rep_id")
-  twilioCallSid      String?   @map("twilio_call_sid")
-  conferenceSid      String?   @map("conference_sid")
-  direction          String    @default("outbound")
-  status             String    @default("initiated")
-  outcome            String?
-  durationSeconds    Int?      @map("duration_seconds")
-  notes              String?
-  callbackDate       DateTime? @map("callback_date")
-  autoTexted         Boolean   @default(false) @map("auto_texted")
-  previewSent        Boolean   @default(false) @map("preview_sent")
-  previewOpened      Boolean   @default(false) @map("preview_opened")
-  previewTimeSeconds Int?      @map("preview_time_seconds")
-  paymentLinkSent    Boolean   @default(false) @map("payment_link_sent")
-  paidOnCall         Boolean   @default(false) @map("paid_on_call")
-  dialBatchId        String?   @map("dial_batch_id")
-  lineNumber         Int?      @map("line_number")
-  createdAt          DateTime  @default(now()) @map("created_at")
-  lead               Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  rep                User      @relation("RepCalls", fields: [repId], references: [id])
-
-  @@index([leadId])
-  @@index([repId])
-  @@index([status])
-  @@index([createdAt])
-  @@index([dialBatchId])
-  @@map("calls")
-}
-
 model CallScoring {
   id                String   @id @default(cuid())
   repId             String   @map("rep_id")
@@ -703,25 +674,6 @@ model DoNotCall {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("do_not_call")
-}
-
-model DialerSession {
-  id              String    @id @default(cuid())
-  repId           String    @map("rep_id")
-  mode            String    @default("power")
-  linesPerDial    Int       @default(3) @map("lines_per_dial")
-  status          String    @default("active")
-  totalDials      Int       @default(0) @map("total_dials")
-  totalConnects   Int       @default(0) @map("total_connects")
-  totalInterested Int       @default(0) @map("total_interested")
-  totalPreviews   Int       @default(0) @map("total_previews")
-  startedAt       DateTime  @default(now()) @map("started_at")
-  endedAt         DateTime? @map("ended_at")
-  rep             User      @relation("DialerSessions", fields: [repId], references: [id])
-
-  @@index([repId])
-  @@index([status])
-  @@map("dialer_sessions")
 }
 
 model InstantlyDailyReport {

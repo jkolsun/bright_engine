@@ -258,7 +258,7 @@ export async function generateReferralReward(
       .filter((r) => !r.product?.startsWith('referral_reward'))
       .reduce((sum, r) => sum + r.amount, 0) / 12
 
-    const rewardAmount = Math.min(monthlyValue, 500)
+    const rewardAmount = Math.round(Math.min(monthlyValue, 500) * 100) / 100
 
     // Create reward record (store as UPSELL type with product identifier)
     const reward = await prisma.revenue.create({

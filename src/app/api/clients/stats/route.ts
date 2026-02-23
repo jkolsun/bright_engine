@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
     })
     const latestPerClient = new Map<string, number>()
     for (const r of recentPaidRevenue) {
-      if (!latestPerClient.has(r.clientId)) {
+      if (r.clientId && !latestPerClient.has(r.clientId)) {
         latestPerClient.set(r.clientId, r.amount)
       }
     }

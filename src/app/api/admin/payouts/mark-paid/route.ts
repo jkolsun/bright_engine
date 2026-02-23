@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Validate net amount is positive
-    const netAmount = commissions.reduce((sum, c) => sum + c.amount, 0)
+    const netAmount = Math.round(commissions.reduce((sum, c) => sum + c.amount, 0) * 100) / 100
     if (netAmount <= 0) {
       return NextResponse.json(
         { error: 'Net payout amount must be positive. Rep has outstanding clawbacks.' },
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     ])
 
     // 8. Notify rep
-    const totalPaid = commissions.reduce((sum, c) => sum + c.amount, 0)
+    const totalPaid = Math.round(commissions.reduce((sum, c) => sum + c.amount, 0) * 100) / 100
     const repName = commissions[0]?.rep?.name || 'Rep'
     await prisma.notification.create({
       data: {
