@@ -182,7 +182,6 @@ model Lead {
   @@index([instantlyStatus])
   @@index([instantlyCampaignId, instantlyStatus])
   @@index([instantlyCampaignId, replySentiment])
-  @@index([personalization])
   @@index([previewUrl])
   @@index([buildStep])
   @@index([ownerRepId])
