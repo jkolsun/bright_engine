@@ -12,12 +12,33 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { callId, notes } = await request.json()
-    if (!callId || typeof notes !== 'string') {
-      return NextResponse.json({ error: 'callId and notes are required' }, { status: 400 })
+    const { callId, leadId, notes } = await request.json()
+
+    if (typeof notes !== 'string') {
+      return NextResponse.json({ error: 'notes is required' }, { status: 400 })
     }
-    const result = await updateCallNotes(callId, notes)
-    return NextResponse.json(result)
+
+    // If callId provided, save to DialerCall.notes (existing behavior)
+    if (callId) {
+      const result = await updateCallNotes(callId, notes)
+      return NextResponse.json(result)
+    }
+
+    // If only leadId provided, save as a LeadEvent (pre-call note)
+    if (leadId) {
+      const { prisma } = await import('@/lib/db')
+      await prisma.leadEvent.create({
+        data: {
+          leadId,
+          eventType: 'REP_NOTE',
+          actor: `rep:${session.userId}`,
+          metadata: { text: notes, source: 'dialer_notes' },
+        },
+      })
+      return NextResponse.json({ success: true })
+    }
+
+    return NextResponse.json({ error: 'callId or leadId is required' }, { status: 400 })
   } catch (err) {
     console.error('[Dialer] Update notes error:', err)
     return NextResponse.json({ error: 'Failed to update notes' }, { status: 500 })

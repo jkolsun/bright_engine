@@ -20,19 +20,28 @@ export function LeadCard() {
     )
   }
 
-  const showDisposition = currentCall && ['COMPLETED', 'VOICEMAIL', 'NO_ANSWER', 'BUSY', 'FAILED'].includes(currentCall.status)
+  // Show disposition during active call AND after call ends
+  const isOnCall = !!currentCall && ['INITIATED', 'RINGING', 'CONNECTED'].includes(currentCall.status)
+  const callEnded = !!currentCall && ['COMPLETED', 'VOICEMAIL', 'NO_ANSWER', 'BUSY', 'FAILED'].includes(currentCall.status)
+  const showDisposition = isOnCall || callEnded
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-6 space-y-4 overflow-y-auto">
       <LeadInfo lead={lead} />
       <QuickStats lead={lead} />
       <div className="grid grid-cols-2 gap-4">
         <PreviewButton lead={lead} />
         <UpsellTags leadId={lead.id} />
       </div>
-      <LiveFeed />
-      {showDisposition && <DispositionTree />}
+
+      {/* Notes — ALWAYS visible (before, during, after call) */}
       <CallNotes />
+
+      {/* Disposition — visible during and after call */}
+      {showDisposition && <DispositionTree />}
+
+      {/* Live Feed — always visible */}
+      <LiveFeed />
     </div>
   )
 }

@@ -1,5 +1,5 @@
 'use client'
-import { createContext, useContext, useEffect, useCallback, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useCallback, useState, useRef, type ReactNode } from 'react'
 import { useCallTimer } from '@/hooks/useCallTimer'
 import { useDialerSession } from '@/hooks/useDialerSession'
 import { useTwilioDevice } from '@/hooks/useTwilioDevice'
@@ -60,18 +60,22 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     }
   }, [sessionHook.session?.id])
 
-  // SSE listeners for call status updates
+  // Ref to avoid stale closure on currentCall inside SSE callback
+  const currentCallRef = useRef<DialerCall | null>(null)
+  useEffect(() => { currentCallRef.current = currentCall }, [currentCall])
+
+  // SSE listeners for call status updates — subscribe ONCE, use ref for current state
   useEffect(() => {
-    if (!sse.connected) return
     const unsub = sse.on('CALL_STATUS', (data: any) => {
-      if (currentCall && data.callId === currentCall.id) {
+      const call = currentCallRef.current
+      if (call && data.callId === call.id) {
         setCurrentCall(prev => prev ? { ...prev, status: data.status, amdResult: data.amdResult } : null)
-        if (data.status === 'CONNECTED' && !timer.isRunning) timer.start()
+        if (data.status === 'CONNECTED') timer.start()
         if (['COMPLETED', 'FAILED', 'NO_ANSWER', 'BUSY'].includes(data.status)) timer.stop()
       }
     })
     return unsub
-  }, [sse.connected, currentCall?.id])
+  }, [])  // Empty deps — subscribe once on mount, never re-subscribe
 
   const dial = useCallback(async (leadId: string, phone?: string) => {
     if (!sessionHook.session) return
@@ -86,9 +90,25 @@ export function DialerProvider({ children }: { children: ReactNode }) {
 
     setCurrentCall({ id: data.callId, leadId, repId: '', status: 'INITIATED', direction: 'OUTBOUND', startedAt: new Date().toISOString(), wasRecommended: false, previewSentDuringCall: false, previewOpenedDuringCall: false, ctaClickedDuringCall: false, vmDropped: false } as any)
 
-    // Connect via Twilio SDK
-    await twilioDevice.makeCall({ To: data.phoneToCall, leadId, callId: data.callId })
+    // Connect via Twilio SDK — makeCall returns the Call object (verified in useTwilioDevice.ts)
+    const call = await twilioDevice.makeCall({ To: data.phoneToCall, leadId, callId: data.callId })
     timer.reset()
+
+    // Fallback: start timer from local Twilio SDK events (instant, no server roundtrip)
+    if (call) {
+      call.on('accept', () => {
+        setCurrentCall(prev => prev ? { ...prev, status: 'CONNECTED' } : null)
+        timer.start()
+      })
+      call.on('disconnect', () => {
+        setCurrentCall(prev => prev ? { ...prev, status: 'COMPLETED' } : null)
+        timer.stop()
+      })
+      call.on('cancel', () => {
+        setCurrentCall(prev => prev ? { ...prev, status: 'FAILED' } : null)
+        timer.stop()
+      })
+    }
   }, [sessionHook.session, twilioDevice])
 
   const hangup = useCallback(async () => {
