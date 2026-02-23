@@ -985,43 +985,73 @@ function CommissionsSection() {
 function RepScriptsSection() {
   const { rawSettings, settingsLoaded, saveSetting, savingKey, savedKey } = useSettingsContext()
 
-  const [callScript, setCallScript] = useState(DEFAULT_PERSONALIZATION.defaultCallScript)
+  const [script, setScript] = useState('')
+  const [sellingPoints, setSellingPoints] = useState('')
+  const [objections, setObjections] = useState('')
+  const [upsells, setUpsells] = useState('')
 
   useEffect(() => {
     if (!settingsLoaded) return
-    if (rawSettings.personalization && typeof rawSettings.personalization === 'object') {
-      setCallScript(rawSettings.personalization.defaultCallScript ?? DEFAULT_PERSONALIZATION.defaultCallScript)
+    const guide = rawSettings.call_guide_content
+    if (guide && typeof guide === 'object') {
+      setScript(guide.script ?? '')
+      setSellingPoints(guide.sellingPoints ?? '')
+      setObjections(guide.objections ?? '')
+      setUpsells(guide.upsells ?? '')
     }
-  }, [settingsLoaded, rawSettings.personalization])
+  }, [settingsLoaded, rawSettings.call_guide_content])
 
   const handleSave = () => {
-    // Save to 'personalization' key to maintain backwards compat with rep-config API
-    const current = rawSettings.personalization && typeof rawSettings.personalization === 'object'
-      ? rawSettings.personalization
-      : DEFAULT_PERSONALIZATION
-    saveSetting('personalization', { ...current, defaultCallScript: callScript })
+    saveSetting('call_guide_content', { script, sellingPoints, objections, upsells })
   }
 
   return (
-    <AccordionSection title="Rep Scripts" description="Default call script shown to reps in the dialer">
+    <AccordionSection title="Rep Scripts" description="Call script, selling points, and objection handling shown to reps in the dialer">
       <div className="space-y-4 pt-4">
         <div>
           <FieldLabel>Call Script</FieldLabel>
           <textarea
-            value={callScript}
-            onChange={(e) => setCallScript(e.target.value)}
-            className="w-full h-80 p-4 border rounded-lg font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Enter your call script..."
+            value={script}
+            onChange={(e) => setScript(e.target.value)}
+            className="w-full h-48 p-4 border rounded-lg font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Hi {{firstName}}, this is [Rep Name] with Bright Engine..."
           />
-          <p className="text-xs text-gray-400 mt-1">
-            Available variables: {'{{firstName}}'}, {'{{companyName}}'}, {'{{industry}}'}, {'{{location}}'}
-          </p>
         </div>
+        <div>
+          <FieldLabel>Selling Points</FieldLabel>
+          <textarea
+            value={sellingPoints}
+            onChange={(e) => setSellingPoints(e.target.value)}
+            className="w-full h-32 p-4 border rounded-lg font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="• Professional website built in 48 hours&#10;• No upfront cost — just $199/mo&#10;• We handle everything: hosting, updates, SEO"
+          />
+        </div>
+        <div>
+          <FieldLabel>Common Objections</FieldLabel>
+          <textarea
+            value={objections}
+            onChange={(e) => setObjections(e.target.value)}
+            className="w-full h-32 p-4 border rounded-lg font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="&quot;I already have a website&quot; → Great! We can review it and show you where you're leaving money on the table...&#10;&#10;&quot;I'm not interested&quot; → Totally understand. Quick question — are you getting new customers from Google right now?"
+          />
+        </div>
+        <div>
+          <FieldLabel>Upsell Opportunities</FieldLabel>
+          <textarea
+            value={upsells}
+            onChange={(e) => setUpsells(e.target.value)}
+            className="w-full h-24 p-4 border rounded-lg font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="• Google Business Profile optimization&#10;• Monthly SEO package&#10;• Social media integration"
+          />
+        </div>
+        <p className="text-xs text-gray-400">
+          Available variables: {'{{firstName}}'}, {'{{companyName}}'}, {'{{industry}}'}, {'{{city}}'}, {'{{state}}'}
+        </p>
         <div className="flex justify-end">
           <SaveButton
             onClick={handleSave}
-            saving={savingKey === 'personalization'}
-            saved={savedKey === 'personalization'}
+            saving={savingKey === 'call_guide_content'}
+            saved={savedKey === 'call_guide_content'}
           />
         </div>
       </div>
@@ -1124,7 +1154,7 @@ function PhoneAssignmentsSection() {
           <div className="text-center py-6 text-gray-500 text-sm">Loading...</div>
         ) : availableNumbers.length === 0 ? (
           <div className="text-center py-6 text-gray-400 text-sm">
-            No dialer numbers configured. Add TWILIO_DIALER_NUMBER_1/2/3 to your environment variables.
+            No dialer numbers configured. Add TWILIO_REP1_NUMBER_PRIMARY / TWILIO_REP2_NUMBER_PRIMARY to your environment variables.
           </div>
         ) : reps.length === 0 ? (
           <div className="text-center py-6 text-gray-400 text-sm">
