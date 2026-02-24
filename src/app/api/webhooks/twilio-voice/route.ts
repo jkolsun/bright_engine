@@ -83,9 +83,8 @@ export async function POST(request: NextRequest) {
         statusCallbackMethod="POST">
     <Number
       machineDetection="DetectMessageEnd"
-      asyncAmd="true"
-      asyncAmdStatusCallback="${escXml(amdCallbackUrl)}"
-      asyncAmdStatusCallbackMethod="POST"
+      amdStatusCallback="${escXml(amdCallbackUrl)}"
+      amdStatusCallbackMethod="POST"
     >${escXml(to)}</Number>
   </Dial>
 </Response>`
