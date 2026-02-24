@@ -78,7 +78,7 @@ export default function EarningsView() {
       let activeLeads = 0
       let paymentLinksSent = 0
       try {
-        const pipelineRes = await fetch(`/api/dialer/leads?repId=${userId}&limit=500`)
+        const pipelineRes = await fetch(`/api/leads?assignedTo=${userId}&limit=500`)
         if (pipelineRes.ok) {
           const pipelineData = await pipelineRes.json()
           const leads = pipelineData.leads || []

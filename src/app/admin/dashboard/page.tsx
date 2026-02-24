@@ -13,7 +13,7 @@ import {
   Bell,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -23,9 +23,18 @@ export default function DashboardPage() {
   const [notifications, setNotifications] = useState<any[]>([])
   const [hotLeads, setHotLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     loadDashboard()
+
+    refreshIntervalRef.current = setInterval(() => {
+      loadDashboard()
+    }, 30000)
+
+    return () => {
+      if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current)
+    }
   }, [])
 
   const loadDashboard = async () => {

@@ -1221,10 +1221,10 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
   const loadLeadHistory = useCallback(async (leadId: string) => {
     try {
-      const res = await fetch(`/api/dialer/queue?history=${leadId}`)
+      const res = await fetch(`/api/dialer/call/history?leadId=${leadId}`)
       if (res.ok) {
         const data = await res.json()
-        setLeadHistory(data.history || [])
+        setLeadHistory(data.calls || [])
       }
     } catch {
       setLeadHistory([])
@@ -1332,20 +1332,20 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
     if (callPhase !== 'idle' && currentLead?.id) {
       const poll = async () => {
         try {
-          const res = await fetch(`/api/dialer/preview-status?leadId=${currentLead.id}`)
+          const res = await fetch(`/api/dialer/preview/status?leadId=${currentLead.id}`)
           if (res.ok) {
             const data = await res.json()
             setPreviewStatus(prev => {
               // Show live toast when status changes
               if (data.ctaClicked && !prev.ctaClicked) {
                 showToast(`${currentLead.firstName} clicked Get Started!`)
-              } else if (data.opened && !prev.opened) {
+              } else if (data.viewed && !prev.opened) {
                 showToast(`${currentLead.firstName} is viewing the preview!`)
               }
               return {
                 sent: data.sent || prev.sent,
-                opened: data.opened || prev.opened,
-                viewDuration: data.viewDurationSeconds || prev.viewDuration,
+                opened: data.viewed || prev.opened,
+                viewDuration: prev.viewDuration,
                 ctaClicked: data.ctaClicked || prev.ctaClicked,
               }
             })
@@ -1519,12 +1519,13 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
       } else {
         // Full-time: initiate via Twilio API
         try {
-          const dialRes = await fetch('/api/dialer/dial', {
+          const dialRes = await fetch('/api/dialer/call/initiate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              leadIds: [leadToDial.id],
+              leadId: leadToDial.id,
               sessionId,
+              phone: leadToDial.phone,
             }),
           })
           if (dialRes.ok) {
@@ -1602,10 +1603,10 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
     if (callPhase === 'connected') {
       setCallPhase('on_hold')
       try {
-        await fetch('/api/dialer/hold', {
+        await fetch('/api/dialer/call/hold', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ callId: activeCallId, action: 'hold' }),
+          body: JSON.stringify({ callId: activeCallId, hold: true }),
         })
       } catch (err) {
         console.warn('[DialerCore] Hold failed:', err)
@@ -1615,10 +1616,10 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
     } else if (callPhase === 'on_hold') {
       setCallPhase('connected')
       try {
-        await fetch('/api/dialer/hold', {
+        await fetch('/api/dialer/call/hold', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ callId: activeCallId, action: 'resume' }),
+          body: JSON.stringify({ callId: activeCallId, hold: false }),
         })
       } catch (err) {
         console.warn('[DialerCore] Resume failed:', err)
@@ -1633,7 +1634,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
     try {
       if (activeCallId) {
-        await fetch('/api/dialer/hangup', {
+        await fetch('/api/dialer/call/end', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ callId: activeCallId }),
@@ -1758,10 +1759,10 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
           body: JSON.stringify({ notes: noteEntry }),
         })
 
-        await fetch('/api/dialer/note', {
+        await fetch('/api/dialer/call/note', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ leadId: lead.id, text: callNotes.trim() }),
+          body: JSON.stringify({ leadId: lead.id, notes: callNotes.trim() }),
         })
       }
 
@@ -1802,13 +1803,13 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
 
       // 5. Schedule callback if needed
       if (type === 'callback' && extra?.callbackDate) {
-        await fetch('/api/dialer/callback', {
+        await fetch('/api/dialer/callback/schedule', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             callId: activeCallId || undefined,
             leadId: lead.id,
-            callbackDate: `${extra.callbackDate}T${extra.callbackTime || '09:00'}:00`,
+            scheduledAt: `${extra.callbackDate}T${extra.callbackTime || '09:00'}:00`,
             notes: callNotes.trim() || undefined,
           }),
         })

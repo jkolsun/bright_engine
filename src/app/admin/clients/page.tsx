@@ -89,6 +89,7 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [creatingClient, setCreatingClient] = useState(false)
   const [expandedClient, setExpandedClient] = useState<string | null>(null)
   const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set())
   const [selectedClient, setSelectedClient] = useState<any>(null)
@@ -155,6 +156,8 @@ export default function ClientsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (creatingClient) return
+    setCreatingClient(true)
     try {
       const res = await fetch('/api/clients', {
         method: 'POST',
@@ -178,6 +181,8 @@ export default function ClientsPage() {
     } catch (error) {
       console.error('Error creating client:', error)
       alert('Failed to create client: network error')
+    } finally {
+      setCreatingClient(false)
     }
   }
 
@@ -401,7 +406,7 @@ export default function ClientsPage() {
                 </div>
                 <DialogFooter>
                   <Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>Cancel</Button>
-                  <Button type="submit">Create Client</Button>
+                  <Button type="submit" disabled={creatingClient}>{creatingClient ? 'Creating...' : 'Create Client'}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>

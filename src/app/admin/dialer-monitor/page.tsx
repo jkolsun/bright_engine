@@ -66,10 +66,27 @@ export default function DialerMonitorPage() {
 
   const loadLiveStatus = async () => {
     try {
-      const res = await fetch('/api/dialer/live')
+      const res = await fetch('/api/dialer/admin/live')
       if (res.ok) {
         const data = await res.json()
-        setLiveReps(data.reps || [])
+        // Map backend session shape to LiveRep interface
+        const reps: LiveRep[] = (data.sessions || []).map((s: any) => ({
+          repId: s.rep?.id || s.repId,
+          repName: s.rep?.name || 'Unknown',
+          status: 'idle' as const,
+          sessionActive: s.isActive ?? true,
+          currentLead: null,
+          activeCalls: 0,
+          callDuration: 0,
+          todayStats: {
+            dials: s._count?.calls || 0,
+            conversations: 0,
+            closes: 0,
+            previewsSent: 0,
+          },
+          previewStatus: null,
+        }))
+        setLiveReps(reps)
       }
     } catch (e) {
       console.error('Failed to load live status:', e)

@@ -76,7 +76,7 @@ export default async function ClientSitePage(
   const killOverlay = `<style>.fixed.inset-0[class*="z-[9999"]{display:none!important}.fixed.bottom-0[class*="bg-\\[#0D7377"]{display:none!important}</style><script>document.querySelectorAll('div').forEach(function(e){if(e.className&&(e.className.indexOf('z-[9999]')!==-1||(e.className.indexOf('fixed')!==-1&&e.className.indexOf('bg-[#0D7377')!==-1)))e.remove()})</script>`
 
   // Analytics tracking for production sites (increment page views)
-  const trackScript = `<script>(function(){try{fetch('/api/preview/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clientId:'${client.id}',event:'page_view'})})}catch(e){}})()</script>`
+  const trackScript = `<script>(function(){try{fetch('/api/preview/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({previewId:'${client.leadId}',event:'page_view'})})}catch(e){}})()</script>`
 
   return (
     <html lang="en">

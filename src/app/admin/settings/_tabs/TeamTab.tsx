@@ -49,6 +49,7 @@ function RepsSection() {
   const [reps, setReps] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [creatingRep, setCreatingRep] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -130,6 +131,8 @@ function RepsSection() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (creatingRep) return
+    setCreatingRep(true)
     const password = formData.password || generatePassword()
 
     try {
@@ -150,6 +153,8 @@ function RepsSection() {
     } catch (error) {
       console.error('Error creating rep:', error)
       alert('Failed to create rep account')
+    } finally {
+      setCreatingRep(false)
     }
   }
 
@@ -363,7 +368,7 @@ function RepsSection() {
                   <Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit">Create Rep</Button>
+                  <Button type="submit" disabled={creatingRep}>{creatingRep ? 'Creating...' : 'Create Rep'}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>

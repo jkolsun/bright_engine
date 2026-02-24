@@ -10,7 +10,7 @@ import {
   MessageSquare, Clock, CheckCircle, Send, ExternalLink, DollarSign, User,
   Plus, Trash2, UserCheck, Package, RefreshCw
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 interface LeadDetailPageProps {
   params: { id: string }
@@ -37,30 +37,35 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
   const [reassignReason, setReassignReason] = useState('')
   // Commissions
   const [commissions, setCommissions] = useState<any[]>([])
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  const fetchLead = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/leads/${id}`)
+      if (!response.ok) throw new Error('Failed to fetch lead')
+      const data = await response.json()
+      setLead(data.lead)
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load lead')
+      setLead(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [id])
 
   useEffect(() => {
-    const fetchLead = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch(`/api/leads/${id}`)
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch lead')
-        }
-        
-        const data = await response.json()
-        setLead(data.lead)
-        setError(null)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load lead')
-        setLead(null)
-      } finally {
-        setLoading(false)
-      }
-    }
-
+    setLoading(true)
     fetchLead()
-  }, [id])
+
+    refreshIntervalRef.current = setInterval(() => {
+      fetchLead()
+    }, 30000)
+
+    return () => {
+      if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current)
+    }
+  }, [fetchLead])
 
   // Load alternate contacts, reps, and commissions
   useEffect(() => {

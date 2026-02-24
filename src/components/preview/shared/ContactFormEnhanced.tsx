@@ -50,7 +50,7 @@ export default function ContactFormEnhanced({
         body: JSON.stringify({
           previewId,
           event: 'contact_form',
-          data: { name, phone, email, service, timeline, details },
+          metadata: { name, phone, email, service, timeline, details },
         }),
       })
       setSent(true)

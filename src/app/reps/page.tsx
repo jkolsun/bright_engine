@@ -745,7 +745,7 @@ function QueueRow({ icon, color, bg, label, count }: { icon: React.ReactNode, co
 
 function CallbackRow({ call, overdue }: { call: any, overdue?: boolean }) {
   const lead = call.lead || {}
-  const time = call.callbackDate ? new Date(call.callbackDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+  const time = call.scheduledAt ? new Date(call.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
   return (
     <div className={`flex items-center gap-2 py-2 px-3 rounded-xl text-sm mb-1 ${overdue ? 'bg-red-50 border border-red-100' : 'bg-emerald-50 border border-emerald-100'}`}>
       <span className={`font-semibold ${overdue ? 'text-red-700' : 'text-emerald-700'}`}>

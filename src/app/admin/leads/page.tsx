@@ -16,7 +16,7 @@ import {
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { formatPhone } from '@/lib/utils'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   Search, Filter, Plus, Eye, TrendingUp, UserPlus, UserMinus, Users,
   FolderOpen, FolderPlus, ArrowLeft, Target, Mail, MoreVertical, Pencil, Trash2,
@@ -82,6 +82,7 @@ function LeadsPageInner() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [assignDialogOpen, setAssignDialogOpen] = useState(false)
   const [assigning, setAssigning] = useState(false)
+  const [creatingLead, setCreatingLead] = useState(false)
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set())
   const [formData, setFormData] = useState({
     firstName: '',
@@ -124,6 +125,7 @@ function LeadsPageInner() {
   const [expandedLeadEvents, setExpandedLeadEvents] = useState<Record<string, any[]>>({})
   const [expandedLeadData, setExpandedLeadData] = useState<Record<string, any>>({})
   const [refreshing, setRefreshing] = useState(false)
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   // View mode & pagination
   const [viewMode, setViewMode] = useState<'folders' | 'leads'>('folders')
@@ -134,6 +136,14 @@ function LeadsPageInner() {
     fetchLeads()
     fetchReps()
     fetchFolders()
+
+    refreshIntervalRef.current = setInterval(() => {
+      fetchLeads()
+    }, 30000)
+
+    return () => {
+      if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current)
+    }
   }, [])
 
   const fetchLeads = async () => {
@@ -274,6 +284,8 @@ function LeadsPageInner() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (creatingLead) return
+    setCreatingLead(true)
 
     try {
       const cleanData = {
@@ -312,6 +324,8 @@ function LeadsPageInner() {
     } catch (error) {
       console.error('Error creating lead:', error)
       alert('Failed to create lead')
+    } finally {
+      setCreatingLead(false)
     }
   }
 
@@ -890,8 +904,8 @@ function LeadsPageInner() {
                   <Button variant="outline" type="button" onClick={() => setDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit">
-                    Create Lead
+                  <Button type="submit" disabled={creatingLead}>
+                    {creatingLead ? 'Creating...' : 'Create Lead'}
                   </Button>
                 </DialogFooter>
               </form>

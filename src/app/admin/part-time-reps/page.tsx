@@ -124,10 +124,10 @@ export default function PartTimeRepsPage() {
           }
 
           // Count assigned leads
-          const leadsRes = await fetch(`/api/leads?assignedTo=${rep.id}&countOnly=true`)
+          const leadsRes = await fetch(`/api/leads?assignedTo=${rep.id}`)
           if (leadsRes.ok) {
             const data = await leadsRes.json()
-            assignedLeads = data.count || data.leads?.length || 0
+            assignedLeads = data.total || data.leads?.length || 0
           }
         } catch { /* ignore individual rep fetch errors */ }
 
