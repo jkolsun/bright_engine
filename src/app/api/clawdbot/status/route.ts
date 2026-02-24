@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       // Lead stats
       prisma.lead.count(),
       prisma.lead.count({ where: { createdAt: { gte: today } } }),
-      prisma.lead.count({ where: { priority: 'HOT' } }),
+      prisma.lead.count({ where: { status: 'HOT_LEAD' } }),
       
       // Client stats  
       prisma.client.count(),

@@ -56,7 +56,7 @@ export default function RepDetailPage({ params }: RepDetailPageProps) {
   const tasks = rep.repTasks || []
 
   const closedDeals = leads.filter((l: any) => l.status === 'PAID').length
-  const hotLeads = leads.filter((l: any) => l.priority === 'HOT').length
+  const hotLeads = leads.filter((l: any) => l.status === 'HOT_LEAD').length
   const totalCommission = commissions
     .filter((c: any) => c.status !== 'REJECTED')
     .reduce((sum: number, c: any) => sum + (c.amount || 0), 0)
@@ -162,7 +162,7 @@ export default function RepDetailPage({ params }: RepDetailPageProps) {
                       <p className="text-sm text-gray-600">{lead.companyName} - {lead.city}, {lead.state}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      {lead.priority === 'HOT' && <Badge variant="destructive">HOT</Badge>}
+                      {lead.status === 'HOT_LEAD' && <Badge variant="destructive">HOT</Badge>}
                       <LeadStatusBadge status={lead.status} />
                     </div>
                   </div>
