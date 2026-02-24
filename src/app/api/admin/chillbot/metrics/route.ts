@@ -13,100 +13,75 @@ export async function GET(request: NextRequest) {
     }
 
     const now = new Date()
-    const todayStart = new Date(now)
-    todayStart.setHours(0, 0, 0, 0)
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
-    const [
-      totalLeads,
-      leadsByStatus,
-      leadsBySource,
-      leadsLast7Days,
-      leadsLast30Days,
-      totalActiveClients,
-      clientsByStatus,
-      totalMRR,
-      churnedLast30,
-      revenueLast7,
-      revenueLast30,
-      revenueByType,
-      commissionsByStatus,
-      activeReps,
-      messagesLast7Days,
-    ] = await Promise.all([
-      prisma.lead.count(),
+    const totalLeads = await prisma.lead.count()
 
-      prisma.lead.groupBy({
-        by: ['status'],
-        _count: { id: true },
-      }),
+    const leadsByStatus = await prisma.lead.groupBy({
+      by: ['status'],
+      _count: { id: true },
+    })
 
-      prisma.lead.groupBy({
-        by: ['source'],
-        _count: { id: true },
-      }),
+    const leadsBySource = await prisma.lead.groupBy({
+      by: ['source'],
+      _count: { id: true },
+    })
 
-      prisma.lead.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
+    const leadsLast7Days = await prisma.lead.count({ where: { createdAt: { gte: sevenDaysAgo } } })
+    const leadsLast30Days = await prisma.lead.count({ where: { createdAt: { gte: thirtyDaysAgo } } })
 
-      prisma.lead.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+    const totalActiveClients = await prisma.client.count({ where: { hostingStatus: 'ACTIVE' } })
 
-      prisma.client.count({ where: { hostingStatus: 'ACTIVE' } }),
+    const clientsByStatus = await prisma.client.groupBy({
+      by: ['hostingStatus'],
+      _count: { id: true },
+    })
 
-      prisma.client.groupBy({
-        by: ['hostingStatus'],
-        _count: { id: true },
-      }),
+    const totalMRR = await prisma.client.aggregate({
+      _sum: { monthlyRevenue: true },
+      where: { hostingStatus: 'ACTIVE' },
+    })
 
-      prisma.client.aggregate({
-        _sum: { monthlyRevenue: true },
-        where: { hostingStatus: 'ACTIVE' },
-      }),
+    const churnedLast30 = await prisma.client.count({
+      where: {
+        hostingStatus: 'CANCELLED',
+        updatedAt: { gte: thirtyDaysAgo },
+      },
+    })
 
-      prisma.client.count({
-        where: {
-          hostingStatus: { in: ['CANCELLED'] },
-          updatedAt: { gte: thirtyDaysAgo },
-        },
-      }),
+    const revenueLast7 = await prisma.revenue.aggregate({
+      _sum: { amount: true },
+      _count: { id: true },
+      where: { createdAt: { gte: sevenDaysAgo } },
+    })
 
-      prisma.revenue.aggregate({
-        _sum: { amount: true },
-        _count: { id: true },
-        where: { createdAt: { gte: sevenDaysAgo } },
-      }),
+    const revenueLast30 = await prisma.revenue.aggregate({
+      _sum: { amount: true },
+      _count: { id: true },
+      where: { createdAt: { gte: thirtyDaysAgo } },
+    })
 
-      prisma.revenue.aggregate({
-        _sum: { amount: true },
-        _count: { id: true },
-        where: { createdAt: { gte: thirtyDaysAgo } },
-      }),
+    const revenueByType = await prisma.revenue.groupBy({
+      by: ['type'],
+      _sum: { amount: true },
+      _count: { id: true },
+    })
 
-      prisma.revenue.groupBy({
-        by: ['type'],
-        _sum: { amount: true },
-        _count: { id: true },
-      }),
+    const commissionsByStatus = await prisma.commission.groupBy({
+      by: ['status'],
+      _sum: { amount: true },
+      _count: { id: true },
+    })
 
-      prisma.commission.groupBy({
-        by: ['status'],
-        _sum: { amount: true },
-        _count: { id: true },
-      }),
+    const activeReps = await prisma.user.findMany({
+      where: { role: 'REP', status: 'ACTIVE' },
+      select: { id: true, name: true },
+    })
 
-      prisma.user.findMany({
-        where: { role: 'REP', status: 'ACTIVE' },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      }),
-
-      prisma.message.count({
-        where: { createdAt: { gte: sevenDaysAgo } },
-      }),
-    ])
+    const messagesLast7Days = await prisma.message.count({
+      where: { createdAt: { gte: sevenDaysAgo } },
+    })
 
     const paidLeads = leadsByStatus.find((l) => l.status === 'PAID')
     const conversionRate = leadsLast30Days > 0
@@ -159,10 +134,7 @@ export async function GET(request: NextRequest) {
         }, {}),
       },
       reps: {
-        active: activeReps.map((rep) => ({
-          id: rep.id,
-          name: rep.name,
-        })),
+        active: activeReps.map((rep) => ({ id: rep.id, name: rep.name })),
         count: activeReps.length,
       },
       communications: {
