@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
     // Custom params passed from device.connect({ params: { ... } })
     const callId = formData.get('callId') as string | null
     const leadId = formData.get('leadId') as string | null
+    const callerIdParam = formData.get('callerId') as string | null
 
     if (!to) {
       return new Response(
@@ -40,19 +41,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Extract repId from identity (format: "client:rep-{userId}" or "rep-{userId}")
-    const identityMatch = from?.match(/rep-(.+)/)
-    const repId = identityMatch ? identityMatch[1] : null
-
-    // Look up rep's assigned caller ID
-    let callerId = process.env.TWILIO_PHONE_NUMBER || ''
-    if (repId) {
-      const rep = await prisma.user.findUnique({
-        where: { id: repId },
-        select: { twilioNumber1: true },
-      })
-      if (rep?.twilioNumber1) {
-        callerId = rep.twilioNumber1
+    // Use callerId from SDK params (set by number rotation in initiateCall),
+    // fall back to rep lookup if not provided
+    let callerId = callerIdParam || ''
+    if (!callerId) {
+      const identityMatch = from?.match(/rep-(.+)/)
+      const repId = identityMatch ? identityMatch[1] : null
+      callerId = process.env.TWILIO_PHONE_NUMBER || ''
+      if (repId) {
+        const rep = await prisma.user.findUnique({
+          where: { id: repId },
+          select: { twilioNumber1: true },
+        })
+        if (rep?.twilioNumber1) {
+          callerId = rep.twilioNumber1
+        }
       }
     }
 

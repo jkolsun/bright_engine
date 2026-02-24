@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
         { ownerRepId: targetRepId },
         { assignedToId: targetRepId },
       ],
-      status: { notIn: ['CLOSED_LOST', 'DO_NOT_CONTACT'] },
+      status: { notIn: ['CLOSED_LOST', 'DO_NOT_CONTACT', 'PAID'] },
       dncAt: null,
     }
 

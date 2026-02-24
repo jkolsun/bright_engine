@@ -108,6 +108,8 @@ export async function POST(request: NextRequest) {
             ...(emails.length > 0 ? [{ email: { in: emails } }] : []),
             ...(uniquePhoneVariants.length > 0 ? [{ phone: { in: uniquePhoneVariants } }] : []),
           ],
+          // Exclude terminal-status leads so deleted/closed leads don't block reimport
+          status: { notIn: ['CLOSED_LOST', 'DO_NOT_CONTACT', 'PAID'] },
         },
         select: { email: true, phone: true },
       })

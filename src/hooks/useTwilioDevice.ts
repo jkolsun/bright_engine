@@ -67,7 +67,7 @@ export function useTwilioDevice() {
     }
   }, [])
 
-  const makeCall = useCallback(async (params: { To: string; leadId?: string; callId?: string }) => {
+  const makeCall = useCallback(async (params: { To: string; leadId?: string; callId?: string; callerId?: string }) => {
     if (!deviceRef.current) throw new Error('Device not initialized')
     // Kill any lingering SDK call before connecting (auto-dial race condition:
     // SSE says call ended but SDK hasn't fired its internal disconnect yet)

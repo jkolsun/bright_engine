@@ -72,6 +72,10 @@ export function DialerProvider({ children }: { children: ReactNode }) {
   const [bannerUrgent, setBannerUrgent] = useState(false)
   const graceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastCalledLeadIdRef = useRef<string | null>(null)
+  // Track ALL leads called/dispositioned in this session to prevent re-dialing
+  const calledLeadIdsRef = useRef<Set<string>>(new Set())
+  // Guard against duplicate autoDispositionAndChain calls for the same callId
+  const processedCallIdsRef = useRef<Set<string>>(new Set())
   const dialRef = useRef<((leadId: string, phone?: string) => Promise<void>) | null>(null)
   const wasConnectedRef = useRef(false)
   const autoDispositionAndChainRef = useRef<((callId: string, leadId: string, result: string) => Promise<void>) | null>(null)
@@ -104,9 +108,11 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     }
   }, [sessionHook.session])
 
-  // Load queue when session starts
+  // Load queue when session starts — reset tracking sets for fresh session
   useEffect(() => {
     if (sessionHook.session) {
+      calledLeadIdsRef.current = new Set()
+      processedCallIdsRef.current = new Set()
       queue.refresh()
     }
   }, [sessionHook.session?.id])
@@ -136,12 +142,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
             !wasConnectedRef.current
           ) {
             console.log('[AutoDial] Non-overlap auto-skip:', data.status, 'for call', call.id)
-            console.log('[DiagBug1] SSE triggering auto-skip (non-overlap)', {
-              callId: call.id.slice(-6),
-              leadId: call.leadId.slice(-6),
-              status: data.status,
-              wasConnected: wasConnectedRef.current,
-            })
+            calledLeadIdsRef.current.add(call.leadId)
             setCurrentCall(null)
             currentCallRef.current = null
             wasConnectedRef.current = false
@@ -173,11 +174,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
           }, 10000)
         } else if (['NO_ANSWER', 'FAILED', 'BUSY', 'COMPLETED'].includes(newStatus)) {
           // Background call didn't connect — auto-disposition and chain to next (use ref to avoid stale closure)
-          console.log('[DiagBug1] SSE triggering auto-skip (overlap/pending)', {
-            callId: pending.callId.slice(-6),
-            leadId: pending.leadId.slice(-6),
-            status: newStatus,
-          })
+          calledLeadIdsRef.current.add(pending.leadId)
           autoDispositionAndChainRef.current?.(pending.callId, pending.leadId, newStatus === 'BUSY' ? 'NO_ANSWER' : newStatus === 'COMPLETED' ? 'NO_ANSWER' : newStatus)
         }
       }
@@ -190,38 +187,34 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     const q = queueRef.current
     const currentId = currentCallRef.current?.leadId
     const pendingId = pendingCallRef.current?.leadId
-    const lastId = lastCalledLeadIdRef.current
-
-    console.log('[DiagBug1] getNextLeadToDial called', {
-      freshCount: q.freshLeads.length,
-      retryCount: q.retryLeads.length,
-      freshIds: q.freshLeads.map(l => l.id.slice(-6)),
-      retryIds: q.retryLeads.map(l => l.id.slice(-6)),
-      skipCurrentId: currentId?.slice(-6),
-      skipPendingId: pendingId?.slice(-6),
-      skipLastId: lastId?.slice(-6),
-    })
+    const called = calledLeadIdsRef.current
 
     // Search Fresh leads first
     for (const lead of q.freshLeads) {
-      if (lead.id !== currentId && lead.id !== pendingId && lead.id !== lastId) {
-        console.log('[DiagBug1] getNextLeadToDial → FOUND LEAD:', lead.id.slice(-6), lead.companyName)
+      if (lead.id !== currentId && lead.id !== pendingId && !called.has(lead.id)) {
         return lead
       }
     }
     // Then Retry leads
     for (const lead of q.retryLeads) {
-      if (lead.id !== currentId && lead.id !== pendingId && lead.id !== lastId) {
-        console.log('[DiagBug1] getNextLeadToDial → FOUND LEAD:', lead.id.slice(-6), lead.companyName)
+      if (lead.id !== currentId && lead.id !== pendingId && !called.has(lead.id)) {
         return lead
       }
     }
-    console.log('[DiagBug1] getNextLeadToDial → RETURNING NULL (queue should stop)')
     return null
   }, [])
 
   // Auto-disposition a skipped call and chain to next
   const autoDispositionAndChain = useCallback(async (callId: string, leadId: string, result: string) => {
+    // Guard: prevent duplicate firings for the same callId (SSE can fire multiple events)
+    if (callId && processedCallIdsRef.current.has(callId)) {
+      return
+    }
+    if (callId) processedCallIdsRef.current.add(callId)
+
+    // Track this lead as called BEFORE getNextLeadToDial so it's excluded
+    calledLeadIdsRef.current.add(leadId)
+
     // Fire auto-disposition API (non-blocking for UX)
     fetch('/api/dialer/call/auto-disposition', {
       method: 'POST',
@@ -235,12 +228,6 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     // Chain — dial next
     setAutoDialState('CHAINING')
     const nextLead = getNextLeadToDial()
-    console.log('[DiagBug1] autoDispositionAndChain result', {
-      disposedLeadId: leadId.slice(-6),
-      disposedResult: result,
-      nextLeadFound: nextLead ? nextLead.id.slice(-6) : 'NULL — STOPPING',
-      autoDialState: autoDialStateRef.current,
-    })
     if (nextLead) {
       setAutoDialBanner({
         type: 'chaining',
@@ -281,9 +268,18 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     // Select lead immediately so LeadCard swaps before the API roundtrip
     queueRef.current.setSelectedLeadId(targetLead.id)
 
-    // NON-OVERLAP: No active call → use dial() which sets currentCall properly
+    // NON-OVERLAP: No active LIVE call → use dial() which sets currentCall properly
     // This gives the rep the full active call UI (hangup, notes, disposition)
-    if (!currentCallRef.current) {
+    // Check if the current call is actually live (not a stale completed call from manual disposition)
+    const currentCallIsLive = currentCallRef.current &&
+      ['INITIATED', 'RINGING', 'CONNECTED'].includes(currentCallRef.current.status)
+    if (!currentCallIsLive) {
+      // Clear stale completed call reference so dial() starts fresh
+      if (currentCallRef.current) {
+        calledLeadIdsRef.current.add(currentCallRef.current.leadId)
+        setCurrentCall(null)
+        currentCallRef.current = null
+      }
       if (!dialRef.current) {
         console.error('[AutoDial] dialRef.current is null — dial function not initialized')
         setAutoDialState('IDLE')
@@ -333,7 +329,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       }
       setPendingCall(newPending)
 
-      const call = await twilioDevice.makeCall({ To: data.phoneToCall, leadId: targetLead.id, callId: data.callId })
+      const call = await twilioDevice.makeCall({ To: data.phoneToCall, leadId: targetLead.id, callId: data.callId, callerId: data.callerId })
 
       if (call) {
         const updatePendingStatus = (status: string) => {
@@ -376,7 +372,10 @@ export function DialerProvider({ children }: { children: ReactNode }) {
 
     // Track previous lead so getNextLeadToDial skips it
     const prevLeadId = currentCallRef.current?.leadId
-    if (prevLeadId) lastCalledLeadIdRef.current = prevLeadId
+    if (prevLeadId) {
+      lastCalledLeadIdRef.current = prevLeadId
+      calledLeadIdsRef.current.add(prevLeadId)
+    }
 
     // Promote pending call to current call
     setCurrentCall({
@@ -434,7 +433,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     sessionHook.incrementStat('totalCalls')
 
     // Connect via Twilio SDK — makeCall returns the Call object (verified in useTwilioDevice.ts)
-    const call = await twilioDevice.makeCall({ To: data.phoneToCall, leadId, callId: data.callId })
+    const call = await twilioDevice.makeCall({ To: data.phoneToCall, leadId, callId: data.callId, callerId: data.callerId })
     timer.reset()
 
     // Fallback: start timer from local Twilio SDK events (instant, no server roundtrip)
@@ -476,6 +475,22 @@ export function DialerProvider({ children }: { children: ReactNode }) {
 
   // Full session teardown: kill SDK calls, clear all state, then end backend session
   const endSessionFull = useCallback(async () => {
+    // 0. Auto-disposition any active/pending calls so leads don't get orphaned
+    //    (fire-and-forget — don't block session teardown)
+    if (currentCallRef.current?.id) {
+      fetch('/api/dialer/call/auto-disposition', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callId: currentCallRef.current.id, result: 'NO_ANSWER' }),
+      }).catch(() => {})
+    }
+    if (pendingCallRef.current?.callId) {
+      fetch('/api/dialer/call/auto-disposition', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callId: pendingCallRef.current.callId, result: 'NO_ANSWER' }),
+      }).catch(() => {})
+    }
     // 1. Kill any active Twilio SDK call
     twilioDevice.hangup()
     if (twilioDevice.device) {
@@ -499,6 +514,8 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     pendingCallRef.current = null
     wasConnectedRef.current = false
     lastCalledLeadIdRef.current = null
+    calledLeadIdsRef.current = new Set()
+    processedCallIdsRef.current = new Set()
     // 6. End backend session (sets session to null → triggers recap screen)
     await sessionHook.endSession()
   }, [twilioDevice, timer, sessionHook])

@@ -21,6 +21,7 @@ export interface InitiateCallResult {
   callId: string
   phoneToCall: string
   leadId: string
+  callerId: string
   error?: never
 }
 
@@ -248,14 +249,24 @@ export async function initiateCall(
     return { error: 'Lead is owned by another rep', code: 'OWNERSHIP_CONFLICT' }
   }
 
-  // Get rep's twilio number for caller ID
+  // Get rep's twilio numbers for caller ID rotation
   const rep = await prisma.user.findUnique({
     where: { id: repId },
-    select: { twilioNumber1: true },
+    select: { twilioNumber1: true, twilioNumber2: true },
   })
 
   if (!rep?.twilioNumber1) {
     return { error: 'Rep has no assigned Twilio number', code: 'CONFIG_ERROR' }
+  }
+
+  // Number rotation: alternate between twilioNumber1 and twilioNumber2 per call
+  let callerId = rep.twilioNumber1
+  if (rep.twilioNumber2 && sessionId) {
+    const sessionCallCount = await prisma.dialerCall.count({
+      where: { sessionId, repId },
+    })
+    // Even count → number1, odd count → number2 (alternates each call)
+    callerId = sessionCallCount % 2 === 0 ? rep.twilioNumber1 : rep.twilioNumber2
   }
 
   // Create DialerCall record
@@ -293,7 +304,7 @@ export async function initiateCall(
   pushToRep(repId, sseEvent)
   pushToAllAdmins({ ...sseEvent, data: { ...sseEvent.data, repId } })
 
-  return { callId: call.id, phoneToCall, leadId }
+  return { callId: call.id, phoneToCall, leadId, callerId }
 }
 
 export async function endCall(callId: string) {
@@ -579,14 +590,13 @@ export async function dropVoicemail(callId: string) {
     where: { id: callId },
     include: {
       rep: {
-        select: { id: true, vmRecordingUrl: true, twilioNumber2: true },
+        select: { id: true, vmRecordingUrl: true },
       },
     },
   })
 
   if (!call) throw new Error('Call not found')
   if (!call.rep?.vmRecordingUrl) throw new Error('No VM recording configured for this rep')
-  if (!call.rep?.twilioNumber2) throw new Error('No VM drop number configured for this rep')
 
   // Bug 10: HEAD-check VM URL before attempting drop
   try {
@@ -605,16 +615,29 @@ export async function dropVoicemail(callId: string) {
     throw new Error('No Twilio call SID — cannot drop VM')
   }
 
-  // Use Twilio REST to redirect the call to play the VM recording
+  // Use Twilio REST to redirect the CHILD call leg (Twilio → lead's phone) to play the recording,
+  // then hang up the PARENT call (rep's browser connection).
+  // If we redirect the parent, the recording plays to the rep instead of the voicemail.
   try {
     const client = getTwilioClient()
-    const publicUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'
 
-    // Create TwiML that plays the recording and hangs up
-    // We'll redirect the current call to a TwiML endpoint
-    await client.calls(call.twilioCallSid).update({
+    // Find the child call (the <Dial> leg to the lead's phone)
+    const childCalls = await client.calls.list({
+      parentCallSid: call.twilioCallSid,
+      limit: 1,
+    })
+
+    if (childCalls.length === 0) {
+      throw new Error('No child call leg found — cannot drop VM')
+    }
+
+    // Redirect the child call to play the VM recording to the voicemail
+    await client.calls(childCalls[0].sid).update({
       twiml: `<?xml version="1.0" encoding="UTF-8"?><Response><Play>${call.rep.vmRecordingUrl}</Play></Response>`,
     })
+
+    // Hang up the parent call so the rep is disconnected and can move on
+    await client.calls(call.twilioCallSid).update({ status: 'completed' })
 
     // Update DialerCall
     await prisma.dialerCall.update({
