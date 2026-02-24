@@ -38,7 +38,7 @@ export function CallControls() {
   }
 
   return (
-    <div className="border-t border-gray-200 bg-white px-6 py-3">
+    <div className="border-t border-gray-200 bg-white px-6 py-3 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
       <div className="flex items-center justify-between">
         {/* Left: Session stats + status */}
         <div className="flex items-center gap-4 text-xs text-gray-500">

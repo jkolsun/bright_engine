@@ -158,7 +158,7 @@ export function DispositionTree() {
     <div className="space-y-3">
       {/* AI RECOMMENDATION BOX — separate from disposition */}
       {topRec && (
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-3">
           <div className="flex items-center gap-2 mb-2">
             <Bot size={14} className="text-purple-600" />
             <span className="text-xs font-semibold text-purple-700 uppercase tracking-wide">AI Suggestion</span>
@@ -185,8 +185,8 @@ export function DispositionTree() {
       )}
 
       {/* DISPOSITION BOX */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
-        <div className="flex items-center justify-between mb-3">
+      <div className="bg-white rounded-xl border border-gray-200 p-3">
+        <div className="flex items-center justify-between mb-2.5">
           <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
             {layer === 'L1' ? 'What happened?' : 'How\'d it go?'}
           </h3>
@@ -220,28 +220,28 @@ export function DispositionTree() {
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => handleL1('connected')}
-              className="flex flex-col items-center gap-1.5 px-4 py-4 rounded-xl border-2 border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-300 transition-all font-medium text-sm"
+              className="flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-300 transition-all font-medium text-sm"
             >
               <Phone size={20} />
               Connected
             </button>
             <button
               onClick={() => handleL1('voicemail')}
-              className="flex flex-col items-center gap-1.5 px-4 py-4 rounded-xl border-2 border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:border-orange-300 transition-all font-medium text-sm"
+              className="flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:border-orange-300 transition-all font-medium text-sm"
             >
               <Voicemail size={20} />
               Voicemail
             </button>
             <button
               onClick={() => handleL1('no_answer')}
-              className="flex flex-col items-center gap-1.5 px-4 py-4 rounded-xl border-2 border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:border-gray-300 transition-all font-medium text-sm"
+              className="flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:border-gray-300 transition-all font-medium text-sm"
             >
               <PhoneMissed size={20} />
               No Answer
             </button>
             <button
               onClick={() => handleL1('bad_number')}
-              className="flex flex-col items-center gap-1.5 px-4 py-4 rounded-xl border-2 border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:border-red-300 transition-all font-medium text-sm"
+              className="flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:border-red-300 transition-all font-medium text-sm"
             >
               <Ban size={20} />
               Bad Number
@@ -256,7 +256,7 @@ export function DispositionTree() {
             <button
               onClick={() => handleL2('WANTS_TO_MOVE_FORWARD')}
               disabled={submitting}
-              className="w-full px-4 py-3 rounded-xl border-2 border-green-300 bg-green-50 text-green-800 hover:bg-green-100 transition-all font-semibold text-sm text-left disabled:opacity-50"
+              className="w-full px-3 py-2.5 rounded-xl border-2 border-green-300 bg-green-50 text-green-800 hover:bg-green-100 transition-all font-semibold text-sm text-left disabled:opacity-50"
             >
               Wants to Move Forward
               <span className="block text-xs font-normal text-green-600 mt-0.5">Ready to buy — triggers payment link flow</span>
@@ -266,7 +266,7 @@ export function DispositionTree() {
             <div>
               <button
                 onClick={() => setCallbackDate(callbackDate ? '' : new Date().toISOString().split('T')[0])}
-                className="w-full px-4 py-3 rounded-xl border-2 border-teal-200 bg-teal-50 text-teal-800 hover:bg-teal-100 transition-all font-semibold text-sm text-left"
+                className="w-full px-3 py-2.5 rounded-xl border-2 border-teal-200 bg-teal-50 text-teal-800 hover:bg-teal-100 transition-all font-semibold text-sm text-left"
               >
                 Interested — Callback
                 <span className="block text-xs font-normal text-teal-600 mt-0.5">Schedule a follow-up call</span>
@@ -303,7 +303,7 @@ export function DispositionTree() {
             <button
               onClick={() => handleL2('WANTS_CHANGES')}
               disabled={submitting}
-              className="w-full px-4 py-3 rounded-xl border-2 border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 transition-all font-semibold text-sm text-left disabled:opacity-50"
+              className="w-full px-3 py-2.5 rounded-xl border-2 border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 transition-all font-semibold text-sm text-left disabled:opacity-50"
             >
               Wants Changes
               <span className="block text-xs font-normal text-blue-600 mt-0.5">Likes it but wants edits to preview</span>
@@ -313,7 +313,7 @@ export function DispositionTree() {
             <button
               onClick={() => handleL2('WILL_LOOK_LATER')}
               disabled={submitting}
-              className="w-full px-4 py-3 rounded-xl border-2 border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-all font-semibold text-sm text-left disabled:opacity-50"
+              className="w-full px-3 py-2.5 rounded-xl border-2 border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-all font-semibold text-sm text-left disabled:opacity-50"
             >
               Will Look Later
               <span className="block text-xs font-normal text-amber-600 mt-0.5">Soft interest — will review preview on their own</span>
@@ -324,7 +324,7 @@ export function DispositionTree() {
               <button
                 onClick={() => handleL2('NOT_INTERESTED')}
                 disabled={submitting}
-                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-all font-medium text-sm text-left disabled:opacity-50"
+                className="w-full px-3 py-2.5 rounded-xl border-2 border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-all font-medium text-sm text-left disabled:opacity-50"
               >
                 Not Interested
               </button>

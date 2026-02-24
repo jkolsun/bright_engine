@@ -1,4 +1,5 @@
 'use client'
+import { useState, useEffect } from 'react'
 import { useDialer } from './DialerProvider'
 import { QueuePanel } from './QueuePanel'
 import { LeadCard } from './LeadCard'
@@ -7,9 +8,23 @@ import { CallControls } from './CallControls'
 import { InboundCallBanner } from './InboundCallBanner'
 import { SessionRecap } from './SessionRecap'
 import { AutoDialBanner } from './AutoDialBanner'
+import { PanelLeftOpen } from 'lucide-react'
 
 function DialerContent() {
   const { session, queue } = useDialer()
+  const [queueCollapsed, setQueueCollapsed] = useState(false)
+
+  // Persist collapse preference
+  useEffect(() => {
+    const saved = localStorage.getItem('dialer-queue-collapsed')
+    if (saved === 'true') setQueueCollapsed(true)
+  }, [])
+
+  const toggleQueue = () => {
+    const next = !queueCollapsed
+    setQueueCollapsed(next)
+    localStorage.setItem('dialer-queue-collapsed', String(next))
+  }
 
   // Recap mode — session just ended, show summary
   if (session.sessionRecap) {
@@ -26,16 +41,28 @@ function DialerContent() {
       <InboundCallBanner />
       <AutoDialBanner />
       <div className="flex flex-1 overflow-hidden">
-        {/* Left: Queue (20%) */}
-        <div className="w-[20%] min-w-[260px] border-r border-gray-200 overflow-y-auto bg-gray-50">
-          <QueuePanel />
-        </div>
-        {/* Center: Lead Card (45%) */}
+        {/* Left: Queue Panel — collapsible */}
+        {queueCollapsed ? (
+          <div className="w-11 flex-shrink-0 border-r border-gray-200 bg-gray-50 flex flex-col items-center pt-3">
+            <button
+              onClick={toggleQueue}
+              className="p-2 rounded-lg text-gray-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
+              title="Open queue"
+            >
+              <PanelLeftOpen className="w-5 h-5" />
+            </button>
+          </div>
+        ) : (
+          <div className="w-[20%] min-w-[260px] flex-shrink-0 border-r border-gray-200 overflow-y-auto bg-gray-50">
+            <QueuePanel onCollapse={toggleQueue} />
+          </div>
+        )}
+        {/* Center: Lead Card */}
         <div className="flex-1 overflow-y-auto">
           <LeadCard />
         </div>
-        {/* Right: Call Guide (35%) */}
-        <div className="w-[35%] min-w-[320px] border-l border-gray-200 overflow-y-auto bg-gray-50">
+        {/* Right: Call Guide (28%) */}
+        <div className="w-[28%] min-w-[280px] flex-shrink-0 border-l border-gray-200 overflow-y-auto bg-gray-50">
           <CallGuidePanel />
         </div>
       </div>

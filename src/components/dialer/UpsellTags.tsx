@@ -41,8 +41,8 @@ export function UpsellTags({ leadId }: { leadId: string }) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <div className="flex items-center justify-between mb-2">
+    <div className="bg-white rounded-xl border border-gray-200 p-3">
+      <div className="flex items-center justify-between mb-1.5">
         <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
           <Tag className="w-3.5 h-3.5" /> Upsells
         </h3>

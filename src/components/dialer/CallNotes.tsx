@@ -75,7 +75,7 @@ export function CallNotes() {
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Type notes..."
-        className="w-full h-20 text-sm p-3 resize-none focus:outline-none focus:ring-0 border-0"
+        className="w-full h-16 text-sm p-3 resize-none focus:outline-none focus:ring-0 border-0"
       />
     </div>
   )

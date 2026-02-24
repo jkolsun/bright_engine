@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { useDialer } from './DialerProvider'
-import { Phone, RefreshCw, Clock, PhoneMissed, CheckCircle, Search, X, ChevronDown } from 'lucide-react'
+import { Phone, RefreshCw, Clock, PhoneMissed, CheckCircle, Search, X, ChevronDown, PanelLeftClose } from 'lucide-react'
 
 const DISPOSITION_BADGE: Record<string, { label: string; className: string }> = {
   WANTS_TO_MOVE_FORWARD: { label: 'Moving Forward', className: 'bg-green-100 text-green-700' },
@@ -17,10 +17,19 @@ const DISPOSITION_BADGE: Record<string, { label: string; className: string }> = 
   VOICEMAIL: { label: 'Voicemail', className: 'bg-purple-100 text-purple-700' },
 }
 
-export function QueuePanel() {
+// Disposition sub-filter groups for Called tab
+const CALLED_PILLS = [
+  { key: null, label: 'All' },
+  { key: 'interested', label: 'Interested', dispositions: ['WANTS_TO_MOVE_FORWARD', 'INTERESTED_VERBAL', 'CALLBACK', 'WANTS_CHANGES', 'WILL_LOOK_LATER'] },
+  { key: 'not_reached', label: 'Not Reached', dispositions: ['NO_ANSWER', 'VOICEMAIL'] },
+  { key: 'rejected', label: 'Rejected', dispositions: ['NOT_INTERESTED', 'DNC', 'WRONG_NUMBER', 'DISCONNECTED'] },
+]
+
+export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
   const { queue } = useDialer()
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [filterOpen, setFilterOpen] = useState(false)
+  const [dispoFilter, setDispoFilter] = useState<string | null>(null)
   const filterRef = useRef<HTMLDivElement>(null)
 
   // Close dropdown on click outside
@@ -47,8 +56,17 @@ export function QueuePanel() {
   const handleFilterSelect = (key: typeof queue.activeTab) => {
     queue.setActiveTab(key)
     queue.setSearchQuery('') // Clear search when switching tabs
+    setDispoFilter(null)     // Clear sub-filter when switching tabs
     setFilterOpen(false)
   }
+
+  // Apply disposition sub-filter on top of search-filtered leads
+  const displayLeads = queue.activeTab === 'called' && dispoFilter
+    ? queue.leads.filter((l: any) => {
+        const pill = CALLED_PILLS.find(p => p.key === dispoFilter)
+        return pill?.dispositions?.includes(l.lastDisposition)
+      })
+    : queue.leads
 
   const handleCancelCallback = async (callbackId: string) => {
     setCancellingId(callbackId)
@@ -69,12 +87,12 @@ export function QueuePanel() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Filter Dropdown */}
+      {/* Header: Filter Dropdown + Collapse */}
       <div className="px-3 pt-3 pb-2" ref={filterRef}>
-        <div className="relative">
+        <div className="relative flex items-center gap-1.5">
           <button
             onClick={() => setFilterOpen(!filterOpen)}
-            className="w-full flex items-center justify-between px-3 py-2 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors shadow-sm"
+            className="flex-1 flex items-center justify-between px-3 py-2 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors shadow-sm"
           >
             <div className="flex items-center gap-2">
               <active.icon className={`w-4 h-4 ${active.color}`} />
@@ -87,6 +105,15 @@ export function QueuePanel() {
             </div>
             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${filterOpen ? 'rotate-180' : ''}`} />
           </button>
+          {onCollapse && (
+            <button
+              onClick={onCollapse}
+              className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0"
+              title="Collapse queue"
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
+          )}
 
           {filterOpen && (
             <div className="absolute z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
@@ -144,17 +171,46 @@ export function QueuePanel() {
         </div>
       )}
 
+      {/* Disposition sub-filters for Called tab */}
+      {queue.activeTab === 'called' && queue.leads.length > 0 && (
+        <div className="px-3 pb-2 flex gap-1.5 overflow-x-auto">
+          {CALLED_PILLS.map(pill => {
+            const count = pill.key === null
+              ? queue.leads.length
+              : queue.leads.filter((l: any) => pill.dispositions?.includes(l.lastDisposition)).length
+            return (
+              <button
+                key={pill.key ?? 'all'}
+                onClick={() => setDispoFilter(pill.key)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap transition-colors ${
+                  dispoFilter === pill.key
+                    ? 'bg-teal-500 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {pill.label}
+                <span className={`px-1 py-0.5 rounded-full text-[9px] ${
+                  dispoFilter === pill.key ? 'bg-teal-600 text-teal-100' : 'bg-gray-200 text-gray-500'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {/* List */}
       <div className="flex-1 overflow-y-auto">
         {/* Fresh / Retry / Called tabs — render leads */}
         {['fresh', 'retry', 'called'].includes(queue.activeTab) && (
-          queue.leads.length > 0 ? (
-            queue.leads.map((lead: any) => (
+          displayLeads.length > 0 ? (
+            displayLeads.map((lead: any) => (
               <button
                 key={lead.id}
                 onClick={() => queue.setSelectedLeadId(lead.id)}
-                className={`w-full text-left px-3 py-2.5 border-b border-gray-100 hover:bg-white transition-colors ${
-                  queue.selectedLeadId === lead.id ? 'bg-white border-l-2 border-l-teal-500' : ''
+                className={`w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-white transition-colors ${
+                  queue.selectedLeadId === lead.id ? 'bg-teal-50/40 border-l-2 border-l-teal-500' : ''
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -184,11 +240,13 @@ export function QueuePanel() {
               <p className="text-xs text-gray-400">
                 {queue.searchQuery
                   ? 'No leads match your search'
-                  : queue.activeTab === 'fresh'
-                    ? 'No fresh leads available'
-                    : queue.activeTab === 'retry'
-                      ? 'No leads ready for retry'
-                      : 'No called leads yet'}
+                  : dispoFilter
+                    ? 'No leads in this filter'
+                    : queue.activeTab === 'fresh'
+                      ? 'No fresh leads available'
+                      : queue.activeTab === 'retry'
+                        ? 'No leads ready for retry'
+                        : 'No called leads yet'}
               </p>
             </div>
           )
@@ -200,7 +258,7 @@ export function QueuePanel() {
             queue.callbacks.map(cb => (
               <div
                 key={cb.id}
-                className="flex items-center w-full text-left px-3 py-2.5 border-b border-gray-100 hover:bg-white"
+                className="flex items-center w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-white"
               >
                 <button
                   onClick={() => { if (cb.lead) queue.setSelectedLeadId(cb.lead.id) }}
@@ -236,7 +294,7 @@ export function QueuePanel() {
               <button
                 key={m.id}
                 onClick={() => { if (m.lead) queue.setSelectedLeadId(m.lead.id) }}
-                className="w-full text-left px-3 py-2.5 border-b border-gray-100 hover:bg-white"
+                className="w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-white"
               >
                 <div className="text-sm font-medium text-gray-900">{m.lead?.companyName || m.phoneNumberUsed || 'Unknown'}</div>
                 <div className="text-xs text-gray-500 mt-0.5">

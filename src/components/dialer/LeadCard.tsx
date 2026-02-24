@@ -51,7 +51,7 @@ export function LeadCard() {
   const lastCall = callHistory?.calls?.[0]
 
   return (
-    <div className="p-6 space-y-4 overflow-y-auto">
+    <div className="p-4 space-y-3 overflow-y-auto">
       <LeadInfo lead={lead} />
       <QuickStats lead={lead} />
 
@@ -85,7 +85,7 @@ export function LeadCard() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3">
         <PreviewButton lead={lead} />
         <UpsellTags leadId={lead.id} />
       </div>

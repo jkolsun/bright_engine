@@ -18,9 +18,9 @@ export function QuickStats({ lead }: { lead: QueueLead }) {
   ]
 
   return (
-    <div className="grid grid-cols-4 gap-3">
+    <div className="grid grid-cols-4 gap-2">
       {stats.map(stat => (
-        <div key={stat.label} className="bg-white rounded-lg border border-gray-200 p-3 text-center">
+        <div key={stat.label} className="bg-white rounded-lg border border-gray-200 p-2 text-center">
           <stat.icon className={`w-4 h-4 mx-auto mb-1 ${stat.color}`} />
           <div className={`text-xs font-medium ${stat.color}`}>{stat.value}</div>
           <div className="text-[10px] text-gray-400 mt-0.5">{stat.label}</div>

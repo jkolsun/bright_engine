@@ -43,12 +43,12 @@ export function CallGuidePanel() {
   ]
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-3">
       <h3 className="text-sm font-bold text-gray-900">Call Guide</h3>
       {sections.map(section => section.content && (
         <div key={section.title}>
           <h4 className="text-xs font-semibold text-gray-700 mb-1">{section.title}</h4>
-          <div className="text-xs text-gray-600 whitespace-pre-line leading-relaxed bg-white rounded-lg p-3 border border-gray-100">
+          <div className="text-xs text-gray-600 whitespace-pre-line leading-relaxed bg-white rounded-lg p-2.5 border border-gray-100">
             {replaceVars(section.content)}
           </div>
         </div>

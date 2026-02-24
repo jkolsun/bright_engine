@@ -41,8 +41,8 @@ export function PreviewButton({ lead }: { lead: QueueLead }) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <h3 className="text-sm font-semibold text-gray-900 mb-2">Preview</h3>
+    <div className="bg-white rounded-xl border border-gray-200 p-3">
+      <h3 className="text-sm font-semibold text-gray-900 mb-1.5">Preview</h3>
       <div className="flex items-center gap-2">
         <button
           onClick={handleSend}
