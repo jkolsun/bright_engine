@@ -159,7 +159,19 @@ export function useDialerQueue() {
         return [{ ...lead, lastDisposition: dispositionResult } as any, ...prev]
       })
     }
-    // NO_ANSWER / VOICEMAIL → removed from Fresh, on cooldown, will appear in Retry later
+    // NO_ANSWER / VOICEMAIL → Retry (for follow-up) AND Called (complete call log)
+    if (['NO_ANSWER', 'VOICEMAIL'].includes(dispositionResult)) {
+      setRetryLeads(prev => {
+        const lead = removedLead
+        if (!lead) return prev
+        return [{ ...lead, lastDisposition: dispositionResult } as any, ...prev]
+      })
+      setCalledLeads(prev => {
+        const lead = removedLead
+        if (!lead) return prev
+        return [{ ...lead, lastDisposition: dispositionResult } as any, ...prev]
+      })
+    }
 
     if (dispositionResult === 'CALLBACK') {
       // Callback → lead goes to Called (disposition is terminal for this call), also refresh callbacks list

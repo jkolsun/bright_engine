@@ -13,6 +13,8 @@ const DISPOSITION_BADGE: Record<string, { label: string; className: string }> = 
   DNC: { label: 'DNC', className: 'bg-red-100 text-red-700' },
   WRONG_NUMBER: { label: 'Wrong Number', className: 'bg-red-100 text-red-600' },
   DISCONNECTED: { label: 'Disconnected', className: 'bg-red-100 text-red-600' },
+  NO_ANSWER: { label: 'No Answer', className: 'bg-amber-100 text-amber-700' },
+  VOICEMAIL: { label: 'Voicemail', className: 'bg-purple-100 text-purple-700' },
 }
 
 export function QueuePanel() {
@@ -157,7 +159,7 @@ export function QueuePanel() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-900 truncate">{lead.companyName}</span>
-                  {queue.activeTab === 'called' && lead.lastDisposition ? (
+                  {(queue.activeTab === 'called' || queue.activeTab === 'retry') && lead.lastDisposition ? (
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ml-2 ${
                       DISPOSITION_BADGE[lead.lastDisposition]?.className || 'bg-gray-100 text-gray-500'
                     }`}>
