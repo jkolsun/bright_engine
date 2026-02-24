@@ -1,4 +1,5 @@
 import { prisma } from './db'
+import { Anthropic } from '@anthropic-ai/sdk'
 
 const SERPER_API_KEY = process.env.SERPER_API_KEY!
 
@@ -32,6 +33,8 @@ export interface SerperResearchData {
   snippets: string[]
   queriesRun: number
   bestTier?: 'S' | 'A' | 'B'
+  websiteContent?: string
+  websiteUrl?: string
 }
 
 // Known tools in home services
@@ -346,6 +349,143 @@ function rankArtifacts(artifacts: Artifact[]): Artifact[] {
 }
 
 // ============================================
+// WEBSITE SCRAPING (Serper Scrape API)
+// ============================================
+
+async function scrapeWebsite(url: string): Promise<{ text: string; cost: number } | null> {
+  try {
+    if (!url.startsWith('http')) url = `https://${url}`
+
+    const response = await fetch('https://scrape.serper.dev', {
+      method: 'POST',
+      headers: {
+        'X-API-KEY': SERPER_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
+    })
+
+    if (!response.ok) {
+      console.warn(`[SERPER] Scrape failed for ${url}: ${response.statusText}`)
+      return null
+    }
+
+    const data = await response.json()
+    const text = data.text || ''
+
+    if (text.length < 50) return null
+    return { text: text.substring(0, 8000), cost: 0.005 }
+  } catch (err) {
+    console.warn(`[SERPER] Scrape error for ${url}:`, err)
+    return null
+  }
+}
+
+// ============================================
+// WEBSITE URL DISCOVERY FROM SEARCH RESULTS
+// ============================================
+
+function findCompanyWebsite(results: any[], companyName: string): string | null {
+  const nameLower = companyName.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+  for (const r of results) {
+    const link = r.link || ''
+    const title = (r.title || '').toLowerCase()
+
+    // Skip directories, review sites, social media
+    if (/yelp\.com|facebook\.com|bbb\.org|angi\.com|homeadvisor\.com|google\.com|yellowpages|nextdoor\.com|linkedin\.com|twitter\.com|instagram\.com|tiktok\.com|mapquest/i.test(link)) continue
+
+    const urlDomain = link.replace(/^https?:\/\//, '').split('/')[0].toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (urlDomain.includes(nameLower) || title.includes(companyName.toLowerCase())) {
+      return link.split('?')[0]
+    }
+  }
+
+  return null
+}
+
+// ============================================
+// AI-POWERED ARTIFACT EXTRACTION
+// ============================================
+
+async function extractArtifactsWithAI(
+  content: string,
+  companyName: string,
+  industry: string
+): Promise<{ artifacts: Artifact[]; cost: number }> {
+  if (!process.env.ANTHROPIC_API_KEY) return { artifacts: [], cost: 0 }
+
+  try {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+    const truncated = content.substring(0, 5000)
+
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 600,
+      messages: [{
+        role: 'user',
+        content: `Analyze this ${industry || 'service'} company's website content and extract SPECIFIC, VERIFIABLE business intelligence for a cold email opener.
+
+COMPANY: ${companyName}
+
+CONTENT:
+${truncated}
+
+Return a JSON array (max 8 items, most compelling first). Each object:
+{"type": "CERT|PROJECT|TOOL|AWARD|COMMUNITY|TEAM|YEARS|PROGRAM|DIFF", "text": "specific fact", "tier": "S|A|B"}
+
+TIER GUIDE:
+S = Named certifications (GAF Master Elite, NATE Certified, EPA 608), specific named clients/projects, tools/software they use (ServiceTitan, Jobber), awards (Angi Super Service 2024, BBB A+), specific star ratings with review counts
+A = Service guarantees/warranties (10-year warranty, same-day service), team size (15+ technicians), community involvement (sponsors Little League), unique programs (Comfort Club membership)
+B = Generic service descriptions, location mentions, basic claims
+
+PRIORITIZE facts that are UNIQUE to this company — things their competitors can't also claim. Skip generic marketing language like "quality service", "customer satisfaction", "trusted professionals".
+
+Return ONLY a valid JSON array, nothing else.`,
+      }],
+    })
+
+    const text = response.content[0].type === 'text' ? response.content[0].text : '[]'
+    const cost = (response.usage.input_tokens + response.usage.output_tokens) * 0.0000008
+
+    let jsonStr = text.trim()
+    if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
+    }
+
+    const parsed = JSON.parse(jsonStr)
+    if (!Array.isArray(parsed)) return { artifacts: [], cost }
+
+    const typeMap: Record<string, ArtifactType> = {
+      'CERT': 'EXACT_PHRASE',
+      'PROJECT': 'CLIENT_OR_PROJECT',
+      'TOOL': 'TOOL_PLATFORM',
+      'AWARD': 'EXACT_PHRASE',
+      'COMMUNITY': 'SERVICE_PROGRAM',
+      'TEAM': 'COMPANY_DESCRIPTION',
+      'YEARS': 'COMPANY_DESCRIPTION',
+      'PROGRAM': 'SERVICE_PROGRAM',
+      'DIFF': 'COMPANY_DESCRIPTION',
+    }
+
+    const artifacts: Artifact[] = parsed
+      .filter((item: any) => item.text && item.text.length > 3 && item.text.length < 120)
+      .map((item: any) => ({
+        type: typeMap[item.type] || 'COMPANY_DESCRIPTION',
+        text: item.text.trim(),
+        source: 'ai_extraction',
+        score: item.tier === 'S' ? 9 : item.tier === 'A' ? 7 : 5,
+        tier: (item.tier === 'S' || item.tier === 'A' || item.tier === 'B') ? item.tier : 'B',
+      } as Artifact))
+
+    return { artifacts, cost }
+  } catch (err) {
+    console.warn('[SERPER] AI extraction failed:', err)
+    return { artifacts: [], cost: 0 }
+  }
+}
+
+// ============================================
 // MAIN EXPORT: fetchSerperResearch
 // ============================================
 
@@ -404,6 +544,56 @@ export async function fetchSerperResearch(leadId: string): Promise<string> {
       artifacts.push({ type: 'LOCATION', text: `${lead.city}, ${lead.state}`, source: 'csv', score: 3, tier: 'B' })
     }
 
+    // --- Website scraping for deep business intelligence ---
+    let websiteContent = ''
+    let websiteUrl = ''
+    let scrapeCost = 0
+    let aiExtractionCost = 0
+
+    const companyWebsite = lead.website || findCompanyWebsite(allResults, lead.companyName)
+
+    if (companyWebsite) {
+      websiteUrl = companyWebsite
+      console.log(`[ENRICHMENT] Scraping website: ${companyWebsite} for lead ${leadId}`)
+
+      // Update lead's website if we discovered it from search results
+      if (!lead.website) {
+        await prisma.lead.update({
+          where: { id: leadId },
+          data: { website: companyWebsite },
+        }).catch(() => {})
+      }
+
+      // Scrape homepage
+      const homepageScrape = await scrapeWebsite(companyWebsite)
+      if (homepageScrape) {
+        websiteContent = homepageScrape.text
+        scrapeCost += homepageScrape.cost
+        console.log(`[ENRICHMENT] Scraped ${websiteContent.length} chars from homepage`)
+
+        // Try about page for deeper company info (one attempt)
+        try {
+          const baseUrl = new URL(companyWebsite.startsWith('http') ? companyWebsite : `https://${companyWebsite}`)
+          const aboutUrl = `${baseUrl.origin}/about`
+          const aboutScrape = await scrapeWebsite(aboutUrl)
+          if (aboutScrape && aboutScrape.text.length > 200) {
+            websiteContent += '\n\n--- ABOUT PAGE ---\n' + aboutScrape.text
+            scrapeCost += aboutScrape.cost
+            console.log(`[ENRICHMENT] Scraped about page: ${aboutScrape.text.length} chars`)
+          }
+        } catch {} // non-fatal
+      }
+    }
+
+    // AI artifact extraction from website content (or snippets as fallback)
+    const contentForAI = websiteContent || allSnippets.join('\n')
+    if (contentForAI.length > 200) {
+      const aiResult = await extractArtifactsWithAI(contentForAI, lead.companyName, lead.industry || '')
+      artifacts = [...artifacts, ...aiResult.artifacts]
+      aiExtractionCost = aiResult.cost
+      console.log(`[ENRICHMENT] AI extracted ${aiResult.artifacts.length} artifacts from ${websiteContent ? 'website' : 'snippets'}`)
+    }
+
     const rankedArtifacts = rankArtifacts(artifacts)
 
     // Determine best tier found
@@ -416,6 +606,8 @@ export async function fetchSerperResearch(leadId: string): Promise<string> {
       snippets: allSnippets.slice(0, 8),
       queriesRun,
       bestTier,
+      websiteContent: websiteContent ? websiteContent.substring(0, 3000) : undefined,
+      websiteUrl: websiteUrl || undefined,
     }
 
     await prisma.lead.update({
@@ -423,12 +615,12 @@ export async function fetchSerperResearch(leadId: string): Promise<string> {
       data: { personalization: JSON.stringify(researchData) },
     })
 
-    // Log cost
+    // Log cost (search queries + website scraping + AI extraction)
     await prisma.apiCost.create({
       data: {
         service: 'serper',
         operation: 'personalization',
-        cost: queriesRun * 0.005,
+        cost: (queriesRun * 0.005) + scrapeCost + aiExtractionCost,
       },
     })
 

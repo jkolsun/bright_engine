@@ -107,13 +107,18 @@ S-TIER (USE FIRST — the perfect hook):
   - Certifications: "GAF Master Elite with 200 reviews..."
   - Awards: "Angi Super Service three years running..."
   - Specific tools: "Your team runs ServiceTitan..."
-  - Star ratings + review counts: "4.9 stars across 300 reviews..."
+  - Founding year + longevity: "22 years in the Dallas market..."
+  - Star ratings + review counts: "4.9 stars across 300 reviews..." (use as LAST RESORT among S-tier — prefer certs/awards/projects/tools)
 A-TIER (use only if NO S-tier data):
   - Service programs: "Your 24/7 emergency response..."
+  - Warranties/guarantees: "Your 10-year workmanship warranty..."
   - Hiring signals: "Scaling your crew..."
   - Community involvement: "Sponsoring Habitat for Humanity..."
+  - Team details: "15 certified technicians on staff..."
 B-TIER (LAST RESORT — avoid if possible):
-  - Location only, years in business, generic services
+  - Location only, generic services
+
+IMPORTANT: If you have BOTH review data AND deeper data (certifications, awards, tools, named projects), ALWAYS prefer the deeper data. Reviews alone are generic — every company has reviews. What makes a great opener is something SPECIFIC that only THEY can claim.
 
 EXAMPLES OF S-TIER OPENERS (this is the quality bar):
 - "Your 4.9 stars across 200+ reviews — that's rare for HVAC in Dallas."
@@ -400,9 +405,22 @@ function buildPrompt(companyName: string, artifact: Artifact | null, research: S
     }
   }
 
+  // Website content — rich source for unique angles
+  if (research && research.websiteContent) {
+    const excerpt = research.websiteContent.substring(0, 1500)
+    parts.push(`\n=== COMPANY WEBSITE CONTENT (from ${research.websiteUrl || 'their site'}) ===`)
+    parts.push(excerpt)
+    parts.push(`\nThe above is from their actual website. Mine it for unique angles: their story, specific claims, certifications, named projects, team details, warranties, founding year, anything that makes them DIFFERENT.`)
+  }
+
   // Explicit instruction based on available data
   if (sTier.length > 0) {
-    parts.push(`\nYou MUST use one of the S-TIER data points above. Write a punchy 8-18 word opener using the most compelling S-tier fact.`)
+    const hasNonReviewSTier = sTier.some(s => !s.startsWith('REVIEWS:') && !s.includes('stars across'))
+    if (hasNonReviewSTier) {
+      parts.push(`\nYou MUST use a NON-REVIEW S-TIER data point if available (certification, award, project, tool). Reviews are a fallback. Write a punchy 8-18 word opener.`)
+    } else {
+      parts.push(`\nUse the S-TIER review data, but try to pair it with another detail from the website content or research if possible. Write a punchy 8-18 word opener.`)
+    }
   } else if (aTier.length > 0) {
     parts.push(`\nNo S-tier data available. Use the best A-TIER data point above for your opener.`)
   } else {
@@ -810,6 +828,14 @@ function buildWebsiteCopyPrompt(lead: any, research: SerperResearchData | null, 
     for (const s of research.snippets.slice(0, 3)) {
       parts.push(`  - ${s.substring(0, 200)}`)
     }
+  }
+
+  // Include website content for richer, more authentic copy
+  if (research && research.websiteContent) {
+    const excerpt = research.websiteContent.substring(0, 2000)
+    parts.push(`\nCOMPANY'S OWN WEBSITE CONTENT (from ${research.websiteUrl || 'their site'}):`)
+    parts.push(excerpt)
+    parts.push(`Use their actual website language and claims to make the landing page feel authentic. Reference real details they mention about themselves.`)
   }
 
   parts.push(`\nWrite landing page copy for ${lead.companyName} that makes them look like the #1 choice in ${location || 'their market'}. Use every data point above.\n`)
