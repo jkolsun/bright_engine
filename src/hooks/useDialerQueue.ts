@@ -14,6 +14,8 @@ export function useDialerQueue() {
   const [loading, setLoading] = useState(false)
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  // Temporary leads injected for inbound callers not in loaded queue arrays
+  const [tempLeads, setTempLeads] = useState<QueueLead[]>([])
 
   const fetchFresh = useCallback(async () => {
     setLoading(true)
@@ -57,6 +59,7 @@ export function useDialerQueue() {
   }, [])
 
   const refresh = useCallback(async () => {
+    setTempLeads([]) // Clear temporary injections on full refresh
     await Promise.all([fetchFresh(), fetchRetry(), fetchCallbacks(), fetchMissed(), fetchCalled()])
   }, [fetchFresh, fetchRetry, fetchCallbacks, fetchMissed, fetchCalled])
 
@@ -88,16 +91,17 @@ export function useDialerQueue() {
   // Expose as `leads` for backward compatibility (always the filtered active list)
   const leads = filteredLeads
 
-  // Search across all arrays for the selected lead
+  // Search across all arrays (including temp injections) for the selected lead
   const selectedLead = useMemo(() => {
     if (!selectedLeadId) return null
     return (
       freshLeads.find(l => l.id === selectedLeadId) ||
       retryLeads.find(l => l.id === selectedLeadId) ||
       calledLeads.find(l => l.id === selectedLeadId) ||
+      tempLeads.find(l => l.id === selectedLeadId) ||
       null
     )
-  }, [selectedLeadId, freshLeads, retryLeads, calledLeads])
+  }, [selectedLeadId, freshLeads, retryLeads, calledLeads, tempLeads])
 
   // Navigate within active tab's filtered list
   const selectNext = useCallback(() => {
@@ -109,6 +113,14 @@ export function useDialerQueue() {
     const idx = filteredLeads.findIndex(l => l.id === selectedLeadId)
     if (idx > 0) setSelectedLeadId(filteredLeads[idx - 1].id)
   }, [filteredLeads, selectedLeadId])
+
+  // Inject a lead temporarily (for inbound callers not in loaded queue arrays)
+  const injectLead = useCallback((lead: QueueLead) => {
+    setTempLeads(prev => {
+      if (prev.find(l => l.id === lead.id)) return prev // already injected
+      return [...prev, lead]
+    })
+  }, [])
 
   // Remove a callback from local state (used after DELETE)
   const removeCallback = useCallback((callbackId: string) => {
@@ -167,6 +179,6 @@ export function useDialerQueue() {
     selectedLeadId, setSelectedLeadId, selectedLead,
     searchQuery, setSearchQuery,
     refresh, fetchFresh, fetchRetry, fetchCalled, fetchCallbacks, fetchMissed,
-    selectNext, selectPrev, removeCallback, moveLeadAfterDisposition,
+    selectNext, selectPrev, removeCallback, moveLeadAfterDisposition, injectLead,
   }
 }

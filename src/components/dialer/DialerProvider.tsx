@@ -223,6 +223,63 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     return unsub
   }, [])  // Empty deps — subscribe once on mount
 
+  // SSE listener for inbound calls — pause auto-dial and surface the calling lead
+  useEffect(() => {
+    const unsub = sse.on('INBOUND_CALL', (data: any) => {
+      console.log('[AutoDial] INBOUND_CALL received:', data.leadId, data.companyName)
+
+      // 1. If auto-dial is active (not IDLE), pause it
+      if (autoDialStateRef.current !== 'IDLE') {
+        console.log('[AutoDial] Pausing auto-dial for inbound call, state was:', autoDialStateRef.current)
+
+        // Clear grace timer if in CONNECTED_PENDING_SWAP state
+        if (graceTimerRef.current) {
+          clearTimeout(graceTimerRef.current)
+          graceTimerRef.current = null
+        }
+
+        // Cancel pending outbound call if one exists
+        const pending = pendingCallRef.current
+        if (pending) {
+          console.log('[AutoDial] Cancelling pending outbound call:', pending.callId)
+          fetch('/api/dialer/call/end', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callId: pending.callId }),
+          }).catch(() => {})
+          fetch('/api/dialer/call/auto-disposition', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callId: pending.callId, result: 'NO_ANSWER' }),
+          }).catch(() => {})
+          calledLeadIdsRef.current.add(pending.leadId)
+          setPendingCall(null)
+          pendingCallRef.current = null
+        }
+
+        // Reset auto-dial state machine to IDLE
+        setAutoDialState('IDLE')
+        setAutoDialBanner(null)
+        setBannerUrgent(false)
+      }
+
+      // 2. Auto-select the calling lead in the queue
+      if (data.leadId) {
+        // Inject a minimal lead so selectedLead resolves even if not in loaded arrays
+        queueRef.current.injectLead({
+          id: data.leadId,
+          companyName: data.companyName || 'Unknown',
+          firstName: data.contactName || undefined,
+          phone: data.from || '',
+          status: 'ACTIVE',
+          priority: 'MEDIUM',
+        } as any)
+        queueRef.current.setSelectedLeadId(data.leadId)
+      }
+    })
+    return unsub
+  }, [])  // Empty deps — subscribe once on mount, use refs for state
+
   // Get next lead to dial from queue (Fresh first, then Retry)
   const getNextLeadToDial = useCallback(() => {
     const q = queueRef.current

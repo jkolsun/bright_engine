@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react'
 import { useDialer } from './DialerProvider'
 import { Phone, PhoneOff } from 'lucide-react'
+import type { DialerCall } from '@/types/dialer'
 
 export function InboundCallBanner() {
-  const { sse, twilioDevice } = useDialer()
+  const { sse, twilioDevice, currentCall, setCurrentCall, timer } = useDialer()
   const [inboundCall, setInboundCall] = useState<any>(null)
 
   useEffect(() => {
@@ -23,11 +24,46 @@ export function InboundCallBanner() {
 
   if (!inboundCall) return null
 
+  const isOnActiveCall = !!currentCall && ['INITIATED', 'RINGING', 'CONNECTED'].includes(currentCall.status)
+
   const accept = () => {
-    // The Twilio SDK handles incoming call acceptance
-    if (twilioDevice.activeCall) {
-      twilioDevice.activeCall.accept()
+    // Build the inbound DialerCall object
+    const inboundDialerCall: DialerCall = {
+      id: inboundCall.callId || '',
+      leadId: inboundCall.leadId || '',
+      repId: '',
+      status: 'CONNECTED',
+      direction: 'INBOUND',
+      startedAt: new Date().toISOString(),
+      wasRecommended: false,
+      previewSentDuringCall: false,
+      previewOpenedDuringCall: false,
+      ctaClickedDuringCall: false,
+      vmDropped: false,
+    } as DialerCall
+
+    const call = twilioDevice.activeCall
+    if (call) {
+      call.accept()
+
+      // Wire disconnect listener so currentCall status updates when call ends
+      call.on('disconnect', () => {
+        setCurrentCall({ ...inboundDialerCall, status: 'COMPLETED' } as DialerCall)
+        timer.stop()
+      })
+      call.on('cancel', () => {
+        setCurrentCall({ ...inboundDialerCall, status: 'COMPLETED' } as DialerCall)
+        timer.stop()
+      })
     }
+
+    // Set currentCall so DispositionTree renders and rep can disposition the inbound call
+    if (inboundCall.callId) {
+      setCurrentCall(inboundDialerCall)
+      timer.reset()
+      timer.start()
+    }
+
     fetch('/api/dialer/inbound/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callId: inboundCall.callId }) }).catch(err => console.warn('[InboundCall] Accept API failed:', err))
     setInboundCall(null)
   }
@@ -53,10 +89,23 @@ export function InboundCallBanner() {
               {inboundCall.companyName || inboundCall.contactName || inboundCall.from || 'Unknown'}
               {inboundCall.isDNC && <span className="ml-2 text-red-600 font-medium">DNC</span>}
             </div>
+            {isOnActiveCall && (
+              <div className="text-xs text-amber-600 font-medium mt-0.5">
+                Finish your current call to accept this one.
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={accept} className="flex items-center gap-1.5 px-4 py-2 bg-green-500 text-white rounded-lg font-medium text-sm hover:bg-green-600">
+          <button
+            onClick={accept}
+            disabled={isOnActiveCall}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-sm ${
+              isOnActiveCall
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-green-500 text-white hover:bg-green-600'
+            }`}
+          >
             <Phone className="w-4 h-4" /> Accept
           </button>
           <button onClick={decline} className="flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white rounded-lg font-medium text-sm hover:bg-red-600">
