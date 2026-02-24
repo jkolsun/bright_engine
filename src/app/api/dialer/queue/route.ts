@@ -9,6 +9,7 @@ import { Prisma } from '@prisma/client'
 const TERMINAL_DISPOSITIONS = [
   'WANTS_TO_MOVE_FORWARD', 'NOT_INTERESTED', 'DNC', 'WRONG_NUMBER',
   'DISCONNECTED', 'WANTS_CHANGES', 'WILL_LOOK_LATER', 'INTERESTED_VERBAL',
+  'CALLBACK',
 ]
 
 // Retry-eligible dispositions

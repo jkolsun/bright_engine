@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useDialer } from './DialerProvider'
-import { Phone, PhoneOff } from 'lucide-react'
+import { Phone, PhoneOff, PhoneIncoming } from 'lucide-react'
 import type { DialerCall } from '@/types/dialer'
 
 export function InboundCallBanner() {
@@ -24,9 +24,33 @@ export function InboundCallBanner() {
 
   if (!inboundCall) return null
 
-  const isOnActiveCall = !!currentCall && ['INITIATED', 'RINGING', 'CONNECTED'].includes(currentCall.status)
+  // Only block accept when rep is actively CONNECTED (talking to someone)
+  const isConnected = !!currentCall && currentCall.status === 'CONNECTED'
+  // Outbound is ringing but not yet answered — can accept inbound and cancel outbound
+  const isRinging = !!currentCall && ['INITIATED', 'RINGING'].includes(currentCall.status)
 
   const accept = () => {
+    // If outbound is only ringing (not connected), cancel it to free the line
+    if (isRinging && currentCall) {
+      // Kill browser's SDK connection to the outbound
+      if (twilioDevice.device) {
+        try { twilioDevice.device.disconnectAll() } catch {}
+      }
+      // End the outbound on the server + auto-disposition as NO_ANSWER
+      fetch('/api/dialer/call/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callId: currentCall.id }),
+      }).catch(() => {})
+      fetch('/api/dialer/call/auto-disposition', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callId: currentCall.id, result: 'NO_ANSWER' }),
+      }).catch(() => {})
+      setCurrentCall(null)
+      timer.stop()
+    }
+
     // Build the inbound DialerCall object
     const inboundDialerCall: DialerCall = {
       id: inboundCall.callId || '',
@@ -42,6 +66,7 @@ export function InboundCallBanner() {
       vmDropped: false,
     } as DialerCall
 
+    // Accept via Twilio SDK
     const call = twilioDevice.activeCall
     if (call) {
       call.accept()
@@ -77,11 +102,11 @@ export function InboundCallBanner() {
   }
 
   return (
-    <div className="bg-blue-50 border-b border-blue-200 px-6 py-3 animate-pulse">
+    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-blue-300 px-6 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-            <Phone className="w-5 h-5 text-white" />
+          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center animate-pulse">
+            <PhoneIncoming className="w-5 h-5 text-white" />
           </div>
           <div>
             <div className="text-sm font-semibold text-gray-900">Incoming Call</div>
@@ -89,26 +114,34 @@ export function InboundCallBanner() {
               {inboundCall.companyName || inboundCall.contactName || inboundCall.from || 'Unknown'}
               {inboundCall.isDNC && <span className="ml-2 text-red-600 font-medium">DNC</span>}
             </div>
-            {isOnActiveCall && (
+            {isConnected && (
               <div className="text-xs text-amber-600 font-medium mt-0.5">
                 Finish your current call to accept this one.
               </div>
             )}
+            {isRinging && (
+              <div className="text-xs text-blue-600 font-medium mt-0.5">
+                Accepting will cancel your outgoing call.
+              </div>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={accept}
-            disabled={isOnActiveCall}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-sm ${
-              isOnActiveCall
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-green-500 text-white hover:bg-green-600'
+            disabled={isConnected}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+              isConnected
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-green-500 text-white hover:bg-green-600 shadow-sm'
             }`}
           >
             <Phone className="w-4 h-4" /> Accept
           </button>
-          <button onClick={decline} className="flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white rounded-lg font-medium text-sm hover:bg-red-600">
+          <button
+            onClick={decline}
+            className="flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white rounded-lg font-medium text-sm hover:bg-red-600 shadow-sm transition-colors"
+          >
             <PhoneOff className="w-4 h-4" /> Decline
           </button>
         </div>
