@@ -4,7 +4,7 @@ import { useDialer } from './DialerProvider'
 import { Phone, PhoneOff, Mic, MicOff, Voicemail, SkipForward, Power, Pause, Play, Info } from 'lucide-react'
 
 export function CallControls() {
-  const { session, twilioDevice, timer, currentCall, dial, hangup, queue } = useDialer()
+  const { session, twilioDevice, timer, currentCall, dial, hangup, queue, endSessionFull } = useDialer()
   const [vmDropping, setVmDropping] = useState(false)
   const [showTooltip, setShowTooltip] = useState(false)
 
@@ -157,7 +157,7 @@ export function CallControls() {
           </div>
 
           <button
-            onClick={() => session.endSession()}
+            onClick={() => endSessionFull()}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-600 border border-red-200 rounded-lg hover:bg-red-50"
           >
             <Power className="w-3.5 h-3.5" />

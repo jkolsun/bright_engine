@@ -47,6 +47,7 @@ interface DialerContextValue {
   bannerUrgent: boolean
   handleAutoDialNext: () => Promise<void>
   handleSwapToNewCall: () => void
+  endSessionFull: () => Promise<void>
 }
 
 const DialerContext = createContext<DialerContextValue | null>(null)
@@ -473,6 +474,35 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     }
   }, [currentCall, twilioDevice])
 
+  // Full session teardown: kill SDK calls, clear all state, then end backend session
+  const endSessionFull = useCallback(async () => {
+    // 1. Kill any active Twilio SDK call
+    twilioDevice.hangup()
+    if (twilioDevice.device) {
+      try { twilioDevice.device.disconnectAll() } catch {}
+    }
+    // 2. Stop timer
+    timer.stop()
+    // 3. Clear grace timer
+    if (graceTimerRef.current) {
+      clearTimeout(graceTimerRef.current)
+      graceTimerRef.current = null
+    }
+    // 4. Reset auto-dial state
+    setAutoDialState('IDLE')
+    setAutoDialBanner(null)
+    setBannerUrgent(false)
+    // 5. Clear call state
+    setCurrentCall(null)
+    currentCallRef.current = null
+    setPendingCall(null)
+    pendingCallRef.current = null
+    wasConnectedRef.current = false
+    lastCalledLeadIdRef.current = null
+    // 6. End backend session (sets session to null → triggers recap screen)
+    await sessionHook.endSession()
+  }, [twilioDevice, timer, sessionHook])
+
   // Cleanup grace timer on unmount
   useEffect(() => {
     return () => {
@@ -484,7 +514,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     <DialerContext.Provider value={{
       session: sessionHook, twilioDevice, sse, queue, timer,
       currentCall, setCurrentCall, dial, hangup,
-      autoDialState, autoDialBanner, bannerUrgent, handleAutoDialNext, handleSwapToNewCall,
+      autoDialState, autoDialBanner, bannerUrgent, handleAutoDialNext, handleSwapToNewCall, endSessionFull,
     }}>
       {children}
     </DialerContext.Provider>
