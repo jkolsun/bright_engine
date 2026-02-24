@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 <Response>
   <Dial callerId="${escXml(callerId)}" answerOnBridge="true" timeout="30"
         statusCallback="${escXml(statusCallbackUrl)}"
-        statusCallbackEvent="initiated ringing answered completed no-answer busy failed"
+        statusCallbackEvent="initiated ringing answered completed"
         statusCallbackMethod="POST">
     <Number
       machineDetection="DetectMessageEnd"

@@ -17,7 +17,13 @@ const getPublicUrl = () =>
  */
 export async function POST(request: NextRequest) {
   const publicUrl = getPublicUrl()
-  const webhookUrl = `${publicUrl}/api/webhooks/twilio-amd`
+
+  // Build verification URL with query params — Twilio signs the FULL URL
+  const { searchParams } = new URL(request.url)
+  const callId = searchParams.get('callId')
+  const webhookUrl = callId
+    ? `${publicUrl}/api/webhooks/twilio-amd?callId=${encodeURIComponent(callId)}`
+    : `${publicUrl}/api/webhooks/twilio-amd`
 
   const isValid = await verifyTwilioSignature(request.clone(), webhookUrl)
   if (!isValid) {
@@ -26,8 +32,6 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { searchParams } = new URL(request.url)
-    const callId = searchParams.get('callId')
 
     const formData = await request.formData()
     const answeredBy = formData.get('AnsweredBy') as string | null
