@@ -18,6 +18,9 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
       include: {
         assignedLeads: {
+          where: {
+            status: { notIn: ['CLOSED_LOST', 'DO_NOT_CONTACT', 'PAID'] }
+          },
           select: { id: true }
         },
         commissions: {
