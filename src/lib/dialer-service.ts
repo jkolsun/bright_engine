@@ -590,19 +590,21 @@ export async function dropVoicemail(callId: string) {
     where: { id: callId },
     include: {
       rep: {
-        select: { id: true, vmRecordingUrl: true },
+        select: { id: true, vmRecordingUrl: true, outboundVmUrl: true },
       },
     },
   })
 
   if (!call) throw new Error('Call not found')
-  if (!call.rep?.vmRecordingUrl) throw new Error('No VM recording configured for this rep')
+  // Use vmRecordingUrl (synced on approval) with fallback to outboundVmUrl (Cloudinary onboarding upload)
+  const vmUrl = call.rep?.vmRecordingUrl || call.rep?.outboundVmUrl
+  if (!vmUrl) throw new Error('No VM recording configured for this rep')
 
   // Bug 10: HEAD-check VM URL before attempting drop
   try {
-    const headResponse = await fetch(call.rep.vmRecordingUrl, { method: 'HEAD' })
+    const headResponse = await fetch(vmUrl, { method: 'HEAD' })
     if (!headResponse.ok) {
-      console.error(`[DialerService] VM recording URL broken (${headResponse.status}): ${call.rep.vmRecordingUrl}`)
+      console.error(`[DialerService] VM recording URL broken (${headResponse.status}): ${vmUrl}`)
       throw new Error('VM recording URL is not accessible')
     }
   } catch (err) {
@@ -632,8 +634,9 @@ export async function dropVoicemail(callId: string) {
     }
 
     // Redirect the child call to play the VM recording to the voicemail
+    const safeUrl = vmUrl.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
     await client.calls(childCalls[0].sid).update({
-      twiml: `<?xml version="1.0" encoding="UTF-8"?><Response><Play>${call.rep.vmRecordingUrl}</Play></Response>`,
+      twiml: `<?xml version="1.0" encoding="UTF-8"?><Response><Play>${safeUrl}</Play></Response>`,
     })
 
     // Hang up the parent call so the rep is disconnected and can move on

@@ -85,6 +85,18 @@ export async function PATCH(
       passwordHash = await bcrypt.hash(data.password, 10)
     }
 
+    // When approving outbound VM, sync outboundVmUrl → vmRecordingUrl so auto VM drop uses it
+    // When rejecting (clearing outboundVmUrl), also clear vmRecordingUrl
+    let vmRecordingSync: { vmRecordingUrl: string | null } | undefined
+    if (data.outboundVmApproved === true) {
+      const existing = await prisma.user.findUnique({ where: { id }, select: { outboundVmUrl: true } })
+      if (existing?.outboundVmUrl) {
+        vmRecordingSync = { vmRecordingUrl: existing.outboundVmUrl }
+      }
+    } else if (data.outboundVmUrl === null) {
+      vmRecordingSync = { vmRecordingUrl: null }
+    }
+
     const user = await prisma.user.update({
       where: { id },
       data: {
@@ -106,6 +118,7 @@ export async function PATCH(
         ...(data.inboundVmUrl !== undefined && { inboundVmUrl: data.inboundVmUrl }),
         ...(data.inboundVmApproved !== undefined && { inboundVmApproved: data.inboundVmApproved }),
         ...(passwordHash && { passwordHash }),
+        ...vmRecordingSync,
       },
     })
 

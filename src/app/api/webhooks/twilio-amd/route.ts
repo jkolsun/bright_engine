@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
         const [rep, activeSession] = await Promise.all([
           prisma.user.findUnique({
             where: { id: dialerCall.repId },
-            select: { vmRecordingUrl: true },
+            select: { vmRecordingUrl: true, outboundVmUrl: true },
           }),
           prisma.dialerSessionNew.findFirst({
             where: { repId: dialerCall.repId, endedAt: null, autoDialEnabled: true },
@@ -92,7 +92,8 @@ export async function POST(request: NextRequest) {
           }),
         ])
 
-        if (activeSession && rep?.vmRecordingUrl) {
+        const vmUrl = rep?.vmRecordingUrl || rep?.outboundVmUrl
+        if (activeSession && vmUrl) {
           await dropVoicemail(dialerCall.id)
           vmAutoDropped = true
           console.log('[TwilioAMD] Auto VM drop succeeded for call', dialerCall.id)
