@@ -125,15 +125,37 @@ export function DialerProvider({ children }: { children: ReactNode }) {
 
       // Update currentCall if it matches
       if (call && data.callId === call.id) {
-        setCurrentCall(prev => prev ? { ...prev, status: data.status, amdResult: data.amdResult } : null)
-        // Sync ref immediately so subsequent SSE events see the latest status
-        currentCallRef.current = { ...call, status: data.status, amdResult: data.amdResult }
+        // Preserve existing values when AMD callback omits status (human detection sends status: undefined)
+        const updatedStatus = data.status ?? call.status
+        const updatedAmdResult = data.amdResult ?? call.amdResult
+        setCurrentCall(prev => prev ? { ...prev, status: updatedStatus, amdResult: updatedAmdResult } : null)
+        currentCallRef.current = { ...call, status: updatedStatus, amdResult: updatedAmdResult }
 
-        if (data.status === 'CONNECTED') {
+        if (updatedStatus === 'CONNECTED' && call.status !== 'CONNECTED') {
           wasConnectedRef.current = true
           timer.start()
         }
-        if (['COMPLETED', 'FAILED', 'NO_ANSWER', 'BUSY'].includes(data.status)) {
+
+        // AMD detected voicemail — auto-skip if auto-dial is enabled
+        // This is the CORE power dialer feature: VM detected → end call → disposition → dial next
+        if (data.isMachine && sessionRef.current?.autoDialEnabled) {
+          console.log('[AutoDial] AMD voicemail detected — auto-skipping call', call.id)
+          // End the Twilio call server-side (SDK disconnects automatically)
+          fetch('/api/dialer/call/end', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callId: call.id }),
+          }).catch(() => {})
+          calledLeadIdsRef.current.add(call.leadId)
+          setCurrentCall(null)
+          currentCallRef.current = null
+          wasConnectedRef.current = false
+          timer.stop()
+          autoDispositionAndChainRef.current?.(call.id, call.leadId, 'VOICEMAIL')
+          return
+        }
+
+        if (['COMPLETED', 'FAILED', 'NO_ANSWER', 'BUSY'].includes(updatedStatus)) {
           timer.stop()
 
           // Auto-skip for non-overlap: if auto-dial is ON and rep never connected, auto-disposition and chain
@@ -141,7 +163,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
             sessionRef.current?.autoDialEnabled &&
             !wasConnectedRef.current
           ) {
-            console.log('[AutoDial] Non-overlap auto-skip:', data.status, 'for call', call.id)
+            console.log('[AutoDial] Non-overlap auto-skip:', updatedStatus, 'for call', call.id)
             calledLeadIdsRef.current.add(call.leadId)
             setCurrentCall(null)
             currentCallRef.current = null
@@ -153,8 +175,23 @@ export function DialerProvider({ children }: { children: ReactNode }) {
 
       // Update pendingCall if it matches (auto-dial overlap)
       if (pending && data.callId === pending.callId) {
-        const newStatus = data.status as string
+        const newStatus = (data.status ?? pending.status) as string
         setPendingCall(prev => prev ? { ...prev, status: newStatus } : null)
+
+        // AMD detected voicemail on pending (background) call — auto-skip to next
+        if (data.isMachine) {
+          console.log('[AutoDial] AMD voicemail on pending call — auto-skipping', pending.callId)
+          fetch('/api/dialer/call/end', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callId: pending.callId }),
+          }).catch(() => {})
+          calledLeadIdsRef.current.add(pending.leadId)
+          setPendingCall(null)
+          pendingCallRef.current = null
+          autoDispositionAndChainRef.current?.(pending.callId, pending.leadId, 'VOICEMAIL')
+          return
+        }
 
         if (newStatus === 'CONNECTED') {
           // Someone picked up the background call
