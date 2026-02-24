@@ -14,7 +14,6 @@ export async function GET(request: NextRequest) {
 
     const now = new Date()
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-    const fourHoursAgo = new Date(now.getTime() - 4 * 60 * 60 * 1000)
     const todayStart = new Date(now)
     todayStart.setHours(0, 0, 0, 0)
 
@@ -111,26 +110,15 @@ export async function GET(request: NextRequest) {
       }),
     ])
 
-    let redisHealth: { status: string; error?: string } = { status: 'unknown' }
-    try {
-      const { default: Redis } = await import('ioredis')
-      const redis = new Redis(process.env.REDIS_URL || '')
-      await redis.ping()
-      redisHealth = { status: 'connected' }
-      await redis.quit()
-    } catch (e) {
-      redisHealth = { status: 'error', error: String(e) }
-    }
-
     const twilioConfigured = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN)
     const stripeConfigured = !!process.env.STRIPE_SECRET_KEY
+    const redisConfigured = !!process.env.REDIS_URL
 
     const issues: string[] = []
     if (recentFailedMessages > 10) issues.push(`${recentFailedMessages} failed messages in last 24h`)
     if (failedWebhooks24h > 5) issues.push(`${failedWebhooks24h} failed webhooks in last 24h`)
     if (failedPayments > 0) issues.push(`${failedPayments} failed payments in last 24h`)
     if (clawdbotErrors > 10) issues.push(`${clawdbotErrors} ClawdBot errors in last 24h`)
-    if (redisHealth.status !== 'connected') issues.push('Redis not connected')
     if (dbCheck.status !== 'connected') issues.push('Database not connected')
 
     const healthStatus = issues.length > 2 ? 'critical' : issues.length > 0 ? 'warning' : 'healthy'
@@ -138,7 +126,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       timestamp: new Date().toISOString(),
       database: dbCheck,
-      redis: redisHealth,
+      redis: { status: redisConfigured ? 'configured' : 'not_configured' },
       twilio: { status: twilioConfigured ? 'configured' : 'not_configured' },
       stripe: { status: stripeConfigured ? 'configured' : 'not_configured' },
       pipeline: {
