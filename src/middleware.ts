@@ -6,19 +6,16 @@ import { verifySession, signSession } from '@/lib/session'
 const PLATFORM_DOMAINS = (process.env.PLATFORM_DOMAINS || 'brightautomations.org,localhost').split(',').map(d => d.trim().toLowerCase())
 
 // ── Webhook rate limiting (BUG 14.3) ──
-// In-memory sliding window: IP → timestamps of recent requests
 const webhookRateMap = new Map<string, number[]>()
-const WEBHOOK_RATE_LIMIT = 100 // requests
-const WEBHOOK_RATE_WINDOW = 60_000 // 1 minute
+const WEBHOOK_RATE_LIMIT = 100
+const WEBHOOK_RATE_WINDOW = 60_000
 
 function isWebhookRateLimited(ip: string): boolean {
   const now = Date.now()
   const timestamps = webhookRateMap.get(ip) || []
-  // Remove entries older than the window
   const recent = timestamps.filter(t => now - t < WEBHOOK_RATE_WINDOW)
   recent.push(now)
   webhookRateMap.set(ip, recent)
-  // Periodic cleanup: if map gets large, prune stale IPs
   if (webhookRateMap.size > 10_000) {
     for (const [key, vals] of webhookRateMap) {
       if (vals.every(t => now - t >= WEBHOOK_RATE_WINDOW)) webhookRateMap.delete(key)
@@ -32,7 +29,6 @@ export async function middleware(request: NextRequest) {
   const hostname = (request.headers.get('host') || '').toLowerCase()
 
   // ── Multi-tenant domain routing ──
-  // If hostname is NOT a known platform domain, treat it as a client custom domain
   const isPlatformDomain = PLATFORM_DOMAINS.some(d => hostname.includes(d))
   const isInternalPath = pathname.startsWith('/api/') ||
     pathname.startsWith('/_next/') ||
@@ -40,7 +36,6 @@ export async function middleware(request: NextRequest) {
     pathname.includes('.')
 
   if (!isPlatformDomain && !isInternalPath) {
-    // Custom domain — look up clientId via internal API
     const lookupUrl = new URL('/api/domain-lookup', request.url)
     lookupUrl.searchParams.set('domain', hostname)
 
@@ -58,7 +53,6 @@ export async function middleware(request: NextRequest) {
       console.error('[Middleware] Domain lookup failed:', err)
     }
 
-    // Domain not found — show "site not available"
     const url = request.nextUrl.clone()
     url.pathname = '/site/not-found'
     return NextResponse.rewrite(url)
@@ -77,7 +71,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Clawdbot API uses API key auth, not cookies
   if (pathname.startsWith('/api/clawdbot/')) {
     const apiKey = request.headers.get('x-clawdbot-key')
     if (!apiKey || apiKey !== process.env.CLAWDBOT_API_KEY) {
@@ -86,7 +79,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Public routes — no auth needed
   if (
     pathname === '/login' ||
     pathname === '/start' ||
@@ -115,21 +107,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Read session cookie
   const sessionCookie = request.cookies.get('session')?.value
 
   if (!sessionCookie) {
-    // No session — redirect to login (but not for API routes, return 401 instead)
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Verify signed session
   const decoded = await verifySession(sessionCookie)
   if (!decoded) {
-    // Invalid session — clear it and redirect to login
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
     }
@@ -140,8 +128,18 @@ export async function middleware(request: NextRequest) {
 
   const userRole = decoded.role || 'guest'
 
+  // ── CHILLBOT role — restricted to only 4 ChillBot endpoints, 403 on everything else ──
+  if (userRole === 'CHILLBOT') {
+    if (pathname.startsWith('/api/admin/chillbot/')) {
+      return NextResponse.next()
+    }
+    return NextResponse.json(
+      { error: 'ChillBot access restricted to /api/admin/chillbot/ endpoints only' },
+      { status: 403 }
+    )
+  }
+
   // ── NEW-M8: Session refresh — extend active sessions ──
-  // If session is >12h old but <24h, re-sign with fresh maxAge
   let sessionRefreshResponse: NextResponse | null = null
   if (decoded.iat) {
     const ageMs = Date.now() - decoded.iat
@@ -165,7 +163,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Admin-only API routes (but diagnostics is checked inside the route)
+  // Admin-only API routes
   const adminOnlyPaths = [
     '/api/admin/',
     '/api/cleanup',
@@ -182,7 +180,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Site editor — admin only (full-screen, outside /admin layout)
+  // Site editor — admin only
   if (pathname.startsWith('/site-editor')) {
     if (userRole !== 'ADMIN') {
       return NextResponse.redirect(new URL('/login', request.url))
@@ -198,12 +196,11 @@ export async function middleware(request: NextRequest) {
     return sessionRefreshResponse || NextResponse.next()
   }
 
-  // Part-time rep routes — REP (PART_TIME) or ADMIN
+  // Part-time rep routes
   if (pathname.startsWith('/part-time')) {
     if (userRole !== 'REP' && userRole !== 'ADMIN') {
       return NextResponse.redirect(new URL('/login', request.url))
     }
-    // Full-time reps should use /reps instead
     if (userRole === 'REP' && decoded.portalType !== 'PART_TIME') {
       return NextResponse.redirect(new URL('/reps', request.url))
     }
@@ -215,11 +212,9 @@ export async function middleware(request: NextRequest) {
     if (userRole !== 'REP' && userRole !== 'ADMIN') {
       return NextResponse.redirect(new URL('/login', request.url))
     }
-    // Part-time reps should use /part-time instead
     if (userRole === 'REP' && decoded.portalType === 'PART_TIME') {
       return NextResponse.redirect(new URL('/part-time', request.url))
     }
-    // Onboarding gate — redirect unboarded full-time reps
     if (userRole === 'REP' && decoded.portalType !== 'PART_TIME' && !decoded.onboardingCompletedAt) {
       if (!pathname.startsWith('/reps/onboarding')) {
         return NextResponse.redirect(new URL('/reps/onboarding', request.url))
@@ -228,12 +223,10 @@ export async function middleware(request: NextRequest) {
     return sessionRefreshResponse || NextResponse.next()
   }
 
-  // API routes — any authenticated user
   if (pathname.startsWith('/api/')) {
     return sessionRefreshResponse || NextResponse.next()
   }
 
-  // Default — allow authenticated users through
   return sessionRefreshResponse || NextResponse.next()
 }
 
