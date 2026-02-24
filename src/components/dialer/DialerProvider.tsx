@@ -139,13 +139,15 @@ export function DialerProvider({ children }: { children: ReactNode }) {
         // AMD detected voicemail — auto-skip if auto-dial is enabled
         // This is the CORE power dialer feature: VM detected → end call → disposition → dial next
         if (data.isMachine && sessionRef.current?.autoDialEnabled) {
-          console.log('[AutoDial] AMD voicemail detected — auto-skipping call', call.id)
-          // End the Twilio call server-side (SDK disconnects automatically)
-          fetch('/api/dialer/call/end', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ callId: call.id }),
-          }).catch(() => {})
+          console.log('[AutoDial] AMD voicemail detected — auto-skipping call', call.id, 'vmAutoDropped:', data.vmAutoDropped)
+          // Only end call if server didn't already auto-drop VM (dropVoicemail hangs up the parent)
+          if (!data.vmAutoDropped) {
+            fetch('/api/dialer/call/end', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ callId: call.id }),
+            }).catch(() => {})
+          }
           calledLeadIdsRef.current.add(call.leadId)
           setCurrentCall(null)
           currentCallRef.current = null
@@ -180,12 +182,14 @@ export function DialerProvider({ children }: { children: ReactNode }) {
 
         // AMD detected voicemail on pending (background) call — auto-skip to next
         if (data.isMachine) {
-          console.log('[AutoDial] AMD voicemail on pending call — auto-skipping', pending.callId)
-          fetch('/api/dialer/call/end', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ callId: pending.callId }),
-          }).catch(() => {})
+          console.log('[AutoDial] AMD voicemail on pending call — auto-skipping', pending.callId, 'vmAutoDropped:', data.vmAutoDropped)
+          if (!data.vmAutoDropped) {
+            fetch('/api/dialer/call/end', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ callId: pending.callId }),
+            }).catch(() => {})
+          }
           calledLeadIdsRef.current.add(pending.leadId)
           setPendingCall(null)
           pendingCallRef.current = null

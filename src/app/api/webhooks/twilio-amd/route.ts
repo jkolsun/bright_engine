@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server'
 import { verifyTwilioSignature } from '@/lib/twilio-verify'
 import { prisma } from '@/lib/db'
 import { pushToRep, pushToAllAdmins } from '@/lib/dialer-events'
+import { dropVoicemail } from '@/lib/dialer-service'
 
 const getPublicUrl = () =>
   process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || 'https://preview.brightautomations.org'
@@ -67,12 +68,37 @@ export async function POST(request: NextRequest) {
       where: { id: dialerCall.id },
       data: {
         amdResult: answeredBy,
-        // If voicemail detected, update status
         ...(isMachine ? { status: 'VOICEMAIL' } : {}),
       },
     })
 
-    // Push SSE to rep — enables VM drop button if machine detected
+    // Auto VM drop: if machine detected + rep has recording + session has auto-dial ON
+    // → drop the pre-recorded VM immediately (right after the beep) and free the rep
+    let vmAutoDropped = false
+    if (isMachine) {
+      try {
+        const [rep, activeSession] = await Promise.all([
+          prisma.user.findUnique({
+            where: { id: dialerCall.repId },
+            select: { vmRecordingUrl: true },
+          }),
+          prisma.dialerSessionNew.findFirst({
+            where: { repId: dialerCall.repId, endedAt: null, autoDialEnabled: true },
+            select: { id: true },
+          }),
+        ])
+
+        if (activeSession && rep?.vmRecordingUrl) {
+          await dropVoicemail(dialerCall.id)
+          vmAutoDropped = true
+          console.log('[TwilioAMD] Auto VM drop succeeded for call', dialerCall.id)
+        }
+      } catch (err) {
+        console.warn('[TwilioAMD] Auto VM drop failed, falling back to manual:', err)
+      }
+    }
+
+    // Push SSE to rep — frontend auto-skips when isMachine + auto-dial ON
     const sseEvent = {
       type: 'CALL_STATUS' as const,
       data: {
@@ -81,6 +107,7 @@ export async function POST(request: NextRequest) {
         amdResult: answeredBy,
         isMachine,
         status: isMachine ? 'VOICEMAIL' : undefined,
+        vmAutoDropped,
       },
       timestamp: new Date().toISOString(),
     }
