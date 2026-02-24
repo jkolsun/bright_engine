@@ -597,8 +597,14 @@ export async function dropVoicemail(callId: string) {
 
   if (!call) throw new Error('Call not found')
   // Use vmRecordingUrl (synced on approval) with fallback to outboundVmUrl (Cloudinary onboarding upload)
-  const vmUrl = call.rep?.vmRecordingUrl || call.rep?.outboundVmUrl
+  let vmUrl = call.rep?.vmRecordingUrl || call.rep?.outboundVmUrl
   if (!vmUrl) throw new Error('No VM recording configured for this rep')
+
+  // Twilio <Play> only supports MP3/WAV — browser recordings are WebM.
+  // Cloudinary converts on-the-fly when you swap the file extension.
+  if (vmUrl.includes('cloudinary.com') && vmUrl.endsWith('.webm')) {
+    vmUrl = vmUrl.replace(/\.webm$/, '.mp3')
+  }
 
   // Bug 10: HEAD-check VM URL before attempting drop
   try {
