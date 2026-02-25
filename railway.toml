@@ -3,5 +3,5 @@ builder = "nixpacks"
 buildCommand = "npm install && npx prisma generate && npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public"
 
 [deploy]
-startCommand = "NODE_OPTIONS='--max-old-space-size=1024 --no-node-snapshot' node .next/standalone/server.js"
+startCommand = "sh -c 'NODE_OPTIONS=\"--max-old-space-size=1024 --no-node-snapshot\" node .next/standalone/server.js'"
 restartPolicyMaxRetries = 5
