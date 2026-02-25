@@ -395,13 +395,17 @@ async function startWorkers() {
           'referral-day-45-email', 'referral-day-90-email', 'referral-day-180-email',
         ])
         if (ONBOARDING_GATED_JOBS.has(job.name) && job.data.clientId) {
-          const gateClient = await prisma.client.findUnique({
-            where: { id: job.data.clientId },
-            select: { onboardingStep: true },
-          })
-          if (gateClient && gateClient.onboardingStep > 0 && gateClient.onboardingStep < 7) {
-            console.log(`[Sequence] Skipping ${job.name} — client onboarding not complete (step ${gateClient.onboardingStep}/7)`)
-            return { success: true, skipped: true, reason: 'onboarding_incomplete' }
+          try {
+            const gateClient = await prisma.client.findUnique({
+              where: { id: job.data.clientId },
+              select: { onboardingStep: true },
+            })
+            if (gateClient && gateClient.onboardingStep > 0 && gateClient.onboardingStep < 7) {
+              console.log(`[Sequence] Skipping ${job.name} — client onboarding not complete (step ${gateClient.onboardingStep}/7)`)
+              return { success: true, skipped: true, reason: 'onboarding_incomplete' }
+            }
+          } catch (err) {
+            console.warn(`[Sequence] Onboarding gate check failed (column may not exist yet), proceeding with job:`, err instanceof Error ? err.message : String(err))
           }
         }
 
@@ -1458,9 +1462,15 @@ async function pendingStateEscalation() {
   const seventyTwoHoursAgo = new Date(Date.now() - 72 * 60 * 60 * 1000)
 
   // 1. Stale Approvals (PENDING > 24h → reminder, > 72h → critical)
-  const pendingApprovals = await prisma.approval.findMany({
-    where: { status: 'PENDING', createdAt: { lt: twentyFourHoursAgo } },
-  })
+  // Wrapped in try/catch — approvals table may not exist yet if migration hasn't been applied
+  let pendingApprovals: any[] = []
+  try {
+    pendingApprovals = await prisma.approval.findMany({
+      where: { status: 'PENDING', createdAt: { lt: twentyFourHoursAgo } },
+    })
+  } catch (err) {
+    console.warn('[PendingEscalation] Skipping approvals check — table may not exist yet:', err instanceof Error ? err.message : String(err))
+  }
 
   for (const approval of pendingApprovals) {
     const isCritical = approval.createdAt < seventyTwoHoursAgo
@@ -1501,10 +1511,15 @@ async function pendingStateEscalation() {
   }
 
   // 2. Stale EditRequests (status 'new' > 24h)
-  const staleEdits = await prisma.editRequest.findMany({
-    where: { status: 'new', createdAt: { lt: twentyFourHoursAgo } },
-    include: { client: { select: { companyName: true } } },
-  })
+  let staleEdits: any[] = []
+  try {
+    staleEdits = await prisma.editRequest.findMany({
+      where: { status: 'new', createdAt: { lt: twentyFourHoursAgo } },
+      include: { client: { select: { companyName: true } } },
+    })
+  } catch (err) {
+    console.warn('[PendingEscalation] Skipping edit requests check:', err instanceof Error ? err.message : String(err))
+  }
 
   for (const edit of staleEdits) {
     const isCritical = edit.createdAt < seventyTwoHoursAgo
@@ -1538,10 +1553,15 @@ async function pendingStateEscalation() {
   }
 
   // 3. Stale PendingActions (status 'PENDING' > 24h)
-  const stalePending = await prisma.pendingAction.findMany({
-    where: { status: 'PENDING', createdAt: { lt: twentyFourHoursAgo } },
-    include: { lead: { select: { companyName: true } } },
-  })
+  let stalePending: any[] = []
+  try {
+    stalePending = await prisma.pendingAction.findMany({
+      where: { status: 'PENDING', createdAt: { lt: twentyFourHoursAgo } },
+      include: { lead: { select: { companyName: true } } },
+    })
+  } catch (err) {
+    console.warn('[PendingEscalation] Skipping pending actions check:', err instanceof Error ? err.message : String(err))
+  }
 
   for (const action of stalePending) {
     const isCritical = action.createdAt < seventyTwoHoursAgo

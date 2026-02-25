@@ -115,3 +115,73 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
+/**
+ * POST /api/admin/queue-status
+ * Actions: retry a failed job, or clear all failed jobs from a queue.
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
+    if (!process.env.REDIS_URL) {
+      return NextResponse.json({ error: 'REDIS_URL not configured' }, { status: 500 })
+    }
+
+    const { action, queueName, jobId } = await request.json()
+
+    if (!action || !queueName || !QUEUE_NAMES.includes(queueName)) {
+      return NextResponse.json({ error: 'Invalid action or queue name' }, { status: 400 })
+    }
+
+    const redis = new Redis(process.env.REDIS_URL, {
+      maxRetriesPerRequest: null,
+      connectTimeout: 5000,
+      retryStrategy: () => null,
+    })
+
+    await redis.ping()
+
+    // @ts-ignore - bullmq accepts ioredis connection
+    const q = new Queue(queueName, { connection: redis })
+
+    if (action === 'retry' && jobId) {
+      const job = await q.getJob(jobId)
+      if (job) {
+        await job.retry()
+        await q.close()
+        await redis.quit()
+        return NextResponse.json({ success: true, retried: jobId })
+      }
+      await q.close()
+      await redis.quit()
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 })
+    }
+
+    if (action === 'clear') {
+      const failed = await q.getFailed(0, 100)
+      let cleared = 0
+      for (const job of failed) {
+        await job.remove()
+        cleared++
+      }
+      await q.close()
+      await redis.quit()
+      return NextResponse.json({ success: true, cleared })
+    }
+
+    await q.close()
+    await redis.quit()
+    return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
+  } catch (error) {
+    console.error('Queue action failed:', error)
+    return NextResponse.json(
+      { error: 'Queue action failed', details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    )
+  }
+}

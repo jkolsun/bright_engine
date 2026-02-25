@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, AlertTriangle, CheckCircle, Clock, XCircle, Activity } from 'lucide-react'
+import { RefreshCw, AlertTriangle, CheckCircle, Clock, XCircle, Activity, RotateCcw, Trash2 } from 'lucide-react'
 
 interface QueueCounts {
   active?: number
@@ -37,6 +37,7 @@ export default function QueueStatusPage() {
   const [data, setData] = useState<QueueStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const fetchStatus = async () => {
     setLoading(true)
@@ -61,6 +62,38 @@ export default function QueueStatusPage() {
     const interval = setInterval(fetchStatus, 30_000)
     return () => clearInterval(interval)
   }, [])
+
+  const retryJob = async (queueName: string, jobId: string) => {
+    setActionLoading(`retry-${jobId}`)
+    try {
+      const res = await fetch('/api/admin/queue-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'retry', queueName, jobId }),
+      })
+      if (res.ok) await fetchStatus()
+    } catch {
+      // silent
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const clearQueue = async (queueName: string) => {
+    setActionLoading(`clear-${queueName}`)
+    try {
+      const res = await fetch('/api/admin/queue-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'clear', queueName }),
+      })
+      if (res.ok) await fetchStatus()
+    } catch {
+      // silent
+    } finally {
+      setActionLoading(null)
+    }
+  }
 
   const totalFailed = data
     ? Object.values(data.queues).reduce((sum, q) => {
@@ -239,6 +272,24 @@ export default function QueueStatusPage() {
                   <Badge variant="destructive" className="ml-2">{data.failedJobs.length}</Badge>
                 )}
               </h2>
+              {data.failedJobs.length > 0 && (
+                <div className="flex items-center gap-2">
+                  {/* Group clear buttons by queue */}
+                  {[...new Set(data.failedJobs.map(j => j.queue))].map(queueName => (
+                    <Button
+                      key={queueName}
+                      size="sm"
+                      variant="outline"
+                      className="text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                      disabled={actionLoading === `clear-${queueName}`}
+                      onClick={() => clearQueue(queueName)}
+                    >
+                      <Trash2 size={12} />
+                      Clear {queueName}
+                    </Button>
+                  ))}
+                </div>
+              )}
             </div>
             {data.failedJobs.length === 0 ? (
               <div className="px-6 py-12 text-center text-gray-500">
@@ -259,9 +310,21 @@ export default function QueueStatusPage() {
                         </span>
                       )}
                       {job.timestamp && (
-                        <span className="text-xs text-gray-400 ml-auto">
+                        <span className="text-xs text-gray-400">
                           {new Date(job.timestamp).toLocaleString()}
                         </span>
+                      )}
+                      {job.id && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="ml-auto text-xs gap-1 text-blue-600 hover:bg-blue-50 h-7"
+                          disabled={actionLoading === `retry-${job.id}`}
+                          onClick={() => retryJob(job.queue, job.id!)}
+                        >
+                          <RotateCcw size={12} className={actionLoading === `retry-${job.id}` ? 'animate-spin' : ''} />
+                          Retry
+                        </Button>
                       )}
                     </div>
                     <pre className="text-xs text-red-600 bg-red-50 rounded p-3 overflow-x-auto whitespace-pre-wrap">

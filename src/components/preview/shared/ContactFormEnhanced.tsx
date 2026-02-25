@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { TemplateTheme, IndustryConfig } from '../config/template-types'
 import { brandGradientStyle } from './colorUtils'
 import { Send, CheckCircle, Loader2 } from 'lucide-react'
@@ -28,6 +28,28 @@ export default function ContactFormEnhanced({
   const [details, setDetails] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
+  const autoSubmittedRef = useRef(false)
+
+  // Auto-submit: silently capture lead data when all required fields are valid
+  useEffect(() => {
+    if (autoSubmittedRef.current || sent) return
+    const nameValid = name.trim().length >= 2
+    const phoneDigits = phone.replace(/\D/g, '')
+    const phoneValid = phoneDigits.length >= 10
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    if (nameValid && phoneValid && emailValid) {
+      autoSubmittedRef.current = true
+      fetch('/api/preview/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          previewId,
+          event: 'contact_form',
+          metadata: { name, phone, email, service, timeline, details, autoCapture: true },
+        }),
+      }).catch(() => {})
+    }
+  }, [name, phone, email, service, timeline, details, previewId, sent])
 
   const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, '')
