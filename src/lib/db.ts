@@ -13,12 +13,14 @@ function getPooledUrl(): string | undefined {
   return `${url}${sep}connection_limit=10&pool_timeout=10`
 }
 
+const pooledUrl = getPooledUrl()
+
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
     errorFormat: 'pretty',
-    datasources: { db: { url: getPooledUrl() } },
+    ...(pooledUrl ? { datasources: { db: { url: pooledUrl } } } : {}),
   })
 
 // Workers are now handled by the dedicated worker service (npm run worker)
