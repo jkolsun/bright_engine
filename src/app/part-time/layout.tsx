@@ -104,7 +104,6 @@ export default function PartTimeLayout({
     { href: '/part-time/dialer', icon: Phone, label: 'Dialer' },
     { href: '/part-time/earnings', icon: DollarSign, label: 'Earnings' },
     { href: '/part-time/tasks', icon: Target, label: 'Tasks' },
-    { href: '/part-time/leaderboard', icon: Award, label: 'Leaderboard' },
   ]
 
   if (!onboardingLoaded) {

@@ -81,7 +81,6 @@ export default function RepsLayout({
     { href: '/reps/dialer', icon: Phone, label: 'Dialer' },
     { href: '/reps/earnings', icon: DollarSign, label: 'Earnings' },
     { href: '/reps/tasks', icon: Target, label: 'Tasks' },
-    { href: '/reps/leaderboard', icon: Award, label: 'Leaderboard' },
   ]
 
   // Onboarding page renders full-screen without sidebar
