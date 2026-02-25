@@ -43,15 +43,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fetch leads to distribute
-    const query: any = {
+    // Fetch leads to distribute — only select needed fields to reduce memory
+    const leads = await prisma.lead.findMany({
       where: {
-        status: { in: ['NEW', 'HOT_LEAD', 'QUALIFIED'] }, // Only distribute active leads
-        ...(leadIds.length > 0 && { id: { in: leadIds } })
-      }
-    }
-
-    const leads = await prisma.lead.findMany(query)
+        status: { in: ['NEW', 'HOT_LEAD', 'QUALIFIED'] },
+        ...(leadIds.length > 0 && { id: { in: leadIds } }),
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        companyName: true,
+        website: true,
+        city: true,
+        state: true,
+        industry: true,
+      },
+      take: 200, // Safety limit — prevents loading thousands of leads at once
+    })
 
     if (leads.length === 0) {
       return NextResponse.json({
