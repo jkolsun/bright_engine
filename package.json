@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "NODE_OPTIONS='--max-old-space-size=2048' next build",
-    "start": "NODE_OPTIONS='--max-old-space-size=1024 --no-node-snapshot' node .next/standalone/server.js",
+    "start": "NODE_OPTIONS='--max-old-space-size=1024 --no-node-snapshot' next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
     "db:push": "prisma db push --accept-data-loss",
