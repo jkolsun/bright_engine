@@ -11,21 +11,16 @@ export async function GET(request: NextRequest) {
   }
 
   // Collect all available dialer numbers from env vars
-  // Supports both naming conventions: TWILIO_REPn_NUMBER_PRIMARY and TWILIO_DIALER_NUMBER_n
+  // Dynamically scans for TWILIO_REPn_NUMBER_PRIMARY and TWILIO_DIALER_NUMBER_n patterns
   const numbers: string[] = []
   const seen = new Set<string>()
-  const envKeys = [
-    'TWILIO_REP1_NUMBER_PRIMARY',
-    'TWILIO_REP2_NUMBER_PRIMARY',
-    'TWILIO_DIALER_NUMBER_1',
-    'TWILIO_DIALER_NUMBER_2',
-    'TWILIO_DIALER_NUMBER_3',
-  ]
-  for (const key of envKeys) {
-    const num = process.env[key]
-    if (num && !seen.has(num)) {
-      numbers.push(num)
-      seen.add(num)
+  for (const [key, val] of Object.entries(process.env)) {
+    if (!val) continue
+    const isRepPrimary = /^TWILIO_REP\d+_NUMBER_PRIMARY$/.test(key)
+    const isDialerNum = /^TWILIO_DIALER_NUMBER_\d+$/.test(key)
+    if ((isRepPrimary || isDialerNum) && !seen.has(val)) {
+      numbers.push(val)
+      seen.add(val)
     }
   }
 
