@@ -26,7 +26,7 @@ import {
 interface LiveRep {
   repId: string
   repName: string
-  status: 'idle' | 'dialing' | 'on_call' | 'on_hold'
+  status: 'idle' | 'dialing' | 'on_call' | 'on_hold' | 'offline'
   sessionActive: boolean
   currentLead: { firstName: string; lastName: string; companyName: string } | null
   activeCalls: number
@@ -69,20 +69,19 @@ export default function DialerMonitorPage() {
       const res = await fetch('/api/dialer/admin/live')
       if (res.ok) {
         const data = await res.json()
-        // Map backend session shape to LiveRep interface
-        const reps: LiveRep[] = (data.sessions || []).map((s: any) => ({
-          repId: s.rep?.id || s.repId,
-          repName: s.rep?.name || 'Unknown',
-          status: 'idle' as const,
-          sessionActive: s.isActive ?? true,
-          currentLead: null,
+        const reps: LiveRep[] = (data.reps || []).map((r: any) => ({
+          repId: r.repId,
+          repName: r.repName || 'Unknown',
+          status: r.status || 'offline',
+          sessionActive: r.sessionActive ?? false,
+          currentLead: r.currentLead || null,
           activeCalls: 0,
-          callDuration: 0,
+          callDuration: r.callDuration || 0,
           todayStats: {
-            dials: s._count?.calls || 0,
-            conversations: 0,
-            closes: 0,
-            previewsSent: 0,
+            dials: r.todayStats?.dials || 0,
+            conversations: r.todayStats?.conversations || 0,
+            closes: r.todayStats?.closes || 0,
+            previewsSent: r.todayStats?.previewsSent || 0,
           },
           previewStatus: null,
         }))
@@ -204,9 +203,9 @@ export default function DialerMonitorPage() {
                         'bg-gray-100 text-gray-600'
                       }>
                         {rep.status === 'on_call' ? `ON CALL (${formatTime(rep.callDuration)})` :
-                         rep.status === 'dialing' ? `DIALING (${rep.activeCalls} lines)` :
+                         rep.status === 'dialing' ? 'DIALING' :
                          rep.status === 'on_hold' ? 'ON HOLD' :
-                         rep.sessionActive ? 'IDLE' : 'OFFLINE'}
+                         rep.status === 'idle' ? 'IDLE' : 'OFFLINE'}
                       </Badge>
                     </div>
 
