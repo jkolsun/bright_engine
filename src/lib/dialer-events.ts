@@ -64,6 +64,8 @@ export function removeRepConnection(repId: string): void {
     try { conn.writer.close() } catch { /* already closed */ }
     repConnections.delete(repId)
   }
+  // Stop heartbeat when no connections remain
+  if (repConnections.size === 0 && adminConnections.size === 0) stopHeartbeat()
 }
 
 export function pushToRep(repId: string, event: DialerEvent): void {
@@ -100,6 +102,8 @@ export function removeAdminConnection(adminId: string): void {
     try { conn.writer.close() } catch { /* already closed */ }
     adminConnections.delete(adminId)
   }
+  // Stop heartbeat when no connections remain
+  if (repConnections.size === 0 && adminConnections.size === 0) stopHeartbeat()
 }
 
 export function pushToAllAdmins(event: DialerEvent): void {

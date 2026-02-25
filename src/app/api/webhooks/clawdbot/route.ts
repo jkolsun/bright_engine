@@ -42,7 +42,12 @@ export async function POST(request: NextRequest) {
       case 'daily.digest_requested':
         await handleDailyDigest(event.data)
         break
-        
+
+      case 'dialer.call_completed':
+      case 'dialer.lead_interested':
+        // Acknowledged — no action needed in Clawdbot for these event types
+        break
+
       default:
         console.log('🤖 Unknown webhook event type:', event.type)
     }

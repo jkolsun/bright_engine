@@ -44,6 +44,14 @@ const leadCallCounts = new Map<string, { count: number; resetAt: number }>()
 
 export function checkAiRateLimit(leadId: string): { allowed: boolean; remaining: number } {
   const now = Date.now()
+
+  // Cleanup stale entries on demand (no setInterval — avoids SIGSEGV in native addons)
+  if (leadCallCounts.size > 50) {
+    for (const [key, e] of leadCallCounts) {
+      if (now > e.resetAt) leadCallCounts.delete(key)
+    }
+  }
+
   const entry = leadCallCounts.get(leadId)
 
   if (!entry || now > entry.resetAt) {
@@ -58,14 +66,6 @@ export function checkAiRateLimit(leadId: string): { allowed: boolean; remaining:
   entry.count++
   return { allowed: true, remaining: AI_RATE_LIMIT - entry.count }
 }
-
-// Cleanup stale entries every 5 minutes
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, entry] of leadCallCounts) {
-    if (now > entry.resetAt) leadCallCounts.delete(key)
-  }
-}, 5 * 60 * 1000)
 
 // Register invalidator so admin API key changes take effect everywhere
 try {
