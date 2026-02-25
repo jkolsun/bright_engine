@@ -33,70 +33,78 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Calculate stats for each rep
-    const repsWithStats = await Promise.all(
-      reps.map(async (rep) => {
-        // Get current month activity
-        const firstDayOfMonth = new Date()
-        firstDayOfMonth.setDate(1)
-        firstDayOfMonth.setHours(0, 0, 0, 0)
+    // Batch queries for all reps at once (2 queries instead of N*2)
+    const repIds = reps.map(r => r.id)
+    const firstDayOfMonth = new Date()
+    firstDayOfMonth.setDate(1)
+    firstDayOfMonth.setHours(0, 0, 0, 0)
 
-        const monthActivity = await prisma.repActivity.aggregate({
-          where: {
-            repId: rep.id,
-            date: { gte: firstDayOfMonth }
+    const [monthActivities, closeCounts] = await Promise.all([
+      // Single groupBy for all reps' monthly activity
+      prisma.repActivity.groupBy({
+        by: ['repId'],
+        where: {
+          repId: { in: repIds },
+          date: { gte: firstDayOfMonth },
+        },
+        _sum: {
+          dials: true,
+          conversations: true,
+          previewLinksSent: true,
+          closes: true,
+          commissionEarned: true,
+        },
+      }),
+      // Single groupBy for all reps' close counts
+      prisma.lead.groupBy({
+        by: ['assignedToId'],
+        where: {
+          OR: [
+            { ownerRepId: { in: repIds } },
+            { assignedToId: { in: repIds }, ownerRepId: null },
+          ],
+          status: 'PAID',
+        },
+        _count: true,
+      }),
+    ])
+
+    // Build lookup maps
+    const activityByRep = new Map(monthActivities.map(a => [a.repId, a._sum]))
+    const closesByRep = new Map(closeCounts.map(c => [c.assignedToId, c._count]))
+
+    const repsWithStats = reps.map(rep => {
+      const monthActivity = activityByRep.get(rep.id)
+      const totalCloses = closesByRep.get(rep.id) || 0
+      const totalCommissions = rep.commissions.reduce(
+        (sum, comm) => sum + comm.amount,
+        0
+      )
+
+      return {
+        id: rep.id,
+        name: rep.name,
+        email: rep.email,
+        phone: rep.phone,
+        assignedDialerPhone: rep.assignedDialerPhone,
+        twilioNumber2: rep.twilioNumber2,
+        status: rep.status,
+        portalType: rep.portalType,
+        createdAt: rep.createdAt,
+        stats: {
+          assignedLeads: rep.assignedLeads.length,
+          totalCloses,
+          totalCommissions,
+          monthActivity: {
+            dials: monthActivity?.dials || 0,
+            conversations: monthActivity?.conversations || 0,
+            previewLinksSent: monthActivity?.previewLinksSent || 0,
+            closes: monthActivity?.closes || 0,
+            commissionEarned: monthActivity?.commissionEarned || 0,
           },
-          _sum: {
-            dials: true,
-            conversations: true,
-            previewLinksSent: true,
-            closes: true,
-            commissionEarned: true
-          }
-        })
-
-        // Get all-time closes (check both ownerRepId and assignedToId)
-        const totalCloses = await prisma.lead.count({
-          where: {
-            OR: [
-              { ownerRepId: rep.id },
-              { assignedToId: rep.id, ownerRepId: null },
-            ],
-            status: 'PAID'
-          }
-        })
-
-        // Get total commissions
-        const totalCommissions = rep.commissions.reduce(
-          (sum, comm) => sum + comm.amount,
-          0
-        )
-
-        return {
-          id: rep.id,
-          name: rep.name,
-          email: rep.email,
-          phone: rep.phone,
-          assignedDialerPhone: rep.assignedDialerPhone,
-          twilioNumber2: rep.twilioNumber2,
-          status: rep.status,
-          portalType: rep.portalType,
-          createdAt: rep.createdAt,
-          stats: {
-            assignedLeads: rep.assignedLeads.length,
-            totalCloses,
-            totalCommissions,
-            monthActivity: {
-              dials: monthActivity._sum.dials || 0,
-              conversations: monthActivity._sum.conversations || 0,
-              previewLinksSent: monthActivity._sum.previewLinksSent || 0,
-              closes: monthActivity._sum.closes || 0,
-              commissionEarned: monthActivity._sum.commissionEarned || 0
-            }
-          }
-        }
-      })
-    )
+        },
+      }
+    })
 
     // Sort by month closes (leaderboard)
     repsWithStats.sort((a, b) => 

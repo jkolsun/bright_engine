@@ -18,13 +18,18 @@ export async function GET(request: NextRequest) {
         orderBy: { updatedAt: 'desc' },
       })
 
-      const scores = await Promise.allSettled(
-        leads.map(l => calculateEngagementScore(l.id))
-      )
-
-      const results = scores
-        .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
-        .map(r => r.value)
+      // Process in chunks of 10 to avoid overwhelming DB connections
+      const CHUNK_SIZE = 10
+      const results: any[] = []
+      for (let i = 0; i < leads.length; i += CHUNK_SIZE) {
+        const chunk = leads.slice(i, i + CHUNK_SIZE)
+        const scores = await Promise.allSettled(
+          chunk.map(l => calculateEngagementScore(l.id))
+        )
+        for (const r of scores) {
+          if (r.status === 'fulfilled') results.push(r.value)
+        }
+      }
 
       return NextResponse.json({ scores: results })
     } catch (error) {

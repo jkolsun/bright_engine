@@ -79,15 +79,16 @@ export async function POST(request: NextRequest) {
       errors: [] as any[]
     }
 
-    // Process each lead
+    // Track successful leads for batch DB update
+    const campaignALeadIds: string[] = []
+    const campaignBLeadIds: string[] = []
+
+    // Process each lead (API calls must be sequential for rate limiting)
     for (const lead of leads) {
       try {
-        // Determine which campaign based on website presence
         const hasWebsite = lead.website && lead.website.trim().length > 0
         const targetCampaign = hasWebsite ? campaign_a : campaign_b
-        const campaignLabel = hasWebsite ? 'Campaign A (Bad Site)' : 'Campaign B (No Site)'
 
-        // Prepare lead data for Instantly API
         const leadData = {
           first_name: lead.firstName || '',
           last_name: lead.lastName || '',
@@ -100,7 +101,6 @@ export async function POST(request: NextRequest) {
           industry: lead.industry || ''
         }
 
-        // Call Instantly API to add lead to campaign
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 5000)
 
@@ -126,21 +126,15 @@ export async function POST(request: NextRequest) {
           throw new Error(`Instantly API error: ${response.status}`)
         }
 
-        // Mark lead as distributed
-        await prisma.lead.update({
-          where: { id: lead.id },
-          data: {
-            status: 'BUILDING',
-            campaign: targetCampaign
-          }
-        })
-
-        results.distributed++
+        // Track success for batch update
         if (hasWebsite) {
+          campaignALeadIds.push(lead.id)
           results.campaignA++
         } else {
+          campaignBLeadIds.push(lead.id)
           results.campaignB++
         }
+        results.distributed++
       } catch (error) {
         results.failed++
         results.errors.push({
@@ -149,6 +143,24 @@ export async function POST(request: NextRequest) {
           error: error instanceof Error ? error.message : String(error)
         })
       }
+    }
+
+    // Batch update all successful leads (2 queries instead of N)
+    if (campaignALeadIds.length > 0 || campaignBLeadIds.length > 0) {
+      await prisma.$transaction([
+        ...(campaignALeadIds.length > 0 ? [
+          prisma.lead.updateMany({
+            where: { id: { in: campaignALeadIds } },
+            data: { status: 'BUILDING', campaign: campaign_a },
+          }),
+        ] : []),
+        ...(campaignBLeadIds.length > 0 ? [
+          prisma.lead.updateMany({
+            where: { id: { in: campaignBLeadIds } },
+            data: { status: 'BUILDING', campaign: campaign_b },
+          }),
+        ] : []),
+      ])
     }
 
     return NextResponse.json({
