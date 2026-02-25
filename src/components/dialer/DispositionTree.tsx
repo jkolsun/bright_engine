@@ -70,7 +70,6 @@ export function DispositionTree() {
         INTERESTED_VERBAL: 'interestedVerbalCount',
         WANTS_CHANGES: 'wantsChangesCount',
         WILL_LOOK_LATER: 'willLookLaterCount',
-        NOT_INTERESTED: 'notInterestedCount',
         DNC: 'dncCount',
         VOICEMAIL: 'voicemails',
         NO_ANSWER: 'noAnswers',
@@ -80,12 +79,15 @@ export function DispositionTree() {
       const INTERESTED_RESULTS = ['WANTS_TO_MOVE_FORWARD', 'CALLBACK', 'INTERESTED_VERBAL', 'WANTS_CHANGES']
       const NOT_INTERESTED_RESULTS = ['NOT_INTERESTED', 'DNC']
 
-      // Increment specific disposition field
+      // Increment specific disposition field (NOT_INTERESTED uses notInterestedCount as its
+      // per-disposition field AND its aggregate, so it's handled below to avoid double-increment)
       const statField = DISPOSITION_STAT_MAP[result]
       if (statField) session.incrementStat(statField)
       // Increment backward-compat aggregates
       if (INTERESTED_RESULTS.includes(result)) session.incrementStat('interestedCount')
-      if (NOT_INTERESTED_RESULTS.includes(result)) session.incrementStat('notInterestedCount')
+      if (NOT_INTERESTED_RESULTS.includes(result) && result !== 'NOT_INTERESTED') session.incrementStat('notInterestedCount')
+      // NOT_INTERESTED doesn't have a separate per-disposition field — notInterestedCount IS its field
+      if (result === 'NOT_INTERESTED') session.incrementStat('notInterestedCount')
       // Increment connected calls if the call was connected
       if (l1Choice === 'connected') session.incrementStat('connectedCalls')
 

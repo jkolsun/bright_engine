@@ -176,32 +176,36 @@ export async function POST(request: NextRequest) {
 
     // If high engagement AND no active call, mark as HOT and dispatch webhook (Bug A fix)
     // During active calls, engagement is expected (rep told them to open it) — not organic
-    if (!activeCall && (duration && duration > 60 || event === 'cta_click' || event === 'call_click' || event === 'contact_form')) {
-      const urgencyScore = event === 'call_click' ? 90 : event === 'contact_form' ? 85 : event === 'cta_click' ? 80 : duration > 120 ? 75 : 65
+    if (!activeCall && ((duration && duration > 60) || event === 'cta_click' || event === 'call_click' || event === 'contact_form')) {
+      try {
+        const urgencyScore = event === 'call_click' ? 90 : event === 'contact_form' ? 85 : event === 'cta_click' ? 80 : duration > 120 ? 75 : 65
 
-      if (lead.priority !== 'HOT') {
-        await prisma.lead.update({
-          where: { id: lead.id },
-          data: { priority: 'HOT', status: 'HOT_LEAD' }
-        })
+        if (lead.priority !== 'HOT') {
+          await prisma.lead.update({
+            where: { id: lead.id },
+            data: { priority: 'HOT', status: 'HOT_LEAD' }
+          })
 
-        // Create hot lead notification
-        await prisma.notification.create({
-          data: {
-            type: 'HOT_LEAD',
-            title: 'Hot Lead Alert',
-            message: `${lead.firstName} at ${lead.companyName} engaged with preview: ${event}`,
-            metadata: { leadId: lead.id, event },
-          }
-        })
+          // Create hot lead notification
+          await prisma.notification.create({
+            data: {
+              type: 'HOT_LEAD',
+              title: 'Hot Lead Alert',
+              message: `${lead.firstName} at ${lead.companyName} engaged with preview: ${event}`,
+              metadata: { leadId: lead.id, event },
+            }
+          })
+        }
+
+        await dispatchWebhook(WebhookEvents.HOT_ENGAGEMENT(
+          lead.id,
+          event,
+          urgencyScore,
+          { duration, company: lead.companyName, firstName: lead.firstName }
+        ))
+      } catch (hotLeadErr) {
+        console.warn('[Preview Track] Hot lead promotion failed:', hotLeadErr)
       }
-
-      await dispatchWebhook(WebhookEvents.HOT_ENGAGEMENT(
-        lead.id,
-        event,
-        urgencyScore,
-        { duration, company: lead.companyName, firstName: lead.firstName }
-      ))
     }
 
     // After logging the event, recalculate engagement:

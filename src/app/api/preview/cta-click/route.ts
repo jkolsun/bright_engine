@@ -31,23 +31,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Update lead priority AND status to HOT
-    await prisma.lead.update({
-      where: { id: lead.id },
-      data: { priority: 'HOT', status: 'HOT_LEAD' },
-    })
-
-    // Create HOT_LEAD notification
-    await prisma.notification.create({
-      data: {
-        type: 'HOT_LEAD',
-        title: 'Preview CTA Clicked!',
-        message: `${lead.firstName} at ${lead.companyName} clicked "Get Started" on their preview`,
-        metadata: { leadId: lead.id, previewId, source: 'cta_banner' },
-      },
-    })
-
-    // Bug 7: If there's an active dialer call for this lead, push SSE + update call flags
+    // Check for active dialer call BEFORE deciding on hot lead promotion
     let activeCall: { id: string; repId: string } | null = null
     try {
       activeCall = await prisma.dialerCall.findFirst({
@@ -77,9 +61,25 @@ export async function POST(request: NextRequest) {
       console.warn('[Preview CTA] Dialer SSE push failed:', dialerErr)
     }
 
-    // Only send admin email and trigger Close Engine for organic engagement (Bug A fix)
-    // During active calls, the rep told the lead to click — not an organic hot signal
+    // Only promote to HOT, create notification, send admin email, and trigger Close Engine
+    // for organic engagement (Bug A fix). During active calls, the rep told the lead to click.
     if (!activeCall) {
+      // Update lead priority AND status to HOT
+      await prisma.lead.update({
+        where: { id: lead.id },
+        data: { priority: 'HOT', status: 'HOT_LEAD' },
+      })
+
+      // Create HOT_LEAD notification
+      await prisma.notification.create({
+        data: {
+          type: 'HOT_LEAD',
+          title: 'Preview CTA Clicked!',
+          message: `${lead.firstName} at ${lead.companyName} clicked "Get Started" on their preview`,
+          metadata: { leadId: lead.id, previewId, source: 'cta_banner' },
+        },
+      })
+
       // Send urgent email notification to admin via Resend
       try {
         const { sendEmail } = await import('@/lib/resend')
