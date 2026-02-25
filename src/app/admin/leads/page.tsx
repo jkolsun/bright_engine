@@ -148,7 +148,7 @@ function LeadsPageInner() {
 
   const fetchLeads = async () => {
     try {
-      const res = await fetch('/api/leads?limit=100')
+      const res = await fetch('/api/leads?limit=10000')
       const data = await res.json()
       setLeads(data.leads || [])
     } catch (error) {
