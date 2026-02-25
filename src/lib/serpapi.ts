@@ -32,7 +32,7 @@ export async function enrichLead(leadId: string): Promise<EnrichmentResult> {
 
   // Safety cap to prevent runaway API costs
   // Override via SERPAPI_DAILY_LIMIT env var
-  const DAILY_SERPAPI_LIMIT = parseInt(process.env.SERPAPI_DAILY_LIMIT || '200', 10)
+  const DAILY_SERPAPI_LIMIT = parseInt(process.env.SERPAPI_DAILY_LIMIT || '1000', 10)
 
   if (todayUsage >= DAILY_SERPAPI_LIMIT) {
     console.log(`[ENRICHMENT] Daily SerpAPI limit reached (${todayUsage}/${DAILY_SERPAPI_LIMIT}). Skipping enrichment for lead ${leadId}.`)
@@ -102,6 +102,8 @@ export async function enrichLead(leadId: string): Promise<EnrichmentResult> {
     for (const query of uniqueQueries) {
       console.log(`[ENRICHMENT] Trying query: "${query}" for lead ${leadId}`)
 
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 30_000)
       const response = await fetch(
         `https://serpapi.com/search.json?` +
           new URLSearchParams({
@@ -109,8 +111,10 @@ export async function enrichLead(leadId: string): Promise<EnrichmentResult> {
             engine: 'google_maps',
             q: query,
             type: 'search',
-          })
+          }),
+        { signal: controller.signal }
       )
+      clearTimeout(timeout)
 
       // Log cost for each API call
       await prisma.apiCost.create({

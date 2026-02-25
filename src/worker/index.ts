@@ -270,6 +270,7 @@ async function startWorkers() {
     })
 
     // Import processing worker (processes leads in background after CSV upload)
+    const IMPORT_LOCK_DURATION = 600_000 // 10 minutes — prevents BullMQ stall detection from killing long imports
     const importWorker = new Worker(
       'import',
       async (job) => {
@@ -281,24 +282,49 @@ async function startWorkers() {
         console.log(`[IMPORT] Processing ${leadIds.length} leads for job ${jobId}`)
 
         const redisConn = getSharedConnection()
+
+        // Checkpoint/resume: check if a previous attempt already processed some leads
+        let existingProgress: any = null
+        if (redisConn) {
+          try {
+            const existing = await redisConn.get(`import:${jobId}`)
+            if (existing) existingProgress = JSON.parse(existing)
+          } catch { /* start fresh */ }
+        }
+
         const progress = {
           status: 'processing',
-          processed: 0,
+          processed: existingProgress?.processed || 0,
           total: leadIds.length,
-          failed: 0,
-          errors: [] as string[],
-          results: {} as Record<string, { enrichment?: boolean; preview?: boolean; personalization?: boolean }>,
+          failed: existingProgress?.failed || 0,
+          errors: (existingProgress?.errors || []) as string[],
+          results: (existingProgress?.results || {}) as Record<string, { enrichment?: boolean; preview?: boolean; personalization?: boolean }>,
+        }
+
+        // Determine where to resume from (skip already-processed leads on retry)
+        const startIndex = existingProgress?.processed || 0
+        if (startIndex > 0) {
+          console.log(`[IMPORT] Resuming job ${jobId} from lead ${startIndex}/${leadIds.length}`)
         }
 
         const updateProgress = async () => {
           if (redisConn) {
-            await redisConn.set(`import:${jobId}`, JSON.stringify(progress), 'EX', 3600).catch(err => console.error('[Worker] Redis progress write failed:', err))
+            await redisConn.set(`import:${jobId}`, JSON.stringify(progress), 'EX', 7200).catch(err => console.error('[Worker] Redis progress write failed:', err))
           }
         }
 
-        for (let i = 0; i < leadIds.length; i++) {
+        for (let i = startIndex; i < leadIds.length; i++) {
           const leadId = leadIds[i]
           const leadResult: { enrichment?: boolean; preview?: boolean; personalization?: boolean } = {}
+
+          // Extend the BullMQ lock every 5 leads to prevent stall detection
+          if (i % 5 === 0) {
+            try {
+              await job.extendLock(job.token!, IMPORT_LOCK_DURATION)
+            } catch (lockErr) {
+              console.warn(`[IMPORT] Lock extension failed at lead ${i}:`, lockErr)
+            }
+          }
 
           try {
             const lead = await prisma.lead.findUnique({ where: { id: leadId } })
@@ -372,7 +398,7 @@ async function startWorkers() {
         return { success: true }
       },
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-      { connection, concurrency: 1 }
+      { connection, concurrency: 1, lockDuration: IMPORT_LOCK_DURATION }
     )
 
     importWorker.on('failed', (job, err) => {

@@ -116,6 +116,8 @@ function buildQueries(companyName: string, city?: string, state?: string, websit
 // ============================================
 
 async function runSerperSearch(query: string, num: number = 5): Promise<any[]> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30_000)
   const response = await fetch('https://google.serper.dev/search', {
     method: 'POST',
     headers: {
@@ -123,7 +125,9 @@ async function runSerperSearch(query: string, num: number = 5): Promise<any[]> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ q: query, num }),
+    signal: controller.signal,
   })
+  clearTimeout(timeout)
 
   if (!response.ok) {
     throw new Error(`Serper error: ${response.statusText}`)
@@ -356,6 +360,8 @@ async function scrapeWebsite(url: string): Promise<{ text: string; cost: number 
   try {
     if (!url.startsWith('http')) url = `https://${url}`
 
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30_000)
     const response = await fetch('https://scrape.serper.dev', {
       method: 'POST',
       headers: {
@@ -363,7 +369,9 @@ async function scrapeWebsite(url: string): Promise<{ text: string; cost: number 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ url }),
+      signal: controller.signal,
     })
+    clearTimeout(timeout)
 
     if (!response.ok) {
       console.warn(`[SERPER] Scrape failed for ${url}: ${response.statusText}`)
