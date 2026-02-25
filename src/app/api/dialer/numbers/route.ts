@@ -16,9 +16,9 @@ export async function GET(request: NextRequest) {
   const seen = new Set<string>()
   for (const [key, val] of Object.entries(process.env)) {
     if (!val) continue
-    const isRepPrimary = /^TWILIO_REP\d+_NUMBER_PRIMARY$/.test(key)
+    const isRepNumber = /^TWILIO_REP\d+_NUMBER_(PRIMARY|VM)$/.test(key)
     const isDialerNum = /^TWILIO_DIALER_NUMBER_\d+$/.test(key)
-    if ((isRepPrimary || isDialerNum) && !seen.has(val)) {
+    if ((isRepNumber || isDialerNum) && !seen.has(val)) {
       numbers.push(val)
       seen.add(val)
     }
