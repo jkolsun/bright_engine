@@ -36,76 +36,105 @@ export async function POST(request: NextRequest) {
     }
 
     const validRows = parsedLeads.filter(p => p.isValid)
-    const created: { id: string; name: string; company: string }[] = []
-    let skipped = 0
-    const batchPhones = new Set<string>()
+
+    // Step A: Collect all emails and phone variants from the batch
+    const allEmails: string[] = []
+    const allPhoneVariants: string[] = []
+    const phoneVariantSet = new Set<string>()
 
     for (const row of validRows) {
-      // Normalize phone for comparison (last 10 digits)
-      const normalizedPhone = row.phone?.replace(/\D/g, '').slice(-10) || ''
-
-      // Check intra-batch duplicate
-      if (normalizedPhone && batchPhones.has(normalizedPhone)) {
-        skipped++
-        continue
-      }
-
-      // Build phone variants for broader matching
-      const phoneVariants: string[] = []
+      if (row.email) allEmails.push(row.email.toLowerCase())
       if (row.phone) {
-        phoneVariants.push(row.phone)
-        if (normalizedPhone.length === 10) {
-          phoneVariants.push(`+1${normalizedPhone}`)
-          phoneVariants.push(`1${normalizedPhone}`)
-          phoneVariants.push(normalizedPhone)
+        const norm = row.phone.replace(/\D/g, '').slice(-10)
+        const variants = [row.phone]
+        if (norm.length === 10) {
+          variants.push(`+1${norm}`, `1${norm}`, norm)
+        }
+        for (const v of variants) {
+          if (!phoneVariantSet.has(v)) {
+            phoneVariantSet.add(v)
+            allPhoneVariants.push(v)
+          }
         }
       }
+    }
 
-      // Check for duplicates in database
-      const existing = await prisma.lead.findFirst({
-        where: {
-          OR: [
-            ...(row.email ? [{ email: row.email }] : []),
-            ...(phoneVariants.length > 0 ? [{ phone: { in: phoneVariants } }] : []),
-          ],
-          // Exclude terminal-status leads so deleted/closed leads don't block reimport
-          status: { notIn: ['CLOSED_LOST', 'DO_NOT_CONTACT', 'PAID'] },
-        },
-      })
+    // Step B: Single batch duplicate query
+    const orConditions = [
+      ...(allEmails.length > 0 ? [{ email: { in: allEmails } }] : []),
+      ...(allPhoneVariants.length > 0 ? [{ phone: { in: allPhoneVariants } }] : []),
+    ]
 
-      if (existing) {
-        skipped++
-        continue
-      }
+    const existingLeads = orConditions.length > 0
+      ? await prisma.lead.findMany({
+          where: {
+            OR: orConditions,
+            status: { notIn: ['CLOSED_LOST', 'DO_NOT_CONTACT', 'PAID'] },
+          },
+          select: { email: true, phone: true },
+        })
+      : []
 
-      if (normalizedPhone) batchPhones.add(normalizedPhone)
+    // Step C: Build duplicate Sets in memory
+    const existingEmails = new Set(
+      existingLeads.map(l => l.email?.toLowerCase()).filter((e): e is string => !!e)
+    )
+    const existingPhones = new Set(
+      existingLeads.map(l => l.phone?.replace(/\D/g, '').slice(-10)).filter((p): p is string => !!p && p.length === 10)
+    )
 
-      const lead = await prisma.lead.create({
-        data: {
-          firstName: row.firstName,
-          lastName: row.lastName,
-          email: row.email,
-          phone: row.phone,
-          companyName: row.companyName,
-          industry: row.industry as any,
-          city: row.city,
-          state: row.state,
-          website: row.website,
-          status: 'NEW',
-          source: 'COLD_EMAIL',
-          sourceDetail: campaign || 'CSV Import',
-          campaign: campaign || undefined,
-          assignedToId: assignTo,
-          priority: 'COLD',
-          timezone: getTimezoneFromState(row.state || '') || 'America/New_York',
-        },
-      })
+    // Step D: Filter duplicates in memory
+    const batchPhones = new Set<string>()
+    const newRows: typeof validRows = []
+    let skipped = 0
 
-      created.push({
+    for (const row of validRows) {
+      const normEmail = row.email?.toLowerCase() || ''
+      const normPhone = row.phone?.replace(/\D/g, '').slice(-10) || ''
+
+      if (normEmail && existingEmails.has(normEmail)) { skipped++; continue }
+      if (normPhone && existingPhones.has(normPhone)) { skipped++; continue }
+      if (normPhone && batchPhones.has(normPhone)) { skipped++; continue }
+
+      if (normPhone) batchPhones.add(normPhone)
+      newRows.push(row)
+    }
+
+    // Step E: Batch create in one transaction
+    let created: { id: string; name: string; company: string }[] = []
+
+    if (newRows.length > 0) {
+      const createdLeads = await prisma.$transaction(
+        newRows.map(row =>
+          prisma.lead.create({
+            data: {
+              firstName: row.firstName,
+              lastName: row.lastName,
+              email: row.email,
+              phone: row.phone,
+              companyName: row.companyName,
+              industry: row.industry as any,
+              city: row.city,
+              state: row.state,
+              website: row.website,
+              status: 'NEW',
+              source: 'COLD_EMAIL',
+              sourceDetail: campaign || 'CSV Import',
+              campaign: campaign || undefined,
+              assignedToId: assignTo,
+              priority: 'COLD',
+              timezone: getTimezoneFromState(row.state || '') || 'America/New_York',
+            },
+          })
+        )
+      )
+
+      // Step F: Build response array
+      created = createdLeads.map(lead => ({
         id: lead.id,
         name: `${lead.firstName} ${lead.lastName}`.trim(),
         company: lead.companyName || '',
-      })
+      }))
     }
 
     // Log activity with lead IDs for history lookup
