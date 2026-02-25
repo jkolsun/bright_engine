@@ -100,41 +100,47 @@ export async function POST(request: NextRequest) {
       newRows.push(row)
     }
 
-    // Step E: Batch create in one transaction
+    // Step E: Batch create in chunked transactions (50 per batch to avoid Railway timeouts)
     let created: { id: string; name: string; company: string }[] = []
 
     if (newRows.length > 0) {
-      const createdLeads = await prisma.$transaction(
-        newRows.map(row =>
-          prisma.lead.create({
-            data: {
-              firstName: row.firstName,
-              lastName: row.lastName,
-              email: row.email,
-              phone: row.phone,
-              companyName: row.companyName,
-              industry: row.industry as any,
-              city: row.city,
-              state: row.state,
-              website: row.website,
-              status: 'NEW',
-              source: 'COLD_EMAIL',
-              sourceDetail: campaign || 'CSV Import',
-              campaign: campaign || undefined,
-              assignedToId: assignTo,
-              priority: 'COLD',
-              timezone: getTimezoneFromState(row.state || '') || 'America/New_York',
-            },
-          })
+      const CHUNK_SIZE = 50
+      for (let i = 0; i < newRows.length; i += CHUNK_SIZE) {
+        const chunk = newRows.slice(i, i + CHUNK_SIZE)
+        const chunkResults = await prisma.$transaction(
+          chunk.map(row =>
+            prisma.lead.create({
+              data: {
+                firstName: row.firstName,
+                lastName: row.lastName,
+                email: row.email,
+                phone: row.phone,
+                companyName: row.companyName,
+                industry: row.industry as any,
+                city: row.city,
+                state: row.state,
+                website: row.website,
+                status: 'NEW',
+                source: 'COLD_EMAIL',
+                sourceDetail: campaign || 'CSV Import',
+                campaign: campaign || undefined,
+                assignedToId: assignTo,
+                priority: 'COLD',
+                timezone: getTimezoneFromState(row.state || '') || 'America/New_York',
+              },
+            })
+          )
         )
-      )
 
-      // Step F: Build response array
-      created = createdLeads.map(lead => ({
-        id: lead.id,
-        name: `${lead.firstName} ${lead.lastName}`.trim(),
-        company: lead.companyName || '',
-      }))
+        // Step F: Build response array
+        for (const lead of chunkResults) {
+          created.push({
+            id: lead.id,
+            name: `${lead.firstName} ${lead.lastName}`.trim(),
+            company: lead.companyName || '',
+          })
+        }
+      }
     }
 
     // Log activity with lead IDs for history lookup
