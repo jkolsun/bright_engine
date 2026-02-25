@@ -116,7 +116,7 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
           )}
 
           {filterOpen && (
-            <div className="absolute z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
+            <div className="absolute top-full left-0 z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
               {filters.map(f => (
                 <button
                   key={f.key}
