@@ -26,9 +26,9 @@ export async function POST(request: NextRequest) {
     const to = formData.get('To') as string
     const callSid = formData.get('CallSid') as string
 
-    // Find which rep owns this number
+    // Find which rep owns this number (check all phone fields)
     const rep = await prisma.user.findFirst({
-      where: { OR: [{ twilioNumber1: to }, { twilioNumber2: to }] },
+      where: { OR: [{ assignedDialerPhone: to }, { twilioNumber1: to }, { twilioNumber2: to }] },
       select: { id: true, name: true },
     })
 
