@@ -66,12 +66,12 @@ export async function GET(request: NextRequest) {
           where: whereClause,
           select: BASE_SELECT,
           orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
-          take: 100,
+          take: 500,
         }),
         prisma.lead.count({ where: whereClause }),
       ])
 
-      return NextResponse.json({ leads, hasMore: totalCount > 100, totalCount })
+      return NextResponse.json({ leads, hasMore: totalCount > 500, totalCount })
     }
 
     // --- RETRY: No Answer / Voicemail with cooldown + max 3 attempts ---
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
             orderBy: { startedAt: 'desc' },
           },
         },
-        take: 200,
+        take: 500,
       })
 
       const now = Date.now()
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
 
       // Strip dialerCalls from response to match QueueLead shape
       const cleanLeads = retryLeads.map(({ dialerCalls, ...lead }) => lead)
-      return NextResponse.json({ leads: cleanLeads.slice(0, 100), hasMore: cleanLeads.length > 100, totalCount: cleanLeads.length })
+      return NextResponse.json({ leads: cleanLeads.slice(0, 500), hasMore: cleanLeads.length > 500, totalCount: cleanLeads.length })
     }
 
     // --- CALLED: terminal disposition leads ---
@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
             take: 1,
           },
         },
-        take: 200,
+        take: 500,
       })
 
       // Filter to leads where most recent outbound call has a terminal disposition
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
         ...lead,
         lastDisposition: dialerCalls[0]?.dispositionResult || null,
       }))
-      return NextResponse.json({ leads: cleanLeads.slice(0, 100), hasMore: cleanLeads.length > 100, totalCount: cleanLeads.length })
+      return NextResponse.json({ leads: cleanLeads.slice(0, 500), hasMore: cleanLeads.length > 500, totalCount: cleanLeads.length })
     }
 
     // --- DEFAULT (no tab) — all leads (original behavior) ---
@@ -169,12 +169,12 @@ export async function GET(request: NextRequest) {
         where: whereClause,
         select: BASE_SELECT,
         orderBy: [{ priority: 'desc' }, { updatedAt: 'desc' }],
-        take: 100,
+        take: 500,
       }),
       prisma.lead.count({ where: whereClause }),
     ])
 
-    return NextResponse.json({ leads, hasMore: totalCount > 100, totalCount })
+    return NextResponse.json({ leads, hasMore: totalCount > 500, totalCount })
   } catch (error) {
     console.error('[Dialer Queue API] GET error:', error)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

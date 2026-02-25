@@ -639,6 +639,13 @@ export async function dropVoicemail(callId: string) {
       throw new Error('No child call leg found — cannot drop VM')
     }
 
+    // Check if the child call is still active before attempting redirect
+    const childStatus = childCalls[0].status
+    if (childStatus === 'completed' || childStatus === 'canceled' || childStatus === 'failed' || childStatus === 'busy' || childStatus === 'no-answer') {
+      console.log(`[DialerService] Call already ended (${childStatus}), skipping VM drop for call ${callId}`)
+      return
+    }
+
     // Redirect the child call to play the VM recording to the voicemail
     const safeUrl = vmUrl.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
     await client.calls(childCalls[0].sid).update({
