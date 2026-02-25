@@ -44,18 +44,18 @@ export async function POST(request: NextRequest) {
       return new Response('OK', { status: 200 })
     }
 
-    // Find DialerCall
-    let dialerCall: { id: string; repId: string; leadId: string } | null = null
+    // Find DialerCall (include connectedAt and status for false-positive detection)
+    let dialerCall: { id: string; repId: string; leadId: string; connectedAt: Date | null; status: string } | null = null
     if (callId) {
       dialerCall = await prisma.dialerCall.findUnique({
         where: { id: callId },
-        select: { id: true, repId: true, leadId: true },
+        select: { id: true, repId: true, leadId: true, connectedAt: true, status: true },
       })
     }
     if (!dialerCall && callSid) {
       dialerCall = await prisma.dialerCall.findUnique({
         where: { twilioCallSid: callSid },
-        select: { id: true, repId: true, leadId: true },
+        select: { id: true, repId: true, leadId: true, connectedAt: true, status: true },
       })
     }
 
@@ -66,6 +66,34 @@ export async function POST(request: NextRequest) {
 
     // Determine if machine or human
     const isMachine = answeredBy.startsWith('machine') || answeredBy === 'fax'
+
+    // CRITICAL: If the call is already connected (rep is talking to a live person),
+    // AMD is a false positive — do NOT mark as voicemail or auto-drop
+    const wasAlreadyConnected = !!(dialerCall.connectedAt || dialerCall.status === 'CONNECTED')
+    if (isMachine && wasAlreadyConnected) {
+      console.log('[TwilioAMD] AMD says machine but call already connected — treating as false positive for call', dialerCall.id)
+      // Still record the AMD result for analytics, but do NOT change status
+      await prisma.dialerCall.update({
+        where: { id: dialerCall.id },
+        data: { amdResult: answeredBy },
+      })
+      // Push SSE with amdOverridden so frontend knows to ignore
+      const sseEvent = {
+        type: 'CALL_STATUS' as const,
+        data: {
+          callId: dialerCall.id,
+          leadId: dialerCall.leadId,
+          amdResult: answeredBy,
+          isMachine: true,
+          amdOverridden: true,
+          wasAlreadyConnected: true,
+        },
+        timestamp: new Date().toISOString(),
+      }
+      pushToRep(dialerCall.repId, sseEvent)
+      pushToAllAdmins({ ...sseEvent, data: { ...sseEvent.data, repId: dialerCall.repId } })
+      return new Response('OK', { status: 200 })
+    }
 
     // Update DialerCall with AMD result
     await prisma.dialerCall.update({

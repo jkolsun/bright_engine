@@ -138,7 +138,12 @@ export function DialerProvider({ children }: { children: ReactNode }) {
 
         // AMD detected voicemail — auto-skip if auto-dial is enabled
         // This is the CORE power dialer feature: VM detected → end call → disposition → dial next
-        if (data.isMachine && sessionRef.current?.autoDialEnabled) {
+        if (data.isMachine && !data.amdOverridden && sessionRef.current?.autoDialEnabled) {
+          // CRITICAL: If rep is already connected and talking to a live person, AMD is a false positive — do NOT kill the call
+          if (wasConnectedRef.current) {
+            console.warn('[AutoDial] AMD false positive — rep already connected, ignoring machine detection for call', call.id)
+            return
+          }
           console.log('[AutoDial] AMD voicemail detected — auto-skipping call', call.id, 'vmAutoDropped:', data.vmAutoDropped)
           // Only end call if server didn't already auto-drop VM (dropVoicemail hangs up the parent)
           if (!data.vmAutoDropped) {
