@@ -57,13 +57,19 @@ export function SessionRecap() {
     ? Math.round((recap.connectedCalls / recap.totalCalls) * 100)
     : 0
 
-  // Build disposition breakdown from the session stats we have
+  // Build disposition breakdown from actual per-disposition fields
   const dispositions: { key: string; count: number }[] = [
-    { key: 'INTERESTED_VERBAL', count: recap.interestedCount },
-    { key: 'CALLBACK', count: recap.callbacksScheduled },
-    { key: 'NOT_INTERESTED', count: recap.notInterestedCount },
-    { key: 'VOICEMAIL', count: recap.voicemails },
-    { key: 'NO_ANSWER', count: recap.noAnswers },
+    { key: 'WANTS_TO_MOVE_FORWARD', count: recap.wantsToMoveForwardCount || 0 },
+    { key: 'CALLBACK', count: recap.callbackCount || 0 },
+    { key: 'INTERESTED_VERBAL', count: recap.interestedVerbalCount || 0 },
+    { key: 'WANTS_CHANGES', count: recap.wantsChangesCount || 0 },
+    { key: 'WILL_LOOK_LATER', count: recap.willLookLaterCount || 0 },
+    { key: 'NOT_INTERESTED', count: recap.notInterestedCount || 0 },
+    { key: 'VOICEMAIL', count: recap.voicemails || 0 },
+    { key: 'NO_ANSWER', count: recap.noAnswers || 0 },
+    { key: 'WRONG_NUMBER', count: recap.wrongNumberCount || 0 },
+    { key: 'DISCONNECTED', count: recap.disconnectedCount || 0 },
+    { key: 'DNC', count: recap.dncCount || 0 },
   ].filter(d => d.count > 0)
 
   return (

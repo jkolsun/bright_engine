@@ -48,8 +48,9 @@ export async function POST(request: NextRequest) {
     })
 
     // Bug 7: If there's an active dialer call for this lead, push SSE + update call flags
+    let activeCall: { id: string; repId: string } | null = null
     try {
-      const activeCall = await prisma.dialerCall.findFirst({
+      activeCall = await prisma.dialerCall.findFirst({
         where: {
           leadId: lead.id,
           endedAt: null,
@@ -76,30 +77,34 @@ export async function POST(request: NextRequest) {
       console.warn('[Preview CTA] Dialer SSE push failed:', dialerErr)
     }
 
-    // Send urgent email notification to admin via Resend
-    try {
-      const { sendEmail } = await import('@/lib/resend')
-      await sendEmail({
-        to: process.env.ADMIN_EMAIL || 'andrew@brightautomations.net',
-        subject: `Hot Lead: ${lead.companyName} clicked CTA`,
-        html: `<p><strong>${lead.firstName}</strong> at <strong>${lead.companyName}</strong> clicked "Get Started" on their preview site.</p>
-               <p>Phone: ${lead.phone} | Email: ${lead.email || 'N/A'}</p>
-               <p><a href="${process.env.BASE_URL || 'https://app.brightautomations.net'}/admin/messages">View conversation</a></p>`,
-        trigger: 'hot_lead_admin_notification',
-      })
-    } catch (emailErr) {
-      console.error('[Preview CTA] Admin email notification failed:', emailErr)
-    }
+    // Only send admin email and trigger Close Engine for organic engagement (Bug A fix)
+    // During active calls, the rep told the lead to click — not an organic hot signal
+    if (!activeCall) {
+      // Send urgent email notification to admin via Resend
+      try {
+        const { sendEmail } = await import('@/lib/resend')
+        await sendEmail({
+          to: process.env.ADMIN_EMAIL || 'andrew@brightautomations.net',
+          subject: `Hot Lead: ${lead.companyName} clicked CTA`,
+          html: `<p><strong>${lead.firstName}</strong> at <strong>${lead.companyName}</strong> clicked "Get Started" on their preview site.</p>
+                 <p>Phone: ${lead.phone} | Email: ${lead.email || 'N/A'}</p>
+                 <p><a href="${process.env.BASE_URL || 'https://app.brightautomations.net'}/admin/messages">View conversation</a></p>`,
+          trigger: 'hot_lead_admin_notification',
+        })
+      } catch (emailErr) {
+        console.error('[Preview CTA] Admin email notification failed:', emailErr)
+      }
 
-    // Trigger Close Engine (atomic guard inside prevents double-fire)
-    try {
-      const { triggerCloseEngine } = await import('@/lib/close-engine')
-      await triggerCloseEngine({
-        leadId: lead.id,
-        entryPoint: 'PREVIEW_CTA',
-      })
-    } catch (err) {
-      console.error('[Preview CTA] Close Engine trigger failed:', err)
+      // Trigger Close Engine (atomic guard inside prevents double-fire)
+      try {
+        const { triggerCloseEngine } = await import('@/lib/close-engine')
+        await triggerCloseEngine({
+          leadId: lead.id,
+          entryPoint: 'PREVIEW_CTA',
+        })
+      } catch (err) {
+        console.error('[Preview CTA] Close Engine trigger failed:', err)
+      }
     }
 
     return NextResponse.json({ success: true })

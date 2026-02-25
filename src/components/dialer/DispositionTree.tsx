@@ -63,12 +63,31 @@ export function DispositionTree() {
         }),
       })
 
-      // 1b. Increment session stats optimistically
+      // 1b. Increment session stats optimistically (per-disposition + backward-compat aggregates)
+      const DISPOSITION_STAT_MAP: Record<string, string> = {
+        WANTS_TO_MOVE_FORWARD: 'wantsToMoveForwardCount',
+        CALLBACK: 'callbackCount',
+        INTERESTED_VERBAL: 'interestedVerbalCount',
+        WANTS_CHANGES: 'wantsChangesCount',
+        WILL_LOOK_LATER: 'willLookLaterCount',
+        NOT_INTERESTED: 'notInterestedCount',
+        DNC: 'dncCount',
+        VOICEMAIL: 'voicemails',
+        NO_ANSWER: 'noAnswers',
+        WRONG_NUMBER: 'wrongNumberCount',
+        DISCONNECTED: 'disconnectedCount',
+      }
+      const INTERESTED_RESULTS = ['WANTS_TO_MOVE_FORWARD', 'CALLBACK', 'INTERESTED_VERBAL', 'WANTS_CHANGES']
+      const NOT_INTERESTED_RESULTS = ['NOT_INTERESTED', 'DNC']
+
+      // Increment specific disposition field
+      const statField = DISPOSITION_STAT_MAP[result]
+      if (statField) session.incrementStat(statField)
+      // Increment backward-compat aggregates
+      if (INTERESTED_RESULTS.includes(result)) session.incrementStat('interestedCount')
+      if (NOT_INTERESTED_RESULTS.includes(result)) session.incrementStat('notInterestedCount')
+      // Increment connected calls if the call was connected
       if (l1Choice === 'connected') session.incrementStat('connectedCalls')
-      if (['WANTS_TO_MOVE_FORWARD', 'INTERESTED_VERBAL'].includes(result)) session.incrementStat('interestedCount')
-      if (['NOT_INTERESTED', 'DNC'].includes(result)) session.incrementStat('notInterestedCount')
-      if (result === 'NO_ANSWER') session.incrementStat('noAnswers')
-      if (result === 'VOICEMAIL') session.incrementStat('voicemails')
 
       // 2. If CALLBACK with date, also schedule the callback (existing endpoint)
       if (result === 'CALLBACK' && extra?.callbackAt) {

@@ -15,10 +15,17 @@ export async function GET(request: NextRequest) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    const [activeSessions, callsToday, connectedToday, interestedToday] = await Promise.all([
+    const CONVERSATION_DISPOSITIONS = [
+      'WANTS_TO_MOVE_FORWARD', 'NOT_INTERESTED', 'CALLBACK',
+      'INTERESTED_VERBAL', 'WANTS_CHANGES', 'WILL_LOOK_LATER', 'DNC',
+    ]
+
+    const [activeSessions, callsToday, conversationsToday, interestedToday] = await Promise.all([
       prisma.dialerSessionNew.count({ where: { isActive: true } }),
       prisma.dialerCall.count({ where: { startedAt: { gte: today } } }),
-      prisma.dialerCall.count({ where: { startedAt: { gte: today }, connectedAt: { not: null } } }),
+      prisma.dialerCall.count({
+        where: { startedAt: { gte: today }, dispositionResult: { in: CONVERSATION_DISPOSITIONS } },
+      }),
       prisma.dialerCall.count({
         where: {
           startedAt: { gte: today },
@@ -27,7 +34,7 @@ export async function GET(request: NextRequest) {
       }),
     ])
 
-    return NextResponse.json({ activeSessions, callsToday, connectedToday, interestedToday })
+    return NextResponse.json({ activeSessions, callsToday, conversationsToday, interestedToday })
   } catch (error) {
     console.error('[Dialer Admin Stats API] GET error:', error)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

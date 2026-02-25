@@ -41,10 +41,28 @@ export function CallControls() {
     <div className="border-t border-gray-200 bg-white px-6 py-3 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
       <div className="flex items-center justify-between">
         {/* Left: Session stats + status */}
-        <div className="flex items-center gap-4 text-xs text-gray-500">
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
           <span>{session.session?.totalCalls || 0} dials</span>
           <span>{session.session?.connectedCalls || 0} connected</span>
-          <span>{session.session?.interestedCount || 0} interested</span>
+          {(() => {
+            const DISPOSITION_DISPLAY: { field: string; label: string; color: string }[] = [
+              { field: 'wantsToMoveForwardCount', label: 'move fwd', color: 'text-green-700' },
+              { field: 'callbackCount', label: 'callback', color: 'text-teal-700' },
+              { field: 'interestedVerbalCount', label: 'verbal int', color: 'text-green-600' },
+              { field: 'wantsChangesCount', label: 'changes', color: 'text-blue-700' },
+              { field: 'willLookLaterCount', label: 'look later', color: 'text-amber-700' },
+              { field: 'notInterestedCount', label: 'not int', color: 'text-gray-600' },
+              { field: 'voicemails', label: 'VM', color: 'text-gray-500' },
+              { field: 'noAnswers', label: 'no ans', color: 'text-gray-500' },
+              { field: 'wrongNumberCount', label: 'wrong #', color: 'text-red-600' },
+              { field: 'disconnectedCount', label: 'disconn', color: 'text-red-600' },
+              { field: 'dncCount', label: 'DNC', color: 'text-red-700' },
+            ]
+            return DISPOSITION_DISPLAY.map(({ field, label, color }) => {
+              const count = (session.session as any)?.[field] || 0
+              return count > 0 ? <span key={field} className={color}>{count} {label}</span> : null
+            })
+          })()}
           <span className={`font-semibold ${isAutoDialOn ? 'text-green-600' : 'text-amber-600'}`}>
             {isAutoDialOn ? 'AUTO-DIAL ON' : 'PAUSED'}
           </span>

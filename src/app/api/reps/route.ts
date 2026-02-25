@@ -53,6 +53,17 @@ export async function GET(request: NextRequest) {
           previewLinksSent: true,
           closes: true,
           commissionEarned: true,
+          wantsToMoveForward: true,
+          callbacks: true,
+          interestedVerbal: true,
+          wantsChanges: true,
+          willLookLater: true,
+          notInterested: true,
+          voicemails: true,
+          noAnswers: true,
+          wrongNumbers: true,
+          disconnected: true,
+          dnc: true,
         },
       }),
       // Single groupBy for all reps' close counts
@@ -101,14 +112,25 @@ export async function GET(request: NextRequest) {
             previewLinksSent: monthActivity?.previewLinksSent || 0,
             closes: monthActivity?.closes || 0,
             commissionEarned: monthActivity?.commissionEarned || 0,
+            wantsToMoveForward: monthActivity?.wantsToMoveForward || 0,
+            callbacks: monthActivity?.callbacks || 0,
+            interestedVerbal: monthActivity?.interestedVerbal || 0,
+            wantsChanges: monthActivity?.wantsChanges || 0,
+            willLookLater: monthActivity?.willLookLater || 0,
+            notInterested: monthActivity?.notInterested || 0,
+            voicemails: monthActivity?.voicemails || 0,
+            noAnswers: monthActivity?.noAnswers || 0,
+            wrongNumbers: monthActivity?.wrongNumbers || 0,
+            disconnected: monthActivity?.disconnected || 0,
+            dnc: monthActivity?.dnc || 0,
           },
         },
       }
     })
 
-    // Sort by month closes (leaderboard)
-    repsWithStats.sort((a, b) => 
-      b.stats.monthActivity.closes - a.stats.monthActivity.closes
+    // Sort by month move-forwards (leaderboard)
+    repsWithStats.sort((a, b) =>
+      b.stats.monthActivity.wantsToMoveForward - a.stats.monthActivity.wantsToMoveForward
     )
 
     return NextResponse.json({ reps: repsWithStats })

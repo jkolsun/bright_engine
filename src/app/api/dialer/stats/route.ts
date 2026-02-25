@@ -60,6 +60,17 @@ export async function GET(request: NextRequest) {
         previewLinksSent: true,
         closes: true,
         commissionEarned: true,
+        wantsToMoveForward: true,
+        callbacks: true,
+        interestedVerbal: true,
+        wantsChanges: true,
+        willLookLater: true,
+        notInterested: true,
+        voicemails: true,
+        noAnswers: true,
+        wrongNumbers: true,
+        disconnected: true,
+        dnc: true,
       },
     })
 
@@ -69,6 +80,17 @@ export async function GET(request: NextRequest) {
       previewsSent: agg._sum.previewLinksSent ?? 0,
       closes: agg._sum.closes ?? 0,
       commissionEarned: agg._sum.commissionEarned ?? 0,
+      wantsToMoveForward: agg._sum.wantsToMoveForward ?? 0,
+      callbacks: agg._sum.callbacks ?? 0,
+      interestedVerbal: agg._sum.interestedVerbal ?? 0,
+      wantsChanges: agg._sum.wantsChanges ?? 0,
+      willLookLater: agg._sum.willLookLater ?? 0,
+      notInterested: agg._sum.notInterested ?? 0,
+      voicemails: agg._sum.voicemails ?? 0,
+      noAnswers: agg._sum.noAnswers ?? 0,
+      wrongNumbers: agg._sum.wrongNumbers ?? 0,
+      disconnected: agg._sum.disconnected ?? 0,
+      dnc: agg._sum.dnc ?? 0,
     }
 
     // Simple coaching tip for weekly stats
@@ -76,8 +98,8 @@ export async function GET(request: NextRequest) {
     if (period === 'week') {
       if (stats.dials > 0 && stats.conversations === 0) {
         coachingTip = 'You\'re putting in the dials — try adjusting your opener to convert more conversations.'
-      } else if (stats.conversations > 0 && stats.closes === 0) {
-        coachingTip = 'You\'re getting conversations — focus on qualifying harder and asking for the close.'
+      } else if (stats.conversations > 0 && stats.wantsToMoveForward === 0) {
+        coachingTip = 'You\'re getting conversations — focus on qualifying harder and moving leads forward.'
       } else if (stats.dials === 0) {
         coachingTip = 'Time to get on the phones! Consistent dials are the foundation of every top rep.'
       }

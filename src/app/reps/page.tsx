@@ -54,9 +54,9 @@ export default function RepsPage() {
   const [saving, setSaving] = useState(false)
 
   // Dialer dashboard state
-  const [todayStats, setTodayStats] = useState({ dials: 0, conversations: 0, previewLinksSent: 0, closes: 0 })
-  const [weekStats, setWeekStats] = useState({ dials: 0, conversations: 0, previewsSent: 0, closes: 0, commissionEarned: 0 })
-  const [monthStats, setMonthStats] = useState({ dials: 0, conversations: 0, closes: 0, commissionEarned: 0 })
+  const [todayStats, setTodayStats] = useState({ dials: 0, conversations: 0, previewLinksSent: 0, closes: 0, wantsToMoveForward: 0, callbacks: 0, interestedVerbal: 0, wantsChanges: 0, willLookLater: 0, notInterested: 0, voicemails: 0, noAnswers: 0, wrongNumbers: 0, disconnected: 0, dnc: 0 })
+  const [weekStats, setWeekStats] = useState({ dials: 0, conversations: 0, previewsSent: 0, closes: 0, commissionEarned: 0, wantsToMoveForward: 0 })
+  const [monthStats, setMonthStats] = useState({ dials: 0, conversations: 0, closes: 0, commissionEarned: 0, wantsToMoveForward: 0 })
   const [allTimeStats, setAllTimeStats] = useState({ commissionEarned: 0 })
   const [queueSummary, setQueueSummary] = useState<any>(null)
   const [callbacks, setCallbacks] = useState<any>({ overdue: [], today: [], upcoming: [] })
@@ -303,10 +303,10 @@ export default function RepsPage() {
           </div>
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-gray-900">{todayStats.closes}</span>
+              <span className="text-4xl font-bold text-gray-900">{todayStats.wantsToMoveForward}</span>
               <span className="text-sm text-gray-400 font-medium">/ {dailyTarget.closes}</span>
             </div>
-            <p className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Closes</p>
+            <p className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Move Forward</p>
           </div>
         </div>
         <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
@@ -314,6 +314,27 @@ export default function RepsPage() {
             className="gradient-primary-vibrant h-3 rounded-full transition-all duration-700 ease-out"
             style={{ width: `${progressPercent}%` }}
           />
+        </div>
+
+        {/* Disposition breakdown pills */}
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {[
+            { key: 'wantsToMoveForward' as const, label: 'Move Fwd', bg: 'bg-green-100', text: 'text-green-700' },
+            { key: 'callbacks' as const, label: 'Callback', bg: 'bg-teal-100', text: 'text-teal-700' },
+            { key: 'interestedVerbal' as const, label: 'Verbal Int', bg: 'bg-green-50', text: 'text-green-600' },
+            { key: 'wantsChanges' as const, label: 'Changes', bg: 'bg-blue-100', text: 'text-blue-700' },
+            { key: 'willLookLater' as const, label: 'Look Later', bg: 'bg-amber-100', text: 'text-amber-700' },
+            { key: 'notInterested' as const, label: 'Not Int', bg: 'bg-gray-100', text: 'text-gray-600' },
+            { key: 'voicemails' as const, label: 'VM', bg: 'bg-gray-100', text: 'text-gray-500' },
+            { key: 'noAnswers' as const, label: 'No Ans', bg: 'bg-gray-50', text: 'text-gray-500' },
+            { key: 'wrongNumbers' as const, label: 'Wrong #', bg: 'bg-red-50', text: 'text-red-600' },
+            { key: 'disconnected' as const, label: 'Disconn', bg: 'bg-red-50', text: 'text-red-600' },
+            { key: 'dnc' as const, label: 'DNC', bg: 'bg-red-100', text: 'text-red-700' },
+          ].filter(d => (todayStats as any)[d.key] > 0).map(d => (
+            <span key={d.key} className={`px-2.5 py-1 rounded-full text-xs font-medium ${d.bg} ${d.text}`}>
+              {(todayStats as any)[d.key]} {d.label}
+            </span>
+          ))}
         </div>
       </Card>
 

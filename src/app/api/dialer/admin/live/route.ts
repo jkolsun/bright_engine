@@ -16,8 +16,13 @@ export async function GET(request: NextRequest) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
+    const CONVERSATION_DISPOSITIONS = [
+      'WANTS_TO_MOVE_FORWARD', 'NOT_INTERESTED', 'CALLBACK',
+      'INTERESTED_VERBAL', 'WANTS_CHANGES', 'WILL_LOOK_LATER', 'DNC',
+    ]
+
     // Batch all queries (5 queries instead of N per rep)
-    const [allReps, activeSessions, activeCalls, todayDials, todayConnected] = await Promise.all([
+    const [allReps, activeSessions, activeCalls, todayDials, todayDispositions] = await Promise.all([
       // 1. All active reps
       prisma.user.findMany({
         where: { role: 'REP', status: 'ACTIVE' },
@@ -59,10 +64,10 @@ export async function GET(request: NextRequest) {
         _count: true,
       }),
 
-      // 5. Today's connected calls per rep
+      // 5. Today's dispositions per rep (Bug D fix: group by disposition, not connectedAt)
       prisma.dialerCall.groupBy({
-        by: ['repId'],
-        where: { startedAt: { gte: today }, connectedAt: { not: null } },
+        by: ['repId', 'dispositionResult'],
+        where: { startedAt: { gte: today }, dispositionResult: { not: null } },
         _count: true,
       }),
     ])
@@ -70,7 +75,18 @@ export async function GET(request: NextRequest) {
     // Build lookup maps
     const sessionByRep = new Map(activeSessions.map(s => [s.repId, s]))
     const dialsByRep = new Map(todayDials.map(d => [d.repId, d._count]))
-    const connectedByRep = new Map(todayConnected.map(c => [c.repId, c._count]))
+
+    // Build per-rep disposition breakdown
+    const dispositionsByRep = new Map<string, Map<string, number>>()
+    for (const row of todayDispositions) {
+      if (!row.dispositionResult) continue
+      if (!dispositionsByRep.has(row.repId)) dispositionsByRep.set(row.repId, new Map())
+      dispositionsByRep.get(row.repId)!.set(row.dispositionResult, row._count)
+    }
+    const getDispositionCount = (repId: string, disp: string) =>
+      dispositionsByRep.get(repId)?.get(disp) || 0
+    const getConversationCount = (repId: string) =>
+      CONVERSATION_DISPOSITIONS.reduce((sum, d) => sum + getDispositionCount(repId, d), 0)
 
     // Group active calls by rep (take most recent)
     const activeCallByRep = new Map<string, typeof activeCalls[0]>()
@@ -111,8 +127,18 @@ export async function GET(request: NextRequest) {
         callDuration,
         todayStats: {
           dials: dialsByRep.get(rep.id) || 0,
-          conversations: connectedByRep.get(rep.id) || 0,
-          closes: repSession?.interestedCount || 0,
+          conversations: getConversationCount(rep.id),
+          wantsToMoveForward: getDispositionCount(rep.id, 'WANTS_TO_MOVE_FORWARD'),
+          callback: getDispositionCount(rep.id, 'CALLBACK'),
+          interestedVerbal: getDispositionCount(rep.id, 'INTERESTED_VERBAL'),
+          wantsChanges: getDispositionCount(rep.id, 'WANTS_CHANGES'),
+          willLookLater: getDispositionCount(rep.id, 'WILL_LOOK_LATER'),
+          notInterested: getDispositionCount(rep.id, 'NOT_INTERESTED'),
+          voicemail: getDispositionCount(rep.id, 'VOICEMAIL'),
+          noAnswer: getDispositionCount(rep.id, 'NO_ANSWER'),
+          wrongNumber: getDispositionCount(rep.id, 'WRONG_NUMBER'),
+          disconnected: getDispositionCount(rep.id, 'DISCONNECTED'),
+          dnc: getDispositionCount(rep.id, 'DNC'),
           previewsSent: repSession?.previewsSent || 0,
         },
       }

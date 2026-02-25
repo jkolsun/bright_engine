@@ -123,11 +123,13 @@ export async function endSession(sessionId: string) {
     },
   })
 
-  // Gap 2: Update RepActivity for the session
+  // Safety net log only — real RepActivity updates happen incrementally in initiateCall (dials),
+  // autoDisposition (voicemails/noAnswers), and logDisposition (conversations + per-disposition).
+  // Closes only come from Stripe payment confirmation.
   await upsertRepActivity(session.repId, {
     dials: session.totalCalls,
     conversations: session.connectedCalls,
-    closes: session.interestedCount,
+    closes: 0,
     previewLinksSent: session.previewsSent,
     previewsOpened: session.previewsOpened,
   })
@@ -178,6 +180,9 @@ export async function mergeClientStats(
     select: {
       totalCalls: true, connectedCalls: true, voicemails: true, noAnswers: true,
       previewsSent: true, callbacksScheduled: true, interestedCount: true, notInterestedCount: true,
+      wantsToMoveForwardCount: true, callbackCount: true, interestedVerbalCount: true,
+      wantsChangesCount: true, willLookLaterCount: true, dncCount: true,
+      wrongNumberCount: true, disconnectedCount: true,
     },
   })
   if (!current) return null
@@ -193,6 +198,14 @@ export async function mergeClientStats(
       callbacksScheduled: Math.max(current.callbacksScheduled, stats.callbacks ?? 0),
       interestedCount: Math.max(current.interestedCount, stats.interested ?? 0),
       notInterestedCount: Math.max(current.notInterestedCount, stats.notInterested ?? 0),
+      wantsToMoveForwardCount: Math.max(current.wantsToMoveForwardCount, stats.wantsToMoveForwardCount ?? 0),
+      callbackCount: Math.max(current.callbackCount, stats.callbackCount ?? 0),
+      interestedVerbalCount: Math.max(current.interestedVerbalCount, stats.interestedVerbalCount ?? 0),
+      wantsChangesCount: Math.max(current.wantsChangesCount, stats.wantsChangesCount ?? 0),
+      willLookLaterCount: Math.max(current.willLookLaterCount, stats.willLookLaterCount ?? 0),
+      dncCount: Math.max(current.dncCount, stats.dncCount ?? 0),
+      wrongNumberCount: Math.max(current.wrongNumberCount, stats.wrongNumberCount ?? 0),
+      disconnectedCount: Math.max(current.disconnectedCount, stats.disconnectedCount ?? 0),
     },
   })
 }
@@ -288,6 +301,9 @@ export async function initiateCall(
       data: { totalCalls: { increment: 1 } },
     }).catch(() => { /* session may not exist */ })
   }
+
+  // Track dial in RepActivity immediately (Bug C fix: count at initiation, not disposition)
+  await upsertRepActivityIncremental(repId, { dials: 1 })
 
   // Push SSE
   const sseEvent = {
@@ -456,17 +472,36 @@ export async function logDisposition(params: {
     console.error('[DialerService] Failed to create LeadEvent:', err)
   })
 
-  // 4. Update DialerSessionNew stats
+  // 4. Update DialerSessionNew stats (per-disposition + backward-compat aggregates)
   if (call.session?.id) {
+    const SESSION_DISPOSITION_FIELD: Record<string, string> = {
+      WANTS_TO_MOVE_FORWARD: 'wantsToMoveForwardCount',
+      CALLBACK: 'callbackCount',
+      INTERESTED_VERBAL: 'interestedVerbalCount',
+      WANTS_CHANGES: 'wantsChangesCount',
+      WILL_LOOK_LATER: 'willLookLaterCount',
+      DNC: 'dncCount',
+      WRONG_NUMBER: 'wrongNumberCount',
+      DISCONNECTED: 'disconnectedCount',
+    }
+
     const sessionUpdate: Record<string, unknown> = {}
 
     if (isConnected) {
       sessionUpdate.connectedCalls = { increment: 1 }
     }
-    if (result === 'VOICEMAIL' || result === 'NO_ANSWER') {
-      if (result === 'VOICEMAIL') sessionUpdate.voicemails = { increment: 1 }
-      if (result === 'NO_ANSWER') sessionUpdate.noAnswers = { increment: 1 }
+
+    // Per-disposition counter
+    const sessionField = SESSION_DISPOSITION_FIELD[result]
+    if (sessionField) {
+      sessionUpdate[sessionField] = { increment: 1 }
     }
+
+    // Existing fields for results that use them directly
+    if (result === 'VOICEMAIL') sessionUpdate.voicemails = { increment: 1 }
+    if (result === 'NO_ANSWER' || result === 'BUSY' || result === 'FAILED') sessionUpdate.noAnswers = { increment: 1 }
+
+    // Backward-compat aggregates
     if (isInterested) {
       sessionUpdate.interestedCount = { increment: 1 }
     }
@@ -482,11 +517,24 @@ export async function logDisposition(params: {
     }
   }
 
-  // 5. Gap 2: Upsert RepActivity
+  // 5. Upsert RepActivity (dials counted at initiation, closes only from Stripe)
+  const REP_ACTIVITY_DISPOSITION_FIELD: Record<string, string> = {
+    WANTS_TO_MOVE_FORWARD: 'wantsToMoveForward',
+    CALLBACK: 'callbacks',
+    INTERESTED_VERBAL: 'interestedVerbal',
+    WANTS_CHANGES: 'wantsChanges',
+    WILL_LOOK_LATER: 'willLookLater',
+    NOT_INTERESTED: 'notInterested',
+    DNC: 'dnc',
+    VOICEMAIL: 'voicemails',
+    NO_ANSWER: 'noAnswers',
+    WRONG_NUMBER: 'wrongNumbers',
+    DISCONNECTED: 'disconnected',
+  }
+  const repActivityField = REP_ACTIVITY_DISPOSITION_FIELD[result]
   await upsertRepActivityIncremental(call.repId, {
-    dials: 1,
     conversations: isConversation ? 1 : 0,
-    closes: isClose ? 1 : 0,
+    ...(repActivityField ? { [repActivityField]: 1 } : {}),
   })
 
   // 6. Gap 4: Create OutboundEvent
@@ -514,16 +562,7 @@ export async function logDisposition(params: {
     console.error('[DialerService] Engagement scoring error:', err)
   })
 
-  // 8. Hot lead notifications for interested dispositions
-  if (isInterested) {
-    processHotLeadEvent({
-      leadId: call.lead.id,
-      eventType: result === 'WANTS_TO_MOVE_FORWARD' ? 'PREVIEW_CTA_CLICKED' : 'PREVIEW_VIEWED',
-      metadata: { source: 'dialer', disposition: result, repName: call.rep?.name },
-    }).catch((err) => {
-      console.error('[DialerService] Hot lead notification error:', err)
-    })
-  }
+  // 8. Hot lead notifications removed — hot leads only from organic preview engagement (Bug A fix)
 
   // 9. Dispatch webhooks (non-blocking)
   dispatchWebhook({
@@ -804,11 +843,11 @@ export async function autoDisposition(callId: string, result: string) {
     },
   })
 
-  // Update session stats
+  // Update session stats (BUSY and FAILED count as noAnswers)
   if (call.sessionId) {
     const sessionUpdate: Record<string, unknown> = {}
     if (result === 'VOICEMAIL') sessionUpdate.voicemails = { increment: 1 }
-    if (result === 'NO_ANSWER') sessionUpdate.noAnswers = { increment: 1 }
+    if (result === 'NO_ANSWER' || result === 'BUSY' || result === 'FAILED') sessionUpdate.noAnswers = { increment: 1 }
     if (Object.keys(sessionUpdate).length > 0) {
       await prisma.dialerSessionNew.update({
         where: { id: call.sessionId },
@@ -850,6 +889,14 @@ export async function autoDisposition(callId: string, result: string) {
   pushToRep(call.repId, sseEvent)
   pushToAllAdmins({ ...sseEvent, data: { ...sseEvent.data, repId: call.repId } })
 
+  // Track in RepActivity (Bug C fix: auto-dispositioned calls now visible in rep stats)
+  const autoField = result === 'VOICEMAIL' ? 'voicemails'
+    : (result === 'NO_ANSWER' || result === 'BUSY' || result === 'FAILED') ? 'noAnswers'
+    : null
+  if (autoField) {
+    await upsertRepActivityIncremental(call.repId, { [autoField]: 1 })
+  }
+
   return { success: true }
 }
 
@@ -881,6 +928,9 @@ export async function manualDial(repId: string, phone: string, sessionId?: strin
       data: { totalCalls: { increment: 1 } },
     }).catch(err => console.error('[DialerService] Session call count update failed:', err))
   }
+
+  // Track dial in RepActivity immediately (Bug C fix)
+  await upsertRepActivityIncremental(repId, { dials: 1 })
 
   return { phoneToCall: phone, repId, sessionId }
 }
@@ -1019,7 +1069,12 @@ export async function updateCallNotes(callId: string, notes: string) {
  */
 async function upsertRepActivityIncremental(
   repId: string,
-  increments: { dials?: number; conversations?: number; closes?: number; previewLinksSent?: number; previewsOpened?: number }
+  increments: {
+    dials?: number; conversations?: number; closes?: number; previewLinksSent?: number; previewsOpened?: number
+    wantsToMoveForward?: number; callbacks?: number; interestedVerbal?: number; wantsChanges?: number
+    willLookLater?: number; notInterested?: number; voicemails?: number; noAnswers?: number
+    wrongNumbers?: number; disconnected?: number; dnc?: number
+  }
 ) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -1035,6 +1090,17 @@ async function upsertRepActivityIncremental(
         closes: increments.closes || 0,
         previewLinksSent: increments.previewLinksSent || 0,
         previewsOpened: increments.previewsOpened || 0,
+        wantsToMoveForward: increments.wantsToMoveForward || 0,
+        callbacks: increments.callbacks || 0,
+        interestedVerbal: increments.interestedVerbal || 0,
+        wantsChanges: increments.wantsChanges || 0,
+        willLookLater: increments.willLookLater || 0,
+        notInterested: increments.notInterested || 0,
+        voicemails: increments.voicemails || 0,
+        noAnswers: increments.noAnswers || 0,
+        wrongNumbers: increments.wrongNumbers || 0,
+        disconnected: increments.disconnected || 0,
+        dnc: increments.dnc || 0,
       },
       update: {
         ...(increments.dials ? { dials: { increment: increments.dials } } : {}),
@@ -1042,6 +1108,17 @@ async function upsertRepActivityIncremental(
         ...(increments.closes ? { closes: { increment: increments.closes } } : {}),
         ...(increments.previewLinksSent ? { previewLinksSent: { increment: increments.previewLinksSent } } : {}),
         ...(increments.previewsOpened ? { previewsOpened: { increment: increments.previewsOpened } } : {}),
+        ...(increments.wantsToMoveForward ? { wantsToMoveForward: { increment: increments.wantsToMoveForward } } : {}),
+        ...(increments.callbacks ? { callbacks: { increment: increments.callbacks } } : {}),
+        ...(increments.interestedVerbal ? { interestedVerbal: { increment: increments.interestedVerbal } } : {}),
+        ...(increments.wantsChanges ? { wantsChanges: { increment: increments.wantsChanges } } : {}),
+        ...(increments.willLookLater ? { willLookLater: { increment: increments.willLookLater } } : {}),
+        ...(increments.notInterested ? { notInterested: { increment: increments.notInterested } } : {}),
+        ...(increments.voicemails ? { voicemails: { increment: increments.voicemails } } : {}),
+        ...(increments.noAnswers ? { noAnswers: { increment: increments.noAnswers } } : {}),
+        ...(increments.wrongNumbers ? { wrongNumbers: { increment: increments.wrongNumbers } } : {}),
+        ...(increments.disconnected ? { disconnected: { increment: increments.disconnected } } : {}),
+        ...(increments.dnc ? { dnc: { increment: increments.dnc } } : {}),
       },
     })
   } catch (err) {

@@ -43,6 +43,14 @@ export interface DialerSession {
   callbacksScheduled: number
   interestedCount: number
   notInterestedCount: number
+  wantsToMoveForwardCount: number
+  callbackCount: number
+  interestedVerbalCount: number
+  wantsChangesCount: number
+  willLookLaterCount: number
+  dncCount: number
+  wrongNumberCount: number
+  disconnectedCount: number
 }
 
 export interface QueueLead {

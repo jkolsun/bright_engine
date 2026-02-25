@@ -130,6 +130,18 @@ export async function GET(request: NextRequest) {
         conversations: dailyStats?.conversations || 0,
         previewLinksSent: dailyStats?.previewLinksSent || 0,
         closes: dailyStats?.closes || 0,
+        wantsToMoveForward: dailyStats?.wantsToMoveForward || 0,
+        callbacks: dailyStats?.callbacks || 0,
+        interestedVerbal: dailyStats?.interestedVerbal || 0,
+        wantsChanges: dailyStats?.wantsChanges || 0,
+        willLookLater: dailyStats?.willLookLater || 0,
+        notInterested: dailyStats?.notInterested || 0,
+        voicemails: dailyStats?.voicemails || 0,
+        noAnswers: dailyStats?.noAnswers || 0,
+        wrongNumbers: dailyStats?.wrongNumbers || 0,
+        disconnected: dailyStats?.disconnected || 0,
+        dnc: dailyStats?.dnc || 0,
+        previewsOpened: dailyStats?.previewsOpened || 0,
       }
     })
   } catch (error) {

@@ -125,8 +125,9 @@ export async function POST(request: NextRequest) {
     })
 
     // Bug 7: If there's an active dialer call for this lead, push SSE + update call flags
+    let activeCall: { id: string; repId: string } | null = null
     try {
-      const activeCall = await prisma.dialerCall.findFirst({
+      activeCall = await prisma.dialerCall.findFirst({
         where: {
           leadId: lead.id,
           endedAt: null,
@@ -173,8 +174,9 @@ export async function POST(request: NextRequest) {
       console.warn('[Preview Track] Dialer SSE push failed:', dialerErr)
     }
 
-    // If high engagement, mark as HOT and dispatch webhook
-    if (duration && duration > 60 || event === 'cta_click' || event === 'call_click' || event === 'contact_form') {
+    // If high engagement AND no active call, mark as HOT and dispatch webhook (Bug A fix)
+    // During active calls, engagement is expected (rep told them to open it) — not organic
+    if (!activeCall && (duration && duration > 60 || event === 'cta_click' || event === 'call_click' || event === 'contact_form')) {
       const urgencyScore = event === 'call_click' ? 90 : event === 'contact_form' ? 85 : event === 'cta_click' ? 80 : duration > 120 ? 75 : 65
 
       if (lead.priority !== 'HOT') {
@@ -194,10 +196,9 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // 🚀 Dispatch immediate webhook for hot engagement
       await dispatchWebhook(WebhookEvents.HOT_ENGAGEMENT(
-        lead.id, 
-        event, 
+        lead.id,
+        event,
         urgencyScore,
         { duration, company: lead.companyName, firstName: lead.firstName }
       ))

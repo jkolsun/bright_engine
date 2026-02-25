@@ -34,7 +34,17 @@ interface LiveRep {
   todayStats: {
     dials: number
     conversations: number
-    closes: number
+    wantsToMoveForward: number
+    callback: number
+    interestedVerbal: number
+    wantsChanges: number
+    willLookLater: number
+    notInterested: number
+    voicemail: number
+    noAnswer: number
+    wrongNumber: number
+    disconnected: number
+    dnc: number
     previewsSent: number
   }
   previewStatus?: {
@@ -80,7 +90,17 @@ export default function DialerMonitorPage() {
           todayStats: {
             dials: r.todayStats?.dials || 0,
             conversations: r.todayStats?.conversations || 0,
-            closes: r.todayStats?.closes || 0,
+            wantsToMoveForward: r.todayStats?.wantsToMoveForward || 0,
+            callback: r.todayStats?.callback || 0,
+            interestedVerbal: r.todayStats?.interestedVerbal || 0,
+            wantsChanges: r.todayStats?.wantsChanges || 0,
+            willLookLater: r.todayStats?.willLookLater || 0,
+            notInterested: r.todayStats?.notInterested || 0,
+            voicemail: r.todayStats?.voicemail || 0,
+            noAnswer: r.todayStats?.noAnswer || 0,
+            wrongNumber: r.todayStats?.wrongNumber || 0,
+            disconnected: r.todayStats?.disconnected || 0,
+            dnc: r.todayStats?.dnc || 0,
             previewsSent: r.todayStats?.previewsSent || 0,
           },
           previewStatus: null,
@@ -106,7 +126,7 @@ export default function DialerMonitorPage() {
   // Aggregate stats
   const totalDials = liveReps.reduce((sum, r) => sum + r.todayStats.dials, 0)
   const totalConversations = liveReps.reduce((sum, r) => sum + r.todayStats.conversations, 0)
-  const totalCloses = liveReps.reduce((sum, r) => sum + r.todayStats.closes, 0)
+  const totalMoveForward = liveReps.reduce((sum, r) => sum + r.todayStats.wantsToMoveForward, 0)
   const activeReps = liveReps.filter(r => r.status !== 'idle')
   const onCallReps = liveReps.filter(r => r.status === 'on_call')
 
@@ -162,10 +182,40 @@ export default function DialerMonitorPage() {
           <div className="text-xs text-gray-500 mt-1">Conversations</div>
         </Card>
         <Card className="p-4 text-center">
-          <div className="text-3xl font-bold text-amber-600">{totalCloses}</div>
-          <div className="text-xs text-gray-500 mt-1">Closes</div>
+          <div className="text-3xl font-bold text-green-600">{totalMoveForward}</div>
+          <div className="text-xs text-gray-500 mt-1">Move Forward</div>
         </Card>
       </div>
+
+      {/* Aggregate Disposition Breakdown */}
+      {(() => {
+        const DISPOSITION_BADGES: { key: keyof LiveRep['todayStats']; label: string; bg: string; text: string }[] = [
+          { key: 'wantsToMoveForward', label: 'Move Fwd', bg: 'bg-green-100', text: 'text-green-700' },
+          { key: 'callback', label: 'Callback', bg: 'bg-teal-100', text: 'text-teal-700' },
+          { key: 'interestedVerbal', label: 'Verbal Int', bg: 'bg-green-50', text: 'text-green-600' },
+          { key: 'wantsChanges', label: 'Changes', bg: 'bg-blue-100', text: 'text-blue-700' },
+          { key: 'willLookLater', label: 'Look Later', bg: 'bg-amber-100', text: 'text-amber-700' },
+          { key: 'notInterested', label: 'Not Int', bg: 'bg-gray-100', text: 'text-gray-600' },
+          { key: 'voicemail', label: 'VM', bg: 'bg-gray-100', text: 'text-gray-500' },
+          { key: 'noAnswer', label: 'No Ans', bg: 'bg-gray-50', text: 'text-gray-500' },
+          { key: 'wrongNumber', label: 'Wrong #', bg: 'bg-red-50', text: 'text-red-600' },
+          { key: 'disconnected', label: 'Disconn', bg: 'bg-red-50', text: 'text-red-600' },
+          { key: 'dnc', label: 'DNC', bg: 'bg-red-100', text: 'text-red-700' },
+        ]
+        const totals = DISPOSITION_BADGES.map(b => ({
+          ...b,
+          total: liveReps.reduce((sum, r) => sum + (r.todayStats[b.key] as number || 0), 0),
+        })).filter(b => b.total > 0)
+        return totals.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {totals.map(b => (
+              <span key={b.key} className={`px-2.5 py-1 rounded-full text-xs font-medium ${b.bg} ${b.text}`}>
+                {b.total} {b.label}
+              </span>
+            ))}
+          </div>
+        ) : null
+      })()}
 
       {/* Live Reps */}
       <div className="space-y-4">
@@ -249,11 +299,27 @@ export default function DialerMonitorPage() {
                         <PhoneForwarded size={12} /> {rep.todayStats.conversations} convos
                       </span>
                       <span className="flex items-center gap-1">
-                        <Target size={12} /> {rep.todayStats.closes} closes
-                      </span>
-                      <span className="flex items-center gap-1">
                         <MessageSquare size={12} /> {rep.todayStats.previewsSent} previews
                       </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {[
+                        { val: rep.todayStats.wantsToMoveForward, label: 'Move Fwd', bg: 'bg-green-100', text: 'text-green-700' },
+                        { val: rep.todayStats.callback, label: 'Callback', bg: 'bg-teal-100', text: 'text-teal-700' },
+                        { val: rep.todayStats.interestedVerbal, label: 'Verbal Int', bg: 'bg-green-50', text: 'text-green-600' },
+                        { val: rep.todayStats.wantsChanges, label: 'Changes', bg: 'bg-blue-100', text: 'text-blue-700' },
+                        { val: rep.todayStats.willLookLater, label: 'Look Later', bg: 'bg-amber-100', text: 'text-amber-700' },
+                        { val: rep.todayStats.notInterested, label: 'Not Int', bg: 'bg-gray-100', text: 'text-gray-600' },
+                        { val: rep.todayStats.voicemail, label: 'VM', bg: 'bg-gray-100', text: 'text-gray-500' },
+                        { val: rep.todayStats.noAnswer, label: 'No Ans', bg: 'bg-gray-50', text: 'text-gray-500' },
+                        { val: rep.todayStats.wrongNumber, label: 'Wrong #', bg: 'bg-red-50', text: 'text-red-600' },
+                        { val: rep.todayStats.disconnected, label: 'Disconn', bg: 'bg-red-50', text: 'text-red-600' },
+                        { val: rep.todayStats.dnc, label: 'DNC', bg: 'bg-red-100', text: 'text-red-700' },
+                      ].filter(d => d.val > 0).map(d => (
+                        <span key={d.label} className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${d.bg} ${d.text}`}>
+                          {d.val} {d.label}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 </div>
