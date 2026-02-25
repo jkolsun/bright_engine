@@ -51,6 +51,14 @@ export function useTwilioDevice() {
         console.error('[TwilioDevice] Error:', err)
         setErrorMessage(err?.message || 'Twilio device error')
         setDeviceState('error')
+        // Auto-retry after 5 seconds — deploy restarts or token expiry can cause transient errors
+        setTimeout(() => {
+          console.log('[TwilioDevice] Auto-retrying after error...')
+          newDevice.destroy()
+          deviceRef.current = null
+          setDevice(null)
+          initialize()
+        }, 5000)
       })
       newDevice.on('incoming', (call: any) => {
         // Handled by SSE inbound events
