@@ -662,7 +662,7 @@ export async function dropVoicemail(callId: string) {
     where: { id: callId },
     include: {
       rep: {
-        select: { id: true, vmRecordingUrl: true, outboundVmUrl: true },
+        select: { id: true, vmRecordingUrl: true, outboundVmUrl: true, twilioNumber1: true },
       },
     },
   })
@@ -745,6 +745,84 @@ export async function dropVoicemail(callId: string) {
     }
     pushToRep(call.repId, sseEvent)
     pushToAllAdmins({ ...sseEvent, data: { ...sseEvent.data, repId: call.repId } })
+
+    // ── Auto-send preview text after VM drop ──
+    try {
+      if (call.previewSentDuringCall) {
+        console.log(`[DialerService] VM auto-preview skipped — preview already sent during call ${callId}`)
+      } else {
+        const lead = await prisma.lead.findUnique({
+          where: { id: call.leadId },
+          select: { previewUrl: true, previewId: true, phone: true, companyName: true, firstName: true },
+        })
+
+        const previewUrl = lead?.previewUrl || (lead?.previewId
+          ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'}/preview/${lead.previewId}`
+          : null)
+
+        if (previewUrl && lead?.phone) {
+          const { getLeadSmsNumber } = await import('./twilio')
+
+          let toNumber: string
+          try {
+            toNumber = await getLeadSmsNumber(call.leadId)
+          } catch {
+            toNumber = lead.phone
+          }
+
+          const firstName = lead.firstName || 'there'
+          const company = lead.companyName || 'your business'
+          const message = `Hey ${firstName}, I just left you a voicemail about ${company}. Check out the site I built for you: ${previewUrl}`
+
+          const { sendSMSViaProvider } = await import('./sms-provider')
+
+          await sendSMSViaProvider({
+            to: toNumber,
+            fromNumber: call.rep?.twilioNumber1 || undefined,
+            message,
+            leadId: call.leadId,
+            sender: `rep:${call.rep?.id || 'unknown'}`,
+            trigger: 'vm_auto_preview',
+          })
+
+          await prisma.leadEvent.create({
+            data: {
+              leadId: call.leadId,
+              eventType: 'PREVIEW_SENT_SMS',
+              actor: 'system:vm-auto-preview',
+              metadata: {
+                source: 'vm_auto_preview',
+                previewUrl,
+                callId,
+                repId: call.rep?.id,
+                trigger: 'voicemail_drop',
+              },
+            },
+          }).catch(() => {})
+
+          await prisma.dialerCall.update({
+            where: { id: callId },
+            data: {
+              previewSentDuringCall: true,
+              previewSentChannel: 'sms',
+            },
+          }).catch(() => {})
+
+          if (call.sessionId) {
+            await prisma.dialerSessionNew.update({
+              where: { id: call.sessionId },
+              data: { previewsSent: { increment: 1 } },
+            }).catch(() => {})
+          }
+
+          console.log(`[DialerService] VM auto-preview sent to ${toNumber} for lead ${call.leadId}`)
+        } else {
+          console.log(`[DialerService] VM auto-preview skipped — no preview URL for lead ${call.leadId}`)
+        }
+      }
+    } catch (err) {
+      console.warn('[DialerService] VM auto-preview failed (non-blocking):', err)
+    }
 
     return { success: true }
   } catch (err) {
