@@ -12,6 +12,17 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url)
+
+  // Support fetching a specific call's notes (for recent lead pre-load)
+  const callId = searchParams.get('callId')
+  if (callId) {
+    const call = await prisma.dialerCall.findUnique({
+      where: { id: callId },
+      select: { notes: true },
+    })
+    return NextResponse.json({ callNotes: call?.notes || '' })
+  }
+
   const leadId = searchParams.get('leadId')
   if (!leadId) return NextResponse.json({ notes: [] })
 

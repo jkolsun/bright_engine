@@ -7,7 +7,7 @@ import type { Recommendation } from '@/types/dialer'
 type Layer1 = 'connected' | 'voicemail' | 'no_answer' | 'bad_number'
 
 export function DispositionTree() {
-  const { currentCall, queue, setCurrentCall, session, autoDialState, handleAutoDialNext, handleSwapToNewCall } = useDialer()
+  const { currentCall, queue, setCurrentCall, session, autoDialState, handleAutoDialNext, handleSwapToNewCall, recentCallId, isViewingRecentLead } = useDialer()
   const [layer, setLayer] = useState<'L1' | 'L2'>('L1')
   const [l1Choice, setL1Choice] = useState<Layer1 | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -21,17 +21,20 @@ export function DispositionTree() {
 
   const isOnCall = !!currentCall && ['INITIATED', 'RINGING', 'CONNECTED'].includes(currentCall.status)
   const callEnded = !!currentCall && ['COMPLETED', 'VOICEMAIL', 'NO_ANSWER', 'BUSY', 'FAILED'].includes(currentCall.status)
+  const effectiveCallId = isViewingRecentLead ? recentCallId : currentCall?.id
+  const isReDisposition = isViewingRecentLead && !!recentCallId
 
   // Fetch AI recommendations (uses existing /api/dialer/recommendation endpoint)
   useEffect(() => {
+    if (isReDisposition) { setRecommendations([]); return }
     if (!currentCall?.id || !queue.selectedLeadId) return
     fetch(`/api/dialer/recommendation?callId=${currentCall.id}&leadId=${queue.selectedLeadId}`)
       .then(r => r.ok ? r.json() : { recommendations: [] })
       .then(data => setRecommendations(data.recommendations || []))
       .catch(() => setRecommendations([]))
-  }, [currentCall?.id, queue.selectedLeadId])
+  }, [currentCall?.id, queue.selectedLeadId, isReDisposition])
 
-  // Reset when call changes
+  // Reset when call changes (including switching between recent leads)
   useEffect(() => {
     setLayer('L1')
     setL1Choice(null)
@@ -40,7 +43,7 @@ export function DispositionTree() {
     setAllDay(false)
     setDncChecked(false)
     setQueuedDisposition(null)
-  }, [currentCall?.id])
+  }, [effectiveCallId])
 
   // If disposition was queued during call and call just ended, auto-submit
   useEffect(() => {
@@ -111,6 +114,12 @@ export function DispositionTree() {
       // 3. Move lead between queue tabs based on disposition
       queue.moveLeadAfterDisposition(currentCall.leadId, result)
 
+      // 3b. Push to recent leads for quick re-access
+      const dispositionedLead = queue.selectedLead
+      if (dispositionedLead && currentCall.id) {
+        queue.pushRecentLead(dispositionedLead, currentCall.id, result)
+      }
+
       // 4. Clear call state — skip setCurrentCall(null) when auto-dial will overwrite it
       //    to prevent React batching null+newCall causing components to unmount
       setQueuedDisposition(null)
@@ -134,7 +143,66 @@ export function DispositionTree() {
     }
   }, [currentCall, recommendations, queue, autoDialState, handleAutoDialNext, handleSwapToNewCall])
 
+  const submitReDisposition = useCallback(async (newResult: string) => {
+    if (!recentCallId) return
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/dialer/disposition/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callId: recentCallId, newResult }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        console.error('[DispositionTree] Re-disposition failed:', data.error)
+        return
+      }
+
+      if (data.changed) {
+        const oldResult = data.oldResult
+        const DISPOSITION_STAT_MAP: Record<string, string> = {
+          WANTS_TO_MOVE_FORWARD: 'wantsToMoveForwardCount',
+          CALLBACK: 'callbackCount',
+          INTERESTED_VERBAL: 'interestedVerbalCount',
+          WANTS_CHANGES: 'wantsChangesCount',
+          WILL_LOOK_LATER: 'willLookLaterCount',
+          DNC: 'dncCount',
+          VOICEMAIL: 'voicemails',
+          NO_ANSWER: 'noAnswers',
+          WRONG_NUMBER: 'wrongNumberCount',
+          DISCONNECTED: 'disconnectedCount',
+        }
+        const INTERESTED_RESULTS = ['WANTS_TO_MOVE_FORWARD', 'CALLBACK', 'INTERESTED_VERBAL', 'WANTS_CHANGES']
+        const NOT_INTERESTED_RESULTS = ['NOT_INTERESTED', 'DNC']
+
+        // Decrement old
+        const oldField = DISPOSITION_STAT_MAP[oldResult]
+        if (oldField) session.incrementStat(oldField, -1)
+        if (INTERESTED_RESULTS.includes(oldResult)) session.incrementStat('interestedCount', -1)
+        if (NOT_INTERESTED_RESULTS.includes(oldResult)) session.incrementStat('notInterestedCount', -1)
+
+        // Increment new
+        const newField = DISPOSITION_STAT_MAP[newResult]
+        if (newField) session.incrementStat(newField, 1)
+        if (INTERESTED_RESULTS.includes(newResult)) session.incrementStat('interestedCount', 1)
+        if (NOT_INTERESTED_RESULTS.includes(newResult)) session.incrementStat('notInterestedCount', 1)
+
+        // Update recentLeads entry
+        const recentLead = queue.recentLeads.find(l => l.lastCallId === recentCallId)
+        if (recentLead) {
+          queue.pushRecentLead(recentLead, recentCallId, newResult)
+        }
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }, [recentCallId, session, queue])
+
   const handleDisposition = useCallback((result: string, extra?: Record<string, unknown>) => {
+    if (isReDisposition) {
+      submitReDisposition(result)
+      return
+    }
     if (isOnCall) {
       // Call still active — queue the disposition (preserve extra for callbacks)
       setQueuedDisposition({ result, extra })
@@ -142,7 +210,7 @@ export function DispositionTree() {
       // Call ended — submit immediately
       submitDisposition(result, extra)
     }
-  }, [isOnCall, submitDisposition])
+  }, [isOnCall, isReDisposition, submitDisposition, submitReDisposition])
 
   const flashButton = (id: string) => {
     setLastClicked(id)

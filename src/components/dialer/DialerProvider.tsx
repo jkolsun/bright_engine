@@ -1,5 +1,5 @@
 'use client'
-import { createContext, useContext, useEffect, useCallback, useState, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useCallback, useState, useRef, useMemo, type ReactNode } from 'react'
 import { useCallTimer } from '@/hooks/useCallTimer'
 import { useDialerSession } from '@/hooks/useDialerSession'
 import { useTwilioDevice } from '@/hooks/useTwilioDevice'
@@ -54,6 +54,10 @@ interface DialerContextValue {
   startManualDial: (phone: string) => Promise<void>
   linkManualDial: (leadId: string, options?: { saveAsSecondary?: boolean }) => Promise<void>
   createLeadFromManualDialFn: (companyName: string, contactName?: string) => Promise<void>
+  // Recent leads
+  isViewingRecentLead: boolean
+  showRecentLeadBanner: boolean
+  recentCallId: string | null
 }
 
 const DialerContext = createContext<DialerContextValue | null>(null)
@@ -103,6 +107,20 @@ export function DialerProvider({ children }: { children: ReactNode }) {
 
   const queueRef = useRef(queue)
   useEffect(() => { queueRef.current = queue }, [queue])
+
+  // Recent-lead computed flags
+  const isViewingRecentLead = useMemo(
+    () => queue.recentLeads.some(l => l.id === queue.selectedLeadId),
+    [queue.recentLeads, queue.selectedLeadId]
+  )
+  const showRecentLeadBanner = useMemo(
+    () => isViewingRecentLead && !!currentCall && queue.selectedLeadId !== currentCall.leadId,
+    [isViewingRecentLead, currentCall, queue.selectedLeadId]
+  )
+  const recentCallId = useMemo(() => {
+    if (!isViewingRecentLead || !queue.selectedLeadId) return null
+    return queue.recentLeads.find(l => l.id === queue.selectedLeadId)?.lastCallId ?? null
+  }, [isViewingRecentLead, queue.selectedLeadId, queue.recentLeads])
 
   // Initialize on mount
   useEffect(() => {
@@ -786,6 +804,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     lastCalledLeadIdRef.current = null
     calledLeadIdsRef.current = new Set()
     processedCallIdsRef.current = new Set()
+    queueRef.current.clearRecentLeads()
     // 6. End backend session (sets session to null → triggers recap screen)
     await sessionHook.endSession()
   }, [twilioDevice, timer, sessionHook])
@@ -803,6 +822,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       currentCall, setCurrentCall, dial, hangup,
       autoDialState, autoDialBanner, bannerUrgent, handleAutoDialNext, handleSwapToNewCall, endSessionFull, activeCallerId,
       manualDialState, startManualDial, linkManualDial, createLeadFromManualDialFn,
+      isViewingRecentLead, showRecentLeadBanner, recentCallId,
     }}>
       {children}
     </DialerContext.Provider>

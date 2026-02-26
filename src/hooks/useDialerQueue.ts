@@ -16,6 +16,10 @@ export function useDialerQueue() {
   const [searchQuery, setSearchQuery] = useState('')
   // Temporary leads injected for inbound callers not in loaded queue arrays
   const [tempLeads, setTempLeads] = useState<QueueLead[]>([])
+  // Recently-dispositioned leads pinned at top of Fresh tab (max 3)
+  const [recentLeads, setRecentLeads] = useState<
+    (QueueLead & { lastCallId?: string; lastDisposition?: string })[]
+  >([])
 
   const fetchFresh = useCallback(async () => {
     setLoading(true)
@@ -75,7 +79,11 @@ export function useDialerQueue() {
 
   // Filter leads by search (applies to fresh, retry, called tabs)
   const filteredLeads = useMemo(() => {
+    const recentIds = activeTab === 'fresh'
+      ? new Set(recentLeads.map(l => l.id))
+      : new Set<string>()
     return activeLeadList.filter(l => {
+      if (recentIds.has(l.id)) return false
       if (!searchQuery) return true
       const q = searchQuery.toLowerCase()
       return (
@@ -86,22 +94,23 @@ export function useDialerQueue() {
         l.industry?.toLowerCase().includes(q)
       )
     })
-  }, [activeLeadList, searchQuery])
+  }, [activeLeadList, searchQuery, activeTab, recentLeads])
 
   // Expose as `leads` for backward compatibility (always the filtered active list)
   const leads = filteredLeads
 
-  // Search across all arrays (including temp injections) for the selected lead
+  // Search across all arrays (including recent + temp injections) for the selected lead
   const selectedLead = useMemo(() => {
     if (!selectedLeadId) return null
     return (
+      recentLeads.find(l => l.id === selectedLeadId) ||
       freshLeads.find(l => l.id === selectedLeadId) ||
       retryLeads.find(l => l.id === selectedLeadId) ||
       calledLeads.find(l => l.id === selectedLeadId) ||
       tempLeads.find(l => l.id === selectedLeadId) ||
       null
     )
-  }, [selectedLeadId, freshLeads, retryLeads, calledLeads, tempLeads])
+  }, [selectedLeadId, recentLeads, freshLeads, retryLeads, calledLeads, tempLeads])
 
   // Navigate within active tab's filtered list
   const selectNext = useCallback(() => {
@@ -121,6 +130,19 @@ export function useDialerQueue() {
       return [...prev, lead]
     })
   }, [])
+
+  // Push a lead to the recent-calls pin section (max 3, newest first, deduped)
+  const pushRecentLead = useCallback(
+    (lead: QueueLead, callId: string, disposition: string) => {
+      setRecentLeads(prev => {
+        const deduped = prev.filter(l => l.id !== lead.id)
+        const entry = { ...lead, lastCallId: callId, lastDisposition: disposition }
+        return [entry, ...deduped].slice(0, 3)
+      })
+    }, []
+  )
+
+  const clearRecentLeads = useCallback(() => setRecentLeads([]), [])
 
   // Remove a callback from local state (used after DELETE)
   const removeCallback = useCallback((callbackId: string) => {
@@ -192,6 +214,7 @@ export function useDialerQueue() {
     setRetryLeads(patcher)
     setCalledLeads(patcher)
     setTempLeads(patcher)
+    setRecentLeads(patcher as any)
   }, [])
 
   return {
@@ -202,5 +225,6 @@ export function useDialerQueue() {
     searchQuery, setSearchQuery,
     refresh, fetchFresh, fetchRetry, fetchCalled, fetchCallbacks, fetchMissed,
     selectNext, selectPrev, removeCallback, moveLeadAfterDisposition, injectLead, updateLeadInQueue,
+    recentLeads, pushRecentLead, clearRecentLeads,
   }
 }

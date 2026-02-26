@@ -3,11 +3,12 @@ import { useState, useEffect, useRef } from 'react'
 import { useDialer } from './DialerProvider'
 
 export function CallNotes() {
-  const { currentCall, queue } = useDialer()
+  const { currentCall, queue, recentCallId, isViewingRecentLead } = useDialer()
   const [notes, setNotes] = useState('')
   const [previousNotes, setPreviousNotes] = useState<Array<{ text: string; date: string; actor?: string }>>([])
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const leadId = queue.selectedLead?.id
+  const effectiveCallId = isViewingRecentLead ? recentCallId : currentCall?.id
 
   // Load previous notes when lead changes
   useEffect(() => {
@@ -18,20 +19,29 @@ export function CallNotes() {
       .catch(() => setPreviousNotes([]))
   }, [leadId])
 
-  // Reset current notes when lead changes
-  useEffect(() => { setNotes('') }, [leadId])
+  // Reset/load current notes when lead changes
+  useEffect(() => {
+    if (isViewingRecentLead && recentCallId) {
+      fetch(`/api/dialer/call/notes?callId=${recentCallId}`)
+        .then(r => r.ok ? r.json() : { callNotes: '' })
+        .then(data => setNotes(data.callNotes || ''))
+        .catch(() => setNotes(''))
+    } else {
+      setNotes('')
+    }
+  }, [leadId, isViewingRecentLead, recentCallId])
 
   // Auto-save with 2s debounce
   useEffect(() => {
     if (!notes.trim()) return
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     timeoutRef.current = setTimeout(async () => {
-      if (currentCall?.id) {
-        // Save to call record (existing endpoint, uses updateCallNotes in dialer-service.ts)
+      if (effectiveCallId) {
+        // Save to call record (works for both active call and recent call)
         await fetch('/api/dialer/call/note', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ callId: currentCall.id, notes }),
+          body: JSON.stringify({ callId: effectiveCallId, notes }),
         }).catch(err => console.warn('[CallNotes] Save to call failed:', err))
       } else if (leadId) {
         // Save to lead as a LeadEvent (pre-call or post-disposition note)
@@ -43,7 +53,7 @@ export function CallNotes() {
       }
     }, 2000)
     return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current) }
-  }, [notes, currentCall?.id, leadId])
+  }, [notes, effectiveCallId, leadId])
 
   if (!leadId) return null
 
@@ -51,7 +61,7 @@ export function CallNotes() {
     <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
       <div className="px-4 py-3 bg-gray-50/80 border-b border-gray-100 flex items-center justify-between">
         <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Call Notes</h3>
-        {currentCall && (
+        {(currentCall || effectiveCallId) && (
           <span className="text-[10px] text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full">Auto-saving</span>
         )}
       </div>

@@ -233,7 +233,7 @@ function ManualCallPanel() {
 }
 
 export function LeadCard() {
-  const { queue, currentCall, manualDialState } = useDialer()
+  const { queue, currentCall, manualDialState, isViewingRecentLead, recentCallId, showRecentLeadBanner } = useDialer()
   const lead = queue.selectedLead
   const [callHistory, setCallHistory] = useState<{ calls: any[]; nextCallback: any } | null>(null)
 
@@ -260,16 +260,28 @@ export function LeadCard() {
     )
   }
 
-  // Show disposition during active call AND after call ends
+  // Show disposition during active call, after call ends, OR when viewing a recent lead
   const isOnCall = !!currentCall && ['INITIATED', 'RINGING', 'CONNECTED'].includes(currentCall.status)
   const callEnded = !!currentCall && ['COMPLETED', 'VOICEMAIL', 'NO_ANSWER', 'BUSY', 'FAILED'].includes(currentCall.status)
-  const showDisposition = isOnCall || callEnded
+  const isRecentWithCall = isViewingRecentLead && !!recentCallId
+  const showDisposition = isOnCall || callEnded || isRecentWithCall
 
   const lastCall = callHistory?.calls?.[0]
 
   return (
     <div className="p-6 lg:p-8 overflow-y-auto h-full">
       <div className="max-w-3xl mx-auto space-y-5">
+        {showRecentLeadBanner && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between">
+            <span className="text-xs text-amber-700 font-medium">Viewing a recently called lead. Your active call is still running.</span>
+            <button
+              onClick={() => { if (currentCall?.leadId) queue.setSelectedLeadId(currentCall.leadId) }}
+              className="text-xs font-semibold text-amber-600 hover:text-amber-800 whitespace-nowrap ml-3"
+            >
+              Back to active call →
+            </button>
+          </div>
+        )}
         <LeadInfo lead={lead} />
         <QuickStats lead={lead} />
 

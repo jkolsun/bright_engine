@@ -204,52 +204,89 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
       <div className="flex-1 overflow-y-auto">
         {/* Fresh / Retry / Called tabs — render leads */}
         {['fresh', 'retry', 'called'].includes(queue.activeTab) && (
-          displayLeads.length > 0 ? (
-            displayLeads.map((lead: any) => (
-              <button
-                key={lead.id}
-                onClick={() => queue.setSelectedLeadId(lead.id)}
-                className={`w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-white transition-colors ${
-                  queue.selectedLeadId === lead.id ? 'bg-teal-50/40 border-l-2 border-l-teal-500' : ''
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-900 truncate">{lead.companyName}</span>
-                  {(queue.activeTab === 'called' || queue.activeTab === 'retry') && lead.lastDisposition ? (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ml-2 ${
-                      DISPOSITION_BADGE[lead.lastDisposition]?.className || 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {DISPOSITION_BADGE[lead.lastDisposition]?.label || lead.lastDisposition}
-                    </span>
-                  ) : (
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                      lead.priority === 'HOT' ? 'bg-red-500' : lead.priority === 'HIGH' ? 'bg-orange-500' : lead.priority === 'MEDIUM' ? 'bg-yellow-500' : 'bg-gray-300'
-                    }`} />
+          <>
+            {/* Recent Calls pin — only on Fresh tab */}
+            {queue.activeTab === 'fresh' && queue.recentLeads.length > 0 && (
+              <>
+                <div className="px-3 pt-2 pb-1 flex items-center gap-1.5">
+                  <Clock className="w-3 h-3 text-amber-500" />
+                  <span className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider">Recent Calls</span>
+                </div>
+                {queue.recentLeads.map((lead: any) => (
+                  <button
+                    key={`recent-${lead.id}`}
+                    onClick={() => queue.setSelectedLeadId(lead.id)}
+                    className={`w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-amber-50/40 transition-colors ${
+                      queue.selectedLeadId === lead.id ? 'bg-amber-50/60 border-l-2 border-l-amber-400' : ''
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-900 truncate">{lead.companyName}</span>
+                      {lead.lastDisposition && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ml-2 ${
+                          DISPOSITION_BADGE[lead.lastDisposition]?.className || 'bg-gray-100 text-gray-500'
+                        }`}>
+                          {DISPOSITION_BADGE[lead.lastDisposition]?.label || lead.lastDisposition}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5 truncate">
+                      {lead.firstName || lead.contactName || 'Unknown'} &middot; {lead.phone?.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-****')}
+                    </div>
+                  </button>
+                ))}
+                <div className="border-t-2 border-gray-200 mx-3 my-1" />
+              </>
+            )}
+
+            {/* Standard lead list */}
+            {displayLeads.length > 0 ? (
+              displayLeads.map((lead: any) => (
+                <button
+                  key={lead.id}
+                  onClick={() => queue.setSelectedLeadId(lead.id)}
+                  className={`w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-white transition-colors ${
+                    queue.selectedLeadId === lead.id ? 'bg-teal-50/40 border-l-2 border-l-teal-500' : ''
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-900 truncate">{lead.companyName}</span>
+                    {(queue.activeTab === 'called' || queue.activeTab === 'retry') && lead.lastDisposition ? (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ml-2 ${
+                        DISPOSITION_BADGE[lead.lastDisposition]?.className || 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {DISPOSITION_BADGE[lead.lastDisposition]?.label || lead.lastDisposition}
+                      </span>
+                    ) : (
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                        lead.priority === 'HOT' ? 'bg-red-500' : lead.priority === 'HIGH' ? 'bg-orange-500' : lead.priority === 'MEDIUM' ? 'bg-yellow-500' : 'bg-gray-300'
+                      }`} />
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5 truncate">
+                    {lead.firstName || lead.contactName || 'Unknown'} &middot; {lead.phone?.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-****')}
+                  </div>
+                  {lead._count?.dialerCalls !== undefined && lead._count.dialerCalls > 0 && (
+                    <div className="text-[10px] text-gray-400 mt-0.5">{lead._count.dialerCalls} calls</div>
                   )}
-                </div>
-                <div className="text-xs text-gray-500 mt-0.5 truncate">
-                  {lead.firstName || lead.contactName || 'Unknown'} &middot; {lead.phone?.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-****')}
-                </div>
-                {lead._count?.dialerCalls !== undefined && lead._count.dialerCalls > 0 && (
-                  <div className="text-[10px] text-gray-400 mt-0.5">{lead._count.dialerCalls} calls</div>
-                )}
-              </button>
-            ))
-          ) : (
-            <div className="text-center py-8 px-4">
-              <p className="text-xs text-gray-400">
-                {queue.searchQuery
-                  ? 'No leads match your search'
-                  : dispoFilter
-                    ? 'No leads in this filter'
-                    : queue.activeTab === 'fresh'
-                      ? 'No fresh leads available'
-                      : queue.activeTab === 'retry'
-                        ? 'No leads ready for retry'
-                        : 'No called leads yet'}
-              </p>
-            </div>
-          )
+                </button>
+              ))
+            ) : (
+              <div className="text-center py-8 px-4">
+                <p className="text-xs text-gray-400">
+                  {queue.searchQuery
+                    ? 'No leads match your search'
+                    : dispoFilter
+                      ? 'No leads in this filter'
+                      : queue.activeTab === 'fresh'
+                        ? (queue.recentLeads.length > 0 ? 'All remaining leads have been called' : 'No fresh leads available')
+                        : queue.activeTab === 'retry'
+                          ? 'No leads ready for retry'
+                          : 'No called leads yet'}
+                </p>
+              </div>
+            )}
+          </>
         )}
 
         {/* Scheduled tab — callbacks with delete */}
