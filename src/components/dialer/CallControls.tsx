@@ -20,6 +20,8 @@ export function CallControls() {
     return num
   }
 
+  if (currentCall) console.log('[CallControls] render — activeCallerId:', activeCallerId, 'callStatus:', currentCall.status)
+
   const isOnCall = !!currentCall && ['INITIATED', 'RINGING', 'CONNECTED'].includes(currentCall.status)
   const isVoicemail = currentCall?.amdResult?.startsWith('machine') || currentCall?.status === 'VOICEMAIL'
   const canDial = !isOnCall && !!queue.selectedLead && twilioDevice.deviceState === 'registered'

@@ -530,10 +530,11 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ leadId, sessionId: sessionHook.session.id, phone }),
     })
     const data = await res.json()
-    console.log('[DialerProvider] dial() initiate response:', data.error ? `ERROR: ${data.error}` : `OK callId=${data.callId}`)
+    console.log('[DialerProvider] dial() initiate response:', data.error ? `ERROR: ${data.error}` : `OK callId=${data.callId}`, 'callerId:', data.callerId)
     if (data.error) throw new Error(data.error)
 
     setActiveCallerId(data.callerId || null)
+    console.log('[DialerProvider] setActiveCallerId:', data.callerId || null)
 
     const newCall = { id: data.callId, leadId, repId: '', status: 'INITIATED', direction: 'OUTBOUND', startedAt: new Date().toISOString(), wasRecommended: false, previewSentDuringCall: false, previewOpenedDuringCall: false, ctaClickedDuringCall: false, vmDropped: false } as any
     setCurrentCall(newCall)
