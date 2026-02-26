@@ -5,8 +5,9 @@ import dynamic from 'next/dynamic'
 import {
   X, Save, RotateCcw, Monitor, Smartphone, Tablet,
   Loader2, Check, AlertCircle,
-  Sparkles, Send, Bot, Eye, EyeOff, MessageSquare, Code,
+  Eye, EyeOff, MessageSquare, Code,
 } from 'lucide-react'
+import AIChatPanel from './AIChatPanel'
 
 // Dynamic import Monaco — it cannot run server-side
 const MonacoEditor = dynamic(() => import('./MonacoEditorPanel'), {
@@ -29,11 +30,6 @@ interface SiteEditorPanelProps {
   onRefresh: () => void
 }
 
-interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
-}
-
 type DeviceMode = 'desktop' | 'tablet' | 'mobile'
 type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error'
 
@@ -42,15 +38,6 @@ const deviceWidths: Record<DeviceMode, string> = {
   tablet: '768px',
   mobile: '375px',
 }
-
-const SUGGESTED_EDITS = [
-  'Make the hero section full-width',
-  'Move testimonials above services',
-  'Change the color scheme to blue',
-  'Add more spacing between sections',
-  'Make the CTA buttons larger',
-  'Remove the FAQ section',
-]
 
 // ─── Component ──────────────────────────────────────────
 export default function SiteEditorPanel({
@@ -77,14 +64,15 @@ export default function SiteEditorPanel({
   const [refreshKey, setRefreshKey] = useState(0)
   const [debouncedHtml, setDebouncedHtml] = useState('')
 
-  // Chat state
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [chatInput, setChatInput] = useState('')
-  const [isProcessing, setIsProcessing] = useState(false)
-  const chatEndRef = useRef<HTMLDivElement>(null)
-
+  // Site context + edit requests
+  const [siteContext, setSiteContext] = useState<{ serviceCount: number; photoCount: number; templateName: string | null }>()
+  const [pendingEditRequests, setPendingEditRequests] = useState<Array<{ id: string; requestText: string; status: string; createdAt: string }>>([])
+  const prevHtmlRef = useRef('')
+  const htmlRef = useRef(html)
   const [needsRebuild, setNeedsRebuild] = useState(false)
   const [rebuilding, setRebuilding] = useState(false)
+  const [approving, setApproving] = useState(false)
+  const [currentBuildStep, setCurrentBuildStep] = useState(buildStep)
 
   // ─── Load HTML on mount (on-demand from API) ──────────
   useEffect(() => {
@@ -98,10 +86,8 @@ export default function SiteEditorPanel({
     return () => clearTimeout(timer)
   }, [html])
 
-  // Auto-scroll chat
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  // Keep htmlRef in sync
+  useEffect(() => { htmlRef.current = html }, [html])
 
   // Lock body scroll while panel is open
   useEffect(() => {
@@ -151,7 +137,18 @@ export default function SiteEditorPanel({
           setOriginalHtml(loadData.html)
           setDebouncedHtml(loadData.html)
           if (typeof loadData.version === 'number') setSiteVersion(loadData.version)
+          // Extract site context
+          setSiteContext({
+            serviceCount: loadData.serviceCount ?? 0,
+            photoCount: loadData.photoCount ?? 0,
+            templateName: loadData.templateName ?? null,
+          })
           setIsLoading(false)
+          // Fetch pending edit requests (non-blocking)
+          fetch(`/api/edit-requests?leadId=${leadId}&status=new`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { if (data?.editRequests) setPendingEditRequests(data.editRequests) })
+            .catch(() => {})
           return
         }
       }
@@ -252,37 +249,76 @@ export default function SiteEditorPanel({
     }
   }, [originalHtml])
 
-  // ─── AI Chat ──────────────────────────────────────────
-  const handleChatSubmit = async (text?: string) => {
-    const instruction = text || chatInput.trim()
-    if (!instruction || isProcessing) return
-
-    setChatInput('')
-    setMessages(prev => [...prev, { role: 'user', content: instruction }])
-    setIsProcessing(true)
-
+  // ─── AI Chat (returns result for AIChatPanel) ─────────
+  const handleChatSubmit = useCallback(async (instruction: string): Promise<{ success: boolean; message: string }> => {
     try {
       const res = await fetch(`/api/site-editor/${leadId}/ai-edit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html, instruction }),
+        body: JSON.stringify({ html: htmlRef.current, instruction }),
       })
       const data = await res.json()
       if (res.ok && data.html) {
+        prevHtmlRef.current = htmlRef.current // Save for undo
         setHtml(data.html)
         setSaveStatus('unsaved')
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
         saveTimeoutRef.current = setTimeout(() => saveHtml(data.html), 1500)
-        setMessages(prev => [...prev, { role: 'assistant', content: `Done. ${data.summary || 'Changes applied'}` }])
+        return { success: true, message: data.summary || 'Changes applied' }
+      }
+      return { success: false, message: data.error || 'AI edit failed' }
+    } catch {
+      return { success: false, message: 'Network error — check your connection and try again' }
+    }
+  }, [leadId, saveHtml])
+
+  const handleUndo = useCallback(() => {
+    if (!prevHtmlRef.current) return
+    setHtml(prevHtmlRef.current)
+    setSaveStatus('unsaved')
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    saveTimeoutRef.current = setTimeout(() => saveHtml(prevHtmlRef.current), 1500)
+    prevHtmlRef.current = ''
+  }, [saveHtml])
+
+  const handleEditRequestProcessed = useCallback(async (editRequestId: string) => {
+    await fetch(`/api/edit-requests/${editRequestId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'ready_for_review',
+        editFlowState: 'awaiting_approval',
+        postEditHtml: htmlRef.current,
+        preEditHtml: prevHtmlRef.current || undefined,
+      }),
+    }).catch(() => {})
+    setPendingEditRequests(prev => prev.filter(r => r.id !== editRequestId))
+  }, [])
+
+  // ─── Approve (advance build step without leaving editor) ─
+  const canApprove = ['QA_REVIEW', 'EDITING'].includes(currentBuildStep)
+  const handleApprove = useCallback(async () => {
+    // Save first if needed
+    if (saveStatus === 'unsaved') {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+      await saveHtml(htmlRef.current)
+    }
+    setApproving(true)
+    try {
+      const res = await fetch(`/api/build-queue/${leadId}/approve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
+      if (res.ok) {
+        setCurrentBuildStep('QA_APPROVED')
+        onRefresh()
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${data.error || 'AI edit failed'}` }])
+        const data = await res.json()
+        alert(data.error || 'Approve failed')
       }
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Error: Network error' }])
+      alert('Network error approving')
     } finally {
-      setIsProcessing(false)
+      setApproving(false)
     }
-  }
+  }, [leadId, saveStatus, saveHtml, onRefresh])
 
   // ─── Status UI ────────────────────────────────────────
   const statusUI: Record<SaveStatus, { icon: React.ReactNode; text: string; cls: string }> = {
@@ -303,9 +339,9 @@ export default function SiteEditorPanel({
           <button
             onClick={() => {
               if (saveStatus === 'unsaved') {
-                // Flush pending save before closing
+                // Flush pending save before closing — use ref for latest HTML
                 if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-                saveHtml(html)
+                saveHtml(htmlRef.current)
               }
               onClose()
             }}
@@ -318,7 +354,7 @@ export default function SiteEditorPanel({
           <div>
             <h1 className="text-sm font-semibold text-white leading-tight">{companyName}</h1>
             <span className="text-[10px] text-gray-500 uppercase tracking-wider">
-              {buildStep.replace(/_/g, ' ')}
+              {currentBuildStep.replace(/_/g, ' ')}
             </span>
           </div>
         </div>
@@ -400,6 +436,16 @@ export default function SiteEditorPanel({
             <Save size={14} />
             Save
           </button>
+          {canApprove && (
+            <button
+              onClick={handleApprove}
+              disabled={approving}
+              className="flex items-center gap-1.5 px-4 py-1.5 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 transition-colors font-medium"
+            >
+              <Check size={14} />
+              {approving ? 'Approving...' : 'Approve'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -481,90 +527,18 @@ export default function SiteEditorPanel({
 
         {/* ── AI Chat Panel ──────────────────────────── */}
         {showChat && (
-          <div className="w-[340px] min-w-[300px] border-l border-gray-700 flex flex-col bg-[#252526]">
-            {/* Chat header */}
-            <div className="px-3 py-2 border-b border-gray-700 flex items-center gap-2 flex-shrink-0">
-              <Sparkles size={14} className="text-blue-400" />
-              <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">AI Editor</span>
-            </div>
-
-            {/* Chat messages */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3">
-              {messages.length === 0 && (
-                <div className="text-center py-6">
-                  <Bot size={28} className="text-gray-500 mx-auto mb-3" />
-                  <p className="text-sm text-gray-400 mb-1">AI Site Editor</p>
-                  <p className="text-xs text-gray-500 mb-4">
-                    Describe changes in plain English.
-                  </p>
-                  <div className="space-y-2">
-                    {SUGGESTED_EDITS.map((suggestion, i) => (
-                      <button
-                        key={i}
-                        onClick={() => handleChatSubmit(suggestion)}
-                        className="w-full text-left text-xs px-3 py-2 rounded-lg bg-gray-700/50 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  {msg.role === 'assistant' && (
-                    <div className="w-6 h-6 rounded bg-blue-600/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Bot size={12} className="text-blue-400" />
-                    </div>
-                  )}
-                  <div className={`max-w-[85%] px-3 py-2 rounded-lg text-xs leading-relaxed ${
-                    msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200'
-                  }`}>
-                    {msg.content}
-                  </div>
-                </div>
-              ))}
-
-              {isProcessing && (
-                <div className="flex gap-2">
-                  <div className="w-6 h-6 rounded bg-blue-600/20 flex items-center justify-center flex-shrink-0">
-                    <Loader2 size={12} className="text-blue-400 animate-spin" />
-                  </div>
-                  <div className="bg-gray-700 px-3 py-2 rounded-lg text-xs text-gray-400">
-                    Editing site...
-                  </div>
-                </div>
-              )}
-              <div ref={chatEndRef} />
-            </div>
-
-            {/* Chat input */}
-            <div className="p-3 border-t border-gray-700 flex-shrink-0">
-              <div className="flex gap-2">
-                <textarea
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      handleChatSubmit()
-                    }
-                  }}
-                  placeholder="Describe a change..."
-                  className="flex-1 text-xs px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-gray-200 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder:text-gray-500"
-                  rows={2}
-                  disabled={isProcessing}
-                />
-                <button
-                  onClick={() => handleChatSubmit()}
-                  disabled={!chatInput.trim() || isProcessing}
-                  className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed self-end transition-colors"
-                >
-                  <Send size={14} />
-                </button>
-              </div>
-            </div>
+          <div className="w-[340px] min-w-[300px] border-l border-gray-700">
+            <AIChatPanel
+              onSubmit={handleChatSubmit}
+              companyName={companyName}
+              leadId={leadId}
+              siteContext={siteContext}
+              editRequests={pendingEditRequests}
+              onEditRequestProcessed={handleEditRequestProcessed}
+              onUndo={handleUndo}
+              canUndo={!!prevHtmlRef.current}
+              autoInstruction={editInstruction}
+            />
           </div>
         )}
       </div>

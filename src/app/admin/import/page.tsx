@@ -5,11 +5,11 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  Upload, X, AlertCircle, AlertTriangle, Loader2,
+  Upload, X, AlertTriangle, Loader2,
   CheckCircle, XCircle, Clock,
-  FolderPlus, FolderOpen, Plus, History,
+  Plus, History,
   Info, Search, Eye, Brain, Download, ChevronRight, ChevronDown, ChevronUp, ArrowLeft,
-  UserPlus
+  UserPlus, Trash2, MoveUp, MoveDown, ListOrdered
 } from 'lucide-react'
 
 type ProcessOptions = {
@@ -26,6 +26,20 @@ type LeadEntry = {
   enrichment?: { success: boolean; error?: string } | null
   preview?: { success: boolean; error?: string } | null
   personalization?: { success: boolean; firstLine?: string; error?: string } | null
+}
+
+type ImportBatchUI = {
+  id: string
+  batchName: string
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
+  totalLeads: number
+  processedLeads: number
+  failedLeads: number
+  jobId: string | null
+  position: number
+  createdAt: string
+  completedAt: string | null
+  redisStatus?: string
 }
 
 const PROCESS_INFO: Record<keyof ProcessOptions, { icon: React.ReactNode; title: string; description: string }> = {
@@ -47,7 +61,7 @@ const PROCESS_INFO: Record<keyof ProcessOptions, { icon: React.ReactNode; title:
 }
 
 export default function ImportPage() {
-  const [step, setStep] = useState<'upload' | 'configure' | 'feed' | 'complete'>('upload')
+  const [step, setStep] = useState<'upload' | 'configure' | 'feed'>('upload')
   const [uploading, setUploading] = useState(false)
   const [importResult, setImportResult] = useState<any>(null)
 
@@ -84,6 +98,11 @@ export default function ImportPage() {
   // Abandoned staging leads state
   const [abandonedLeads, setAbandonedLeads] = useState<{ count: number; leads: any[] } | null>(null)
   const [deletingAbandoned, setDeletingAbandoned] = useState(false)
+
+  // Queue state
+  const [queueBatches, setQueueBatches] = useState<ImportBatchUI[]>([])
+  const queuePollingRef = useRef<NodeJS.Timeout | null>(null)
+  const autoStartingRef = useRef(false)
 
   // Rate limit state
   const [rateLimitHit, setRateLimitHit] = useState(false)
@@ -136,12 +155,84 @@ export default function ImportPage() {
     } catch { /* ignore */ }
   }
 
+  const fetchQueue = useCallback(async () => {
+    try {
+      const res = await fetch('/api/import-queue')
+      if (!res.ok) return
+      const data = await res.json()
+      const batches = (data.batches || []) as ImportBatchUI[]
+      // Only show PENDING and PROCESSING in the queue panel
+      const active = batches.filter(b => b.status === 'PENDING' || b.status === 'PROCESSING')
+      setQueueBatches(active)
+      return active
+    } catch { return [] as ImportBatchUI[] }
+  }, [])
+
+  const autoStartNextBatch = useCallback(async (batches: ImportBatchUI[]) => {
+    if (autoStartingRef.current) return
+    const hasProcessing = batches.some(b => b.status === 'PROCESSING')
+    if (hasProcessing) return
+    const firstPending = batches.find(b => b.status === 'PENDING')
+    if (!firstPending) return
+
+    autoStartingRef.current = true
+    try {
+      const res = await fetch(`/api/import-queue/${firstPending.id}/start`, { method: 'POST' })
+      if (res.ok) {
+        const data = await res.json()
+        setQueueBatches(prev => prev.map(b =>
+          b.id === firstPending.id ? { ...b, status: 'PROCESSING' as const, jobId: data.jobId } : b
+        ))
+      }
+    } catch { /* ignore */ }
+    finally { autoStartingRef.current = false }
+  }, [])
+
   useEffect(() => {
     fetchImportHistory()
     fetchFolders()
     fetchReps()
     fetchAbandonedLeads()
+    fetchQueue().then(batches => {
+      if (batches && batches.length > 0) autoStartNextBatch(batches)
+    })
   }, [])
+
+  // Queue polling: 3s interval when any batch is PROCESSING
+  useEffect(() => {
+    const hasProcessing = queueBatches.some(b => b.status === 'PROCESSING')
+
+    if (hasProcessing && !queuePollingRef.current) {
+      queuePollingRef.current = setInterval(async () => {
+        const batches = await fetchQueue()
+        if (!batches) return
+
+        // Check for completed batches (worker set DB status or Redis status is completed)
+        const justCompleted = batches.some(
+          (b: any) => b.status === 'PROCESSING' && b.redisStatus === 'completed'
+        )
+        if (justCompleted) {
+          fetchImportHistory()
+          fetchAbandonedLeads()
+          // Re-fetch to get updated list after completion
+          const updated = await fetchQueue()
+          if (updated) autoStartNextBatch(updated)
+        } else {
+          autoStartNextBatch(batches)
+        }
+      }, 3000)
+    } else if (!hasProcessing && queuePollingRef.current) {
+      clearInterval(queuePollingRef.current)
+      queuePollingRef.current = null
+    }
+
+    return () => {
+      if (queuePollingRef.current) {
+        clearInterval(queuePollingRef.current)
+        queuePollingRef.current = null
+      }
+    }
+  }, [queueBatches, fetchQueue, autoStartNextBatch])
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return
@@ -300,6 +391,10 @@ export default function ImportPage() {
         clearInterval(pollingRef.current)
         pollingRef.current = null
       }
+      if (queuePollingRef.current) {
+        clearInterval(queuePollingRef.current)
+        queuePollingRef.current = null
+      }
     }
   }, [])
 
@@ -322,8 +417,7 @@ export default function ImportPage() {
 
       if (res.ok) {
         if (data.created.length === 0) {
-          setImportResult({ created: 0, skipped: data.skipped })
-          setStep('complete')
+          alert(`All ${data.skipped || 0} leads were already in the database (duplicates).`)
           return
         }
 
@@ -446,59 +540,114 @@ export default function ImportPage() {
     }
   }
 
-  const startProcessing = async () => {
+  const addToQueue = async () => {
     if (!batchName.trim()) {
       alert('Please enter a batch name before proceeding.')
       return
     }
 
-    const anyProcessing = processOptions.enrichment || processOptions.preview || processOptions.personalization
-    if (!anyProcessing) {
-      // No processing selected — apply batch settings with graduation and go back
-      const ok = await applyBatchSettings(true)
-      if (ok) {
-        setFeedDone(true)
-        setStep('feed')
-      } else {
-        alert('Failed to apply batch settings. Please try again.')
-      }
-      return
-    }
-
-    // Apply batch settings first (without graduation — worker handles that)
+    // Call 1: Apply batch settings (no graduation)
     const batchOk = await applyBatchSettings(false)
     if (!batchOk) {
       alert('Failed to apply batch settings. Please try again.')
       return
     }
 
-    setStep('feed')
-    processingRef.current = true
-
+    // Call 2: Create ImportBatch in queue
     try {
-      const res = await fetch('/api/leads/import/process', {
+      const res = await fetch('/api/import-queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          batchName: batchName.trim(),
           leadIds: feedLeads.map(l => l.id),
+          folderId: selectedFolderId || undefined,
+          assignToId: assignTo || undefined,
           options: processOptions,
         }),
       })
-
-      const data = await res.json()
-
-      if (res.ok && data.jobId) {
-        setImportJobId(data.jobId)
-        pollImportProgress(data.jobId, feedLeads)
-      } else {
-        alert(`Failed to start processing: ${data.error || 'Unknown error'}`)
-        processingRef.current = false
+      if (!res.ok) {
+        alert('Failed to add to queue. Please try again.')
+        return
       }
-    } catch (err) {
-      console.error('Failed to start import processing:', err)
-      alert('Failed to start processing. Please try again.')
-      processingRef.current = false
+    } catch {
+      alert('Failed to add to queue. Please try again.')
+      return
     }
+
+    // Reset to upload step
+    setStep('upload')
+    setFeedLeads([])
+    setImportResult(null)
+    setBatchName('')
+    setSelectedFolderId('')
+    setAssignTo('')
+    setProcessOptions({ enrichment: true, preview: true, personalization: true })
+
+    // Refresh queue and auto-start
+    const batches = await fetchQueue()
+    if (batches) autoStartNextBatch(batches)
+    fetchAbandonedLeads()
+  }
+
+  const viewBatchFeed = async (batch: ImportBatchUI) => {
+    if (batch.status !== 'PROCESSING' || !batch.jobId) return
+
+    try {
+      const res = await fetch(`/api/import-queue/${batch.id}`)
+      if (!res.ok) return
+      const data = await res.json()
+      const leads: LeadEntry[] = (data.leads || []).map((l: any) => ({
+        id: l.id,
+        name: l.firstName || 'Unknown',
+        company: l.companyName || '',
+        status: 'pending' as const,
+      }))
+      setFeedLeads(leads)
+      setFeedDone(false)
+      setFeedStats({ enriched: 0, previews: 0, personalized: 0, errors: 0 })
+      setRateLimitHit(false)
+      setRateLimitMessage('')
+      setImportJobId(batch.jobId)
+      setImportResult({ created: batch.totalLeads, skipped: 0 })
+      const batchOptions = (data.batch?.options as any) || {}
+      setProcessOptions({
+        enrichment: batchOptions.enrichment ?? true,
+        preview: batchOptions.preview ?? true,
+        personalization: batchOptions.personalization ?? true,
+      })
+      setStep('feed')
+      pollImportProgress(batch.jobId, leads)
+    } catch { /* ignore */ }
+  }
+
+  const handleCancelBatch = async (batch: ImportBatchUI) => {
+    if (!window.confirm(`Cancel "${batch.batchName}"? This will delete ${batch.totalLeads} staging leads.`)) return
+    try {
+      const res = await fetch(`/api/import-queue/${batch.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setQueueBatches(prev => prev.filter(b => b.id !== batch.id))
+        fetchAbandonedLeads()
+      }
+    } catch { /* ignore */ }
+  }
+
+  const handleReorderBatch = async (batch: ImportBatchUI, direction: 'up' | 'down') => {
+    const sorted = [...queueBatches].sort((a, b) => a.position - b.position)
+    const idx = sorted.findIndex(b => b.id === batch.id)
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= sorted.length) return
+    const target = sorted[swapIdx]
+    if (target.status !== 'PENDING') return // Can't swap with PROCESSING
+
+    try {
+      await fetch(`/api/import-queue/${batch.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ position: target.position }),
+      })
+      fetchQueue()
+    } catch { /* ignore */ }
   }
 
   const toggleOption = (key: keyof ProcessOptions) => {
@@ -589,6 +738,78 @@ export default function ImportPage() {
               </div>
             </div>
           </Card>
+
+          {/* Queue Panel */}
+          {queueBatches.length > 0 && (
+            <Card className="p-6 mt-6">
+              <div className="flex items-center gap-3 mb-4">
+                <ListOrdered size={20} className="text-blue-500" />
+                <h4 className="font-semibold text-gray-900">Queue ({queueBatches.length} batch{queueBatches.length !== 1 ? 'es' : ''})</h4>
+              </div>
+              <div className="space-y-2">
+                {[...queueBatches].sort((a, b) => a.position - b.position).map((batch, displayIdx) => {
+                  const isProcessing = batch.status === 'PROCESSING'
+                  const progressPct = batch.totalLeads > 0 ? Math.round((batch.processedLeads / batch.totalLeads) * 100) : 0
+                  return (
+                    <div
+                      key={batch.id}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors ${
+                        isProcessing
+                          ? 'border-blue-200 bg-blue-50 cursor-pointer hover:bg-blue-100'
+                          : 'border-gray-200 bg-white'
+                      }`}
+                      onClick={() => isProcessing && viewBatchFeed(batch)}
+                    >
+                      <span className="text-sm font-mono text-gray-400 w-6">{displayIdx + 1}.</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900 text-sm truncate">{batch.batchName}</span>
+                          <span className="text-xs text-gray-500">{batch.totalLeads} leads</span>
+                        </div>
+                        {isProcessing && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="flex-1 h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
+                            </div>
+                            <span className="text-xs text-blue-600 font-medium">{batch.processedLeads}/{batch.totalLeads}</span>
+                          </div>
+                        )}
+                      </div>
+                      {isProcessing && (
+                        <Loader2 size={16} className="text-blue-500 animate-spin flex-shrink-0" />
+                      )}
+                      {batch.status === 'PENDING' && (
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <span className="text-xs text-gray-500 mr-1">Pending</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleReorderBatch(batch, 'up') }}
+                            className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                            title="Move up"
+                          >
+                            <MoveUp size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleReorderBatch(batch, 'down') }}
+                            className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                            title="Move down"
+                          >
+                            <MoveDown size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleCancelBatch(batch) }}
+                            className="p-1 text-gray-400 hover:text-red-500 rounded"
+                            title="Cancel"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+          )}
 
           {/* Import History */}
           <Card className="p-6 mt-6">
@@ -1107,11 +1328,9 @@ export default function ImportPage() {
             <Button variant="outline" onClick={handleSkipProcessing}>
               Skip Processing
             </Button>
-            <Button onClick={startProcessing} className="px-8">
-              {processOptions.enrichment || processOptions.preview || processOptions.personalization
-                ? `Start Processing ${feedLeads.length} Leads`
-                : `Done`}
-              <ChevronRight size={18} className="ml-1" />
+            <Button onClick={addToQueue} className="px-8">
+              <ListOrdered size={18} className="mr-1" />
+              Add to Queue
             </Button>
           </div>
         </div>
@@ -1120,6 +1339,28 @@ export default function ImportPage() {
       {/* ── STEP 3: LIVE PROCESSING FEED ──────────────────────────── */}
       {step === 'feed' && (
         <div className="max-w-4xl mx-auto space-y-4">
+          {/* Back to Queue */}
+          <button
+            onClick={() => {
+              setStep('upload')
+              setFeedLeads([])
+              setFeedDone(false)
+              setFeedStats({ enriched: 0, previews: 0, personalized: 0, errors: 0 })
+              setRateLimitHit(false)
+              setRateLimitMessage('')
+              if (pollingRef.current) {
+                clearInterval(pollingRef.current)
+                pollingRef.current = null
+              }
+              fetchQueue()
+              fetchImportHistory()
+              fetchAbandonedLeads()
+            }}
+            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <ArrowLeft size={16} />
+            Back to Queue
+          </button>
           {/* Progress Header */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
@@ -1252,20 +1493,22 @@ export default function ImportPage() {
           {feedDone && (
             <Card className="p-6">
               <div className="flex gap-3">
-                <Button variant="outline" onClick={() => {
+                <Button onClick={() => {
                   setStep('upload')
                   setFeedLeads([])
                   setFeedDone(false)
                   setFeedStats({ enriched: 0, previews: 0, personalized: 0, errors: 0 })
                   setRateLimitHit(false)
                   setRateLimitMessage('')
+                  if (pollingRef.current) {
+                    clearInterval(pollingRef.current)
+                    pollingRef.current = null
+                  }
+                  fetchQueue()
                   fetchImportHistory()
                   fetchAbandonedLeads()
                 }}>
-                  Import More Leads
-                </Button>
-                <Button onClick={() => window.location.href = '/admin/leads'}>
-                  View in Leads
+                  Back to Queue
                 </Button>
               </div>
             </Card>
@@ -1273,27 +1516,6 @@ export default function ImportPage() {
         </div>
       )}
 
-      {/* ── COMPLETE (edge case: all duplicates) ──────────────────── */}
-      {step === 'complete' && (
-        <div className="max-w-4xl mx-auto">
-          <Card className="p-12">
-            <div className="text-center">
-              <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <AlertCircle size={48} className="text-yellow-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Import Complete</h3>
-              <p className="text-gray-600 mb-8">
-                {importResult?.created === 0
-                  ? `All ${importResult?.skipped || 0} leads were already in the database (duplicates).`
-                  : `Created ${importResult?.created || 0} leads, skipped ${importResult?.skipped || 0} duplicates.`}
-              </p>
-              <Button variant="outline" onClick={() => setStep('upload')}>
-                Back to Import
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
     </div>
   )
 }

@@ -173,6 +173,7 @@ model Lead {
   callbackSchedules      CallbackSchedule[]       @relation("LeadCallbacks")
   siteEditVersion        Int                      @default(0) @map("site_edit_version")
   selectedTemplate       String?                  @map("selected_template")
+  importBatchId           String?                  @map("import_batch_id")
   siteVersions           SiteVersion[]
 
   @@index([status])
@@ -191,6 +192,7 @@ model Lead {
   @@index([buildStep])
   @@index([ownerRepId])
   @@index([dncAt])
+  @@index([importBatchId])
   @@map("leads")
 }
 
@@ -1441,4 +1443,24 @@ model SiteVersion {
 
   @@index([leadId, version])
   @@map("site_versions")
+}
+
+model ImportBatch {
+  id              String    @id @default(cuid())
+  batchName       String    @map("batch_name")
+  status          String    @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  folderId        String?   @map("folder_id")
+  assignToId      String?   @map("assign_to_id")
+  options         Json      @default("{}")
+  totalLeads      Int       @default(0) @map("total_leads")
+  processedLeads  Int       @default(0) @map("processed_leads")
+  failedLeads     Int       @default(0) @map("failed_leads")
+  jobId           String?   @map("job_id")
+  position        Int       @default(0)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  completedAt     DateTime? @map("completed_at")
+
+  @@index([status])
+  @@index([position])
+  @@map("import_batches")
 }

@@ -1,11 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { Save, RotateCcw, ArrowLeft, Eye, EyeOff, MessageSquare, Loader2, Check, AlertCircle, RefreshCw, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 
 interface EditorToolbarProps {
   companyName: string
   buildStep: string
+  leadId: string
   saveStatus: 'saved' | 'unsaved' | 'saving' | 'error'
   lastSavedAt?: string | null
   onSave: () => void
@@ -29,6 +31,23 @@ const statusConfig = {
 
 export default function EditorToolbar(props: EditorToolbarProps) {
   const status = statusConfig[props.saveStatus]
+  const [approving, setApproving] = useState(false)
+  const [approved, setApproved] = useState(false)
+  const canApprove = ['QA_REVIEW', 'EDITING'].includes(props.buildStep) && !approved
+
+  const handleApprove = async () => {
+    if (props.saveStatus === 'unsaved') props.onSave()
+    setApproving(true)
+    try {
+      const res = await fetch(`/api/build-queue/${props.leadId}/approve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
+      if (res.ok) setApproved(true)
+      else {
+        const data = await res.json()
+        alert(data.error || 'Approve failed')
+      }
+    } catch { alert('Network error') }
+    finally { setApproving(false) }
+  }
 
   return (
     <div className="flex items-center justify-between px-4 py-2 bg-[#333333] border-b border-gray-700 flex-shrink-0">
@@ -127,6 +146,22 @@ export default function EditorToolbar(props: EditorToolbarProps) {
           <Save size={14} />
           Save
         </button>
+        {canApprove && (
+          <button
+            onClick={handleApprove}
+            disabled={approving}
+            className="flex items-center gap-1.5 px-4 py-1.5 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 transition-colors font-medium"
+          >
+            <Check size={14} />
+            {approving ? 'Approving...' : 'Approve'}
+          </button>
+        )}
+        {approved && (
+          <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-green-400 font-medium">
+            <Check size={14} />
+            Approved
+          </span>
+        )}
       </div>
     </div>
   )

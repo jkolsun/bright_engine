@@ -16,11 +16,13 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const status = searchParams.get('status')
     const clientId = searchParams.get('clientId')
+    const leadId = searchParams.get('leadId')
     const limit = parseInt(searchParams.get('limit') || '100')
 
     const where: any = {}
     if (status) where.status = status
     if (clientId) where.clientId = clientId
+    if (leadId) where.leadId = leadId
 
     const [editRequests, total] = await Promise.all([
       prisma.editRequest.findMany({

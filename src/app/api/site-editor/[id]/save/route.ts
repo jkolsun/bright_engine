@@ -31,6 +31,9 @@ export async function GET(
         siteHtml: true,
         siteEditVersion: true,
         buildReadinessScore: true,
+        enrichedServices: true,
+        enrichedPhotos: true,
+        selectedTemplate: true,
       },
     })
 
@@ -57,6 +60,9 @@ export async function GET(
       hasHtml: !!cleanHtml,
       html: cleanHtml,
       version: lead.siteEditVersion,
+      serviceCount: Array.isArray(lead.enrichedServices) ? (lead.enrichedServices as string[]).length : 0,
+      photoCount: Array.isArray(lead.enrichedPhotos) ? (lead.enrichedPhotos as string[]).length : 0,
+      templateName: lead.selectedTemplate || null,
     })
   } catch (error) {
     console.error('[Site Editor Load] Error:', error)

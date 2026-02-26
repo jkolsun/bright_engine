@@ -440,6 +440,21 @@ async function startWorkers() {
         progress.status = 'completed'
         await updateProgress()
 
+        // Mark ImportBatch as COMPLETED (no-op if no batch has this jobId)
+        try {
+          await prisma.importBatch.updateMany({
+            where: { jobId },
+            data: {
+              status: 'COMPLETED',
+              completedAt: new Date(),
+              processedLeads: progress.processed,
+              failedLeads: progress.failed,
+            },
+          })
+        } catch (batchErr) {
+          console.warn('[IMPORT] Failed to update ImportBatch completion:', batchErr)
+        }
+
         // Create notification
         await prisma.notification.create({
           data: {

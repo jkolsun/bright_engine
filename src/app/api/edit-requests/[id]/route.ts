@@ -82,6 +82,10 @@ export async function PUT(
     if (data.aiInterpretation) updateData.aiInterpretation = data.aiInterpretation
     if (data.complexityTier) updateData.complexityTier = data.complexityTier
     if (data.stagingSnapshotUrl) updateData.stagingSnapshotUrl = data.stagingSnapshotUrl
+    if (data.postEditHtml) updateData.postEditHtml = data.postEditHtml
+    if (data.editSummary) updateData.editSummary = data.editSummary
+    if (data.editFlowState) updateData.editFlowState = data.editFlowState
+    if (data.preEditHtml) updateData.preEditHtml = data.preEditHtml
 
     if (data.status === 'live') {
       updateData.pushedLiveAt = new Date()

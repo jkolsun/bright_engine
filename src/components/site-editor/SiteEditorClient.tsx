@@ -37,8 +37,12 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
   const [siteVersion, setSiteVersion] = useState(0)
 
+  const [siteContext, setSiteContext] = useState<{ serviceCount: number; photoCount: number; templateName: string | null }>()
+  const [pendingEditRequests, setPendingEditRequests] = useState<Array<{ id: string; requestText: string; status: string; createdAt: string }>>([])
+
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
   const htmlRef = useRef(html)
+  const prevHtmlRef = useRef('')
   const editHistoryRef = useRef<Array<{ instruction: string; summary: string }>>([])
 
   // Keep ref in sync with state for use in closures
@@ -88,7 +92,18 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
           setHtml(loadData.html)
           setOriginalHtml(loadData.html)
           if (typeof loadData.version === 'number') setSiteVersion(loadData.version)
+          // Extract site context from response
+          setSiteContext({
+            serviceCount: loadData.serviceCount ?? 0,
+            photoCount: loadData.photoCount ?? 0,
+            templateName: loadData.templateName ?? null,
+          })
           setIsLoading(false)
+          // Fetch pending edit requests (non-blocking)
+          fetch(`/api/edit-requests?leadId=${props.leadId}&status=new`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { if (data?.editRequests) setPendingEditRequests(data.editRequests) })
+            .catch(() => {})
           return
         }
       }
@@ -153,7 +168,7 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
             fetch(`/api/site-editor/${props.leadId}/save`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ html: htmlToSave }),
+              body: JSON.stringify({ html: htmlToSave, expectedVersion: siteVersion }),
             }).then(r => r.json()).then(d => {
               if (d.success) {
                 setSaveStatus('saved')
@@ -196,6 +211,7 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
       })
       const data = await res.json()
       if (res.ok && data.html) {
+        prevHtmlRef.current = htmlRef.current // Save for undo
         setHtml(data.html)
         setSaveStatus('unsaved')
         // Track this edit in conversation history
@@ -258,6 +274,29 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
     }
   }, [props.leadId, saveHtml])
 
+  const handleUndo = useCallback(() => {
+    if (!prevHtmlRef.current) return
+    setHtml(prevHtmlRef.current)
+    setSaveStatus('unsaved')
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    saveTimeoutRef.current = setTimeout(() => saveHtml(prevHtmlRef.current), 1500)
+    prevHtmlRef.current = ''
+  }, [saveHtml])
+
+  const handleEditRequestProcessed = useCallback(async (editRequestId: string) => {
+    await fetch(`/api/edit-requests/${editRequestId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'ready_for_review',
+        editFlowState: 'awaiting_approval',
+        postEditHtml: htmlRef.current,
+        preEditHtml: prevHtmlRef.current || undefined,
+      }),
+    }).catch(() => {})
+    setPendingEditRequests(prev => prev.filter(r => r.id !== editRequestId))
+  }, [])
+
   const handleReset = useCallback(() => {
     if (confirm('Reset to original HTML? Your changes will be lost.')) {
       setHtml(originalHtml)
@@ -270,6 +309,7 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
       <EditorToolbar
         companyName={props.companyName}
         buildStep={props.buildStep}
+        leadId={props.leadId}
         saveStatus={saveStatus}
         lastSavedAt={lastSavedAt}
         onSave={handleManualSave}
@@ -330,7 +370,16 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
         {/* AI Chat — toggleable */}
         {showChat && !showImages && (
           <div className="w-[320px] min-w-[280px] border-l border-gray-700">
-            <AIChatPanel onSubmit={handleAIEdit} companyName={props.companyName} />
+            <AIChatPanel
+              onSubmit={handleAIEdit}
+              companyName={props.companyName}
+              leadId={props.leadId}
+              siteContext={siteContext}
+              editRequests={pendingEditRequests}
+              onEditRequestProcessed={handleEditRequestProcessed}
+              onUndo={handleUndo}
+              canUndo={!!prevHtmlRef.current}
+            />
           </div>
         )}
       </div>
