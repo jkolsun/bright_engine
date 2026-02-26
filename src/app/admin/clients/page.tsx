@@ -162,7 +162,7 @@ export default function ClientsPage() {
       const res = await fetch('/api/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, siteBuildFee: formData.chargeSiteBuildFee ? pricing.siteBuildFee : 0 })
+        body: JSON.stringify({ ...formData, siteBuildFee: formData.chargeSiteBuildFee ? formData.siteBuildFee : 0 })
       })
       if (res.ok) {
         setDialogOpen(false)
@@ -387,17 +387,27 @@ export default function ClientsPage() {
                         <option value="PEST_CONTROL">Pest Control</option>
                       </select>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Plan</label>
-                      <div className="p-3 bg-blue-50 rounded-lg">
-                        <div className="font-medium">Website + Hosting</div>
-                        <div className="text-sm text-gray-600">${pricing.siteBuildFee} first month &middot; ${pricing.monthlyHosting}/mo after</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Build Fee</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                          <input type="number" value={formData.siteBuildFee} onChange={(e) => setFormData(prev => ({ ...prev, siteBuildFee: parseInt(e.target.value) || 0 }))} placeholder="149" className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md text-sm" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Monthly Hosting</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                          <input type="number" value={formData.monthlyRevenue} onChange={(e) => setFormData(prev => ({ ...prev, monthlyRevenue: parseInt(e.target.value) || 0 }))} placeholder="39" className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md text-sm" />
+                        </div>
+                        <p className="text-xs text-gray-400">/mo after first month</p>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <input type="checkbox" id="setup" className="rounded" checked={formData.chargeSiteBuildFee} onChange={(e) => setFormData(prev => ({ ...prev, chargeSiteBuildFee: e.target.checked }))} />
-                    <label htmlFor="setup" className="text-sm">Charge ${pricing.siteBuildFee} site build fee + ${pricing.monthlyHosting}/mo hosting</label>
+                    <label htmlFor="setup" className="text-sm">Charge ${formData.siteBuildFee} site build fee + ${formData.monthlyRevenue}/mo hosting</label>
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Notes</label>
