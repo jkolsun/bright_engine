@@ -216,7 +216,7 @@ async function pullInstantlyState() {
     const campaigns = await campaignsRes.json()
 
     // Call 3: Get warmup analytics
-    const emailAddresses = accounts.data?.map((a: any) => a.email) || []
+    const emailAddresses = (accounts.items || []).map((a: any) => a.email)
     console.log('[Instantly] API Call 3: POST /accounts/warmup-analytics')
     const warmupRes = await fetch(`${INSTANTLY_API_BASE}/accounts/warmup-analytics`, {
       method: 'POST',
@@ -244,11 +244,11 @@ async function pullInstantlyState() {
     return {
       timestamp: new Date(),
       inboxes: {
-        active: accounts.data?.filter((a: any) => a.status === 1)?.length || 0,
-        paused: accounts.data?.filter((a: any) => a.status !== 1)?.length || 0,
+        active: (accounts.items || []).filter((a: any) => a.status === 1)?.length || 0,
+        paused: (accounts.items || []).filter((a: any) => a.status !== 1)?.length || 0,
         problem: 0,
-        total_inbox_capacity: calculateTotalCapacity(accounts.data || []),
-        details: (accounts.data || []).map((a: any) => ({
+        total_inbox_capacity: calculateTotalCapacity(accounts.items || []),
+        details: (accounts.items || []).map((a: any) => ({
           email: a.email,
           daily_limit: a.daily_limit || 150,
           health_score: a.stat_warmup_score || 90,
@@ -257,7 +257,7 @@ async function pullInstantlyState() {
           campaign_capacity: (a.daily_limit || 150) - (a.warmup?.limit || 0),
         })),
       },
-      campaigns: (campaigns.data || []).map((c: any) => ({
+      campaigns: (campaigns.items || []).map((c: any) => ({
         id: c.id,
         name: c.name,
         step_count: c.sequences?.[0]?.steps?.length || 4,
@@ -600,7 +600,7 @@ export async function handleInstantlyWebhook(event: any) {
     }
 
     switch (event_type) {
-      case 'reply':
+      case 'reply_received':
         // Lead replied — exit sequence
         const sentiment = classifyReplySentiment(body)
         await prisma.lead.update({
@@ -658,7 +658,7 @@ export async function handleInstantlyWebhook(event: any) {
         try { await calculateEngagementScore(lead.id) } catch (e) { console.warn('[Instantly] Score calc failed:', e) }
         break
 
-      case 'bounce':
+      case 'email_bounced':
         // Email bounced — hard failure
         await prisma.lead.update({
           where: { id: lead.id },
@@ -667,7 +667,7 @@ export async function handleInstantlyWebhook(event: any) {
         console.log(`[Instantly] Lead ${email} bounced`)
         break
 
-      case 'unsubscribe':
+      case 'lead_unsubscribed':
         // Unsubscribed
         await prisma.lead.update({
           where: { id: lead.id },
@@ -696,7 +696,7 @@ export async function handleInstantlyWebhook(event: any) {
         try { await calculateEngagementScore(lead.id) } catch (e) { console.warn('[Instantly] Score calc failed:', e) }
         break
 
-      case 'link_clicked':
+      case 'email_link_clicked':
         // Track link clicks — likely preview URL click
         await prisma.leadEvent.create({
           data: {
@@ -940,8 +940,8 @@ async function ensureWebhookRegistered() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        url: webhookUrl,
-        events: ['reply', 'bounce', 'unsubscribe', 'email_opened', 'link_clicked'],
+        target_hook_url: webhookUrl,
+        event_type: 'all_events',
       }),
     })
 
