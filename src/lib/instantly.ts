@@ -791,8 +791,59 @@ async function ensureCampaignsExist() {
     })
 
     if (existing) {
-      console.log('[Instantly] Campaigns already created:', existing.value)
-      return
+      const stored = existing.value as any
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      const aValid = stored?.campaign_a && UUID_RE.test(stored.campaign_a)
+      const bValid = stored?.campaign_b && UUID_RE.test(stored.campaign_b)
+
+      if (aValid && bValid) {
+        console.log('[Instantly] Campaigns already created:', existing.value)
+        return
+      }
+
+      // Stored IDs are not valid UUIDs — refresh from Instantly API
+      console.warn('[Instantly] Stored campaign IDs are not valid UUIDs, refreshing from API...',
+        { campaign_a: stored?.campaign_a, campaign_b: stored?.campaign_b })
+
+      const headers = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
+      const res = await fetch(`${INSTANTLY_API_BASE}/campaigns`, { method: 'GET', headers })
+      if (res.ok) {
+        const data = await res.json()
+        const allCampaigns = data.items || []
+        const campaignA = allCampaigns.find((c: any) => c.name?.includes('Campaign A') || c.name?.includes('Bad Website'))
+        const campaignB = allCampaigns.find((c: any) => c.name?.includes('Campaign B') || c.name?.includes('No Website'))
+
+        if (campaignA?.id || campaignB?.id) {
+          const refreshed = {
+            campaign_a: campaignA?.id || stored?.campaign_a,
+            campaign_b: campaignB?.id || stored?.campaign_b,
+          }
+          await prisma.settings.update({
+            where: { key: 'instantly_campaigns' },
+            data: { value: refreshed },
+          })
+          console.log('[Instantly] Campaign IDs refreshed from API:', refreshed)
+
+          // Also update any leads that have the old non-UUID campaign IDs
+          if (stored?.campaign_a && campaignA?.id && stored.campaign_a !== campaignA.id) {
+            const updated = await prisma.lead.updateMany({
+              where: { instantlyCampaignId: stored.campaign_a },
+              data: { instantlyCampaignId: campaignA.id },
+            })
+            if (updated.count > 0) console.log(`[Instantly] Migrated ${updated.count} leads from old Campaign A ID`)
+          }
+          if (stored?.campaign_b && campaignB?.id && stored.campaign_b !== campaignB.id) {
+            const updated = await prisma.lead.updateMany({
+              where: { instantlyCampaignId: stored.campaign_b },
+              data: { instantlyCampaignId: campaignB.id },
+            })
+            if (updated.count > 0) console.log(`[Instantly] Migrated ${updated.count} leads from old Campaign B ID`)
+          }
+          return
+        }
+      }
+      // If API fetch failed, fall through to create new campaigns
+      console.warn('[Instantly] Could not refresh campaign IDs from API, will create new campaigns')
     }
 
     console.log('[Instantly] Creating Campaign A & B in Instantly...')
