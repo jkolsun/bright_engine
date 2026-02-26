@@ -5,10 +5,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  Upload, X, AlertCircle, Loader2,
+  Upload, X, AlertCircle, AlertTriangle, Loader2,
   CheckCircle, XCircle, Clock,
   FolderPlus, FolderOpen, Plus, History,
-  Info, Search, Eye, Brain, Download, ChevronRight, ArrowLeft
+  Info, Search, Eye, Brain, Download, ChevronRight, ChevronDown, ChevronUp, ArrowLeft
 } from 'lucide-react'
 
 type ProcessOptions = {
@@ -57,6 +57,7 @@ export default function ImportPage() {
     personalization: true,
   })
   const [showInfo, setShowInfo] = useState<string | null>(null)
+  const [showInvalidDetail, setShowInvalidDetail] = useState(false)
 
   // Live feed state
   const [feedLeads, setFeedLeads] = useState<LeadEntry[]>([])
@@ -312,7 +313,16 @@ export default function ImportPage() {
         setFeedLeads(leads)
         setFeedDone(false)
         setFeedStats({ enriched: 0, previews: 0, personalized: 0, errors: 0 })
-        setImportResult({ created: data.created.length, skipped: data.skipped, total: data.total })
+        setImportResult({
+          created: data.created.length,
+          skipped: data.skipped,
+          total: data.total,
+          totalCsvRows: data.totalCsvRows,
+          totalValid: data.totalValid,
+          totalInvalid: data.totalInvalid,
+          validationErrors: data.validationErrors || [],
+          invalidRows: data.invalidRows || [],
+        })
         setStep('configure')
       } else {
         alert(`Import failed: ${data.error}`)
@@ -688,15 +698,117 @@ export default function ImportPage() {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-900">
-                  {importResult?.created} leads imported
+                  {importResult?.created} leads ready to process
                 </h3>
                 <p className="text-sm text-gray-500">
-                  {importResult?.skipped > 0 && `${importResult.skipped} duplicates skipped. `}
+                  {importResult?.totalCsvRows
+                    ? `from ${importResult.totalCsvRows} CSV rows — ${importResult.totalInvalid || 0} invalid, ${importResult.skipped || 0} duplicates. `
+                    : importResult?.skipped > 0 ? `${importResult.skipped} duplicates skipped. ` : ''}
                   Choose which processing steps to run below.
                 </p>
               </div>
             </div>
           </Card>
+
+          {/* Validation Report — only when there are invalid rows */}
+          {importResult?.totalInvalid > 0 && (
+            <Card className="p-6 border-l-4 border-amber-400 bg-amber-50/50">
+              {/* Header */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                  <AlertTriangle size={20} className="text-amber-600" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900">
+                    {importResult.totalInvalid} rows couldn&apos;t be imported
+                  </h4>
+                  <p className="text-xs text-gray-500">out of {importResult.totalCsvRows} total CSV rows</p>
+                </div>
+              </div>
+
+              {/* Summary bar */}
+              <div className="flex gap-3 mb-4">
+                <div className="flex-1 text-center py-2 rounded-lg bg-green-50">
+                  <div className="text-lg font-bold text-green-700">{importResult.totalValid}</div>
+                  <div className="text-xs text-green-600">valid</div>
+                </div>
+                <div className="flex-1 text-center py-2 rounded-lg bg-red-50">
+                  <div className="text-lg font-bold text-red-700">{importResult.totalInvalid}</div>
+                  <div className="text-xs text-red-600">invalid</div>
+                </div>
+                <div className="flex-1 text-center py-2 rounded-lg bg-gray-100">
+                  <div className="text-lg font-bold text-gray-600">{importResult.skipped}</div>
+                  <div className="text-xs text-gray-500">duplicates</div>
+                </div>
+              </div>
+
+              {/* Error breakdown */}
+              {importResult.validationErrors?.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {importResult.validationErrors.map((err: any, idx: number) => (
+                    <div key={idx} className="flex items-start gap-2 text-sm">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 shrink-0">
+                        {err.count}
+                      </span>
+                      <div>
+                        <span className="text-gray-700">{err.reason}</span>
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          Rows: {err.rows.slice(0, 10).join(', ')}
+                          {err.rows.length > 10 && ` +${err.rows.length - 10} more`}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Expandable detail table */}
+              {importResult.invalidRows?.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => setShowInvalidDetail(!showInvalidDetail)}
+                    className="flex items-center gap-1 text-xs text-amber-700 hover:text-amber-900 font-medium"
+                  >
+                    {showInvalidDetail ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    {showInvalidDetail ? 'Hide affected rows' : 'Show affected rows'}
+                  </button>
+
+                  {showInvalidDetail && (
+                    <div className="mt-2 overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-amber-200">
+                            <th className="text-left py-2 px-2 font-semibold text-gray-500">Row</th>
+                            <th className="text-left py-2 px-2 font-semibold text-gray-500">First Name</th>
+                            <th className="text-left py-2 px-2 font-semibold text-gray-500">Company</th>
+                            <th className="text-left py-2 px-2 font-semibold text-gray-500">Errors</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-amber-100">
+                          {importResult.invalidRows.map((row: any, idx: number) => (
+                            <tr key={idx}>
+                              <td className="py-1.5 px-2 text-gray-500 font-mono">{row.row}</td>
+                              <td className="py-1.5 px-2 text-gray-700">{row.firstName || '—'}</td>
+                              <td className="py-1.5 px-2 text-gray-700">{row.companyName || '—'}</td>
+                              <td className="py-1.5 px-2">
+                                <div className="flex flex-wrap gap-1">
+                                  {row.errors.map((e: string, ei: number) => (
+                                    <span key={ei} className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">
+                                      {e}
+                                    </span>
+                                  ))}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card>
+          )}
 
           {/* Processing Options */}
           <Card className="p-6">

@@ -67,12 +67,13 @@ const VALID_INDUSTRIES = [
   'NONPROFIT',
 ]
 
-const PHONE_REGEX = /^\+?1?\d{10,14}$/
+const PHONE_REGEX = /^\+?\d{7,15}$/
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function normalizePhone(phone: string): string | null {
+  phone = phone.replace(/^['"]+/, '') // Strip Excel apostrophe/quote prefix
   const cleaned = phone.replace(/\D/g, '')
-  if (cleaned.length < 10) return null
+  if (cleaned.length < 7) return null
   if (cleaned.length === 10) return `+1${cleaned}`
   if (cleaned.length === 11 && cleaned[0] === '1') return `+${cleaned}`
   if (cleaned.length === 11) return `+1${cleaned.slice(1)}`
@@ -117,7 +118,7 @@ export function parseLead(row: RawLeadRow): ParsedLead {
   if (!companyName) errors.push('Company name is required')
 
   const normalizedPhone = normalizePhone(phone)
-  if (!normalizedPhone) errors.push('Phone must be a valid 10-14 digit number')
+  if (!normalizedPhone) errors.push('Phone must be a valid phone number (7+ digits)')
 
   const normalizedEmail = normalizeEmail(email)
   if (!normalizedEmail) errors.push('Email must be valid (name@domain.com)')

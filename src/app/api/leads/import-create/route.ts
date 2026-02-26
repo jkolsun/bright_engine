@@ -29,13 +29,40 @@ export async function POST(request: NextRequest) {
     }
 
     const csvContent = await file.text()
-    const { leads: parsedLeads, validCount } = parseCSV(csvContent)
+    const { leads: parsedLeads, totalRows, validCount, invalidCount, errors: validationErrorsMap } = parseCSV(csvContent)
 
     if (validCount === 0) {
       return NextResponse.json({ error: 'No valid leads found in CSV' }, { status: 400 })
     }
 
     const validRows = parsedLeads.filter(p => p.isValid)
+
+    // Build grouped validation errors for the response
+    const errorGroups = new Map<string, number[]>()
+    for (const [rowIdx, rowErrors] of validationErrorsMap.entries()) {
+      for (const errMsg of rowErrors) {
+        const existing = errorGroups.get(errMsg) || []
+        existing.push(rowIdx + 1) // Map key is 1-based line index, +1 gives spreadsheet row
+        errorGroups.set(errMsg, existing)
+      }
+    }
+    const validationErrors = Array.from(errorGroups.entries()).map(([reason, rows]) => ({
+      reason,
+      count: rows.length,
+      rows,
+    }))
+
+    // Build invalid rows detail (first 50)
+    const invalidLeads = parsedLeads
+      .map((lead, idx) => ({ lead, csvRow: idx + 2 })) // idx 0 = first data row = CSV line 2
+      .filter(({ lead }) => !lead.isValid)
+      .slice(0, 50)
+      .map(({ lead, csvRow }) => ({
+        row: csvRow,
+        firstName: lead.firstName || '',
+        companyName: lead.companyName || '',
+        errors: lead.errors,
+      }))
 
     // Step A: Collect all emails and phone variants from the batch
     const allEmails: string[] = []
@@ -164,6 +191,11 @@ export async function POST(request: NextRequest) {
       created,
       skipped,
       total: validRows.length,
+      totalCsvRows: totalRows,
+      totalValid: validCount,
+      totalInvalid: invalidCount,
+      validationErrors,
+      invalidRows: invalidLeads,
     })
   } catch (error) {
     console.error('Import create error:', error)
