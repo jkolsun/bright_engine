@@ -15,13 +15,13 @@ export function useDialerSession() {
     } catch { setSession(null) }
   }, [])
 
-  const startSession = useCallback(async (autoDialEnabled = false) => {
+  const startSession = useCallback(async (autoDialEnabled = false, name?: string) => {
     setLoading(true)
     try {
       const res = await fetch('/api/dialer/session/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ autoDialEnabled }),
+        body: JSON.stringify({ autoDialEnabled, name }),
       })
       const data = await res.json()
       setSession(data)

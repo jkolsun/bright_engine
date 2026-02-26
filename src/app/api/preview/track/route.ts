@@ -26,7 +26,7 @@ function isRateLimited(ip: string): boolean {
 }
 
 // Known valid event types
-const VALID_EVENTS = ['page_view', 'time_on_page', 'cta_click', 'call_click', 'contact_form', 'return_visit', 'scroll_depth']
+const VALID_EVENTS = ['page_view', 'time_on_page', 'cta_click', 'call_click', 'contact_form', 'return_visit', 'scroll_depth', 'template_switch']
 
 // POST /api/preview/track - Track preview analytics events
 export async function POST(request: NextRequest) {

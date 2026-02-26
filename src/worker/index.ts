@@ -528,6 +528,13 @@ async function startWorkers() {
             await handleOnboardingDnsCheck(job.data.clientId)
             break
 
+          // ── Session Analysis (AI recommendation after session ends) ──
+          case 'session-analysis': {
+            const { generateSessionAnalysis } = await import('../lib/session-analysis')
+            await generateSessionAnalysis(job.data.sessionId)
+            break
+          }
+
           default:
             console.log(`Unknown sequence: ${job.name}`)
         }

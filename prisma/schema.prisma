@@ -1356,6 +1356,10 @@ model DialerSessionNew {
   endedAt            DateTime?    @map("ended_at")
   isActive           Boolean      @default(true) @map("is_active")
   autoDialEnabled    Boolean      @default(false) @map("auto_dial_enabled")
+  name               String?      @map("name")
+  freshLeadsAtStart  Int?         @map("fresh_leads_at_start")
+  uniqueFreshCalled  Int?         @map("unique_fresh_called")
+  aiRecommendation   String?      @map("ai_recommendation") @db.Text
   totalCalls         Int          @default(0) @map("total_calls")
   connectedCalls     Int          @default(0) @map("connected_calls")
   voicemails         Int          @default(0)

@@ -74,7 +74,7 @@ const CLOSE_DISPOSITIONS = ['WANTS_TO_MOVE_FORWARD']
 // Session Management
 // ============================================
 
-export async function startSession(repId: string, autoDialEnabled: boolean = false) {
+export async function startSession(repId: string, autoDialEnabled: boolean = false, name?: string) {
   // End any existing active sessions for this rep
   await prisma.dialerSessionNew.updateMany({
     where: { repId, isActive: true },
@@ -85,8 +85,28 @@ export async function startSession(repId: string, autoDialEnabled: boolean = fal
     data: {
       repId,
       autoDialEnabled,
+      name: name || null,
     },
   })
+
+  // Capture fresh lead count at session start (mirrors /api/dialer/queue?tab=fresh logic)
+  try {
+    const freshCount = await prisma.lead.count({
+      where: {
+        OR: [{ ownerRepId: repId }, { assignedToId: repId }],
+        status: { notIn: ['CLOSED_LOST', 'DO_NOT_CONTACT', 'PAID'] },
+        dncAt: null,
+        dialerCalls: { none: { direction: 'OUTBOUND' } },
+      },
+    })
+    await prisma.dialerSessionNew.update({
+      where: { id: session.id },
+      data: { freshLeadsAtStart: freshCount },
+    })
+    session.freshLeadsAtStart = freshCount
+  } catch (err) {
+    console.warn('[DialerService] Failed to capture fresh lead count:', err)
+  }
 
   pushToAllAdmins({
     type: 'SESSION_UPDATE',
@@ -166,6 +186,54 @@ export async function endSession(sessionId: string) {
     previewLinksSent: session.previewsSent,
     previewsOpened: session.previewsOpened,
   })
+
+  // Calculate uniqueFreshCalled — how many leads were called for the first time in this session
+  try {
+    const sessionLeads = await prisma.dialerCall.findMany({
+      where: { sessionId },
+      select: { leadId: true },
+      distinct: ['leadId'],
+    })
+    const leadIds = sessionLeads.map(c => c.leadId)
+
+    if (leadIds.length > 0) {
+      // For each lead, check if they had any outbound calls BEFORE this session started
+      const leadsWithPriorCalls = await prisma.dialerCall.groupBy({
+        by: ['leadId'],
+        where: {
+          leadId: { in: leadIds },
+          direction: 'OUTBOUND',
+          startedAt: { lt: session.startedAt },
+          sessionId: { not: sessionId },
+        },
+      })
+      const priorCallLeadIds = new Set(leadsWithPriorCalls.map(l => l.leadId))
+      const freshBurned = leadIds.filter(id => !priorCallLeadIds.has(id)).length
+
+      await prisma.dialerSessionNew.update({
+        where: { id: sessionId },
+        data: { uniqueFreshCalled: freshBurned },
+      })
+      console.log(`[SessionEnd] Fresh leads burned: ${freshBurned} out of ${leadIds.length} unique leads`)
+    } else {
+      await prisma.dialerSessionNew.update({
+        where: { id: sessionId },
+        data: { uniqueFreshCalled: 0 },
+      })
+    }
+  } catch (err) {
+    console.warn('[SessionEnd] Failed to calculate uniqueFreshCalled:', err)
+  }
+
+  // Queue AI session analysis (non-blocking, only if enough data)
+  if (session.totalCalls >= 10) {
+    try {
+      const { addSessionAnalysisJob } = await import('@/worker/queue')
+      await addSessionAnalysisJob({ sessionId })
+    } catch (err) {
+      console.warn('[SessionEnd] Failed to queue session analysis:', err)
+    }
+  }
 
   pushToAllAdmins({
     type: 'SESSION_UPDATE',

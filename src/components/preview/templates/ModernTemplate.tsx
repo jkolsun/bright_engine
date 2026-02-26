@@ -1,738 +1,618 @@
 'use client'
 /*
- * MODERN TEMPLATE — "Wavelength"
- * Design Direction: Modern SaaS, teal/cyan
- * Brand Voice: Technical & Precise + warm
- * Multi-page with hash-based client-side routing
- *
- * CHANGES: +chatbot +social nav +mobile drawer +FAQ +contact form
- * Removed: bento grid services, "How It Works" timeline, service area, Quick Links
- * Services → numbered list, gallery → asymmetric, testimonial → 3 staggered
- * Floating stats bar → inline proof strip
+ * HORIZON TEMPLATE -- Modern
+ * Light, airy, geometric. Split hero, floating pill nav, left-accent service rows.
+ * Warm white (#FAFAF9), alternating warm gray (#F5F3EF)
+ * Fonts: Space Grotesk (heading) / DM Sans (body) / IBM Plex Mono (labels)
  */
 
 import { useState, useEffect, useRef } from 'react'
-import {
-  Phone, MapPin, Star, Shield, Clock, CheckCircle, ArrowRight, Mail,
-  Sparkles, Camera, Quote,
-  MessageCircle, X, Send, ChevronDown, Menu, ChevronRight,
-  Minus, Plus, Facebook, Instagram
-} from 'lucide-react'
+import { Phone, MapPin, Star, CheckCircle, ArrowRight, Mail, Camera, MessageCircle, X, Send, Menu, Minus, Plus, Quote, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
-import { brandGradientStyle, brandAccent } from '../shared/colorUtils'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
-import ScrollReveal from '../shared/ScrollReveal'
-import usePageRouter from '../shared/usePageRouter'
-import type { PageName } from '../shared/usePageRouter'
-import PageShell from '../shared/PageShell'
-import PageHeader from '../shared/PageHeader'
-import { distributePhotos } from '../shared/photoUtils'
-import { ServiceHero, ServiceGrid, ProcessTimeline, WhyChooseUs } from '../shared/ServiceSections'
-import TrustBadges from '../shared/TrustBadges'
-import BrandsStrip from '../shared/BrandsStrip'
-import ReviewsSection from '../shared/ReviewsSection'
-import ContactFormEnhanced from '../shared/ContactFormEnhanced'
-import PhotoLightbox from '../shared/PhotoLightbox'
-import AnimatedCounter from '../shared/AnimatedCounter'
-import VideoPlaceholder from '../shared/VideoPlaceholder'
 
-function formatNavPhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '')
-  if (digits.length === 11 && digits[0] === '1') {
-    return `(${digits.slice(1,4)}) ${digits.slice(4,7)}-${digits.slice(7)}`
-  }
-  if (digits.length === 10) {
-    return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`
-  }
+/* ── Helpers ─────────────────────────────────────────── */
+
+function fmt(phone: string): string {
+  const d = phone.replace(/\D/g, '')
+  if (d.length === 11 && d[0] === '1') return `(${d.slice(1,4)}) ${d.slice(4,7)}-${d.slice(7)}`
+  if (d.length === 10) return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`
   return phone
 }
 
-function GoogleIcon({ size = 15, className = '' }: { size?: number; className?: string }) {
-  return (<svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>)
-}
-
-function ChatbotWidget({ companyName, accentColor = '#14b8a6' }: { companyName: string; accentColor?: string }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [messages, setMessages] = useState<{from: string; text: string}[]>([])
-  const [input, setInput] = useState('')
-  const [isTyping, setIsTyping] = useState(false)
-  const endRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
-  useEffect(() => {
-    if (isOpen && messages.length === 0) { setIsTyping(true); const t = setTimeout(() => { setMessages([{ from: 'bot', text: `Hi! 👋 Welcome to ${companyName}. Need a quote or have a question? I'm here to help.` }]); setIsTyping(false) }, 800); return () => clearTimeout(t) }
-    if (isOpen) setTimeout(() => inputRef.current?.focus(), 100)
-  }, [isOpen, companyName])
-  const quickReplies = ['Get a free estimate', 'What services do you offer?', 'Hours & availability']
-  const handleSend = (text?: string) => {
-    const msg = text || input.trim(); if (!msg) return
-    setMessages(p => [...p, { from: 'user', text: msg }]); setInput(''); setIsTyping(true)
-    setTimeout(() => {
-      let reply = "Thanks for reaching out! A team member will follow up shortly. Call us for the fastest response."
-      if (msg.toLowerCase().includes('quote') || msg.toLowerCase().includes('estimate')) reply = "We'd love to get you a free estimate! Tell me about your project or call us directly."
-      else if (msg.toLowerCase().includes('service')) reply = "We offer a full range of services — check out the list below, or tell me what you need!"
-      else if (msg.toLowerCase().includes('hour')) reply = "We're available Monday through Saturday with same-day response. Call anytime!"
-      setMessages(p => [...p, { from: 'bot', text: reply }]); setIsTyping(false)
-    }, 1200)
+function getAccent(config: TemplateProps['config']): string {
+  const m: Record<string, string> = {
+    'amber-300':'#fcd34d','amber-400':'#fbbf24','amber-500':'#f59e0b','amber-600':'#d97706',
+    'sky-400':'#38bdf8','sky-500':'#0ea5e9','cyan-400':'#22d3ee','cyan-600':'#0891b2',
+    'teal-400':'#2dd4bf','teal-500':'#14b8a6','emerald-400':'#34d399','emerald-500':'#10b981','emerald-600':'#059669',
+    'green-400':'#4ade80','green-500':'#22c55e','green-600':'#16a34a',
+    'lime-400':'#a3e635','lime-500':'#84cc16',
+    'violet-400':'#a78bfa','purple-600':'#9333ea',
+    'blue-400':'#60a5fa','blue-500':'#3b82f6','blue-600':'#2563eb',
+    'red-600':'#dc2626','rose-500':'#f43f5e',
+    'orange-400':'#fb923c','orange-500':'#f97316',
+    'yellow-500':'#eab308',
+    'slate-600':'#475569','gray-600':'#4b5563',
   }
-  return (
-    <>
-      <button onClick={() => setIsOpen(!isOpen)} className="fixed bottom-6 right-5 z-[100] group sm:bottom-6 bottom-20" aria-label="Chat">
-        <div className="w-[58px] h-[58px] rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-105" style={{ background: `linear-gradient(135deg, ${accentColor}, #06b6d4)` }}>
-          {isOpen ? <X size={22} className="text-white" /> : <MessageCircle size={22} className="text-white" />}
-        </div>
-        {!isOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-15" style={{ background: accentColor }} />}
-        {!isOpen && (<div className="absolute bottom-full right-0 mb-3 whitespace-nowrap bg-white text-gray-700 text-sm font-semibold px-4 py-2 rounded-xl shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Need help? Chat with us<div className="absolute top-full right-6 w-2 h-2 bg-white transform rotate-45 -translate-y-1" /></div>)}
-      </button>
-      {isOpen && (
-        <div className="fixed sm:bottom-24 bottom-28 right-5 z-[100] w-[370px] max-w-[calc(100vw-2.5rem)] bg-white rounded-2xl shadow-2xl border border-teal-100 overflow-hidden">
-          <div className="px-5 py-4 text-white" style={{ background: `linear-gradient(135deg, ${accentColor}, #06b6d4)` }}>
-            <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"><MessageCircle size={18} className="text-white" /></div><div><p className="font-bold text-sm">{companyName}</p><div className="flex items-center gap-1.5"><span className="w-2 h-2 bg-green-300 rounded-full animate-pulse" /><span className="text-xs text-white/80">Online now</span></div></div></div>
-            <p className="text-[10px] text-white/40 mt-2.5 tracking-wide uppercase">AI Assistant by Bright Automations · Included with your website</p>
-          </div>
-          <div className="h-[280px] overflow-y-auto px-4 py-4 space-y-3 bg-teal-50/20">
-            {messages.map((msg, i) => (<div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[80%] px-4 py-2.5 text-sm leading-relaxed ${msg.from === 'user' ? 'text-white rounded-2xl rounded-br-sm' : 'bg-white text-gray-700 rounded-2xl rounded-bl-sm shadow-sm border border-teal-50'}`} style={msg.from === 'user' ? { background: accentColor } : undefined}>{msg.text}</div></div>))}
-            {isTyping && (<div className="flex justify-start"><div className="bg-white px-4 py-3 rounded-2xl rounded-bl-sm shadow-sm border border-teal-50"><div className="flex gap-1"><span className="w-2 h-2 bg-teal-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} /><span className="w-2 h-2 bg-teal-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} /><span className="w-2 h-2 bg-teal-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} /></div></div></div>)}
-            <div ref={endRef} />
-          </div>
-          {messages.length <= 1 && (<div className="px-4 pb-2 flex gap-2 flex-wrap bg-teal-50/20">{quickReplies.map((qr, i) => (<button key={i} onClick={() => handleSend(qr)} className="text-xs px-3 py-1.5 rounded-full border border-teal-200 text-teal-600 hover:bg-teal-50 transition-all">{qr}</button>))}</div>)}
-          <div className="px-4 py-3 border-t border-teal-50 bg-white"><div className="flex gap-2"><input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder="Type a message..." className="flex-1 text-sm px-4 py-2.5 rounded-full bg-teal-50/50 border border-teal-100 text-gray-800 focus:outline-none focus:ring-2 focus:ring-teal-400/30 placeholder:text-gray-400" /><button onClick={() => handleSend()} disabled={!input.trim()} className="w-10 h-10 rounded-full flex items-center justify-center text-white transition-all disabled:opacity-30" style={{ background: accentColor }}><Send size={15} /></button></div></div>
-        </div>
-      )}
-    </>
-  )
+  return m[config.accentColor] || '#0ea5e9'
 }
 
-function MobileNav({ isOpen, onClose, companyName, logo, sections, phone, onCallClick, onCTAClick, onNavigate, config }: { isOpen: boolean; onClose: () => void; companyName: string; logo?: string; sections: { page: PageName; label: string }[]; phone?: string; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void; config?: import('../config/template-types').IndustryConfig }) {
-  if (!isOpen) return null
-  return (
-    <div className="fixed inset-0 z-[90] lg:hidden">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="absolute right-0 top-0 bottom-0 w-[300px] bg-white shadow-2xl">
-        <div className="p-6 h-full flex flex-col">
-          <div className="flex justify-between items-center mb-10"><div className="flex items-center gap-2">{logo ? (<img src={logo} alt="" className="h-7 w-7 rounded-xl object-cover" />) : null}<span className="text-lg font-bold text-gray-900">{companyName}</span></div><button onClick={onClose} className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500"><X size={18} /></button></div>
-          <nav className="space-y-1 flex-1">{sections.map((s) => (<button key={s.page} data-nav-page={s.page} onClick={() => { onNavigate(s.page); onClose() }} className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-gray-700 hover:bg-teal-50 transition-all text-[15px] font-medium">{s.label}<ChevronRight size={16} className="text-gray-300" /></button>))}</nav>
-          <div className="flex gap-3 mb-5">
-            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:text-teal-600 transition-colors"><Facebook size={16} /></a>
-            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:text-teal-600 transition-colors"><Instagram size={16} /></a>
-            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:text-teal-600 transition-colors"><GoogleIcon size={16} /></a>
-          </div>
-          <div className="space-y-3">
-            {phone && (<a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-gray-100 text-gray-800 font-bold text-sm border border-gray-200"><Phone size={16} />Call {formatNavPhone(phone)}</a>)}
-            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-xl ${config?.primaryHex ? '' : 'bg-gradient-to-r from-teal-500 to-cyan-500'} text-white font-bold text-sm`} style={config ? brandGradientStyle(config, 'to right') : undefined}>Get Free Quote</button>
-          </div>
-        </div>
+function Counter({ end, suffix='', dur=2000 }: { end: number; suffix?: string; dur?: number }) {
+  const [v, setV] = useState(0); const ref = useRef<HTMLSpanElement>(null); const go = useRef(false)
+  useEffect(() => {
+    const el = ref.current; if (!el) return
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && !go.current) { go.current = true; const s = performance.now()
+        const f = (n: number) => { const p = Math.min((n-s)/dur,1); setV(Math.floor((1-Math.pow(1-p,3))*end*10)/10); if(p<1) requestAnimationFrame(f); else setV(end) }
+        requestAnimationFrame(f)
+      }
+    }, { threshold: 0.3 }); obs.observe(el); return () => obs.disconnect()
+  }, [end, dur])
+  return <span ref={ref}>{Number.isInteger(v)?v:v.toFixed(1)}{suffix}</span>
+}
+
+function Reveal({ children, delay=0, y=24, className='' }: { children: React.ReactNode; delay?: number; y?: number; className?: string }) {
+  const [vis, setVis] = useState(false); const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = ref.current; if (!el) return
+    const obs = new IntersectionObserver(([e]) => { if(e.isIntersecting){setVis(true);obs.disconnect()} }, { threshold:0.08 })
+    obs.observe(el); return () => obs.disconnect()
+  }, [])
+  return <div ref={ref} className={className} style={{ opacity:vis?1:0, transform:vis?'translateY(0)':`translateY(${y}px)`, transition:`opacity 0.7s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms, transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms` }}>{children}</div>
+}
+
+function ChatWidget({ name, accent }: { name: string; accent: string }) {
+  const [open, setOpen] = useState(false)
+  const [msgs, setMsgs] = useState<{from:string;text:string}[]>([])
+  const [input, setInput] = useState(''); const [typing, setTyping] = useState(false)
+  const endRef = useRef<HTMLDivElement>(null); const inRef = useRef<HTMLInputElement>(null)
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior:'smooth' }) }, [msgs])
+  useEffect(() => {
+    if(open && msgs.length===0){ setTyping(true); const t=setTimeout(()=>{setMsgs([{from:'bot',text:`Hi! Welcome to ${name}. How can we help you today?`}]);setTyping(false)},700); return()=>clearTimeout(t) }
+    if(open) setTimeout(()=>inRef.current?.focus(),100)
+  }, [open,name])
+  const send = (t?:string) => {
+    const m=t||input.trim(); if(!m) return; setMsgs(p=>[...p,{from:'user',text:m}]); setInput(''); setTyping(true)
+    setTimeout(()=>{
+      let r="Thanks for reaching out! We'll get back to you shortly."
+      if(m.toLowerCase().includes('estimat')||m.toLowerCase().includes('quot')) r="We'd love to give you a free estimate! Share some details or call us."
+      else if(m.toLowerCase().includes('servic')) r="Check out our Services page for the full list, or tell me what you need."
+      else if(m.toLowerCase().includes('hour')) r="We're available Mon-Sat, and 24/7 for emergencies."
+      setMsgs(p=>[...p,{from:'bot',text:r}]); setTyping(false)
+    },1000)
+  }
+  return (<>
+    <button onClick={()=>setOpen(!open)} className="fixed bottom-6 right-5 z-[100] sm:bottom-6 bottom-20" aria-label="Chat">
+      <div className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg text-white" style={{background:accent}}>{open?<X size={22}/>:<MessageCircle size={22}/>}</div>
+    </button>
+    {open&&(<div className="fixed sm:bottom-24 bottom-28 right-5 z-[100] w-[370px] max-w-[calc(100vw-2.5rem)] bg-white shadow-2xl rounded-2xl overflow-hidden border border-gray-100">
+      <div className="px-5 py-4 text-white" style={{background:accent}}>
+        <p className="font-bold text-sm">{name}</p>
+        <p className="text-[10px] opacity-60 mt-0.5">AI Assistant by Bright Automations</p>
       </div>
-    </div>
-  )
-}
-
-function FAQItem({ question, answer, isOpen, onToggle }: { question: string; answer: string; isOpen: boolean; onToggle: () => void }) {
-  return (
-    <div className="border-b border-gray-100 last:border-0">
-      <button onClick={onToggle} className="w-full flex items-center justify-between py-5 text-left group">
-        <span className="text-[15px] font-medium text-gray-800 group-hover:text-teal-600 transition-colors pr-6">{question}</span>
-        <span className="flex-shrink-0 w-8 h-8 rounded-full bg-teal-50 group-hover:bg-teal-100 flex items-center justify-center transition-all">
-          {isOpen ? <Minus size={14} className="text-teal-600" /> : <Plus size={14} className="text-teal-300" />}
-        </span>
-      </button>
-      <div className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-[200px] opacity-100 pb-5' : 'max-h-0 opacity-0'}`}><p className="text-sm text-gray-500 leading-relaxed pr-14">{answer}</p></div>
-    </div>
-  )
-}
-
-/* ═══════ CTA BAND (reused on multiple pages) ═══════ */
-function CTABand({ closingHeadline, onCTAClick, onNavigateContact, config }: { closingHeadline?: string; onCTAClick: () => Promise<void>; onNavigateContact: () => void; config?: import('../config/template-types').IndustryConfig }) {
-  return (
-    <section className={`relative py-16 sm:py-20 md:py-24 overflow-hidden ${config?.primaryHex ? '' : 'bg-gradient-to-r from-teal-600 via-cyan-600 to-teal-600'}`} style={config ? brandGradientStyle(config, 'to right') : undefined}>
-      <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
-      <ScrollReveal animation="fade-in" delay={0}>
-      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 md:px-8 text-center">
-        <Quote size={36} className="text-white/15 mx-auto mb-5" />
-        <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-snug">{closingHeadline || "Quality work. Honest pricing. Guaranteed."}</p>
-        <button onClick={() => { onCTAClick(); onNavigateContact() }} className="mt-8 inline-flex items-center gap-2.5 bg-white text-teal-700 px-8 py-4 rounded-full font-semibold text-lg hover:bg-teal-50 transition-all shadow-lg group">
-          Get Started <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-        </button>
+      <div className="h-[260px] overflow-y-auto px-4 py-4 space-y-3 bg-gray-50">
+        {msgs.map((m,i)=>(<div key={i} className={`flex ${m.from==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[80%] px-4 py-2.5 text-sm leading-relaxed rounded-2xl ${m.from==='user'?'text-white':'bg-white text-gray-700 border border-gray-100'}`} style={m.from==='user'?{background:accent}:{}}>{m.text}</div></div>))}
+        {typing&&<div className="flex justify-start"><div className="bg-white px-4 py-3 rounded-2xl border border-gray-100"><div className="flex gap-1">{[0,150,300].map(d=><span key={d} className="w-2 h-2 rounded-full animate-bounce" style={{background:accent,opacity:0.4,animationDelay:`${d}ms`}}/>)}</div></div></div>}
+        <div ref={endRef}/>
       </div>
-      </ScrollReveal>
-    </section>
-  )
+      <div className="px-4 py-3 bg-white border-t border-gray-100"><div className="flex gap-2">
+        <input ref={inRef} value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Type a message..." className="flex-1 text-sm px-4 py-2.5 bg-gray-50 rounded-full border border-gray-200 text-gray-800 focus:outline-none focus:border-gray-300 placeholder:text-gray-400"/>
+        <button onClick={()=>send()} disabled={!input.trim()} className="w-10 h-10 rounded-full flex items-center justify-center text-white disabled:opacity-30" style={{background:accent}}><Send size={15}/></button>
+      </div></div>
+    </div>)}
+  </>)
 }
 
-// ═══════ MAIN TEMPLATE ═══════
-export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, websiteCopy }: TemplateProps) {
-  const { currentPage, navigateTo } = usePageRouter()
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-  const [openFAQ, setOpenFAQ] = useState<number | null>(null)
-  // Form state moved to ContactFormEnhanced component
-  const services = lead.enrichedServices || []
-  const photos = lead.enrichedPhotos || []
-  const photosDist = distributePhotos(photos)
-  const industryLabel = lead.industry.toLowerCase().replace(/_/g, ' ')
-  const location = [lead.city, lead.state].filter(Boolean).join(', ')
-  const hasRating = lead.enrichedRating && lead.enrichedRating > 0
-  const wc = websiteCopy
-  const [lightboxOpen, setLightboxOpen] = useState(false)
-  const [lightboxIndex, setLightboxIndex] = useState(0)
+/* ── Main Template ───────────────────────────────────── */
 
-  /** Combined handler: track CTA click + navigate to contact */
-  const ctaNavigate = () => { onCTAClick(); navigateTo('contact') }
+export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, websiteCopy: wc }: TemplateProps) {
+  const [page, setPage] = useState<'home'|'services'|'about'|'work'|'contact'>('home')
+  const [mobNav, setMobNav] = useState(false)
+  const [openFAQ, setOpenFAQ] = useState<number|null>(null)
+  const [lb, setLb] = useState<number|null>(null)
+  const [navSolid, setNavSolid] = useState(false)
 
-  const navSections: { page: PageName; label: string }[] = [
-    { page: 'home', label: 'Home' }, { page: 'services', label: 'Services' },
-    { page: 'about', label: 'About' }, { page: 'portfolio', label: 'Work' },
-    { page: 'contact', label: 'Contact' },
+  useEffect(() => {
+    const h = () => setNavSolid(window.scrollY>60)
+    window.addEventListener('scroll',h,{passive:true}); return()=>window.removeEventListener('scroll',h)
+  },[])
+
+  const go = (p: typeof page) => { setPage(p); setMobNav(false); window.scrollTo({top:0,behavior:'smooth'}) }
+
+  const svc = lead.enrichedServices||[]; const photos = lead.enrichedPhotos||[]
+  const loc = [lead.city,lead.state].filter(Boolean).join(', ')
+  const indLabel = lead.industry.toLowerCase().replace(/_/g,' ')
+  const hasR = lead.enrichedRating && lead.enrichedRating > 0
+  const A = getAccent(config)
+
+  const svcData = svc.map((n,i) => ({ name:n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services tailored to your needs.`, img: photos[i % photos.length] }))
+  const testis = [
+    { text: wc?.testimonialQuote || `${lead.companyName} exceeded expectations. On time, clean work, great communication throughout.`, name: wc?.testimonialAuthor || 'Rachel M.', loc:lead.city||'Local' },
+    ...(wc?.additionalTestimonials?.map(t=>({text:t.quote,name:t.author,loc:lead.city||'Local'})) || [
+      { text: "We compared five companies -- these guys were the most professional and the fairest price.", name:'David K.', loc:lead.city||'Local' },
+      { text: "Already recommended them to two neighbors. That says everything.", name:'Linda P.', loc:lead.city||'Local' },
+    ])
   ]
+  const steps = wc?.processSteps || [
+    { title:'Consultation', description:'We discuss your needs and vision in detail.' },
+    { title:'Custom Quote', description:'Transparent pricing with no hidden fees.' },
+    { title:'Expert Execution', description:'Our skilled team delivers quality results.' },
+    { title:'Final Walkthrough', description:'We review every detail until you\'re thrilled.' },
+  ]
+  const whyUs = wc?.whyChooseUs || wc?.valueProps || [
+    { title:'Licensed & Insured', description:'Full protection on every single job.' },
+    { title:'Fast Response', description:'Same-day service when you need it most.' },
+    { title:'Satisfaction Guarantee', description:'Not happy? We make it right, period.' },
+  ]
+  const brands = wc?.brandNames || []
   const faqs = [
-    { q: 'How do I get a free estimate?', a: 'Call us or submit the form below — we respond same-day.' },
-    { q: 'What areas do you serve?', a: `We serve ${location || 'the local area'} and surrounding communities.` },
-    { q: 'Are you licensed and insured?', a: 'Yes — fully licensed, bonded, and insured on every job.' },
-    { q: 'How soon can you start?', a: 'Most projects begin within 1-2 weeks.' },
-    { q: 'Do you guarantee your work?', a: "Every job is backed by our satisfaction guarantee." },
+    { q:'How do I get a quote?', a:'Call us or fill out our contact form -- we respond same-day with a free estimate.' },
+    { q:'Do you offer free estimates?', a:'Absolutely! All estimates are free with no obligation whatsoever.' },
+    { q:'What areas do you serve?', a:`We proudly serve ${loc||'your area'} and surrounding communities within 30 miles.` },
+    { q:'Are you licensed and insured?', a:'Yes -- fully licensed, bonded, and insured for your complete protection.' },
+    { q:'How quickly can you start?', a:'Most projects can begin within a few days. Emergency services available same-day.' },
   ]
 
-  const testimonials = wc?.testimonialQuote
-    ? [{ quote: wc.testimonialQuote, name: wc.testimonialAuthor || 'Verified Customer', loc: lead.city || 'Local' }]
-    : [
-        { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, name: 'Sarah M.', loc: lead.city || 'Local' },
-        { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, name: 'David R.', loc: lead.city || 'Local' },
-      ]
+  const PAGES = [{k:'home' as const,l:'Home'},{k:'services' as const,l:'Services'},{k:'about' as const,l:'About'},{k:'work' as const,l:'Portfolio'},{k:'contact' as const,l:'Contact'}]
 
-  useEffect(() => { const h = () => setScrolled(window.scrollY > 50); window.addEventListener('scroll', h, { passive: true }); return () => window.removeEventListener('scroll', h) }, [])
+  const sans = "'Space Grotesk','Inter',sans-serif"
+  const body = "'DM Sans','Helvetica Neue',sans-serif"
+  const mono = "'IBM Plex Mono','SF Mono',monospace"
 
   return (
-    <div className="preview-template min-h-screen bg-white antialiased">
-      <DisclaimerBanner variant="modern" companyName={lead.companyName} />
+    <div className="preview-template min-h-screen antialiased" style={{fontFamily:body,background:'#FAFAF9',color:'#1a1a1a',overflowX:'hidden'}}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+        @keyframes hz-fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes hz-slideUp{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:translateY(0)}}
+        .hz-pill-btn{display:inline-flex;align-items:center;gap:8px;background:${A};color:#fff;padding:14px 32px;font-weight:600;font-size:15px;border-radius:999px;border:none;cursor:pointer;transition:all .25s;font-family:${body};text-decoration:none}
+        .hz-pill-btn:hover{transform:scale(1.02);box-shadow:0 8px 30px ${A}33}
+        .hz-pill-o{display:inline-flex;align-items:center;gap:8px;background:transparent;color:#1a1a1a;padding:14px 32px;border-radius:999px;border:1.5px solid #e0ddd8;font-weight:600;font-size:15px;cursor:pointer;transition:all .25s;font-family:${body};text-decoration:none}
+        .hz-pill-o:hover{border-color:${A};color:${A}}
+        .hz-lift{transition:transform .3s ease,box-shadow .3s ease}.hz-lift:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.06)}
+        .hz-img-zoom{transition:transform .5s ease}.hz-img-zoom:hover{transform:scale(1.04)}
+        .hz-overlay{position:fixed;inset:0;z-index:60;background:rgba(250,250,249,0.97);backdrop-filter:blur(20px);display:flex;flex-direction:column;padding:80px 24px 40px;animation:hz-slideUp .35s ease}
+        ::selection{background:${A}22;color:#1a1a1a}
+      ` }} />
 
-      {/* ═══════ NAV ═══════ */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-white/95 backdrop-blur-xl shadow-sm border-b border-gray-100' : 'bg-white/50 backdrop-blur-md'}`}>
-        <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <div className="flex items-center justify-between h-[68px]">
-            <button onClick={() => navigateTo('home')} className="flex items-center gap-3 cursor-pointer">
-              {lead.logo ? (
-                <img src={lead.logo} alt="" className="h-8 w-8 rounded-xl object-cover ring-2 ring-teal-100" />
-              ) : null}
-              <span className="text-lg font-bold text-gray-900 tracking-tight">{lead.companyName}</span>
+      <DisclaimerBanner variant="modern" companyName={lead.companyName}/>
+
+      {/* ── FLOATING PILL NAV (Desktop) ── */}
+      <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 hidden lg:block" style={{transition:'all .4s'}}>
+        <div style={{background:navSolid?'rgba(255,255,255,0.92)':'rgba(255,255,255,0.8)',backdropFilter:'blur(20px)',borderRadius:999,border:'1px solid rgba(0,0,0,0.06)',padding:'8px 8px 8px 24px',display:'flex',alignItems:'center',gap:8,boxShadow:'0 4px 30px rgba(0,0,0,0.06)'}}>
+          <button onClick={()=>go('home')} className="flex items-center gap-2 mr-6" style={{background:'none',border:'none',cursor:'pointer'}}>
+            {lead.logo?<img src={lead.logo} alt="" className="h-6 w-6 rounded-full object-cover"/>:<div className="w-2 h-2 rounded-full" style={{background:A}}/>}
+            <span className="font-bold text-sm" style={{fontFamily:sans}}>{lead.companyName}</span>
+          </button>
+          {PAGES.map(p=>(
+            <button key={p.k} onClick={()=>go(p.k)} className="text-[13px] font-medium px-4 py-2 rounded-full transition-all" style={{background:page===p.k?`${A}12`:'transparent',color:page===p.k?A:'#666',border:'none',cursor:'pointer',fontFamily:body}}>{p.l}</button>
+          ))}
+          <button onClick={()=>{onCTAClick();go('contact')}} className="ml-3 text-[13px] font-semibold px-5 py-2.5 rounded-full text-white border-none cursor-pointer" style={{background:A}}>Get Quote</button>
+        </div>
+      </nav>
+
+      {/* ── MOBILE TOP BAR ── */}
+      <nav className="lg:hidden fixed top-0 left-0 right-0 z-50" style={{background:'rgba(250,250,249,0.92)',backdropFilter:'blur(16px)',borderBottom:'1px solid rgba(0,0,0,0.05)',padding:'0 20px'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',height:60}}>
+          <button onClick={()=>go('home')} className="flex items-center gap-2" style={{background:'none',border:'none',cursor:'pointer'}}>
+            {lead.logo?<img src={lead.logo} alt="" className="h-6 w-6 rounded-full object-cover"/>:<div className="w-2 h-2 rounded-full" style={{background:A}}/>}
+            <span className="font-bold text-sm" style={{fontFamily:sans}}>{lead.companyName}</span>
+          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={()=>{onCTAClick();go('contact')}} className="text-[12px] font-semibold px-4 py-2 rounded-full text-white border-none cursor-pointer" style={{background:A}}>Quote</button>
+            <button onClick={()=>setMobNav(!mobNav)} aria-label="Menu" style={{width:40,height:40,borderRadius:12,background:'#F5F3EF',border:'1.5px solid #e8e5df',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+              {mobNav?<X size={18} style={{color:'#666'}}/>:<Menu size={18} style={{color:'#666'}}/>}
             </button>
-            <div className="hidden lg:flex items-center gap-1.5">{navSections.map((s) => (
-              <button key={s.page} data-nav-page={s.page} onClick={() => navigateTo(s.page)} className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${currentPage === s.page ? 'text-teal-600 bg-teal-50' : 'text-gray-500 hover:text-teal-600 hover:bg-teal-50'}`}>{s.label}</button>
-            ))}</div>
-            <div className="flex items-center gap-3">
-              <div className="hidden md:flex items-center gap-0.5 text-gray-400">
-                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-teal-50 hover:text-teal-500 transition-all"><Facebook size={14} /></a>
-                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-teal-50 hover:text-teal-500 transition-all"><Instagram size={14} /></a>
-                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-teal-50 hover:text-teal-500 transition-all"><GoogleIcon size={13} /></a>
-              </div>
-              <div className="hidden md:block w-px h-5 bg-gray-200" />
-              {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-sm text-gray-500 hover:text-teal-600 font-medium"><Phone size={14} />{formatNavPhone(lead.phone)}</a>)}
-              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className={`hidden sm:flex ${config.primaryHex ? '' : 'bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600'} text-white px-5 py-2.5 rounded-full text-sm font-semibold transition-all shadow-md`} style={brandGradientStyle(config, 'to right')}>Free Quote</button>
-              <button onClick={() => setMobileNavOpen(true)} className="lg:hidden w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600"><Menu size={20} /></button>
-            </div>
           </div>
         </div>
       </nav>
 
-      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} logo={lead.logo} sections={navSections} phone={lead.phone} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} config={config} />
+      {/* ── MOBILE NAV OVERLAY ── */}
+      {mobNav&&<div className="hz-overlay lg:hidden">
+        <div className="flex flex-col gap-2">
+          {PAGES.map(p=>(
+            <button key={p.k} onClick={()=>go(p.k)} className="text-left text-2xl font-semibold py-3 px-2 rounded-xl transition-all" style={{background:page===p.k?`${A}08`:'transparent',color:page===p.k?A:'#444',border:'none',cursor:'pointer',fontFamily:sans}}>{p.l}</button>
+          ))}
+        </div>
+        <div className="mt-auto flex flex-col gap-3">
+          <button onClick={()=>{onCTAClick();go('contact')}} className="hz-pill-btn justify-center">{config.ctaText||'Get Free Quote'} <ArrowRight size={16}/></button>
+          {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hz-pill-o justify-center"><Phone size={16}/>{fmt(lead.phone)}</a>}
+        </div>
+      </div>}
 
-      {/* ═══════════════════════════════════════════
-          PAGE: HOME
-       ═══════════════════════════════════════════ */}
-      <PageShell page="home" currentPage={currentPage}>
-        {/* HERO — Centered with Gradient Mesh */}
-        <section className="relative min-h-[100svh] flex items-center justify-center overflow-hidden">
-          <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-gradient-to-bl from-teal-100/50 to-cyan-50/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-[-15%] left-[-8%] w-[500px] h-[500px] bg-gradient-to-tr from-cyan-100/40 to-teal-50/10 rounded-full blur-3xl" />
-          <div className="absolute top-[30%] left-[55%] w-[250px] h-[250px] bg-gradient-to-br from-emerald-50/30 to-transparent rounded-full blur-3xl" />
-          <div className="relative max-w-4xl mx-auto w-full px-4 sm:px-6 md:px-8 py-32 text-center">
-            <div className="inline-flex items-center gap-2 bg-teal-50 border border-teal-100 text-teal-700 rounded-full px-5 py-2 text-sm font-semibold mb-8">
-              <Sparkles size={14} />
-              {hasRating ? `${lead.enrichedRating}-Star Rated` : 'Top Rated'}{location ? ` · ${location}` : ''}
-            </div>
-            <h1 className="font-display text-[2.75rem] sm:text-6xl md:text-7xl lg:text-8xl font-bold text-gray-900 mb-6 tracking-tight leading-[1.02]">{wc?.heroHeadline || lead.companyName}</h1>
-            {wc?.heroSubheadline && (
-              <p className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto mb-8 leading-relaxed">{wc.heroSubheadline}</p>
-            )}
-            <div className="w-24 h-1 bg-gradient-to-r from-teal-400 via-cyan-400 to-emerald-400 mx-auto mb-8 rounded-full" />
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className={`inline-flex items-center justify-center gap-2.5 ${config.primaryHex ? '' : 'bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600'} text-white px-10 py-4 rounded-full font-semibold text-lg transition-all shadow-lg hover:-translate-y-0.5`} style={brandGradientStyle(config, 'to right')}><Phone size={20} />Call Now</a>)}
-              <button onClick={ctaNavigate} className="inline-flex items-center justify-center gap-2.5 bg-white border-2 border-gray-200 text-gray-700 px-10 py-4 rounded-full font-semibold text-lg hover:border-teal-400 hover:text-teal-600 transition-all group">{config.ctaText}<ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></button>
-            </div>
-          </div>
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-gray-300"><span className="text-[10px] uppercase tracking-[0.25em] font-medium">Scroll</span><ChevronDown size={18} className="animate-bounce" /></div>
-        </section>
-
-        {/* PROOF STRIP */}
-        <section className="py-4 px-4 sm:px-6 md:px-8 border-b border-gray-100 bg-gray-50/50">
-          <ScrollReveal animation="fade-in" delay={0}>
-          <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
-            {hasRating && <span className="flex items-center gap-2 text-gray-700 font-semibold"><Star size={13} className="text-amber-400 fill-current" />{lead.enrichedRating} Rating</span>}
-            {lead.enrichedReviews && (<><span className="text-gray-200 hidden sm:inline">•</span><span className="text-gray-500">{lead.enrichedReviews}+ Reviews</span></>)}
-            <span className="text-gray-200 hidden sm:inline">•</span>
-            <span className="flex items-center gap-1.5 text-gray-500"><Shield size={13} />Licensed & Insured</span>
-            {location && (<><span className="text-gray-200 hidden sm:inline">•</span><span className="flex items-center gap-1.5 text-gray-500"><MapPin size={13} />{location}</span></>)}
-            <span className="text-gray-200 hidden sm:inline">•</span>
-            <span className="flex items-center gap-1.5 text-gray-500"><Clock size={13} />Same-Day Response</span>
-            {wc?.yearsBadge && (
-              <><span className="text-gray-200 hidden sm:inline">•</span><span className="flex items-center gap-1.5 text-gray-500">{wc.yearsBadge}</span></>
-            )}
-          </div>
-          </ScrollReveal>
-        </section>
-
-        {/* HOMEPAGE: SERVICES PREVIEW */}
-        {services.length > 0 && (
-          <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
-            <div className="max-w-6xl mx-auto">
-              <ScrollReveal animation="fade-up" delay={0}>
-              <div className="flex items-end justify-between mb-12 sm:mb-14">
-                <div>
-                  <div className="inline-flex items-center gap-2 bg-teal-50 text-teal-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-teal-100"><Sparkles size={12} />Services</div>
-                  <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">What we offer.</h2>
-                </div>
-                <button onClick={() => navigateTo('services')} className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-teal-600 hover:text-teal-500 transition-colors group">
-                  View All Services <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
-              </ScrollReveal>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {services.slice(0, 6).map((service, i) => (
-                  <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
-                  <button onClick={() => navigateTo('services')} className="group bg-gray-50/50 border border-gray-100 rounded-2xl p-6 text-left hover:border-teal-200 hover:shadow-md transition-all duration-300 w-full">
-                    <div className="flex items-start gap-4">
-                      <span className="text-xs text-teal-300 font-mono tabular-nums font-bold mt-1">{String(i + 1).padStart(2, '0')}</span>
-                      <div>
-                        <h3 className="text-base font-semibold text-gray-800 group-hover:text-teal-600 transition-colors mb-1">{service}</h3>
-                        {wc?.serviceDescriptions?.[service] && (
-                          <p className="text-sm text-gray-500 leading-relaxed line-clamp-2">{wc.serviceDescriptions[service]}</p>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                  </ScrollReveal>
+      {/* ================================================================ */}
+      {/* ═══ HOME ═══ */}
+      {/* ================================================================ */}
+      <div data-page="home" style={{display:page==='home'?'block':'none'}}>
+        {/* HERO -- split layout */}
+        <section style={{paddingTop:'clamp(100px,14vh,160px)',paddingBottom:'clamp(60px,8vh,100px)',paddingLeft:'clamp(16px,4vw,48px)',paddingRight:'clamp(16px,4vw,48px)'}}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center" style={{maxWidth:1280,margin:'0 auto'}}>
+            <div>
+              <Reveal><div className="flex items-center gap-3 mb-6">
+                {hasR&&<div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold" style={{background:`${A}12`,color:A}}><Star size={14} className="fill-current"/>{lead.enrichedRating} Rating</div>}
+                {loc&&<span className="text-sm" style={{color:'#999'}}><MapPin size={13} className="inline mr-1"/>{loc}</span>}
+              </div></Reveal>
+              <Reveal delay={100}><h1 style={{fontFamily:sans,fontSize:'clamp(36px,5vw,64px)',fontWeight:700,lineHeight:1.08,letterSpacing:'-0.03em',marginBottom:20,color:'#1a1a1a'}}>{wc?.heroHeadline||config.tagline||`Quality ${indLabel} you can trust.`}</h1></Reveal>
+              {wc?.heroSubheadline&&<Reveal delay={200}><p className="text-lg mb-8" style={{color:'#777',lineHeight:1.7,maxWidth:460}}>{wc.heroSubheadline}</p></Reveal>}
+              <Reveal delay={300}><div className="flex flex-wrap gap-3">
+                <button onClick={()=>{onCTAClick();go('contact')}} className="hz-pill-btn">{config.ctaText||'Get Free Quote'} <ArrowRight size={16}/></button>
+                {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hz-pill-o"><Phone size={16}/>{fmt(lead.phone)}</a>}
+              </div></Reveal>
+              <Reveal delay={400}><div className="flex items-center gap-6 mt-10">
+                {[{v:hasR?`${lead.enrichedRating}`:'-',l:'Rating'},{v:lead.enrichedReviews?`${lead.enrichedReviews}+`:'-',l:'Reviews'},{v:'10+',l:'Years'}].map((s,i)=>(
+                  <div key={i} className="text-center"><p className="text-2xl font-bold" style={{fontFamily:sans}}>{s.v}</p><p className="text-[11px] font-medium uppercase" style={{color:'#bbb',letterSpacing:'0.1em'}}>{s.l}</p></div>
                 ))}
-              </div>
-              <button onClick={() => navigateTo('services')} className="sm:hidden mt-8 inline-flex items-center gap-2 text-sm font-medium text-teal-600 hover:text-teal-500 transition-colors group">
-                View All Services <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </button>
+              </div></Reveal>
             </div>
-          </section>
-        )}
-
-        {/* HOMEPAGE: ABOUT PREVIEW */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-50/50">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-              <ScrollReveal animation="fade-left" delay={0}>
-              <div>
-                <div className="inline-flex items-center gap-2 bg-teal-50 text-teal-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-teal-100">About {lead.companyName}</div>
-                <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-6">Your local {industryLabel} experts.</h2>
-                <p className="text-gray-500 text-base leading-relaxed mb-6">
-                  {wc?.aboutParagraph1 || `${lead.companyName} delivers top-quality ${industryLabel}${location ? ` in ${location}` : ''}. Licensed, insured, and committed to your satisfaction.`}
-                </p>
-                <div className="flex flex-wrap gap-8 mb-8">
-                  <div><p className="font-display text-3xl font-bold text-teal-600"><AnimatedCounter value={hasRating ? lead.enrichedRating! : 5.0} /></p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mt-1">Star Rating</p></div>
-                  {lead.enrichedReviews && (<div><p className="font-display text-3xl font-bold text-teal-600"><AnimatedCounter value={lead.enrichedReviews} suffix="+" /></p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mt-1">Reviews</p></div>)}
-                  <div><p className="font-display text-3xl font-bold text-teal-600"><AnimatedCounter value={100} suffix="%" /></p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mt-1">Satisfaction</p></div>
-                </div>
-                <button onClick={() => navigateTo('about')} className="inline-flex items-center gap-2 text-sm font-medium text-teal-600 hover:text-teal-500 transition-colors group">
-                  Learn More About Us <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
-              </ScrollReveal>
-              <ScrollReveal animation="fade-right" delay={200}>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {(wc?.valueProps || [
-                  { title: 'Licensed & Insured', description: 'Full protection on every job' },
-                  { title: 'Satisfaction Guaranteed', description: 'We stand behind our work' },
-                  { title: 'Transparent Pricing', description: 'No hidden fees, no surprises' },
-                ]).slice(0, 3).map((vp, i) => (
-                  <div key={i} className="bg-white border border-gray-100 rounded-2xl p-5">
-                    <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center mb-3 border border-teal-100"><CheckCircle size={18} className="text-teal-500" /></div>
-                    <h4 className="text-sm font-bold text-gray-800 mb-1">{vp.title}</h4>
-                    <p className="text-xs text-gray-400 leading-relaxed">{vp.description}</p>
-                  </div>
-                ))}
-              </div>
-              </ScrollReveal>
-            </div>
+            {photos[0]&&<Reveal delay={200} y={30}><div className="relative">
+              <img src={photos[0]} alt="" className="w-full object-cover" style={{borderRadius:16,aspectRatio:'4/3',display:'block',boxShadow:'0 20px 60px rgba(0,0,0,0.08)'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+              {lead.enrichedReviews&&<div className="absolute -bottom-4 -left-4 px-4 py-2.5 rounded-xl bg-white shadow-lg border border-gray-100 flex items-center gap-2">
+                <div className="flex gap-0.5">{Array.from({length:5},(_,i)=><Star key={i} size={12} className="fill-current" style={{color:'#f59e0b'}}/>)}</div>
+                <span className="text-sm font-semibold">{lead.enrichedReviews}+ reviews</span>
+              </div>}
+            </div></Reveal>}
           </div>
         </section>
 
-        {/* HOMEPAGE: PORTFOLIO PREVIEW */}
-        {photos.length > 0 && (
-          <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
-            <div className="max-w-6xl mx-auto">
-              <ScrollReveal animation="fade-up" delay={0}>
-              <div className="flex items-end justify-between mb-10 sm:mb-14">
-                <div>
-                  <div className="inline-flex items-center gap-2 bg-teal-50 text-teal-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-teal-100"><Camera size={12} />Portfolio</div>
-                  <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900">Our recent work.</h2>
-                </div>
-                <button onClick={() => navigateTo('portfolio')} className="hidden sm:inline-flex items-center gap-2 text-sm font-medium text-teal-600 hover:text-teal-500 transition-colors group">
-                  View Our Work <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
-              </ScrollReveal>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-                {photos.slice(0, 3).map((photo, i) => (
-                  <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
-                  <button onClick={() => navigateTo('portfolio')} className="relative overflow-hidden rounded-2xl group border border-gray-100 hover:border-teal-200 transition-all w-full">
-                    <img src={photo} alt={`Project ${i + 1}`} className="w-full aspect-[4/3] object-cover transition-transform duration-700 group-hover:scale-105" {...(i > 0 ? { loading: 'lazy' as const } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </button>
-                  </ScrollReveal>
-                ))}
-              </div>
-              <button onClick={() => navigateTo('portfolio')} className="sm:hidden mt-8 inline-flex items-center gap-2 text-sm font-medium text-teal-600 hover:text-teal-500 transition-colors group">
-                View Our Work <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </button>
+        {/* SERVICES preview -- left-accent rows */}
+        {svc.length>0&&(<section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)',background:'#F5F3EF'}}>
+          <div style={{maxWidth:1200,margin:'0 auto'}}>
+            <Reveal><div className="flex flex-wrap justify-between items-end gap-4 mb-12">
+              <div><p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:8}}>Our Services</p>
+              <h2 style={{fontFamily:sans,fontSize:'clamp(28px,3.5vw,44px)',fontWeight:700,letterSpacing:'-0.02em'}}>How we can help.</h2></div>
+              <button onClick={()=>go('services')} className="hz-pill-o" style={{padding:'10px 24px',fontSize:13}}>See all <ArrowRight size={14}/></button>
+            </div></Reveal>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {svcData.slice(0,6).map((s,i)=>(
+                <Reveal key={i} delay={i*60}><div onClick={()=>go('services')} className="hz-lift cursor-pointer flex gap-5 bg-white p-6 rounded-xl" style={{borderLeft:`4px solid ${A}`}}>
+                  <div className="flex-1"><h3 className="text-lg font-bold mb-1.5">{s.name}</h3>
+                  <p className="text-sm leading-relaxed" style={{color:'#888'}}>{s.desc}</p></div>
+                  <ArrowRight size={18} className="flex-shrink-0 mt-1" style={{color:'#ccc'}}/>
+                </div></Reveal>
+              ))}
             </div>
-          </section>
-        )}
+          </div>
+        </section>)}
 
-        {/* HOMEPAGE: TESTIMONIAL HIGHLIGHT */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-50/50">
-          <div className="max-w-3xl mx-auto text-center">
-            <ScrollReveal animation="fade-up" delay={0}>
-              <div className="inline-flex items-center gap-2 bg-teal-50 text-teal-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-teal-100">Reviews</div>
-              <div className="flex justify-center gap-0.5 mb-6">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={18} className="text-amber-400 fill-current" />)}</div>
-              <p className="text-xl sm:text-2xl text-gray-600 leading-relaxed italic mb-6">"{testimonials[0].quote}"</p>
-              <div className="flex items-center justify-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-100 to-cyan-100 flex items-center justify-center"><span className="text-teal-600 font-bold text-sm">{testimonials[0].name[0]}</span></div>
-                <div className="text-left"><span className="font-semibold text-gray-800 text-sm">{testimonials[0].name}</span><span className="text-gray-400 text-sm"> — {testimonials[0].loc}</span></div>
-              </div>
-            </ScrollReveal>
+        {/* PHOTO + QUOTE band */}
+        {photos[1]&&<Reveal><section className="relative overflow-hidden" style={{height:'50vh',minHeight:340}}>
+          <div className="absolute inset-0"><img src={photos[1]} alt="" className="w-full h-full object-cover" onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div>
+          <div className="absolute inset-0" style={{background:'rgba(26,26,26,0.55)'}}/>
+          <div className="relative h-full flex items-center justify-center text-center p-6">
+            <p className="text-white" style={{fontFamily:sans,fontSize:'clamp(24px,3.5vw,44px)',fontWeight:700,lineHeight:1.2,maxWidth:650,letterSpacing:'-0.02em'}}>"{wc?.closingHeadline||`Trusted by families across ${loc||'your community'}.`}"</p>
+          </div>
+        </section></Reveal>}
+
+        {/* STATS */}
+        <section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)'}}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8" style={{maxWidth:1000,margin:'0 auto'}}>
+            {[{v:hasR?Number(lead.enrichedRating):5.0,s:'',l:'Star Rating'},{v:lead.enrichedReviews||100,s:'+',l:'Reviews'},{v:10,s:'+',l:'Years Experience'},{v:100,s:'%',l:'Satisfaction'}].map((st,i)=>(
+              <Reveal key={i} delay={i*100}><div className="text-center">
+                <p style={{fontFamily:sans,fontSize:'clamp(36px,5vw,56px)',fontWeight:700,letterSpacing:'-0.02em',color:'#1a1a1a'}}><Counter end={st.v} suffix={st.s}/></p>
+                <p className="text-sm font-medium mt-1" style={{color:'#aaa'}}>{st.l}</p>
+              </div></Reveal>
+            ))}
           </div>
         </section>
 
-        {/* HOMEPAGE: TRUST BADGES */}
-        <TrustBadges theme="modern" config={config} rating={lead.enrichedRating} reviewCount={lead.enrichedReviews} />
+        {/* TESTIMONIALS */}
+        <section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)',background:'#F5F3EF'}}>
+          <div style={{maxWidth:1200,margin:'0 auto'}}>
+            <Reveal><p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:8}}>Reviews</p>
+            <h2 style={{fontFamily:sans,fontSize:'clamp(28px,3.5vw,44px)',fontWeight:700,letterSpacing:'-0.02em',marginBottom:48}}>What our clients say.</h2></Reveal>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">{testis.slice(0,3).map((t,i)=>(
+              <Reveal key={i} delay={i*100}><div className="hz-lift bg-white rounded-xl p-7">
+                <div className="flex gap-0.5 mb-4">{Array.from({length:5},(_,j)=><Star key={j} size={14} className="fill-current" style={{color:'#f59e0b'}}/>)}</div>
+                <p className="text-[15px] leading-relaxed mb-6" style={{color:'#555'}}>"{t.text}"</p>
+                <div className="flex items-center gap-3"><div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{background:A}}>{t.name[0]}</div>
+                <div><p className="text-sm font-semibold">{t.name}</p><p className="text-xs" style={{color:'#bbb'}}>{t.loc}</p></div></div>
+              </div></Reveal>
+            ))}</div>
+          </div>
+        </section>
 
-        {/* HOMEPAGE: BRANDS STRIP */}
-        <BrandsStrip theme="modern" brandNames={wc?.brandNames} industry={lead.industry} />
+        {/* PORTFOLIO PREVIEW */}
+        {photos.length>2&&(<section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)'}}>
+          <div style={{maxWidth:1280,margin:'0 auto'}}>
+            <Reveal><div className="flex flex-wrap justify-between items-end gap-4 mb-10">
+              <div><p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:8}}>Our Work</p>
+              <h2 style={{fontFamily:sans,fontSize:'clamp(28px,3.5vw,44px)',fontWeight:700,letterSpacing:'-0.02em'}}>Recent projects.</h2></div>
+              <button onClick={()=>go('work')} className="hz-pill-o" style={{padding:'10px 24px',fontSize:13}}>View all <ArrowRight size={14}/></button>
+            </div></Reveal>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*80}><div className="overflow-hidden rounded-xl cursor-pointer hz-lift" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover" style={{aspectRatio:'4/3',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>))}
+            </div>
+          </div>
+        </section>)}
 
-        {/* HOMEPAGE: CTA BAND */}
-        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
-      </PageShell>
+        {/* CTA */}
+        <section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)',background:'#F5F3EF'}}>
+          <Reveal><div style={{maxWidth:640,margin:'0 auto',background:A,borderRadius:24,padding:'clamp(40px,6vw,64px)',textAlign:'center',color:'#fff'}}>
+            <h2 style={{fontFamily:sans,fontSize:'clamp(28px,4vw,40px)',fontWeight:700,letterSpacing:'-0.02em',marginBottom:12}}>Ready to get started?</h2>
+            <p className="text-base mb-8" style={{opacity:0.8}}>Free estimate, no obligation. We respond same-day.</p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button onClick={()=>{onCTAClick();go('contact')}} style={{display:'inline-flex',alignItems:'center',gap:8,background:'#fff',color:A,padding:'14px 32px',fontWeight:600,fontSize:15,borderRadius:999,border:'none',cursor:'pointer',fontFamily:body}}>Get Quote <ArrowRight size={16}/></button>
+              {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} style={{display:'inline-flex',alignItems:'center',gap:8,border:'1.5px solid rgba(255,255,255,.3)',color:'#fff',padding:'14px 32px',fontWeight:600,fontSize:15,borderRadius:999,textDecoration:'none',fontFamily:body}}><Phone size={16}/>{fmt(lead.phone)}</a>}
+            </div>
+          </div></Reveal>
+        </section>
+      </div>
 
-      {/* ═══════════════════════════════════════════
-          PAGE: SERVICES
-       ═══════════════════════════════════════════ */}
-      <PageShell page="services" currentPage={currentPage}>
-        <PageHeader
-          title="Our Services"
-          subtitle={`Expert ${industryLabel}${location ? ` serving ${location}` : ''} and surrounding areas.`}
-          bgClass={config.primaryHex ? '' : 'bg-gradient-to-r from-teal-600 via-cyan-600 to-teal-600'}
-          bgStyle={brandGradientStyle(config, 'to right')}
-          subtitleClass="text-teal-100/60"
-          accentClass="text-teal-200"
-          onBackClick={() => navigateTo('home')}
-        />
+      {/* ================================================================ */}
+      {/* ═══ SERVICES PAGE ═══ */}
+      {/* ================================================================ */}
+      <div data-page="services" style={{display:page==='services'?'block':'none'}}>
+        {/* Header */}
+        <section style={{padding:'clamp(100px,14vh,160px) clamp(16px,4vw,48px) 60px'}}><div style={{maxWidth:1200,margin:'0 auto'}}>
+          <Reveal><p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:8}}>Services</p></Reveal>
+          <Reveal delay={80}><h1 style={{fontFamily:sans,fontSize:'clamp(36px,5vw,60px)',fontWeight:700,letterSpacing:'-0.03em',marginBottom:16}}>What we offer.</h1></Reveal>
+          <Reveal delay={160}><p className="text-lg" style={{color:'#888',maxWidth:540}}>Comprehensive {indLabel} services{loc?` in ${loc}`:''} -- backed by {lead.enrichedReviews||'hundreds of'} five-star reviews.</p></Reveal>
+        </div></section>
 
-        {/* Service Hero — featured service with photo */}
-        {services.length > 0 && (
-          <ServiceHero
-            theme="modern"
-            config={config}
-            service={services[0]}
-            description={wc?.serviceDescriptions?.[services[0]]}
-            photo={photosDist.serviceHero}
-            onCTAClick={ctaNavigate}
-          />
-        )}
+        {/* Service cards with photos -- alternating layout */}
+        <section style={{padding:'0 clamp(16px,4vw,48px) clamp(60px,8vw,100px)'}}>
+          <div style={{maxWidth:1200,margin:'0 auto'}}>{svcData.map((s,i)=>(
+            <Reveal key={i} delay={i*60}>
+              <div className={`grid grid-cols-1 md:grid-cols-2 gap-0 mb-5 hz-lift overflow-hidden bg-white rounded-xl`} style={{borderLeft:`4px solid ${A}`}}>
+                {i%2===0 && s.img && <div className="relative overflow-hidden" style={{minHeight:240}}>
+                  <img src={s.img} alt={s.name} className="w-full h-full object-cover hz-img-zoom" style={{display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                  <div className="absolute top-4 left-4"><span style={{fontFamily:mono,fontSize:11,color:'#fff',background:'rgba(0,0,0,0.5)',padding:'6px 12px',borderRadius:999,letterSpacing:'0.1em',backdropFilter:'blur(4px)'}}>{String(i+1).padStart(2,'0')}</span></div>
+                </div>}
+                <div className="flex flex-col justify-center p-8 md:p-10">
+                  <h3 className="text-xl font-bold mb-3" style={{fontFamily:sans}}>{s.name}</h3>
+                  <p className="text-[15px] leading-relaxed mb-5" style={{color:'#888'}}>{s.desc}</p>
+                  <button onClick={()=>{onCTAClick();go('contact')}} className="flex items-center gap-2 text-sm font-semibold p-0" style={{background:'none',border:'none',color:A,cursor:'pointer'}}>Get estimate <ArrowRight size={14}/></button>
+                </div>
+                {i%2!==0 && s.img && <div className="relative overflow-hidden hidden md:block" style={{minHeight:240}}>
+                  <img src={s.img} alt={s.name} className="w-full h-full object-cover hz-img-zoom" style={{display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                  <div className="absolute top-4 right-4"><span style={{fontFamily:mono,fontSize:11,color:'#fff',background:'rgba(0,0,0,0.5)',padding:'6px 12px',borderRadius:999,letterSpacing:'0.1em',backdropFilter:'blur(4px)'}}>{String(i+1).padStart(2,'0')}</span></div>
+                </div>}
+              </div>
+            </Reveal>
+          ))}</div>
+        </section>
 
-        {/* Service Grid — rich cards */}
-        {services.length > 1 && (
-          <ServiceGrid
-            theme="modern"
-            services={services}
-            descriptions={wc?.serviceDescriptions}
-            photos={photosDist.serviceAccents}
-          />
-        )}
+        {/* Process Steps */}
+        <section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)',background:'#F5F3EF'}}>
+          <div style={{maxWidth:1000,margin:'0 auto'}}>
+            <Reveal><p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:8}}>Our Process</p>
+            <h2 style={{fontFamily:sans,fontSize:'clamp(28px,4vw,44px)',fontWeight:700,letterSpacing:'-0.02em',marginBottom:56}}>How it works.</h2></Reveal>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">{steps.slice(0,4).map((s,i)=>(
+              <Reveal key={i} delay={i*100}>
+                <div className="text-center">
+                  <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center text-lg font-bold text-white" style={{background:A}}>{String(i+1).padStart(2,'0')}</div>
+                  <h4 className="text-lg font-bold mb-2" style={{fontFamily:sans}}>{s.title}</h4>
+                  <p className="text-sm leading-relaxed" style={{color:'#999'}}>{s.description}</p>
+                </div>
+              </Reveal>
+            ))}</div>
+          </div>
+        </section>
 
-        {/* Process Timeline — How We Work */}
-        <ProcessTimeline
-          theme="modern"
-          config={config}
-          steps={wc?.processSteps}
-        />
+        {/* Services CTA */}
+        <section className="text-center" style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)'}}>
+          <Reveal><div style={{maxWidth:540,margin:'0 auto'}}>
+            <h2 style={{fontFamily:sans,fontSize:'clamp(24px,3vw,36px)',fontWeight:700,letterSpacing:'-0.02em',marginBottom:12}}>Need help choosing?</h2>
+            <p className="text-base mb-8" style={{color:'#999'}}>Contact us for a personalized recommendation.</p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button onClick={()=>{onCTAClick();go('contact')}} className="hz-pill-btn">Contact Us <ArrowRight size={16}/></button>
+              {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hz-pill-o"><Phone size={16}/>{fmt(lead.phone)}</a>}
+            </div>
+          </div></Reveal>
+        </section>
+      </div>
+
+      {/* ================================================================ */}
+      {/* ═══ ABOUT PAGE ═══ */}
+      {/* ================================================================ */}
+      <div data-page="about" style={{display:page==='about'?'block':'none'}}>
+        {/* Story header */}
+        <section style={{padding:'clamp(100px,14vh,160px) clamp(16px,4vw,48px) 60px'}}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-end" style={{maxWidth:1200,margin:'0 auto'}}>
+            <Reveal><div><p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:8}}>About</p>
+            <h1 style={{fontFamily:sans,fontSize:'clamp(36px,5vw,60px)',fontWeight:700,letterSpacing:'-0.03em'}}>Our story.</h1></div></Reveal>
+            <Reveal delay={150}><p className="text-[17px] leading-relaxed" style={{color:'#777'}}>{wc?.aboutParagraph1||`${lead.companyName} provides expert ${indLabel}${loc?` in ${loc}`:''}, combining years of experience with a commitment to quality that shows in every project.`}</p></Reveal>
+          </div>
+        </section>
+
+        {/* Photo + second paragraph */}
+        <section style={{padding:'0 clamp(16px,4vw,48px) clamp(60px,8vw,80px)'}}><div style={{maxWidth:1200,margin:'0 auto'}}>
+          {photos[3]&&<Reveal><div className="overflow-hidden rounded-xl mb-10"><img src={photos[3]} alt="" className="w-full object-cover" style={{height:400,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>}
+          {wc?.aboutParagraph2&&<Reveal><p className="text-base leading-relaxed mb-10" style={{color:'#777',maxWidth:700}}>{wc.aboutParagraph2}</p></Reveal>}
+        </div></section>
 
         {/* Why Choose Us */}
-        <WhyChooseUs
-          theme="modern"
-          config={config}
-          companyName={lead.companyName}
-          items={wc?.whyChooseUs || wc?.valueProps}
-          photo={photosDist.aboutPhoto}
-        />
-
-        {/* Service area info */}
-        {(wc?.serviceAreaText || location) && (
-          <section className="py-12 px-4 sm:px-6 md:px-8 bg-gray-50/50 border-t border-gray-100">
-            <div className="max-w-3xl mx-auto text-center">
-              <ScrollReveal animation="fade-up" delay={0}>
-                <div className="flex items-center justify-center gap-2 mb-3">
-                  <MapPin size={16} className="text-teal-500" />
-                  <h3 className="text-lg font-bold text-gray-800">Service Area</h3>
-                </div>
-                <p className="text-gray-500 text-sm leading-relaxed">{wc?.serviceAreaText || `Proudly serving ${location} and all surrounding communities. Contact us to confirm availability in your area.`}</p>
-              </ScrollReveal>
-            </div>
-          </section>
-        )}
-
-        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
-      </PageShell>
-
-      {/* ═══════════════════════════════════════════
-          PAGE: ABOUT
-       ═══════════════════════════════════════════ */}
-      <PageShell page="about" currentPage={currentPage}>
-        <PageHeader
-          title="About Us"
-          subtitle={`Get to know ${lead.companyName} — your trusted ${industryLabel} experts.`}
-          bgClass={config.primaryHex ? '' : 'bg-gradient-to-r from-teal-600 via-cyan-600 to-teal-600'}
-          bgStyle={brandGradientStyle(config, 'to right')}
-          subtitleClass="text-teal-100/60"
-          accentClass="text-teal-200"
-          onBackClick={() => navigateTo('home')}
-        />
-
-        {/* Full About section */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
-              <ScrollReveal animation="fade-left" delay={0} className="lg:col-span-3">
-              <div>
-                <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-6">Your local {industryLabel} experts.</h2>
-                <div className="space-y-4 text-gray-500 text-base leading-relaxed">
-                  <p>{wc?.aboutParagraph1 || `${lead.companyName} delivers top-quality ${industryLabel}${location ? ` in ${location}` : ''}. Licensed, insured, and committed to your satisfaction.`}</p>
-                  {wc?.aboutParagraph2 && <p>{wc.aboutParagraph2}</p>}
-                  {wc?.closingBody && <p>{wc.closingBody}</p>}
-                </div>
-                <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  {(wc?.valueProps || [
-                    { title: 'Licensed & Insured', description: 'Full protection on every job' },
-                    { title: 'Satisfaction Guaranteed', description: 'We stand behind our work' },
-                    { title: 'Transparent Pricing', description: 'No hidden fees, no surprises' },
-                  ]).slice(0, 3).map((vp, i) => (
-                    <div key={i}><div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center mb-3 border border-teal-100"><CheckCircle size={18} className="text-teal-500" /></div><h4 className="text-sm font-bold text-gray-800 mb-1">{vp.title}</h4><p className="text-xs text-gray-400 leading-relaxed">{vp.description}</p></div>
-                  ))}
-                </div>
-                <div className="mt-10 flex flex-wrap gap-12">
-                  <div><p className="font-display text-4xl font-bold text-teal-600"><AnimatedCounter value={hasRating ? lead.enrichedRating! : 5.0} /></p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mt-2">Star Rating</p></div>
-                  {lead.enrichedReviews && (<div><p className="font-display text-4xl font-bold text-teal-600"><AnimatedCounter value={lead.enrichedReviews} suffix="+" /></p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mt-2">Reviews</p></div>)}
-                  <div><p className="font-display text-4xl font-bold text-teal-600"><AnimatedCounter value={100} suffix="%" /></p><p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 mt-2">Satisfaction</p></div>
-                </div>
-              </div>
-              </ScrollReveal>
-              <ScrollReveal animation="fade-right" delay={100} className="lg:col-span-2">
-              <div className="flex flex-col gap-5">
-                <div className="bg-teal-50/40 border border-teal-100 rounded-2xl p-7">
-                  <div className="flex gap-0.5 mb-4">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={14} className="text-amber-400 fill-current" />)}</div>
-                  <p className="text-gray-700 text-base italic leading-relaxed mb-4">"{wc?.testimonialQuote || `They handled everything from start to finish — on time, on budget, and the results were exactly what we wanted.`}"</p>
-                  <div className="w-8 h-0.5 bg-teal-200 rounded-full mb-2" />
-                  <span className="text-gray-400 text-xs font-medium">{wc?.testimonialAuthor || 'Local Homeowner'}{location ? ` · ${location}` : ''}</span>
-                </div>
-                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-7">
-                  <h3 className="font-bold text-gray-800 text-base mb-1">Ready to get started?</h3>
-                  <p className="text-gray-400 text-xs mb-5">Free estimate · Same-day response</p>
-                  <div className="space-y-3.5">
-                    {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-3"><div className="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center flex-shrink-0"><Phone size={14} className="text-white" /></div><div><p className="text-[11px] text-gray-400 uppercase tracking-wider font-bold">Phone</p><p className="text-sm font-bold text-gray-800">{lead.phone}</p></div></a>)}
-                    {lead.email && (<a href={`mailto:${lead.email}`} className="flex items-center gap-3"><div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center flex-shrink-0"><Mail size={14} className="text-white" /></div><div><p className="text-[11px] text-gray-400 uppercase tracking-wider font-bold">Email</p><p className="text-sm font-bold text-gray-800">{lead.email}</p></div></a>)}
-                    {lead.enrichedAddress && (<div className="flex items-center gap-3"><div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0"><MapPin size={14} className="text-white" /></div><div><p className="text-[11px] text-gray-400 uppercase tracking-wider font-bold">Location</p><p className="text-sm font-bold text-gray-800">{lead.enrichedAddress}</p></div></div>)}
-                  </div>
-                </div>
-              </div>
-              </ScrollReveal>
-            </div>
+        <section style={{padding:'clamp(40px,6vw,80px) clamp(16px,4vw,48px)',background:'#F5F3EF'}}>
+          <div style={{maxWidth:1200,margin:'0 auto'}}>
+            <Reveal><p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:8}}>Why Us</p>
+            <h2 style={{fontFamily:sans,fontSize:'clamp(28px,4vw,44px)',fontWeight:700,letterSpacing:'-0.02em',marginBottom:48}}>Why choose us.</h2></Reveal>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">{whyUs.slice(0,3).map((vp,i)=>(
+              <Reveal key={i} delay={i*100}><div className="hz-lift bg-white rounded-xl p-7" style={{borderLeft:`4px solid ${A}`}}>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center mb-4" style={{background:`${A}12`}}><CheckCircle size={20} style={{color:A}}/></div>
+                <h4 className="text-lg font-bold mb-2" style={{fontFamily:sans}}>{vp.title}</h4>
+                <p className="text-sm leading-relaxed" style={{color:'#888'}}>{vp.description}</p>
+              </div></Reveal>
+            ))}</div>
           </div>
         </section>
 
-        {/* Full Reviews Section */}
-        <ReviewsSection
-          theme="modern"
-          config={config}
-          location={location}
-          testimonials={[
-            ...(wc?.testimonialQuote ? [{ quote: wc.testimonialQuote, author: wc.testimonialAuthor || 'Verified Customer' }] : []),
-            ...(wc?.additionalTestimonials || []),
-            ...(!wc?.testimonialQuote && !wc?.additionalTestimonials?.length ? [
-              { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, author: 'Sarah M.' },
-              { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, author: 'David R.' },
-            ] : []),
-          ]}
-        />
+        {/* Stats */}
+        <section style={{padding:'clamp(40px,6vw,80px) clamp(16px,4vw,48px)'}}>
+          <div className="flex flex-wrap gap-12 justify-center" style={{maxWidth:1200,margin:'0 auto'}}>
+            {hasR&&<Reveal><div className="text-center"><p className="text-5xl font-bold" style={{fontFamily:sans}}>{lead.enrichedRating}</p><p className="text-xs uppercase mt-2 font-medium" style={{letterSpacing:'0.12em',color:'#bbb'}}>Rating</p></div></Reveal>}
+            {lead.enrichedReviews&&<Reveal delay={100}><div className="text-center"><p className="text-5xl font-bold" style={{fontFamily:sans}}><Counter end={lead.enrichedReviews} suffix="+"/></p><p className="text-xs uppercase mt-2 font-medium" style={{letterSpacing:'0.12em',color:'#bbb'}}>Reviews</p></div></Reveal>}
+            <Reveal delay={200}><div className="text-center"><p className="text-5xl font-bold" style={{fontFamily:sans}}>100%</p><p className="text-xs uppercase mt-2 font-medium" style={{letterSpacing:'0.12em',color:'#bbb'}}>Satisfaction</p></div></Reveal>
+            <Reveal delay={300}><div className="text-center"><p className="text-5xl font-bold" style={{fontFamily:sans}}><Counter end={svc.length}/></p><p className="text-xs uppercase mt-2 font-medium" style={{letterSpacing:'0.12em',color:'#bbb'}}>Services</p></div></Reveal>
+          </div>
+        </section>
 
-        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
-      </PageShell>
+        {/* Testimonials */}
+        <section style={{padding:'clamp(40px,6vw,80px) clamp(16px,4vw,48px)',background:'#F5F3EF'}}>
+          <div style={{maxWidth:1200,margin:'0 auto'}}>
+            <Reveal><p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:8}}>Testimonials</p>
+            <h2 style={{fontFamily:sans,fontSize:'clamp(28px,4vw,44px)',fontWeight:700,letterSpacing:'-0.02em',marginBottom:48}}>What clients say.</h2></Reveal>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">{testis.slice(0,3).map((t,i)=>(
+              <Reveal key={i} delay={i*100}><div className="hz-lift bg-white rounded-xl p-7">
+                <Quote size={28} style={{color:A,opacity:0.15,marginBottom:12}}/>
+                <p className="text-[15px] leading-relaxed mb-6" style={{color:'#555'}}>"{t.text}"</p>
+                <div className="flex items-center gap-3"><div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{background:A}}>{t.name[0]}</div>
+                <div><p className="text-sm font-semibold">{t.name}</p><p className="text-xs" style={{color:'#bbb'}}>{t.loc}</p></div></div>
+              </div></Reveal>
+            ))}</div>
+          </div>
+        </section>
 
-      {/* ═══════════════════════════════════════════
-          PAGE: PORTFOLIO
-       ═══════════════════════════════════════════ */}
-      <PageShell page="portfolio" currentPage={currentPage}>
-        <PageHeader
-          title="Our Work"
-          subtitle="Browse our portfolio of completed projects."
-          bgClass={config.primaryHex ? '' : 'bg-gradient-to-r from-teal-600 via-cyan-600 to-teal-600'}
-          bgStyle={brandGradientStyle(config, 'to right')}
-          subtitleClass="text-teal-100/60"
-          accentClass="text-teal-200"
-          onBackClick={() => navigateTo('home')}
-        />
+        {/* Brand Partners */}
+        {brands.length>0&&(<section style={{padding:'clamp(40px,6vw,60px) clamp(16px,4vw,48px)'}}>
+          <div className="text-center" style={{maxWidth:800,margin:'0 auto'}}>
+            <p style={{fontFamily:mono,fontSize:11,color:'#bbb',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:24}}>Trusted Brands We Work With</p>
+            <div className="flex flex-wrap justify-center gap-8">{brands.map((b,i)=>(
+              <span key={i} className="text-lg font-bold" style={{color:'#ddd'}}>{b}</span>
+            ))}</div>
+          </div>
+        </section>)}
 
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
-          <div className="max-w-7xl mx-auto">
-            {photos.length > 0 ? (
-              <>
-                {/* First photo hero-sized */}
-                {photos[0] && (
-                  <ScrollReveal animation="zoom-in" delay={100}>
-                  <div className="relative overflow-hidden rounded-2xl group border border-gray-100 hover:border-teal-200 transition-all mb-3 sm:mb-4 cursor-pointer" onClick={() => { setLightboxIndex(0); setLightboxOpen(true) }}>
-                    <img src={photos[0]} alt="Project 1" className="w-full object-cover aspect-[4/3] sm:aspect-[16/9] transition-transform duration-700 group-hover:scale-105" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+        {/* FAQ */}
+        <section style={{padding:'clamp(40px,6vw,80px) clamp(16px,4vw,48px)',background:'#F5F3EF'}}>
+          <div style={{maxWidth:700,margin:'0 auto'}}>
+            <Reveal><p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:8}}>FAQ</p>
+            <h2 style={{fontFamily:sans,fontSize:'clamp(24px,3vw,36px)',fontWeight:700,letterSpacing:'-0.02em',marginBottom:40}}>Common questions.</h2></Reveal>
+            {faqs.map((f,i)=>(<Reveal key={i} delay={i*50}><div style={{borderBottom:'1px solid #e8e5df'}}>
+              <button onClick={()=>setOpenFAQ(openFAQ===i?null:i)} className="w-full flex justify-between items-center text-left" style={{background:'none',border:'none',cursor:'pointer',color:'#1a1a1a',padding:'18px 0'}}>
+                <span className="text-[15px] font-semibold pr-5">{f.q}</span><span style={{color:openFAQ===i?A:'#ccc'}}>{openFAQ===i?<Minus size={16}/>:<Plus size={16}/>}</span>
+              </button>
+              <div style={{maxHeight:openFAQ===i?200:0,opacity:openFAQ===i?1:0,overflow:'hidden',transition:'all .3s'}}><p className="text-sm leading-relaxed pb-5" style={{color:'#888'}}>{f.a}</p></div>
+            </div></Reveal>))}
+          </div>
+        </section>
+      </div>
+
+      {/* ================================================================ */}
+      {/* ═══ WORK / PORTFOLIO PAGE ═══ */}
+      {/* ================================================================ */}
+      <div data-page="portfolio" style={{display:page==='work'?'block':'none'}}>
+        {/* Gallery Header */}
+        <section style={{padding:'clamp(100px,14vh,160px) clamp(16px,4vw,48px) 48px'}}><div style={{maxWidth:1200,margin:'0 auto'}}>
+          <Reveal><p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:8}}>Portfolio</p></Reveal>
+          <Reveal delay={80}><h1 style={{fontFamily:sans,fontSize:'clamp(36px,5vw,60px)',fontWeight:700,letterSpacing:'-0.03em',marginBottom:16}}>Our work.</h1></Reveal>
+          <Reveal delay={160}><p className="text-lg max-w-lg" style={{color:'#888',lineHeight:1.6}}>A selection of recent projects{loc?` in ${loc}`:''} and surrounding areas.</p></Reveal>
+        </div></section>
+
+        {/* Photo grid */}
+        <section style={{padding:'0 clamp(16px,4vw,48px) clamp(60px,8vw,100px)'}}>
+          <div style={{maxWidth:1200,margin:'0 auto'}}>
+            {photos.length>0?(
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {photos.slice(0,9).map((p,i)=>(<Reveal key={i} delay={i*60}><div className="overflow-hidden rounded-xl cursor-pointer relative group" onClick={()=>setLb(i)}>
+                  <img src={p} alt="" className="w-full object-cover hz-img-zoom" style={{aspectRatio:i===0?'16/10':'4/3',display:'block'}} loading={i>2?'lazy':undefined} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                  <div className="absolute inset-0 flex items-end p-5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{background:'linear-gradient(to top,rgba(0,0,0,.6),transparent)'}}>
+                    <p style={{fontFamily:mono,fontSize:11,color:'#fff',letterSpacing:'0.12em'}}>PROJECT {String(i+1).padStart(2,'0')}</p>
                   </div>
-                  </ScrollReveal>
-                )}
-                {/* Remaining photos in grid */}
-                {photos.length > 1 && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-                    {photos.slice(1, 7).map((photo, i) => (
-                      <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
-                      <div className="relative overflow-hidden rounded-2xl group border border-gray-100 hover:border-teal-200 transition-all cursor-pointer" onClick={() => { setLightboxIndex(i + 1); setLightboxOpen(true) }}>
-                        <img src={photo} alt={`Project ${i + 2}`} className="w-full object-cover aspect-[4/3] transition-transform duration-700 group-hover:scale-105" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                      </ScrollReveal>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center py-16">
-                <div className="w-16 h-16 rounded-full bg-teal-50 flex items-center justify-center mx-auto mb-4 border border-teal-100">
-                  <Camera size={24} className="text-teal-500" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-800 mb-2">Portfolio Coming Soon</h3>
-                <p className="text-sm text-gray-500 max-w-md mx-auto">We&apos;re putting together our best project photos. Contact us to see examples of our work.</p>
-                <button onClick={ctaNavigate} className={`mt-6 inline-flex items-center gap-2 ${config.primaryHex ? '' : 'bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600'} text-white px-6 py-3 rounded-full font-semibold text-sm transition-all shadow-md`} style={brandGradientStyle(config, 'to right')}>
-                  Request Examples <ArrowRight size={14} />
-                </button>
+                </div></Reveal>))}
               </div>
+            ):(
+              <div className="text-center py-20 bg-white rounded-2xl"><Camera size={40} style={{color:'#ddd',margin:'0 auto 16px'}}/><h3 className="text-xl font-bold mb-3">Portfolio Coming Soon</h3><p className="text-sm mb-8" style={{color:'#aaa'}}>Contact us to see examples of our work.</p><button onClick={()=>{onCTAClick();go('contact')}} className="hz-pill-btn">Request Examples <ArrowRight size={14}/></button></div>
             )}
           </div>
         </section>
 
-        {/* Video Placeholder */}
-        <VideoPlaceholder theme="modern" photo={photos[1]} onCTAClick={ctaNavigate} config={config} />
+        {/* Portfolio CTA */}
+        {photos.length>0&&<section className="text-center" style={{padding:'clamp(40px,6vw,80px) clamp(16px,4vw,48px)',background:'#F5F3EF'}}>
+          <Reveal><h2 style={{fontFamily:sans,fontSize:'clamp(24px,3vw,36px)',fontWeight:700,letterSpacing:'-0.02em',marginBottom:12}}>Like what you see?</h2>
+          <p className="text-base mb-8" style={{color:'#999'}}>Let us bring the same quality to your project.</p>
+          <button onClick={()=>{onCTAClick();go('contact')}} className="hz-pill-btn">Discuss Your Project <ArrowRight size={14}/></button></Reveal>
+        </section>}
+      </div>
 
-        <CTABand closingHeadline={wc?.closingHeadline} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} config={config} />
-      </PageShell>
+      {/* ================================================================ */}
+      {/* ═══ CONTACT PAGE ═══ */}
+      {/* ================================================================ */}
+      <div data-page="contact" style={{display:page==='contact'?'block':'none'}}>
+        {/* Header */}
+        <section style={{padding:'clamp(100px,14vh,160px) clamp(16px,4vw,48px) 0'}}><div style={{maxWidth:1200,margin:'0 auto'}}>
+          <Reveal><p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:8}}>Contact</p></Reveal>
+          <Reveal delay={80}><h1 style={{fontFamily:sans,fontSize:'clamp(36px,5vw,60px)',fontWeight:700,letterSpacing:'-0.03em',marginBottom:16}}>Get in touch.</h1></Reveal>
+          <Reveal delay={160}><p className="text-lg" style={{color:'#888',maxWidth:480}}>We would love to hear from you. Reach out and we will respond same-day.</p></Reveal>
+        </div></section>
 
-      {/* ═══════════════════════════════════════════
-          PAGE: CONTACT
-       ═══════════════════════════════════════════ */}
-      <PageShell page="contact" currentPage={currentPage}>
-        <PageHeader
-          title="Get In Touch"
-          subtitle="We'd love to hear from you. Reach out for a free estimate."
-          bgClass={config.primaryHex ? '' : 'bg-gradient-to-r from-teal-600 via-cyan-600 to-teal-600'}
-          bgStyle={brandGradientStyle(config, 'to right')}
-          subtitleClass="text-teal-100/60"
-          accentClass="text-teal-200"
-          onBackClick={() => navigateTo('home')}
-        />
-
-        {/* Contact form + info */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-              <ScrollReveal animation="fade-left" delay={0}>
-              <div>
-                <div className="inline-flex items-center gap-2 bg-teal-50 text-teal-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-teal-100">Contact</div>
-                <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-8">Get your free estimate.</h2>
-                <div className="space-y-5">
-                  {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-sm"><Phone size={20} className="text-white" /></div><div><p className="text-sm font-bold text-gray-800">{lead.phone}</p><p className="text-xs text-gray-400">Call or text anytime</p></div></a>)}
-                  {lead.email && (<a href={`mailto:${lead.email}`} className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-sm"><Mail size={20} className="text-white" /></div><div><p className="text-sm font-bold text-gray-800">{lead.email}</p><p className="text-xs text-gray-400">We reply fast</p></div></a>)}
-                  {lead.enrichedAddress && (<div className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0 shadow-sm"><MapPin size={20} className="text-white" /></div><div><p className="text-sm font-bold text-gray-800">{lead.enrichedAddress}</p><p className="text-xs text-gray-400">{location}</p></div></div>)}
-                </div>
-                <div className="flex gap-3 mt-10">
-                  <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-teal-500 hover:border-teal-200 transition-all"><Facebook size={16} /></a>
-                  <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-teal-500 hover:border-teal-200 transition-all"><Instagram size={16} /></a>
-                  <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-gray-400 hover:text-teal-500 hover:border-teal-200 transition-all"><GoogleIcon size={16} /></a>
-                </div>
-              </div>
-              </ScrollReveal>
-              <ScrollReveal animation="fade-right" delay={100}>
-              <ContactFormEnhanced
-                theme="modern"
-                config={config}
-                previewId={lead.previewId}
-                services={services}
-                companyName={lead.companyName}
-              />
-              </ScrollReveal>
-            </div>
+        {/* Contact info cards */}
+        <section style={{padding:'clamp(40px,5vw,64px) clamp(16px,4vw,48px)'}}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{maxWidth:1200,margin:'0 auto'}}>
+            {[
+              lead.phone&&{icon:<Phone size={20}/>,label:'Phone',value:fmt(lead.phone),sub:'Call or text anytime',href:`tel:${lead.phone}`},
+              lead.email&&{icon:<Mail size={20}/>,label:'Email',value:lead.email,sub:'We respond same-day',href:`mailto:${lead.email}`},
+              (lead.enrichedAddress||loc)&&{icon:<MapPin size={20}/>,label:'Location',value:lead.enrichedAddress||loc,sub:loc,href:undefined},
+            ].filter(Boolean).map((item,i)=>{
+              const c = item as {icon:React.ReactNode;label:string;value:string;sub:string;href?:string}
+              return(<Reveal key={i} delay={i*80}><div className="hz-lift bg-white rounded-xl p-6 text-center" style={{border:'1px solid #eee'}}>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{background:`${A}10`,color:A}}>{c.icon}</div>
+                <p style={{fontFamily:mono,fontSize:10,letterSpacing:'0.12em',textTransform:'uppercase',color:'#bbb',marginBottom:8}}>{c.label}</p>
+                {c.href?<a href={c.href} onClick={c.label==='Phone'?onCallClick:undefined} className="font-semibold text-base" style={{color:'#1a1a1a',textDecoration:'none'}}>{c.value}</a>:<p className="font-semibold text-base">{c.value}</p>}
+                <p className="text-xs mt-1" style={{color:'#bbb'}}>{c.sub}</p>
+              </div></Reveal>)
+            })}
           </div>
         </section>
 
-        {/* FAQ */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-gray-50/50">
-          <div className="max-w-3xl mx-auto">
-            <ScrollReveal animation="fade-up" delay={0}>
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 bg-teal-50 text-teal-600 rounded-full px-4 py-1.5 text-xs font-semibold mb-4 border border-teal-100">FAQ</div>
-              <h2 className="font-display text-3xl sm:text-4xl font-bold text-gray-900">Common questions.</h2>
-            </div>
-            </ScrollReveal>
-            <ScrollReveal animation="fade-up" delay={100}>
-            <div className="bg-white rounded-2xl border border-gray-100 px-6 sm:px-8 shadow-sm">
-              {faqs.map((f, i) => <FAQItem key={i} question={f.q} answer={f.a} isOpen={openFAQ === i} onToggle={() => setOpenFAQ(openFAQ === i ? null : i)} />)}
-            </div>
-            </ScrollReveal>
+        {/* Service area + FAQ + Form */}
+        <section style={{padding:'clamp(40px,6vw,80px) clamp(16px,4vw,48px)',background:'#F5F3EF'}}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16" style={{maxWidth:1200,margin:'0 auto'}}>
+            <Reveal><div>
+              {wc?.serviceAreaText&&<div className="bg-white rounded-xl p-6 mb-8" style={{borderLeft:`4px solid ${A}`}}>
+                <p style={{fontFamily:mono,fontSize:10,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:8}}>Service Area</p>
+                <p className="text-sm leading-relaxed" style={{color:'#777'}}>{wc.serviceAreaText}</p>
+              </div>}
+              <p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:20}}>FAQ</p>
+              {faqs.map((f,i)=>(<div key={i} style={{borderBottom:'1px solid #e8e5df'}}>
+                <button onClick={()=>setOpenFAQ(openFAQ===i?null:i)} className="w-full flex justify-between items-center text-left" style={{background:'none',border:'none',cursor:'pointer',color:'#1a1a1a',padding:'16px 0'}}>
+                  <span className="text-sm font-semibold pr-5">{f.q}</span><span style={{color:openFAQ===i?A:'#ccc'}}>{openFAQ===i?<Minus size={14}/>:<Plus size={14}/>}</span>
+                </button>
+                <div style={{maxHeight:openFAQ===i?200:0,opacity:openFAQ===i?1:0,overflow:'hidden',transition:'all .3s'}}><p className="text-sm leading-relaxed pb-4" style={{color:'#888'}}>{f.a}</p></div>
+              </div>))}
+            </div></Reveal>
+            <Reveal delay={120}><div className="bg-white rounded-xl p-8 border border-gray-100" style={{boxShadow:'0 4px 30px rgba(0,0,0,0.04)'}}>
+              <h3 className="text-xl font-bold mb-1" style={{fontFamily:sans}}>Request an Estimate</h3>
+              <p className="text-[13px] mb-6" style={{color:'#aaa'}}>Free estimate, no obligation.</p>
+              {['Full Name','Phone','Email'].map(l=>(<input key={l} placeholder={l} className="w-full text-sm mb-3 outline-none rounded-xl" style={{padding:'14px 16px',background:'#f8f7f5',border:'1px solid #eee',color:'#1a1a1a',fontFamily:body,boxSizing:'border-box'}}/>))}
+              {svc.length>0&&<select className="w-full text-sm mb-3 rounded-xl" style={{padding:'14px 16px',background:'#f8f7f5',border:'1px solid #eee',color:'#aaa',fontFamily:body,boxSizing:'border-box'}}><option>Select service</option>{svc.map(s=><option key={s}>{s}</option>)}</select>}
+              <textarea placeholder="Tell us about your project..." rows={4} className="w-full text-sm mb-5 outline-none resize-none rounded-xl" style={{padding:'14px 16px',background:'#f8f7f5',border:'1px solid #eee',color:'#1a1a1a',fontFamily:body,boxSizing:'border-box'}}/>
+              <button onClick={onCTAClick} className="hz-pill-btn w-full justify-center" style={{padding:16}}>Submit Request <ArrowRight size={14}/></button>
+            </div></Reveal>
           </div>
         </section>
-      </PageShell>
+      </div>
 
-      {/* ═══════ FOOTER (always visible) ═══════ */}
-      <footer className="bg-gray-950 py-14 px-4 sm:px-6 md:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
-            <div>
-              <div className="flex items-center gap-2.5">{lead.logo ? (<img src={lead.logo} alt="" className="h-7 w-7 rounded-xl object-cover" />) : null}<span className="text-white font-bold text-lg">{lead.companyName}</span></div>
-              <p className="text-gray-400 text-sm leading-relaxed mt-3">Professional {industryLabel}{location ? ` in ${location}` : ''}. Quality workmanship, guaranteed.</p>
-              {hasRating && (<div className="flex items-center gap-2 mt-4"><div className="flex gap-0.5">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={11} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-amber-400 fill-current' : 'text-gray-700'} />)}</div><span className="text-gray-500 text-xs">{lead.enrichedRating} rating</span></div>)}
-              <div className="flex gap-2.5 mt-5">
-                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-white transition-all"><Facebook size={13} /></a>
-                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-white transition-all"><Instagram size={13} /></a>
-                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center text-gray-500 hover:text-white transition-all"><GoogleIcon size={12} /></a>
-              </div>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4 text-xs uppercase tracking-[0.15em]">Quick Links</h4>
-              <ul className="space-y-2.5 text-sm text-gray-400">
-                {navSections.map((s) => (
-                  <li key={s.page}><button onClick={() => navigateTo(s.page)} data-nav-page={s.page} className="hover:text-white transition-colors">{s.label}</button></li>
-                ))}
-              </ul>
-            </div>
-            <div><h4 className="text-white font-semibold mb-4 text-xs uppercase tracking-[0.15em]">Contact</h4><div className="space-y-3 text-sm text-gray-400">{lead.phone && <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-2.5 hover:text-white transition-colors"><Phone size={13} className="text-teal-400" />{lead.phone}</a>}{lead.email && <a href={`mailto:${lead.email}`} className="flex items-center gap-2.5 hover:text-white transition-colors"><Mail size={13} className="text-teal-400" />{lead.email}</a>}{lead.enrichedAddress && <p className="flex items-center gap-2.5"><MapPin size={13} className="text-teal-400 flex-shrink-0" />{lead.enrichedAddress}</p>}</div></div>
-          </div>
-          <div className="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-gray-500 text-xs">&copy; {new Date().getFullYear()} {lead.companyName}. All rights reserved.</p>
-            <div className="flex items-center gap-4">
-              {location && <p className="text-gray-600 text-xs">Professional {industryLabel} · {location}</p>}
-              <span className="text-gray-700 text-[10px]">Powered by <a href="https://brightautomations.com" target="_blank" rel="noopener noreferrer" className="text-teal-500 hover:text-teal-400 transition-colors">Bright Automations</a></span>
-            </div>
-          </div>
+      {/* ═══ FOOTER ═══ */}
+      <footer style={{background:'#fff',borderTop:'1px solid #eee',padding:'clamp(48px,6vw,80px) clamp(16px,4vw,48px) clamp(80px,10vw,120px)'}}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12" style={{maxWidth:1200,margin:'0 auto'}}>
+          <div><div className="flex items-center gap-2 mb-4">{lead.logo?<img src={lead.logo} alt="" className="h-6 w-6 rounded-full object-cover"/>:<div className="w-2 h-2 rounded-full" style={{background:A}}/>}<span className="font-bold" style={{fontFamily:sans}}>{lead.companyName}</span></div>
+          <p className="text-sm leading-relaxed" style={{color:'#aaa',maxWidth:300}}>Professional {indLabel}{loc?` in ${loc}`:''}.  Licensed and insured.</p></div>
+          <div><p className="text-[10px] font-semibold uppercase mb-4" style={{color:'#ccc',letterSpacing:'0.12em'}}>Pages</p>
+          <div className="flex flex-col gap-2.5">{PAGES.map(p=><button key={p.k} onClick={()=>go(p.k)} className="text-sm text-left p-0" style={{background:'none',border:'none',color:'#999',cursor:'pointer'}}>{p.l}</button>)}</div></div>
+          <div><p className="text-[10px] font-semibold uppercase mb-4" style={{color:'#ccc',letterSpacing:'0.12em'}}>Contact</p>
+          <div className="flex flex-col gap-3 text-sm" style={{color:'#999'}}>
+            {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} style={{textDecoration:'none',color:'inherit'}}>{fmt(lead.phone)}</a>}
+            {lead.email&&<a href={`mailto:${lead.email}`} style={{textDecoration:'none',color:'inherit'}}>{lead.email}</a>}
+            {loc&&<span>{loc}</span>}
+          </div></div>
+        </div>
+        <div className="flex flex-wrap justify-between items-center gap-4" style={{maxWidth:1200,margin:'0 auto',borderTop:'1px solid #f0f0f0',paddingTop:24}}>
+          <p className="text-xs" style={{color:'#ccc'}}>&copy; {new Date().getFullYear()} {lead.companyName}</p>
+          <span className="text-[10px]" style={{color:'#ddd'}}>Powered by <a href="https://brightautomations.com" target="_blank" rel="noopener noreferrer" style={{color:'#bbb'}}>Bright Automations</a></span>
         </div>
       </footer>
 
-      <PhotoLightbox photos={photos} isOpen={lightboxOpen} initialIndex={lightboxIndex} onClose={() => setLightboxOpen(false)} />
-      <ChatbotWidget companyName={lead.companyName} accentColor={brandAccent(config, '#14b8a6')} />
-      <div className="h-16 sm:h-0" />
+      {/* ═══ LIGHTBOX with prev/next ═══ */}
+      {lb!==null&&photos[lb]&&(<div className="fixed inset-0 z-[200] flex items-center justify-center p-5" style={{background:'rgba(0,0,0,.92)'}} onClick={()=>setLb(null)}>
+        <img src={photos[lb]} alt="" className="rounded-xl" style={{maxWidth:'90%',maxHeight:'85vh',objectFit:'contain'}}/>
+        <button className="absolute top-6 right-6 w-11 h-11 rounded-full flex items-center justify-center bg-white/10 border border-white/20 text-white cursor-pointer" onClick={e=>{e.stopPropagation();setLb(null)}}><X size={18}/></button>
+        {lb>0&&<button className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center bg-white/10 border border-white/20 text-white cursor-pointer" onClick={e=>{e.stopPropagation();setLb(lb-1)}}><ChevronLeft size={20}/></button>}
+        {lb<photos.length-1&&<button className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full flex items-center justify-center bg-white/10 border border-white/20 text-white cursor-pointer" onClick={e=>{e.stopPropagation();setLb(lb+1)}}><ChevronRight size={20}/></button>}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2" style={{fontFamily:mono,fontSize:11,color:'rgba(255,255,255,.5)',letterSpacing:'0.1em'}}>{lb+1} / {photos.length}</div>
+      </div>)}
+
+      <ChatWidget name={lead.companyName} accent={A}/>
+      <div className="h-20 lg:h-0"/>
     </div>
   )
 }

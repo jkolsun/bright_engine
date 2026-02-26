@@ -1,7 +1,7 @@
 'use client'
 
-import { useCallback } from 'react'
-import { getIndustryConfig } from './config/industry-mapping'
+import { useCallback, useState, useEffect } from 'react'
+import { getAllIndustryVariants } from './config/industry-mapping'
 import type { PreviewLead, WebsiteCopy } from './config/template-types'
 import ModernTemplate from './templates/ModernTemplate'
 import ModernBTemplate from './templates/ModernBTemplate'
@@ -13,6 +13,7 @@ import PremiumTemplate from './templates/PremiumTemplate'
 import PremiumBTemplate from './templates/PremiumBTemplate'
 import PremiumCTemplate from './templates/PremiumCTemplate'
 import PreviewQAChecker from './shared/PreviewQAChecker'
+import TemplateSwitcher from './shared/TemplateSwitcher'
 
 /** Detect if a string is a raw placeholder label leaked from the AI parser */
 function isPlaceholder(text: string): boolean {
@@ -89,12 +90,57 @@ export default function PreviewTemplate({ lead, websiteCopy }: { lead: any; webs
     colorPrefs: lead.colorPrefs || undefined,
   }
 
-  // Get base config from industry mapping, then override with client colors if present
-  const baseConfig = getIndustryConfig(typedLead.industry, typedLead.companyName)
+  // Get ALL variants for this industry
+  const { configs: allVariants, defaultIndex } = getAllIndustryVariants(typedLead.industry, typedLead.companyName)
+
+  // Template switching state
+  const [activeIndex, setActiveIndex] = useState(defaultIndex)
+  const [fading, setFading] = useState(false)
+
+  // Restore persisted choice on mount
+  useEffect(() => {
+    if (!typedLead.previewId) return
+    try {
+      const saved = localStorage.getItem(`template_choice_${typedLead.previewId}`)
+      if (saved !== null) {
+        const idx = parseInt(saved, 10)
+        if (idx >= 0 && idx < allVariants.length) {
+          setActiveIndex(idx)
+        }
+      }
+    } catch {}
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Apply colorPrefs override to whichever variant is active
+  const baseConfig = allVariants[activeIndex]
   const cp = typedLead.colorPrefs
   const config = cp
     ? { ...baseConfig, primaryHex: cp.primary, secondaryHex: cp.secondary, accentHex: cp.accent || cp.primary }
     : baseConfig
+
+  const handleSwitch = useCallback((index: number) => {
+    if (index === activeIndex) return
+    setFading(true)
+    setTimeout(() => {
+      setActiveIndex(index)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      setFading(false)
+      // Persist choice
+      try {
+        localStorage.setItem(`template_choice_${typedLead.previewId}`, String(index))
+      } catch {}
+      // Track the switch
+      fetch('/api/preview/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          previewId: typedLead.previewId,
+          event: 'template_switch',
+          metadata: { from: allVariants[activeIndex]?.template, to: allVariants[index]?.template },
+        }),
+      }).catch(() => {})
+    }, 200)
+  }, [activeIndex, allVariants, typedLead.previewId])
 
   const onCTAClick = useCallback(async () => {
     await fetch('/api/preview/track', {
@@ -131,8 +177,17 @@ export default function PreviewTemplate({ lead, websiteCopy }: { lead: any; webs
 
   return (
     <>
-      {template}
+      <div style={{ opacity: fading ? 0 : 1, transition: 'opacity 200ms ease-in-out' }}>
+        {template}
+      </div>
       <PreviewQAChecker lead={lead} websiteCopy={cleanCopy} />
+      {allVariants.length > 1 && (
+        <TemplateSwitcher
+          variants={allVariants}
+          activeIndex={activeIndex}
+          onSwitch={handleSwitch}
+        />
+      )}
     </>
   )
 }

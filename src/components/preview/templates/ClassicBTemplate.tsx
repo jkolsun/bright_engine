@@ -1,725 +1,753 @@
 'use client'
 /*
- * CLASSIC-B TEMPLATE — "Greenfield"
- * Design Direction: Editorial/Storytelling, warm local
- * Brand Voice: Warm & Local
- * Multi-page with hash-based client-side routing
- *
- * CHANGES: +chatbot +social nav +mobile drawer +FAQ +contact form
- * Services → numbered list, testimonials → staggered, gallery → asymmetric
+ * IRONCLAD TEMPLATE — Premium Industrial
+ * Dark slate (#1C1F26), Oswald condensed headings, table-layout services
+ * Darkened photo hero, stamped badges, thick dividers, bolt corner decorations
+ * data-page wrapper divs for snapshot delivery
  */
 
 import { useState, useEffect, useRef } from 'react'
-import {
-  Phone, MapPin, Star, Shield, Clock, CheckCircle, ArrowRight, Mail,
-  Heart, Quote, Leaf, Camera,
-  MessageCircle, X, Send, ChevronDown, Menu, ChevronRight,
-  Minus, Plus, Facebook, Instagram
-} from 'lucide-react'
+import { Phone, MapPin, Star, CheckCircle, ArrowRight, Mail, Camera, MessageCircle, X, Send, Menu, Minus, Plus, Quote, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
-import ScrollReveal from '../shared/ScrollReveal'
-import usePageRouter from '../shared/usePageRouter'
-import type { PageName } from '../shared/usePageRouter'
-import PageShell from '../shared/PageShell'
-import PageHeader from '../shared/PageHeader'
-import { brandGradientStyle, brandGradientClass, brandAccent } from '../shared/colorUtils'
-import { distributePhotos } from '../shared/photoUtils'
-import { ServiceHero, ServiceGrid, ProcessTimeline, WhyChooseUs } from '../shared/ServiceSections'
-import TrustBadges from '../shared/TrustBadges'
-import BrandsStrip from '../shared/BrandsStrip'
-import ReviewsSection from '../shared/ReviewsSection'
-import ContactFormEnhanced from '../shared/ContactFormEnhanced'
-import PhotoLightbox from '../shared/PhotoLightbox'
-import AnimatedCounter from '../shared/AnimatedCounter'
-import VideoPlaceholder from '../shared/VideoPlaceholder'
 
-function formatNavPhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '')
-  if (digits.length === 11 && digits[0] === '1') {
-    return `(${digits.slice(1,4)}) ${digits.slice(4,7)}-${digits.slice(7)}`
-  }
-  if (digits.length === 10) {
-    return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`
-  }
+function fmt(phone: string): string {
+  const d = phone.replace(/\D/g, '')
+  if (d.length === 11 && d[0] === '1') return `(${d.slice(1,4)}) ${d.slice(4,7)}-${d.slice(7)}`
+  if (d.length === 10) return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`
   return phone
 }
 
-function GoogleIcon({ size = 15, className = '' }: { size?: number; className?: string }) {
-  return (<svg width={size} height={size} viewBox="0 0 24 24" className={className} fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" /></svg>)
-}
-
-// ─── CHATBOT (light theme) ───
-function ChatbotWidget({ companyName, accentColor = '#15803d' }: { companyName: string; accentColor?: string }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [messages, setMessages] = useState<{from: string; text: string}[]>([])
-  const [input, setInput] = useState('')
-  const [isTyping, setIsTyping] = useState(false)
-  const endRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
-  useEffect(() => {
-    if (isOpen && messages.length === 0) {
-      setIsTyping(true)
-      const t = setTimeout(() => {
-        setMessages([{ from: 'bot', text: `Hi there! 👋 Welcome to ${companyName}. Whether you need a quote or just have a question, I'm happy to help.` }])
-        setIsTyping(false)
-      }, 800)
-      return () => clearTimeout(t)
-    }
-    if (isOpen) setTimeout(() => inputRef.current?.focus(), 100)
-  }, [isOpen, companyName])
-
-  const quickReplies = ['Get a free estimate', 'What services do you offer?', 'Hours & availability']
-
-  const handleSend = (text?: string) => {
-    const msg = text || input.trim()
-    if (!msg) return
-    setMessages(p => [...p, { from: 'user', text: msg }])
-    setInput('')
-    setIsTyping(true)
-    setTimeout(() => {
-      let reply = "Thanks for reaching out! Someone from our team will get back to you soon. Call us anytime for faster service."
-      if (msg.toLowerCase().includes('quote') || msg.toLowerCase().includes('estimate')) reply = "We'd love to give you a free estimate! Tell me about your project, or give us a call and we'll walk through it together."
-      else if (msg.toLowerCase().includes('service')) reply = "We offer a full range of services — scroll down to see the list, or tell me what you need!"
-      else if (msg.toLowerCase().includes('hour')) reply = "We're available Monday through Saturday. Call us anytime — we'll call back within the hour!"
-      setMessages(p => [...p, { from: 'bot', text: reply }])
-      setIsTyping(false)
-    }, 1200)
+function getAccent(config: TemplateProps['config']): string {
+  const m: Record<string, string> = {
+    'amber-300':'#fcd34d','amber-400':'#fbbf24','amber-500':'#f59e0b','amber-600':'#d97706',
+    'sky-400':'#38bdf8','sky-500':'#0ea5e9','cyan-400':'#22d3ee','cyan-600':'#0891b2',
+    'teal-400':'#2dd4bf','teal-500':'#14b8a6','emerald-400':'#34d399','emerald-500':'#10b981','emerald-600':'#059669',
+    'green-400':'#4ade80','green-500':'#22c55e','green-600':'#16a34a',
+    'lime-400':'#a3e635','lime-500':'#84cc16',
+    'violet-400':'#a78bfa','purple-600':'#9333ea',
+    'blue-400':'#60a5fa','blue-500':'#3b82f6','blue-600':'#2563eb',
+    'red-600':'#dc2626','rose-500':'#f43f5e',
+    'orange-400':'#fb923c','orange-500':'#f97316',
+    'yellow-500':'#eab308',
+    'slate-600':'#475569','gray-600':'#4b5563',
   }
-
-  return (
-    <>
-      <button onClick={() => setIsOpen(!isOpen)} className="fixed bottom-6 right-5 z-[100] group sm:bottom-6 bottom-20" aria-label="Chat with us">
-        <div className="w-[58px] h-[58px] rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-105" style={{ background: `linear-gradient(135deg, ${accentColor}, #059669)` }}>
-          {isOpen ? <X size={22} className="text-white" /> : <MessageCircle size={22} className="text-white" />}
-        </div>
-        {!isOpen && <span className="absolute inset-0 rounded-full animate-ping opacity-20" style={{ background: accentColor }} />}
-        {!isOpen && (<div className="absolute bottom-full right-0 mb-3 whitespace-nowrap bg-white text-gray-800 text-sm font-semibold px-4 py-2 rounded-xl shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">Chat with us!<div className="absolute top-full right-6 w-2 h-2 bg-white transform rotate-45 -translate-y-1" /></div>)}
-      </button>
-      {isOpen && (
-        <div className="fixed sm:bottom-24 bottom-28 right-5 z-[100] w-[370px] max-w-[calc(100vw-2.5rem)] bg-white rounded-2xl shadow-2xl border border-green-100 overflow-hidden">
-          <div className="px-5 py-4 text-white" style={{ background: `linear-gradient(135deg, ${accentColor}, #059669)` }}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center"><MessageCircle size={18} className="text-white" /></div>
-              <div><p className="font-bold text-sm">{companyName}</p><div className="flex items-center gap-1.5"><span className="w-2 h-2 bg-green-300 rounded-full animate-pulse" /><span className="text-xs text-white/80">Online now</span></div></div>
-            </div>
-            <p className="text-[10px] text-white/40 mt-2.5 tracking-wide uppercase">AI Assistant by Bright Automations · Included with your website</p>
-          </div>
-          <div className="h-[280px] overflow-y-auto px-4 py-4 space-y-3 bg-green-50/30">
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] px-4 py-2.5 text-sm leading-relaxed ${msg.from === 'user' ? 'text-white rounded-2xl rounded-br-sm' : 'bg-white text-gray-700 rounded-2xl rounded-bl-sm shadow-sm border border-green-100'}`} style={msg.from === 'user' ? { background: accentColor } : undefined}>{msg.text}</div>
-              </div>
-            ))}
-            {isTyping && (<div className="flex justify-start"><div className="bg-white px-4 py-3 rounded-2xl rounded-bl-sm shadow-sm border border-green-100"><div className="flex gap-1"><span className="w-2 h-2 bg-green-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} /><span className="w-2 h-2 bg-green-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} /><span className="w-2 h-2 bg-green-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} /></div></div></div>)}
-            <div ref={endRef} />
-          </div>
-          {messages.length <= 1 && (<div className="px-4 pb-2 flex gap-2 flex-wrap bg-green-50/30">{quickReplies.map((qr, i) => (<button key={i} onClick={() => handleSend(qr)} className="text-xs px-3 py-1.5 rounded-full border border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 transition-all">{qr}</button>))}</div>)}
-          <div className="px-4 py-3 border-t border-green-100 bg-white">
-            <div className="flex gap-2">
-              <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder="Type a message..." className="flex-1 text-sm px-4 py-2.5 rounded-full bg-green-50 border border-green-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500/30 placeholder:text-gray-400" />
-              <button onClick={() => handleSend()} disabled={!input.trim()} className="w-10 h-10 rounded-full flex items-center justify-center text-white transition-all disabled:opacity-30" style={{ background: accentColor }}><Send size={15} /></button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  )
+  return m[config.accentColor] || '#f59e0b'
 }
 
-// ─── MOBILE NAV ───
-function MobileNav({ isOpen, onClose, companyName, logo, sections, phone, config, onCallClick, onCTAClick, onNavigate }: { isOpen: boolean; onClose: () => void; companyName: string; logo?: string; sections: { page: PageName; label: string }[]; phone?: string; config: import('../config/template-types').IndustryConfig; onCallClick: () => void; onCTAClick: () => void; onNavigate: (page: PageName) => void }) {
-  if (!isOpen) return null
-  return (
-    <div className="fixed inset-0 z-[90] lg:hidden">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="absolute right-0 top-0 bottom-0 w-[300px] bg-white shadow-2xl">
-        <div className="p-6 h-full flex flex-col">
-          <div className="flex justify-between items-center mb-10">
-            <div className="flex items-center gap-2">{logo ? (<img src={logo} alt="" className="h-7 w-7 rounded-lg object-cover" />) : (<div className={`w-7 h-7 rounded-lg ${brandGradientClass(config)} flex items-center justify-center`} style={brandGradientStyle(config)}><Leaf size={13} className="text-white" /></div>)}<span className="text-lg font-bold text-green-900">{companyName}</span></div>
-            <button onClick={onClose} className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center text-green-700"><X size={18} /></button>
-          </div>
-          <nav className="space-y-1 flex-1">{sections.map((s) => (<button key={s.page} data-nav-page={s.page} onClick={() => { onNavigate(s.page); onClose() }} className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-green-800 hover:bg-green-50 transition-all text-[15px] font-medium">{s.label}<ChevronRight size={16} className="text-green-300" /></button>))}</nav>
-          <div className="flex gap-3 mb-5">
-            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center text-green-600 hover:text-green-800 hover:bg-green-100 transition-colors"><Facebook size={16} /></a>
-            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center text-green-600 hover:text-green-800 hover:bg-green-100 transition-colors"><Instagram size={16} /></a>
-            <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center text-green-600 hover:text-green-800 hover:bg-green-100 transition-colors"><GoogleIcon size={16} /></a>
-          </div>
-          <div className="space-y-3">
-            {phone && (<a href={`tel:${phone}`} onClick={() => { onCallClick(); onClose() }} className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-green-50 text-green-900 font-bold text-sm border border-green-200"><Phone size={16} />Call {formatNavPhone(phone)}</a>)}
-            <button onClick={() => { onCTAClick(); onNavigate('contact'); onClose() }} className={`flex items-center justify-center gap-2 w-full py-3.5 rounded-xl ${brandGradientClass(config, 'bg-gradient-to-r')} text-white font-bold text-sm`} style={brandGradientStyle(config, 'to right')}>Get Free Estimate</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+function Counter({ end, suffix = '' }: { end: number; suffix?: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const counted = useRef(false)
+  useEffect(() => {
+    if (!ref.current) return
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && !counted.current) {
+        counted.current = true
+        let f = 0
+        const step = Math.max(1, Math.floor(end / 30))
+        const iv = setInterval(() => { f += step; if (f >= end) { f = end; clearInterval(iv) } if (ref.current) ref.current.textContent = f + suffix }, 30)
+      }
+    }, { threshold: 0.3 })
+    obs.observe(ref.current)
+    return () => obs.disconnect()
+  }, [end, suffix])
+  return <span ref={ref}>0{suffix}</span>
 }
 
-// ─── FAQ ITEM ───
-function FAQItem({ question, answer, isOpen, onToggle }: { question: string; answer: string; isOpen: boolean; onToggle: () => void }) {
-  return (
-    <div className="border-b border-green-100 last:border-0">
-      <button onClick={onToggle} className="w-full flex items-center justify-between py-5 text-left group">
-        <span className="text-[15px] font-medium text-green-900 group-hover:text-green-700 transition-colors pr-6">{question}</span>
-        <span className="flex-shrink-0 w-8 h-8 rounded-full bg-green-50 group-hover:bg-green-100 flex items-center justify-center transition-all">
-          {isOpen ? <Minus size={14} className="text-green-600" /> : <Plus size={14} className="text-green-400" />}
-        </span>
-      </button>
-      <div className={`overflow-hidden transition-all duration-300 ${isOpen ? 'max-h-[200px] opacity-100 pb-5' : 'max-h-0 opacity-0'}`}>
-        <p className="text-sm text-green-700/60 leading-relaxed pr-14">{answer}</p>
-      </div>
-    </div>
-  )
+function Reveal({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string }) {
+  const [vis, setVis] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = ref.current; if (!el) return
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVis(true); obs.disconnect() } }, { threshold: 0.15 })
+    obs.observe(el); return () => obs.disconnect()
+  }, [])
+  return <div ref={ref} className={className} style={{ opacity: vis ? 1 : 0, transform: vis ? 'translateY(0)' : 'translateY(24px)', transition: `opacity .8s ease ${delay}ms, transform .8s ease ${delay}ms` }}>{children}</div>
 }
 
-/* ═══════ CTA BAND (reused on multiple pages) ═══════ */
-function CTABand({ closingHeadline, companyName, location, config, onCTAClick, onNavigateContact }: { closingHeadline?: string; companyName: string; location: string; config: import('../config/template-types').IndustryConfig; onCTAClick: () => Promise<void>; onNavigateContact: () => void }) {
-  return (
-    <section className={`relative py-16 sm:py-20 md:py-28 overflow-hidden ${brandGradientClass(config, 'bg-gradient-to-r')}`} style={brandGradientStyle(config, 'to right')}>
-      <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
-      <ScrollReveal animation="fade-in" delay={0}>
-      <div className="relative max-w-4xl mx-auto px-5 sm:px-8 text-center">
-        <Quote size={40} className="text-white/15 mx-auto mb-6" />
-        <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white leading-snug">{closingHeadline || "We don't just do the job — we build relationships that last."}</p>
-        <button onClick={() => { onCTAClick(); onNavigateContact() }} className="mt-8 inline-flex items-center gap-2.5 bg-white text-green-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-green-50 transition-all shadow-xl group">
-          Get Free Estimate <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-        </button>
-        <p className="mt-6 text-white/50 text-sm font-medium">— The {companyName} Team{location ? ` · ${location}` : ''}</p>
-      </div>
-      </ScrollReveal>
-    </section>
-  )
+/* bolt corners reusable */
+function Bolts() {
+  return <>
+    <div style={{ position: 'absolute', top: 8, left: 8, width: 6, height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }} />
+    <div style={{ position: 'absolute', top: 8, right: 8, width: 6, height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }} />
+    <div style={{ position: 'absolute', bottom: 8, left: 8, width: 6, height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }} />
+    <div style={{ position: 'absolute', bottom: 8, right: 8, width: 6, height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }} />
+  </>
 }
 
-// ═══════ MAIN TEMPLATE ═══════
 export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick, websiteCopy }: TemplateProps) {
-  const { currentPage, navigateTo } = usePageRouter()
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [openFAQ, setOpenFAQ] = useState<number | null>(null)
-  const [lightboxOpen, setLightboxOpen] = useState(false)
-  const [lightboxIndex, setLightboxIndex] = useState(0)
-  /** Combined handler: track CTA click + navigate to contact */
-  const ctaNavigate = () => { onCTAClick(); navigateTo('contact') }
+  const A = getAccent(config)
+  const indLabel = lead.industry.toLowerCase().replace(/_/g, ' ')
+  const name = lead.companyName || indLabel
+  const phone = lead.phone || ''
+  const city = lead.city || ''
+  const loc = [lead.city, lead.state].filter(Boolean).join(', ')
 
-  const services = lead.enrichedServices || []
+  const svc = lead.enrichedServices || []
   const photos = lead.enrichedPhotos || []
-  const photosDist = distributePhotos(photos)
-  const industryLabel = lead.industry.toLowerCase().replace(/_/g, ' ')
-  const location = [lead.city, lead.state].filter(Boolean).join(', ')
-  const hasRating = lead.enrichedRating && lead.enrichedRating > 0
+  const rating = lead.enrichedRating || 0
+  const reviewCount = lead.enrichedReviews || 0
+  const heroPhoto = photos[0] || ''
   const wc = websiteCopy
 
-  const navSections: { page: PageName; label: string }[] = [
-    { page: 'home', label: 'Home' }, { page: 'services', label: 'Services' },
-    { page: 'about', label: 'About' }, { page: 'portfolio', label: 'Our Work' },
-    { page: 'contact', label: 'Contact' },
-  ]
+  const heroHeadline = wc?.heroHeadline || `${indLabel} Done Right`
+  const heroSub = wc?.heroSubheadline || `Trusted ${indLabel} professionals serving ${city || 'your area'}`
+  const aboutText = wc?.aboutParagraph1 || `${name} delivers dependable ${indLabel} services with precision, transparency, and a relentless focus on quality. We show up on time, do the job right, and stand behind every project.`
+  const aboutText2 = wc?.aboutParagraph2 || `From day one our mission has been simple: do honest work at fair prices. Every crew member is trained, every job is inspected, and every client gets our direct number.`
 
+  const svcData = svc.map((n, i) => ({ name: n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services.`, img: photos[i % (photos.length || 1)] }))
+  const testis = [
+    { text: wc?.testimonialQuote || `${name} exceeded our expectations. Professional, on time, and the quality speaks for itself.`, author: wc?.testimonialAuthor || 'Verified Customer' },
+    ...(wc?.additionalTestimonials?.map(t => ({ text: t.quote, author: t.author })) || [
+      { text: 'Solid work from start to finish. No shortcuts, no excuses. Exactly what we needed.', author: 'Local Client' },
+      { text: `We've used other companies before — ${name} is in a different league. Highly recommend.`, author: 'Repeat Customer' },
+    ])
+  ]
+  const steps = wc?.processSteps || [
+    { title: 'Contact', description: 'Call or request an estimate — we respond fast.' },
+    { title: 'Assess', description: 'On-site evaluation with honest, upfront pricing.' },
+    { title: 'Execute', description: 'Our crew delivers precision work, on schedule.' },
+    { title: 'Inspect', description: 'Final walkthrough and your satisfaction guarantee.' },
+  ]
+  const whyUs = wc?.whyChooseUs || wc?.valueProps || [
+    { title: 'Licensed & Insured', description: 'Full coverage and credentials you can verify.' },
+    { title: 'Dependable Service', description: 'We show up on time, every time. No excuses.' },
+    { title: 'Transparent Pricing', description: 'Written estimates before work begins. Zero surprises.' },
+    { title: 'Quality Guaranteed', description: 'We stand behind every job we complete.' },
+  ]
+  const brands = wc?.brandNames || []
   const faqs = [
-    { q: 'How do I get a free estimate?', a: 'Call us or fill out the contact form — we respond within 24 hours.' },
-    { q: 'What areas do you serve?', a: `We serve ${location || 'the local area'} and surrounding communities.` },
-    { q: 'Are you licensed and insured?', a: 'Fully licensed, bonded, and insured with comprehensive coverage.' },
-    { q: 'How quickly can you start?', a: 'Most projects begin within 1–2 weeks of your approved estimate.' },
-    { q: 'Do you guarantee your work?', a: 'Every job is backed by our satisfaction guarantee.' },
+    { q: `Why choose ${name}?`, a: `${name} combines years of experience with a commitment to quality. We treat every project like our reputation depends on it — because it does.` },
+    { q: 'Do you offer free estimates?', a: 'Absolutely. We provide honest, no-obligation estimates so you know exactly what to expect before any work begins.' },
+    { q: 'What areas do you serve?', a: `We proudly serve ${loc || 'the local area'} and surrounding communities. Call us to confirm service in your location.` },
+    { q: 'Are you licensed and insured?', a: 'Yes. We are fully licensed and insured, giving you complete peace of mind on every job.' },
+    { q: 'How quickly can you start?', a: 'Most projects begin within the week. For urgent needs, call us directly and we will prioritize your job.' },
   ]
 
-  const testimonials = wc?.testimonialQuote
-    ? [{ quote: wc.testimonialQuote, name: wc.testimonialAuthor || 'Verified Customer', loc: lead.city || 'Local' }]
-    : [
-        { quote: `Called on a Monday, had a crew here by Wednesday. They finished ahead of schedule and left the place spotless. Already told three neighbors about ${lead.companyName}.`, name: 'Sarah M.', loc: lead.city || 'Local' },
-        { quote: `We've used other companies before — no comparison. ${lead.companyName} showed up on time, communicated every step, and the final result was exactly what we pictured.`, name: 'David R.', loc: lead.city || 'Local' },
-      ]
+  const [page, setPage] = useState<'home' | 'services' | 'about' | 'work' | 'contact'>('home')
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [lb, setLb] = useState<number | null>(null)
+  const [chatOpen, setChatOpen] = useState(false)
+  const [faqOpen, setFaqOpen] = useState<number | null>(null)
+
+  const nav = (p: typeof page) => { setPage(p); setMenuOpen(false); window.scrollTo({ top: 0 }) }
+
+  const navItems: { label: string; key: typeof page }[] = [
+    { label: 'Home', key: 'home' }, { label: 'Services', key: 'services' },
+    { label: 'About', key: 'about' }, { label: 'Work', key: 'work' }, { label: 'Contact', key: 'contact' },
+  ]
+
+  const head = "'Oswald', sans-serif"
+  const body = "'Work Sans', sans-serif"
+  const mono = "'Roboto Mono', monospace"
 
   return (
-    <div className="preview-template min-h-screen bg-green-50/20 antialiased">
-      <DisclaimerBanner variant="classic" companyName={lead.companyName} />
+    <div className="preview-template" style={{ background: '#1C1F26', color: '#E8E6E1', minHeight: '100vh', fontFamily: body }}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Work+Sans:wght@300;400;500;600&family=Roboto+Mono:wght@400;500&display=swap');
+        .ic-press { transition: transform 0.15s ease; }
+        .ic-press:hover { transform: scale(0.97); }
+        .ic-press:active { transform: scale(0.95); }
+        .ic-dropdown { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+        .ic-dropdown.open { max-height: 600px; }
+        .ic-table-row { transition: background 0.2s ease; }
+        .ic-table-row:hover { background: rgba(255,255,255,0.03); }
+        @keyframes ic-stamp { from { opacity:0; transform:scale(1.3) rotate(-6deg); } to { opacity:1; transform:scale(1) rotate(-3deg); } }
+        .ic-stamp { animation: ic-stamp 0.5s ease forwards; }
+        ::selection { background: ${A}; color: #1C1F26; }
+      ` }} />
 
-      {/* ═══════ NAV ═══════ */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl shadow-sm border-b border-green-100">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8">
-          <div className="flex items-center justify-between h-[68px]">
-            <button onClick={() => navigateTo('home')} className="flex items-center gap-2.5 cursor-pointer">
-              {lead.logo ? (
-                <img src={lead.logo} alt="" className="h-8 w-8 rounded-lg object-cover" />
-              ) : (
-                <div className={`w-8 h-8 rounded-lg ${brandGradientClass(config)} flex items-center justify-center`} style={brandGradientStyle(config)}><Leaf size={15} className="text-white" /></div>
-              )}
-              <span className="text-lg font-bold text-green-900">{lead.companyName}</span>
+      <DisclaimerBanner variant="classic-b" companyName={name} />
+
+      {/* NAV */}
+      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: '#1C1F26', borderBottom: `4px solid ${A}` }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 clamp(16px,4vw,32px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
+          <button onClick={() => nav('home')} style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(18px,3vw,24px)', color: '#fff', textTransform: 'uppercase', letterSpacing: 2, background: 'none', border: 'none', cursor: 'pointer' }}>
+            {name}
+          </button>
+          <div style={{ display: 'flex', gap: 0, alignItems: 'center' }} className="hidden md:flex">
+            {navItems.map(n => (
+              <button key={n.key} onClick={() => nav(n.key)}
+                style={{ fontFamily: head, fontWeight: 500, fontSize: 13, color: page === n.key ? A : '#9CA3AF', textTransform: 'uppercase', letterSpacing: 2, background: 'none', border: 'none', cursor: 'pointer', padding: '8px 16px', borderBottom: page === n.key ? `3px solid ${A}` : '3px solid transparent', transition: 'all 0.2s' }}>
+                {n.label}
+              </button>
+            ))}
+            <button onClick={onCallClick} className="ic-press"
+              style={{ fontFamily: mono, fontSize: 12, background: A, color: '#1C1F26', padding: '10px 20px', fontWeight: 500, letterSpacing: 1, border: 'none', cursor: 'pointer', marginLeft: 16, textTransform: 'uppercase' }}>
+              <Phone size={14} style={{ display: 'inline', verticalAlign: -2, marginRight: 6 }} />CALL NOW
             </button>
-            <div className="hidden lg:flex items-center gap-1.5">{navSections.map((s) => (
-              <button key={s.page} data-nav-page={s.page} onClick={() => navigateTo(s.page)} className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${currentPage === s.page ? 'text-green-800 bg-green-50' : 'text-green-700/60 hover:text-green-900 hover:bg-green-50'}`}>{s.label}</button>
-            ))}</div>
-            <div className="flex items-center gap-3">
-              <div className="hidden md:flex items-center gap-0.5 text-green-500">
-                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-green-50/50 transition-all"><Facebook size={14} /></a>
-                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-green-50/50 transition-all"><Instagram size={14} /></a>
-                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-green-50/50 transition-all"><GoogleIcon size={13} /></a>
-              </div>
-              <div className="hidden md:block w-px h-5 bg-green-200" />
-              {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-sm font-medium text-green-700/60 hover:text-green-900"><Phone size={14} />{formatNavPhone(lead.phone)}</a>)}
-              <button onClick={() => { onCTAClick(); navigateTo('contact') }} className={`hidden sm:flex ${brandGradientClass(config, 'bg-gradient-to-r')} text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-all shadow-md`} style={brandGradientStyle(config, 'to right')}>Free Estimate</button>
-              <button onClick={() => setMobileNavOpen(true)} className="lg:hidden w-10 h-10 rounded-lg bg-green-50 text-green-700 flex items-center justify-center transition-colors"><Menu size={20} /></button>
-            </div>
+          </div>
+          <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden" style={{ background: '#252830', border: `1px solid rgba(255,255,255,0.08)`, color: '#fff', cursor: 'pointer', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
+        <div className={`ic-dropdown ${menuOpen ? 'open' : ''} md:hidden`} style={{ background: '#252830', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          {navItems.map(n => (
+            <button key={n.key} onClick={() => nav(n.key)}
+              style={{ display: 'block', width: '100%', textAlign: 'left', fontFamily: head, fontWeight: 500, fontSize: 15, color: page === n.key ? A : '#9CA3AF', textTransform: 'uppercase', letterSpacing: 2, background: 'none', border: 'none', borderLeft: page === n.key ? `4px solid ${A}` : '4px solid transparent', cursor: 'pointer', padding: '16px 24px' }}>
+              {n.label}
+            </button>
+          ))}
+          <div style={{ padding: '12px 24px 20px' }}>
+            <button onClick={onCallClick} className="ic-press" style={{ width: '100%', fontFamily: mono, fontSize: 13, background: A, color: '#1C1F26', padding: '14px', fontWeight: 500, border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 1 }}>
+              <Phone size={14} style={{ display: 'inline', verticalAlign: -2, marginRight: 6 }} />CALL NOW
+            </button>
           </div>
         </div>
       </nav>
 
-      <MobileNav isOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} companyName={lead.companyName} logo={lead.logo} sections={navSections} phone={lead.phone} config={config} onCallClick={onCallClick} onCTAClick={onCTAClick} onNavigate={navigateTo} />
+      <div style={{ paddingTop: 64 }}>
 
-      {/* ═══════════════════════════════════════════
-          PAGE: HOME
-       ═══════════════════════════════════════════ */}
-      <PageShell page="home" currentPage={currentPage}>
-        {/* HERO */}
-        <section className={`relative min-h-[100svh] flex items-center overflow-hidden ${brandGradientClass(config)}`} style={brandGradientStyle(config)}>
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-emerald-400/10 rounded-full -translate-y-1/3 translate-x-1/4 blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-green-400/8 rounded-full translate-y-1/2 -translate-x-1/4 blur-3xl" />
-          <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 md:px-8 py-32">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-              <div>
-                {location && (<div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-8 border border-white/10"><MapPin size={14} className="text-emerald-300" /><span className="text-sm font-medium text-emerald-200">{location}</span></div>)}
-                <h1 className="font-display text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6 tracking-tight leading-[1.08]">{wc?.heroHeadline || lead.companyName}</h1>
-                {wc?.heroSubheadline && (
-                  <p className="text-lg sm:text-xl text-gray-200 max-w-2xl mb-8 leading-relaxed">{wc.heroSubheadline}</p>
-                )}
-                <p className="text-base sm:text-lg text-white/55 mb-10 max-w-lg">{config.tagline}</p>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="inline-flex items-center justify-center gap-2.5 bg-white text-green-900 px-8 py-4 rounded-xl font-bold text-base hover:bg-green-50 transition-all shadow-xl"><Phone size={18} />Call Now — Free Estimate</a>)}
-                  <button onClick={ctaNavigate} className="inline-flex items-center justify-center gap-2.5 bg-white/10 border border-white/20 text-white px-8 py-4 rounded-xl font-semibold text-base hover:bg-white hover:text-green-900 transition-all duration-300 group">{config.ctaText}<ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" /></button>
-                </div>
-                <div className="mt-10 flex flex-wrap gap-x-6 gap-y-2 text-white/35 text-sm">
-                  <span className="flex items-center gap-1.5"><Shield size={14} />Licensed & Insured</span>
-                  {location && <span className="flex items-center gap-1.5"><MapPin size={14} />{location}</span>}
-                  {wc?.yearsBadge && (
-                    <span className="flex items-center gap-1.5">{wc.yearsBadge}</span>
-                  )}
-                </div>
-              </div>
-              <div className="flex justify-center lg:justify-end">
-                <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
-                  {hasRating && (<div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/10"><div className="flex justify-center gap-0.5 mb-2">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={16} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-yellow-300 fill-current' : 'text-white/20'} />)}</div><p className="text-3xl font-bold text-white"><AnimatedCounter value={Number(lead.enrichedRating)} /></p><p className="text-xs text-white/50 mt-1">Star Rating</p></div>)}
-                  {lead.enrichedReviews && (<div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/10"><p className="text-3xl font-bold text-white"><AnimatedCounter value={Number(lead.enrichedReviews)} suffix="+" /></p><p className="text-xs text-white/50 mt-1">Happy Customers</p></div>)}
-                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center border border-white/10"><p className="text-3xl font-bold text-white"><AnimatedCounter value={100} suffix="%" /></p><p className="text-xs text-white/50 mt-1">Satisfaction</p></div>
-                  <div className="bg-emerald-500/15 backdrop-blur-sm rounded-2xl p-6 text-center border border-emerald-400/15"><p className="text-3xl font-bold text-white"><AnimatedCounter value={24} suffix="hr" /></p><p className="text-xs text-white/50 mt-1">Response Time</p></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/25"><span className="text-[10px] uppercase tracking-[0.25em] font-medium">Scroll</span><ChevronDown size={18} className="animate-bounce" /></div>
-        </section>
-
-        {/* PROOF STRIP */}
-        <section className="py-4 px-4 sm:px-6 md:px-8 bg-white border-b border-green-100">
-          <ScrollReveal animation="fade-in" delay={0}>
-          <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
-            {hasRating && <span className="flex items-center gap-2 text-green-900 font-semibold"><Star size={13} className="text-amber-400 fill-current" />{lead.enrichedRating} Rating</span>}
-            {lead.enrichedReviews && (<><span className="text-green-200 hidden sm:inline">•</span><span className="text-green-700/50">{lead.enrichedReviews}+ Reviews</span></>)}
-            <span className="text-green-200 hidden sm:inline">•</span>
-            <span className="flex items-center gap-1.5 text-green-700/50"><Shield size={13} className="text-green-600/50" />Licensed & Insured</span>
-            <span className="text-green-200 hidden sm:inline">•</span>
-            <span className="flex items-center gap-1.5 text-green-700/50"><Clock size={13} className="text-green-600/50" />Same-Day Response</span>
-            {location && (<><span className="text-green-200 hidden sm:inline">•</span><span className="flex items-center gap-1.5 text-green-700/50"><MapPin size={13} className="text-green-600/50" />{location}</span></>)}
-            {wc?.yearsBadge && (
-              <><span className="text-green-200 hidden sm:inline">•</span><span className="flex items-center gap-1.5 text-green-700/50">{wc.yearsBadge}</span></>
-            )}
-          </div>
-          </ScrollReveal>
-        </section>
-
-        {/* HOMEPAGE: SERVICES PREVIEW */}
-        {services.length > 0 && (
-          <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
-            <div className="max-w-6xl mx-auto">
-              <ScrollReveal animation="fade-up" delay={0}>
-              <div className="flex items-end justify-between mb-12 sm:mb-16">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-3">What We Do</p>
-                  <h2 className="font-display text-3xl sm:text-4xl font-bold text-green-950 leading-tight">Our Services</h2>
-                </div>
-                <button onClick={() => navigateTo('services')} className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-600 transition-colors group">
-                  View All Services <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
-              </ScrollReveal>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {services.slice(0, 6).map((service, i) => (
-                  <ScrollReveal key={i} animation="fade-up" delay={i * 80}>
-                  <button onClick={() => navigateTo('services')} className="group bg-green-50/50 border border-green-100 rounded-2xl p-6 text-left hover:border-green-300 hover:shadow-md transition-all duration-300 w-full">
-                    <div className="flex items-start gap-4">
-                      <span className="text-xs text-green-300 font-mono tabular-nums font-bold mt-1">{String(i + 1).padStart(2, '0')}</span>
-                      <div>
-                        <h3 className="text-base font-semibold text-green-900 group-hover:text-green-700 transition-colors mb-1">{service}</h3>
-                        {wc?.serviceDescriptions?.[service] && (
-                          <p className="text-sm text-green-700/50 leading-relaxed line-clamp-2">{wc.serviceDescriptions[service]}</p>
-                        )}
-                      </div>
+        {/* ══════════════ HOME ══════════════ */}
+        <div data-page="home" style={{ display: page === 'home' ? 'block' : 'none' }}>
+          {/* HERO */}
+          <section style={{ position: 'relative', minHeight: 'clamp(500px,70vh,700px)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }}>
+            {heroPhoto && <img src={heroPhoto} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #1C1F26 10%, rgba(28,31,38,0.85) 50%, rgba(28,31,38,0.6) 100%)' }} />
+            <div style={{ position: 'relative', zIndex: 2, maxWidth: 1200, margin: '0 auto', padding: 'clamp(32px,6vw,80px) clamp(16px,4vw,32px)', width: '100%' }}>
+              <Reveal>
+                <p style={{ fontFamily: mono, fontSize: 'clamp(11px,1.4vw,13px)', color: A, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 16 }}>
+                  {city && `${city} \u2022 `}{indLabel}
+                </p>
+                <h1 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(36px,7vw,72px)', textTransform: 'uppercase', lineHeight: 1, color: '#fff', marginBottom: 20, maxWidth: 700 }}>
+                  {heroHeadline}
+                </h1>
+                <p style={{ fontSize: 'clamp(15px,1.8vw,18px)', color: '#B0ADA6', maxWidth: 520, lineHeight: 1.7, marginBottom: 28, fontWeight: 300 }}>
+                  {heroSub}
+                </p>
+                <div style={{ width: 80, height: 6, background: A, marginBottom: 32 }} />
+                <div style={{ display: 'flex', gap: 'clamp(24px,4vw,48px)', flexWrap: 'wrap', alignItems: 'center' }}>
+                  {rating > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Star size={20} fill={A} color={A} />
+                      <span style={{ fontFamily: head, fontWeight: 600, fontSize: 22, color: '#fff' }}>{rating}</span>
+                      {reviewCount > 0 && <span style={{ fontFamily: mono, fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase' }}>({reviewCount} reviews)</span>}
                     </div>
-                  </button>
-                  </ScrollReveal>
-                ))}
-              </div>
-              <button onClick={() => navigateTo('services')} className="sm:hidden mt-8 inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-600 transition-colors group">
-                View All Services <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
-          </section>
-        )}
-
-        {/* HOMEPAGE: ABOUT PREVIEW */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-green-50/40">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-              <ScrollReveal animation="fade-left" delay={0}>
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-4">Our Story</p>
-                <h2 className="font-display text-3xl sm:text-4xl font-bold text-green-950 leading-tight mb-6">Built on trust. Driven by community.</h2>
-                <p className="text-green-800/55 text-base leading-relaxed mb-6">{wc?.aboutParagraph1 || `${lead.companyName} delivers trusted ${industryLabel}${location ? ` across ${location}` : ''} — honest work, every time.`}</p>
-                <div className="flex flex-wrap gap-8 mb-8">
-                  <div><p className="text-3xl font-bold text-green-700"><AnimatedCounter value={hasRating ? Number(lead.enrichedRating) : 5.0} /></p><p className="text-[11px] uppercase tracking-[0.2em] text-green-700/40 mt-1">Star Rating</p></div>
-                  {lead.enrichedReviews && (<div><p className="text-3xl font-bold text-green-700"><AnimatedCounter value={Number(lead.enrichedReviews)} suffix="+" /></p><p className="text-[11px] uppercase tracking-[0.2em] text-green-700/40 mt-1">Reviews</p></div>)}
-                  <div><p className="text-3xl font-bold text-green-700"><AnimatedCounter value={100} suffix="%" /></p><p className="text-[11px] uppercase tracking-[0.2em] text-green-700/40 mt-1">Satisfaction</p></div>
-                </div>
-                <button onClick={() => navigateTo('about')} className="inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-600 transition-colors group">
-                  Learn More About Us <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
-              </ScrollReveal>
-              <ScrollReveal animation="fade-right" delay={200}>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {(wc?.valueProps || [
-                  { title: 'Locally Owned', description: `Your neighbors in ${lead.city || 'your community'}` },
-                  { title: 'Quality First', description: 'Premium materials, expert craftsmanship' },
-                  { title: 'Free Estimates', description: 'No-obligation quotes within 24 hours' },
-                ]).slice(0, 3).map((vp, i) => (
-                  <div key={i} className="bg-white border border-green-100 rounded-2xl p-5">
-                    <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center mb-3 border border-green-100"><CheckCircle size={18} className="text-green-600" /></div>
-                    <h4 className="text-sm font-bold text-green-900 mb-1">{vp.title}</h4>
-                    <p className="text-xs text-green-700/40 leading-relaxed">{vp.description}</p>
-                  </div>
-                ))}
-              </div>
-              </ScrollReveal>
-            </div>
-          </div>
-        </section>
-
-        {/* HOMEPAGE: PORTFOLIO PREVIEW */}
-        {photos.length > 0 && (
-          <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
-            <div className="max-w-6xl mx-auto">
-              <ScrollReveal animation="fade-up" delay={0}>
-              <div className="flex items-end justify-between mb-10 sm:mb-14">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-3">Our Work</p>
-                  <h2 className="font-display text-3xl sm:text-4xl font-bold text-green-950">See the difference.</h2>
-                </div>
-                <button onClick={() => navigateTo('portfolio')} className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-600 transition-colors group">
-                  View Our Work <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
-              </ScrollReveal>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-                {photos.slice(0, 3).map((photo, i) => (
-                  <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
-                  <button onClick={() => navigateTo('portfolio')} className="relative overflow-hidden rounded-xl group border border-green-100/50 hover:border-green-300/50 transition-all w-full">
-                    <img src={photo} alt={`Project ${i + 1}`} className="w-full aspect-[4/3] object-cover transition-transform duration-700 group-hover:scale-105" {...(i > 0 ? { loading: 'lazy' as const } : {})} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </button>
-                  </ScrollReveal>
-                ))}
-              </div>
-              <button onClick={() => navigateTo('portfolio')} className="sm:hidden mt-8 inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-600 transition-colors group">
-                View Our Work <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
-          </section>
-        )}
-
-        {/* HOMEPAGE: TESTIMONIAL HIGHLIGHT */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-green-50/40">
-          <div className="max-w-3xl mx-auto text-center">
-            <ScrollReveal animation="fade-up" delay={0}>
-              <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-3">What Our Customers Say</p>
-              <div className="flex justify-center gap-0.5 mb-6">{Array.from({ length: 5 }, (_, j) => <Star key={j} size={18} className="text-amber-400 fill-current" />)}</div>
-              <p className="text-xl sm:text-2xl text-green-800/65 leading-relaxed italic mb-6">"{testimonials[0].quote}"</p>
-              <div className="flex items-center justify-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-200 to-emerald-200 flex items-center justify-center"><span className="text-green-700 font-bold text-sm">{testimonials[0].name[0]}</span></div>
-                <div className="text-left"><span className="font-semibold text-green-900 text-sm">{testimonials[0].name}</span><span className="text-green-600/40 text-sm"> — {testimonials[0].loc}</span></div>
-              </div>
-            </ScrollReveal>
-          </div>
-        </section>
-
-        <TrustBadges theme="classic" config={config} rating={lead.enrichedRating} reviewCount={lead.enrichedReviews} />
-        <BrandsStrip theme="classic" brandNames={wc?.brandNames} industry={lead.industry} />
-
-        {/* HOMEPAGE: CTA BAND */}
-        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} config={config} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
-      </PageShell>
-
-      {/* ═══════════════════════════════════════════
-          PAGE: SERVICES
-       ═══════════════════════════════════════════ */}
-      <PageShell page="services" currentPage={currentPage}>
-        <PageHeader
-          title="Our Services"
-          subtitle={`Expert ${industryLabel}${location ? ` serving ${location}` : ''} and surrounding areas.`}
-          bgClass={brandGradientClass(config)}
-          bgStyle={brandGradientStyle(config)}
-          subtitleClass="text-emerald-200/60"
-          accentClass="text-emerald-300"
-          onBackClick={() => navigateTo('home')}
-        />
-
-        {services.length > 0 && <ServiceHero theme="classic" config={config} service={services[0]} description={wc?.serviceDescriptions?.[services[0]]} photo={photosDist.serviceHero} onCTAClick={ctaNavigate} />}
-        {services.length > 1 && <ServiceGrid theme="classic" services={services} descriptions={wc?.serviceDescriptions} photos={photosDist.serviceAccents} />}
-        <ProcessTimeline theme="classic" config={config} steps={wc?.processSteps} />
-        <WhyChooseUs theme="classic" config={config} companyName={lead.companyName} items={wc?.whyChooseUs || wc?.valueProps} photo={photosDist.aboutPhoto} />
-
-        {/* Service area info */}
-        {(wc?.serviceAreaText || location) && (
-          <section className="py-12 px-4 sm:px-6 md:px-8 bg-green-50/40 border-t border-green-100">
-            <div className="max-w-3xl mx-auto text-center">
-              <ScrollReveal animation="fade-up" delay={0}>
-                <div className="flex items-center justify-center gap-2 mb-3">
-                  <MapPin size={16} className="text-green-600" />
-                  <h3 className="text-lg font-bold text-green-900">Service Area</h3>
-                </div>
-                <p className="text-green-700/50 text-sm leading-relaxed">{wc?.serviceAreaText || `Proudly serving ${location} and all surrounding communities. Contact us to confirm availability in your area.`}</p>
-              </ScrollReveal>
-            </div>
-          </section>
-        )}
-
-        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} config={config} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
-      </PageShell>
-
-      {/* ═══════════════════════════════════════════
-          PAGE: ABOUT
-       ═══════════════════════════════════════════ */}
-      <PageShell page="about" currentPage={currentPage}>
-        <PageHeader
-          title="About Us"
-          subtitle={`Get to know ${lead.companyName} — your trusted partner in ${industryLabel}.`}
-          bgClass={brandGradientClass(config)}
-          bgStyle={brandGradientStyle(config)}
-          subtitleClass="text-emerald-200/60"
-          accentClass="text-emerald-300"
-          onBackClick={() => navigateTo('home')}
-        />
-
-        {/* Full About section */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-start">
-              <ScrollReveal animation="fade-left" delay={0} className="lg:col-span-5">
-                {photos.length > 0 ? (<img src={photos[0]} alt="Our team" className="w-full aspect-[4/5] object-cover rounded-2xl" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />) : (<div className="w-full aspect-[4/5] rounded-2xl bg-green-50 flex items-center justify-center border border-green-100"><Camera size={48} className="text-green-200" /></div>)}
-              </ScrollReveal>
-              <ScrollReveal animation="fade-right" delay={200} className="lg:col-span-7">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-4">Our Story</p>
-                <h2 className="font-display text-3xl sm:text-4xl font-bold text-green-950 leading-tight mb-6">Built on trust. Driven by community.</h2>
-                <div className="text-green-800/55 text-base leading-relaxed">
-                  <p>{wc?.aboutParagraph1 || `${lead.companyName} delivers trusted ${industryLabel}${location ? ` across ${location}` : ''} — honest work, every time.`}</p>
-                  {wc?.aboutParagraph2 && (
-                    <p className="text-gray-500 text-base leading-relaxed mt-4">{wc.aboutParagraph2}</p>
                   )}
-                  {wc?.closingBody && <p className="text-gray-500 text-base leading-relaxed mt-4">{wc.closingBody}</p>}
+                  {svc.length > 0 && <div style={{ fontFamily: mono, fontSize: 12, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 1 }}><Counter end={svc.length} />+ Services</div>}
+                  {photos.length > 0 && <div style={{ fontFamily: mono, fontSize: 12, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 1 }}><Counter end={photos.length} /> Project Photos</div>}
                 </div>
-                <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  {(wc?.valueProps || [
-                    { title: 'Locally Owned', description: `Your neighbors in ${lead.city || 'your community'}` },
-                    { title: 'Quality First', description: 'Premium materials, expert craftsmanship' },
-                    { title: 'Free Estimates', description: 'No-obligation quotes within 24 hours' },
-                  ]).slice(0, 3).map((vp, i) => (
-                    <div key={i}><div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center mb-3 border border-green-100"><CheckCircle size={18} className="text-green-600" /></div><h4 className="text-sm font-bold text-green-900 mb-1">{vp.title}</h4><p className="text-xs text-green-700/40 leading-relaxed">{vp.description}</p></div>
+              </Reveal>
+              <Reveal>
+                <div style={{ display: 'flex', gap: 12, marginTop: 32, flexWrap: 'wrap' }}>
+                  <button onClick={onCTAClick} className="ic-press" style={{ fontFamily: head, fontWeight: 600, fontSize: 15, background: A, color: '#1C1F26', padding: '16px 36px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 2 }}>Get Free Estimate</button>
+                  <button onClick={onCallClick} className="ic-press" style={{ fontFamily: head, fontWeight: 600, fontSize: 15, background: 'transparent', color: '#fff', padding: '16px 36px', border: '2px solid rgba(255,255,255,0.2)', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 2 }}>
+                    <Phone size={16} style={{ display: 'inline', verticalAlign: -3, marginRight: 8 }} />{phone ? fmt(phone) : 'Call Us'}
+                  </button>
+                </div>
+              </Reveal>
+            </div>
+          </section>
+
+          <div style={{ height: 6, background: A }} />
+
+          {/* SERVICES PREVIEW */}
+          <section style={{ background: '#252830', padding: 'clamp(48px,8vw,96px) clamp(16px,4vw,32px)' }}>
+            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+              <Reveal>
+                <p style={{ fontFamily: mono, fontSize: 12, color: A, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>What We Do</p>
+                <h2 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(28px,5vw,48px)', textTransform: 'uppercase', color: '#fff', marginBottom: 40 }}>Our Services</h2>
+              </Reveal>
+              <div style={{ borderTop: `3px solid ${A}` }}>
+                {svc.slice(0, 6).map((s, i) => (
+                  <Reveal key={i}>
+                    <div className="ic-table-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'clamp(16px,3vw,24px) clamp(12px,2vw,20px)', borderBottom: '1px solid rgba(255,255,255,0.06)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)', gap: 16 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(12px,2vw,24px)', flex: 1, minWidth: 0 }}>
+                        <span style={{ fontFamily: mono, fontSize: 'clamp(11px,1.2vw,13px)', color: A, flexShrink: 0, width: 32 }}>{String(i + 1).padStart(2, '0')}</span>
+                        <span style={{ fontFamily: head, fontWeight: 500, fontSize: 'clamp(15px,2vw,20px)', textTransform: 'uppercase', letterSpacing: 1, color: '#E8E6E1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s}</span>
+                      </div>
+                      <CheckCircle size={16} color={A} style={{ flexShrink: 0 }} />
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+              <Reveal>
+                <div style={{ marginTop: 32, textAlign: 'center' }}>
+                  <button onClick={() => nav('services')} className="ic-press" style={{ fontFamily: head, fontWeight: 600, fontSize: 14, color: A, background: 'none', border: `2px solid ${A}`, padding: '14px 32px', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 2 }}>
+                    View All Services <ArrowRight size={14} style={{ display: 'inline', verticalAlign: -2, marginLeft: 8 }} />
+                  </button>
+                </div>
+              </Reveal>
+            </div>
+          </section>
+
+          {/* TRUST BADGES */}
+          <section style={{ background: '#1C1F26', padding: 'clamp(40px,6vw,72px) clamp(16px,4vw,32px)' }}>
+            <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'clamp(20px,3vw,32px)' }}>
+              {[
+                { label: 'Licensed & Insured', val: 'Verified' },
+                { label: 'Years of Service', val: '10+' },
+                { label: 'Jobs Completed', val: '500+' },
+                { label: 'Satisfaction Rate', val: '99%' },
+              ].map((b, i) => (
+                <Reveal key={i}>
+                  <div style={{ border: '2px solid rgba(255,255,255,0.08)', padding: 'clamp(20px,3vw,28px)', textAlign: 'center', position: 'relative' }}>
+                    <div style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(28px,4vw,40px)', color: A }}>{b.val}</div>
+                    <div style={{ fontFamily: mono, fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 2, marginTop: 6 }}>{b.label}</div>
+                    <Bolts />
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </section>
+
+          {/* WORK PREVIEW */}
+          {photos.length > 0 && (
+            <section style={{ background: '#252830', padding: 'clamp(48px,8vw,96px) clamp(16px,4vw,32px)' }}>
+              <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+                <Reveal>
+                  <p style={{ fontFamily: mono, fontSize: 12, color: A, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>Project Gallery</p>
+                  <h2 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(28px,5vw,48px)', textTransform: 'uppercase', color: '#fff', marginBottom: 40 }}>Our Work</h2>
+                </Reveal>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(250px,30vw,350px), 1fr))', gap: 4 }}>
+                  {photos.slice(0, 6).map((p, i) => (
+                    <Reveal key={i}>
+                      <div onClick={() => setLb(i)} style={{ position: 'relative', paddingBottom: '75%', cursor: 'pointer', overflow: 'hidden' }}>
+                        <img src={p} alt={`Project ${i + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }}
+                          onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.03)')} onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')} />
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '24px 12px 8px', background: 'linear-gradient(transparent, rgba(28,31,38,0.9))' }}>
+                          <span style={{ fontFamily: mono, fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 2 }}>Project {String(i + 1).padStart(2, '0')}</span>
+                        </div>
+                        <Camera size={16} color="#fff" style={{ position: 'absolute', top: 10, right: 10, opacity: 0.5 }} />
+                      </div>
+                    </Reveal>
                   ))}
                 </div>
-                <div className="mt-10 flex flex-wrap gap-12">
-                  <div><p className="text-4xl font-bold text-green-700"><AnimatedCounter value={hasRating ? Number(lead.enrichedRating) : 5.0} /></p><p className="text-[11px] uppercase tracking-[0.2em] text-green-700/40 mt-2">Star Rating</p></div>
-                  {lead.enrichedReviews && (<div><p className="text-4xl font-bold text-green-700"><AnimatedCounter value={Number(lead.enrichedReviews)} suffix="+" /></p><p className="text-[11px] uppercase tracking-[0.2em] text-green-700/40 mt-2">Reviews</p></div>)}
-                  <div><p className="text-4xl font-bold text-green-700"><AnimatedCounter value={100} suffix="%" /></p><p className="text-[11px] uppercase tracking-[0.2em] text-green-700/40 mt-2">Satisfaction</p></div>
+                {photos.length > 6 && (
+                  <Reveal><div style={{ textAlign: 'center', marginTop: 28 }}>
+                    <button onClick={() => nav('work')} className="ic-press" style={{ fontFamily: head, fontWeight: 600, fontSize: 14, color: A, background: 'none', border: `2px solid ${A}`, padding: '14px 32px', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 2 }}>
+                      View All Work <ArrowRight size={14} style={{ display: 'inline', verticalAlign: -2, marginLeft: 8 }} />
+                    </button>
+                  </div></Reveal>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* TESTIMONIALS */}
+          <section style={{ background: '#1C1F26', padding: 'clamp(48px,8vw,96px) clamp(16px,4vw,32px)' }}>
+            <div style={{ maxWidth: 900, margin: '0 auto' }}>
+              <Reveal>
+                <p style={{ fontFamily: mono, fontSize: 12, color: A, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12, textAlign: 'center' }}>Testimonials</p>
+                <h2 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(28px,5vw,48px)', textTransform: 'uppercase', color: '#fff', marginBottom: 48, textAlign: 'center' }}>What Clients Say</h2>
+              </Reveal>
+              <div style={{ display: 'grid', gap: 32 }}>
+                {testis.slice(0, 3).map((t, i) => (
+                  <Reveal key={i}>
+                    <div style={{ position: 'relative', padding: 'clamp(24px,4vw,40px)', background: '#252830', borderLeft: `4px solid ${A}` }}>
+                      <Quote size={28} color={A} style={{ opacity: 0.3, marginBottom: 12 }} />
+                      <p style={{ fontSize: 'clamp(15px,1.6vw,17px)', lineHeight: 1.8, color: '#D1CFC9', fontWeight: 300 }}>&ldquo;{t.text}&rdquo;</p>
+                      <p style={{ fontFamily: head, fontWeight: 500, fontSize: 14, color: A, textTransform: 'uppercase', letterSpacing: 2, marginTop: 16 }}>&mdash; {t.author}</p>
+                      <div className="ic-stamp" style={{ position: 'absolute', top: 16, right: 16, border: `2px solid ${A}40`, padding: '4px 12px', transform: 'rotate(-3deg)' }}>
+                        <span style={{ fontFamily: mono, fontSize: 9, color: `${A}80`, textTransform: 'uppercase', letterSpacing: 2 }}>Verified</span>
+                      </div>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* CTA */}
+          <section style={{ background: '#252830', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(48px,8vw,96px) clamp(16px,4vw,32px)', textAlign: 'center' }}>
+              <Reveal>
+                <p style={{ fontFamily: mono, fontSize: 12, color: A, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>Ready to Start?</p>
+                <h2 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(28px,5vw,48px)', textTransform: 'uppercase', color: '#fff', marginBottom: 16 }}>Let&rsquo;s Build Something Solid</h2>
+                <p style={{ fontSize: 'clamp(14px,1.6vw,16px)', color: '#9CA3AF', lineHeight: 1.7, marginBottom: 28, maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>Get in touch for a free, no-obligation estimate. We respond fast and show up ready to work.</p>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                  <button onClick={onCTAClick} className="ic-press" style={{ fontFamily: head, fontWeight: 600, fontSize: 15, background: A, color: '#1C1F26', padding: '16px 36px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 2 }}>Get Free Estimate</button>
+                  <button onClick={onCallClick} className="ic-press" style={{ fontFamily: head, fontWeight: 600, fontSize: 15, color: '#fff', background: 'none', border: '2px solid rgba(255,255,255,0.15)', padding: '16px 36px', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 2 }}>
+                    <Phone size={16} style={{ display: 'inline', verticalAlign: -3, marginRight: 8 }} />{phone ? fmt(phone) : 'Call'}
+                  </button>
+                </div>
+              </Reveal>
+            </div>
+            {/* Corner bolts */}
+            <div style={{ position: 'absolute', top: 16, left: 16, width: 10, height: 10, border: `2px solid ${A}30` }} />
+            <div style={{ position: 'absolute', top: 16, right: 16, width: 10, height: 10, border: `2px solid ${A}30` }} />
+            <div style={{ position: 'absolute', bottom: 16, left: 16, width: 10, height: 10, border: `2px solid ${A}30` }} />
+            <div style={{ position: 'absolute', bottom: 16, right: 16, width: 10, height: 10, border: `2px solid ${A}30` }} />
+          </section>
+        </div>
+
+        {/* ══════════════ SERVICES ══════════════ */}
+        <div data-page="services" style={{ display: page === 'services' ? 'block' : 'none' }}>
+          <section style={{ padding: 'clamp(48px,8vw,96px) clamp(16px,4vw,32px)' }}>
+            <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+              <Reveal>
+                <p style={{ fontFamily: mono, fontSize: 12, color: A, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>Full Service List</p>
+                <h1 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(32px,6vw,56px)', textTransform: 'uppercase', color: '#fff', marginBottom: 48 }}>Our Services</h1>
+              </Reveal>
+
+              {/* Table-row services with thumbnail */}
+              <div style={{ borderTop: `3px solid ${A}` }}>
+                {svcData.map((s, i) => (
+                  <Reveal key={i}>
+                    <div className="ic-table-row" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(16px,3vw,24px)', padding: 'clamp(16px,3vw,24px) clamp(12px,2vw,20px)', borderBottom: '1px solid rgba(255,255,255,0.06)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
+                      {s.img && <img src={s.img} alt={s.name} style={{ width: 'clamp(56px,8vw,80px)', height: 'clamp(56px,8vw,80px)', objectFit: 'cover', flexShrink: 0 }} />}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+                          <span style={{ fontFamily: mono, fontSize: 'clamp(10px,1.1vw,12px)', color: A, flexShrink: 0 }}>{String(i + 1).padStart(2, '0')}</span>
+                          <span style={{ fontFamily: head, fontWeight: 600, fontSize: 'clamp(16px,2.2vw,22px)', textTransform: 'uppercase', letterSpacing: 1, color: '#E8E6E1' }}>{s.name}</span>
+                        </div>
+                        <p style={{ fontSize: 'clamp(13px,1.4vw,15px)', color: '#9CA3AF', lineHeight: 1.6, fontWeight: 300 }}>{s.desc}</p>
+                      </div>
+                      <CheckCircle size={18} color={A} style={{ flexShrink: 0 }} />
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+
+              {/* Process Steps */}
+              <div style={{ marginTop: 64 }}>
+                <Reveal>
+                  <p style={{ fontFamily: mono, fontSize: 12, color: A, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>How It Works</p>
+                  <h2 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(24px,4vw,40px)', textTransform: 'uppercase', color: '#fff', marginBottom: 40 }}>Our Process</h2>
+                </Reveal>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'clamp(16px,3vw,24px)' }}>
+                  {steps.map((s, i) => (
+                    <Reveal key={i}>
+                      <div style={{ padding: 'clamp(20px,3vw,32px)', background: '#252830', borderTop: `3px solid ${A}`, position: 'relative' }}>
+                        <span style={{ fontFamily: mono, fontSize: 32, color: `${A}20`, fontWeight: 500, position: 'absolute', top: 12, right: 16 }}>{String(i + 1).padStart(2, '0')}</span>
+                        <h3 style={{ fontFamily: head, fontWeight: 600, fontSize: 'clamp(16px,2vw,20px)', textTransform: 'uppercase', color: '#fff', marginBottom: 8 }}>{s.title}</h3>
+                        <p style={{ fontSize: 'clamp(13px,1.4vw,15px)', color: '#9CA3AF', lineHeight: 1.6, fontWeight: 300 }}>{s.description}</p>
+                      </div>
+                    </Reveal>
+                  ))}
                 </div>
               </div>
-              </ScrollReveal>
-            </div>
-          </div>
-        </section>
 
-        <ReviewsSection theme="classic" config={config} testimonials={testimonials.map(t => ({ quote: t.quote, author: t.name }))} location={location} />
-
-        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} config={config} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
-      </PageShell>
-
-      {/* ═══════════════════════════════════════════
-          PAGE: PORTFOLIO
-       ═══════════════════════════════════════════ */}
-      <PageShell page="portfolio" currentPage={currentPage}>
-        <PageHeader
-          title="Our Work"
-          subtitle="Browse our portfolio of completed projects."
-          bgClass={brandGradientClass(config)}
-          bgStyle={brandGradientStyle(config)}
-          subtitleClass="text-emerald-200/60"
-          accentClass="text-emerald-300"
-          onBackClick={() => navigateTo('home')}
-        />
-
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-green-50/40">
-          <div className="max-w-7xl mx-auto">
-            {photos.length > 0 ? (
-              <>
-                {/* Hero photo full width */}
-                <ScrollReveal animation="zoom-in" delay={100}>
-                <div className="mb-3 sm:mb-4">
-                  <div className="relative overflow-hidden rounded-xl group cursor-pointer border border-green-100/50 hover:border-green-300/50 transition-all" onClick={() => { setLightboxIndex(0); setLightboxOpen(true) }}>
-                    <img src={photos[0]} alt="Project 1" className="w-full object-cover aspect-[16/9] sm:aspect-[2/1] transition-transform duration-700 group-hover:scale-105" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </div>
+              {/* CTA */}
+              <Reveal>
+                <div style={{ marginTop: 48, padding: 'clamp(24px,4vw,40px)', background: '#252830', borderLeft: `4px solid ${A}`, display: 'flex', flexDirection: 'column', gap: 16, position: 'relative' }}>
+                  <h3 style={{ fontFamily: head, fontWeight: 600, fontSize: 'clamp(20px,3vw,28px)', textTransform: 'uppercase', color: '#fff' }}>Need a Custom Solution?</h3>
+                  <p style={{ fontSize: 'clamp(14px,1.5vw,16px)', color: '#9CA3AF', lineHeight: 1.7 }}>Every job is different. Contact us to discuss your specific needs and we&rsquo;ll build a plan that fits.</p>
+                  <button onClick={onCTAClick} className="ic-press" style={{ fontFamily: head, fontWeight: 600, fontSize: 14, background: A, color: '#1C1F26', padding: '14px 32px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 2, alignSelf: 'flex-start' }}>Get Free Estimate</button>
+                  <Bolts />
                 </div>
-                </ScrollReveal>
+              </Reveal>
+            </div>
+          </section>
+        </div>
 
-                {/* Remaining photos */}
-                {photos.length > 2 && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                    {photos.slice(1, 5).map((photo, i) => (
-                      <ScrollReveal key={i} animation="zoom-in" delay={i * 100}>
-                      <div className="relative overflow-hidden rounded-xl group cursor-pointer border border-green-100/50 hover:border-green-300/50 transition-all" onClick={() => { setLightboxIndex(i + 1); setLightboxOpen(true) }}>
-                        <img src={photo} alt={`Project ${i + 2}`} className="w-full object-cover aspect-[4/3] transition-transform duration-700 group-hover:scale-105" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        {/* ══════════════ ABOUT ══════════════ */}
+        <div data-page="about" style={{ display: page === 'about' ? 'block' : 'none' }}>
+          {/* Story + photo */}
+          <section style={{ padding: 'clamp(48px,8vw,96px) clamp(16px,4vw,32px)' }}>
+            <div style={{ maxWidth: 900, margin: '0 auto' }}>
+              <Reveal>
+                <p style={{ fontFamily: mono, fontSize: 12, color: A, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>About</p>
+                <h1 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(32px,6vw,56px)', textTransform: 'uppercase', color: '#fff', marginBottom: 16 }}>{name}</h1>
+                <div style={{ width: 60, height: 6, background: A, marginBottom: 40 }} />
+              </Reveal>
+              {photos[1] && (
+                <Reveal>
+                  <div style={{ marginBottom: 48, position: 'relative' }}>
+                    <img src={photos[1]} alt="About" style={{ width: '100%', height: 'clamp(250px,40vw,400px)', objectFit: 'cover' }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 40%, #1C1F26)' }} />
+                  </div>
+                </Reveal>
+              )}
+              <Reveal>
+                <p style={{ fontSize: 'clamp(15px,1.8vw,18px)', lineHeight: 1.9, color: '#D1CFC9', fontWeight: 300, marginBottom: 24 }}>{aboutText}</p>
+                <p style={{ fontSize: 'clamp(14px,1.6vw,16px)', lineHeight: 1.8, color: '#9CA3AF', fontWeight: 300, marginBottom: 48 }}>{aboutText2}</p>
+              </Reveal>
+            </div>
+          </section>
+
+          <div style={{ height: 4, background: A }} />
+
+          {/* Why Choose Us — stamped badges */}
+          <section style={{ background: '#252830', padding: 'clamp(48px,8vw,80px) clamp(16px,4vw,32px)' }}>
+            <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+              <Reveal>
+                <p style={{ fontFamily: mono, fontSize: 12, color: A, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12, textAlign: 'center' }}>The Difference</p>
+                <h2 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(28px,5vw,44px)', textTransform: 'uppercase', color: '#fff', marginBottom: 48, textAlign: 'center' }}>Why Choose Us</h2>
+              </Reveal>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'clamp(16px,3vw,24px)' }}>
+                {whyUs.slice(0, 4).map((w, i) => (
+                  <Reveal key={i}>
+                    <div style={{ padding: 'clamp(24px,3vw,32px)', border: '2px solid rgba(255,255,255,0.06)', position: 'relative', textAlign: 'center' }}>
+                      <div className="ic-stamp" style={{ display: 'inline-block', border: `2px solid ${A}`, padding: '6px 18px', transform: 'rotate(-3deg)', marginBottom: 16 }}>
+                        <span style={{ fontFamily: mono, fontSize: 10, color: A, textTransform: 'uppercase', letterSpacing: 3, fontWeight: 500 }}>{String(i + 1).padStart(2, '0')}</span>
                       </div>
-                      </ScrollReveal>
+                      <h3 style={{ fontFamily: head, fontWeight: 600, fontSize: 'clamp(16px,2vw,20px)', textTransform: 'uppercase', color: '#fff', marginBottom: 8 }}>{w.title}</h3>
+                      <p style={{ fontSize: 'clamp(13px,1.3vw,15px)', color: '#9CA3AF', lineHeight: 1.6, fontWeight: 300 }}>{w.description}</p>
+                      <Bolts />
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Stats Counters */}
+          <section style={{ background: '#1C1F26', padding: 'clamp(40px,6vw,72px) clamp(16px,4vw,32px)' }}>
+            <div style={{ maxWidth: 900, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 'clamp(16px,3vw,32px)', textAlign: 'center' }}>
+              {[
+                { n: 500, s: '+', l: 'Jobs Completed' },
+                { n: 10, s: '+', l: 'Years Experience' },
+                { n: 99, s: '%', l: 'Satisfaction' },
+                { n: reviewCount || 50, s: '+', l: 'Reviews' },
+              ].map((c, i) => (
+                <Reveal key={i}>
+                  <div style={{ padding: 'clamp(16px,2vw,24px)' }}>
+                    <div style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(36px,6vw,56px)', color: A }}><Counter end={c.n} suffix={c.s} /></div>
+                    <div style={{ fontFamily: mono, fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 2, marginTop: 4 }}>{c.l}</div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </section>
+
+          {/* Testimonials with rotated badge frames */}
+          <section style={{ background: '#252830', padding: 'clamp(48px,8vw,80px) clamp(16px,4vw,32px)' }}>
+            <div style={{ maxWidth: 900, margin: '0 auto' }}>
+              <Reveal>
+                <h2 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(24px,4vw,36px)', textTransform: 'uppercase', color: '#fff', marginBottom: 40, textAlign: 'center' }}>Client Testimonials</h2>
+              </Reveal>
+              <div style={{ display: 'grid', gap: 24 }}>
+                {testis.slice(0, 3).map((t, i) => (
+                  <Reveal key={i}>
+                    <div style={{ position: 'relative', padding: 'clamp(24px,3vw,36px)', background: '#1C1F26', borderLeft: `4px solid ${A}` }}>
+                      <Quote size={24} color={A} style={{ opacity: 0.3, marginBottom: 8 }} />
+                      <p style={{ fontSize: 'clamp(14px,1.5vw,16px)', lineHeight: 1.8, color: '#D1CFC9', fontWeight: 300 }}>&ldquo;{t.text}&rdquo;</p>
+                      <p style={{ fontFamily: head, fontWeight: 500, fontSize: 13, color: A, textTransform: 'uppercase', letterSpacing: 2, marginTop: 12 }}>&mdash; {t.author}</p>
+                      <div className="ic-stamp" style={{ position: 'absolute', top: 12, right: 12, border: `2px solid ${A}40`, padding: '3px 10px', transform: 'rotate(-3deg)' }}>
+                        <span style={{ fontFamily: mono, fontSize: 8, color: `${A}80`, textTransform: 'uppercase', letterSpacing: 2 }}>Verified</span>
+                      </div>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Brand Partners */}
+          {brands.length > 0 && (
+            <section style={{ background: '#1C1F26', padding: 'clamp(32px,5vw,56px) clamp(16px,4vw,32px)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+              <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
+                <Reveal>
+                  <p style={{ fontFamily: mono, fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 4, marginBottom: 24 }}>Brands We Trust</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 'clamp(16px,3vw,32px)' }}>
+                    {brands.map((b, i) => (
+                      <div key={i} style={{ fontFamily: head, fontWeight: 500, fontSize: 'clamp(13px,1.5vw,16px)', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: 2, padding: '8px 16px', border: '1px solid rgba(255,255,255,0.06)' }}>{b}</div>
                     ))}
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center py-16">
-                <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4 border border-green-100">
-                  <Camera size={24} className="text-green-600" />
-                </div>
-                <h3 className="text-lg font-bold text-green-900 mb-2">Portfolio Coming Soon</h3>
-                <p className="text-sm text-green-700/50 max-w-md mx-auto">We&apos;re putting together our best project photos. Contact us to see examples of our work.</p>
-                <button onClick={ctaNavigate} className={`mt-6 inline-flex items-center gap-2 ${brandGradientClass(config, 'bg-gradient-to-r')} text-white px-6 py-3 rounded-xl font-semibold text-sm hover:opacity-90 transition-all shadow-md`} style={brandGradientStyle(config, 'to right')}>
-                  Request Examples <ArrowRight size={14} />
-                </button>
+                </Reveal>
               </div>
-            )}
-          </div>
-        </section>
+            </section>
+          )}
 
-        <VideoPlaceholder theme="classic" config={config} photo={photos[1]} onCTAClick={ctaNavigate} />
-
-        <CTABand closingHeadline={wc?.closingHeadline} companyName={lead.companyName} location={location} config={config} onCTAClick={onCTAClick} onNavigateContact={() => navigateTo('contact')} />
-
-        <PhotoLightbox photos={photos} isOpen={lightboxOpen} initialIndex={lightboxIndex} onClose={() => setLightboxOpen(false)} />
-      </PageShell>
-
-      {/* ═══════════════════════════════════════════
-          PAGE: CONTACT
-       ═══════════════════════════════════════════ */}
-      <PageShell page="contact" currentPage={currentPage}>
-        <PageHeader
-          title="Get In Touch"
-          subtitle="We'd love to hear from you. Reach out for a free estimate."
-          bgClass={brandGradientClass(config)}
-          bgStyle={brandGradientStyle(config)}
-          subtitleClass="text-emerald-200/60"
-          accentClass="text-emerald-300"
-          onBackClick={() => navigateTo('home')}
-        />
-
-        {/* Contact form + info */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-white">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
-              <ScrollReveal animation="fade-left" delay={0}>
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-4">Get In Touch</p>
-                <h2 className="font-display text-3xl sm:text-4xl font-bold text-green-950 leading-tight mb-6">Ready to get started?</h2>
-                <p className="text-green-800/50 text-base leading-relaxed mb-10">{wc?.closingBody || `Free estimates, fast response. Reach out today.`}</p>
-                <div className="space-y-5">
-                  {lead.phone && (<a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-4 group"><div className={`w-12 h-12 rounded-xl ${brandGradientClass(config)} flex items-center justify-center flex-shrink-0 shadow-sm`} style={brandGradientStyle(config)}><Phone size={20} className="text-white" /></div><div><p className="text-sm font-bold text-green-900">{lead.phone}</p><p className="text-xs text-green-600/40">Call or text anytime</p></div></a>)}
-                  {lead.email && (<a href={`mailto:${lead.email}`} className="flex items-center gap-4"><div className={`w-12 h-12 rounded-xl ${brandGradientClass(config)} flex items-center justify-center flex-shrink-0 shadow-sm`} style={brandGradientStyle(config)}><Mail size={20} className="text-white" /></div><div><p className="text-sm font-bold text-green-900">{lead.email}</p><p className="text-xs text-green-600/40">We reply fast</p></div></a>)}
-                  {lead.enrichedAddress && (<div className="flex items-center gap-4"><div className={`w-12 h-12 rounded-xl ${brandGradientClass(config)} flex items-center justify-center flex-shrink-0 shadow-sm`} style={brandGradientStyle(config)}><MapPin size={20} className="text-white" /></div><div><p className="text-sm font-bold text-green-900">{lead.enrichedAddress}</p><p className="text-xs text-green-600/40">{location}</p></div></div>)}
-                </div>
-                <div className="flex gap-3 mt-10">
-                  <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-xl bg-green-50 border border-green-200 flex items-center justify-center text-green-500 hover:text-green-700 hover:border-green-300 transition-all"><Facebook size={16} /></a>
-                  <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-xl bg-green-50 border border-green-200 flex items-center justify-center text-green-500 hover:text-green-700 hover:border-green-300 transition-all"><Instagram size={16} /></a>
-                  <a href="#" onClick={(e) => e.preventDefault()} className="w-10 h-10 rounded-xl bg-green-50 border border-green-200 flex items-center justify-center text-green-500 hover:text-green-700 hover:border-green-300 transition-all"><GoogleIcon size={16} /></a>
-                </div>
-              </div>
-              </ScrollReveal>
-              <ScrollReveal animation="fade-right" delay={200}>
-                <ContactFormEnhanced theme="classic" config={config} previewId={lead.previewId} services={services} companyName={lead.companyName} />
-              </ScrollReveal>
-            </div>
-          </div>
-        </section>
-
-        {/* FAQ */}
-        <section className="py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 bg-green-50/40">
-          <div className="max-w-3xl mx-auto">
-            <ScrollReveal animation="fade-up" delay={0}>
-            <div className="text-center mb-14">
-              <p className="text-xs uppercase tracking-[0.2em] font-semibold text-green-600 mb-3">Common Questions</p>
-              <h2 className="font-display text-3xl sm:text-4xl font-bold text-green-950">Got questions? We've got answers.</h2>
-            </div>
-            </ScrollReveal>
-            <ScrollReveal animation="fade-up" delay={200}>
-            <div className="bg-white rounded-2xl border border-green-100 px-6 sm:px-8 shadow-sm">
-              {faqs.map((f, i) => <FAQItem key={i} question={f.q} answer={f.a} isOpen={openFAQ === i} onToggle={() => setOpenFAQ(openFAQ === i ? null : i)} />)}
-            </div>
-            </ScrollReveal>
-          </div>
-        </section>
-      </PageShell>
-
-      {/* ═══════ FOOTER (always visible) ═══════ */}
-      <footer className="bg-green-950 py-14 px-4 sm:px-6 md:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
-            <div>
-              <div className="flex items-center gap-2.5 mb-4">{lead.logo ? (<img src={lead.logo} alt="" className="h-7 w-7 rounded-lg object-cover" />) : (<div className={`w-7 h-7 rounded-lg ${brandGradientClass(config)} flex items-center justify-center`} style={brandGradientStyle(config)}><Leaf size={14} className="text-white" /></div>)}<span className="text-white font-bold text-lg">{lead.companyName}</span></div>
-              <p className="text-green-200/40 text-sm leading-relaxed">Trusted {industryLabel} professionals{location ? ` in ${location}` : ''}. Licensed, insured, committed to quality.</p>
-              {hasRating && (<div className="flex items-center gap-2 mt-4"><div className="flex gap-0.5">{Array.from({ length: 5 }, (_, i) => <Star key={i} size={11} className={i < Math.floor(lead.enrichedRating || 0) ? 'text-amber-400 fill-current' : 'text-green-800'} />)}</div><span className="text-green-200/40 text-xs">{lead.enrichedRating} rating</span></div>)}
-              <div className="flex gap-2.5 mt-5">
-                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-green-900 flex items-center justify-center text-green-600 hover:text-white hover:bg-green-800 transition-all"><Facebook size={13} /></a>
-                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-green-900 flex items-center justify-center text-green-600 hover:text-white hover:bg-green-800 transition-all"><Instagram size={13} /></a>
-                <a href="#" onClick={(e) => e.preventDefault()} className="w-8 h-8 rounded-lg bg-green-900 flex items-center justify-center text-green-600 hover:text-white hover:bg-green-800 transition-all"><GoogleIcon size={12} /></a>
-              </div>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4 text-xs uppercase tracking-[0.15em]">Quick Links</h4>
-              <ul className="space-y-2.5 text-sm text-green-200/40">
-                {navSections.map((s) => (
-                  <li key={s.page}><button onClick={() => navigateTo(s.page)} data-nav-page={s.page} className="hover:text-white transition-colors">{s.label}</button></li>
+          {/* FAQ */}
+          <section style={{ background: '#1C1F26', padding: 'clamp(48px,8vw,80px) clamp(16px,4vw,32px)' }}>
+            <div style={{ maxWidth: 800, margin: '0 auto' }}>
+              <Reveal>
+                <h2 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(24px,4vw,36px)', textTransform: 'uppercase', color: '#fff', marginBottom: 32 }}>Common Questions</h2>
+              </Reveal>
+              <div style={{ borderTop: `3px solid ${A}` }}>
+                {faqs.map((f, i) => (
+                  <Reveal key={i}>
+                    <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <button onClick={() => setFaqOpen(faqOpen === i ? null : i)}
+                        style={{ width: '100%', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'clamp(16px,2.5vw,24px) 0', background: 'none', border: 'none', cursor: 'pointer', gap: 16 }}>
+                        <span style={{ fontFamily: head, fontWeight: 500, fontSize: 'clamp(15px,2vw,18px)', color: '#E8E6E1', textTransform: 'uppercase', letterSpacing: 1 }}>{f.q}</span>
+                        {faqOpen === i ? <Minus size={18} color={A} /> : <Plus size={18} color="#9CA3AF" />}
+                      </button>
+                      <div style={{ maxHeight: faqOpen === i ? 200 : 0, overflow: 'hidden', transition: 'max-height 0.3s ease' }}>
+                        <p style={{ fontSize: 'clamp(14px,1.5vw,16px)', color: '#9CA3AF', lineHeight: 1.7, paddingBottom: 20, fontWeight: 300 }}>{f.a}</p>
+                      </div>
+                    </div>
+                  </Reveal>
                 ))}
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4 text-xs uppercase tracking-[0.15em]">Contact</h4>
-              <div className="space-y-3 text-sm text-green-200/40">
-                {lead.phone && <a href={`tel:${lead.phone}`} onClick={onCallClick} className="flex items-center gap-2.5 hover:text-white transition-colors"><Phone size={13} />{lead.phone}</a>}
-                {lead.email && <a href={`mailto:${lead.email}`} className="flex items-center gap-2.5 hover:text-white transition-colors"><Mail size={13} />{lead.email}</a>}
-                {lead.enrichedAddress && <p className="flex items-center gap-2.5"><MapPin size={13} className="flex-shrink-0" />{lead.enrichedAddress}</p>}
               </div>
             </div>
-          </div>
-          <div className="border-t border-green-800/50 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-green-200/30 text-xs">&copy; {new Date().getFullYear()} {lead.companyName}. All rights reserved.</p>
-            <span className="text-gray-700 text-[10px]">Powered by <a href="https://brightautomations.com" target="_blank" rel="noopener noreferrer" className="text-emerald-500 hover:text-emerald-400 transition-colors">Bright Automations</a></span>
-            {location && <p className="text-green-200/20 text-xs">Professional {industryLabel} · {location}</p>}
+          </section>
+        </div>
+
+        {/* ══════════════ PORTFOLIO / WORK ══════════════ */}
+        <div data-page="portfolio" style={{ display: page === 'work' ? 'block' : 'none' }}>
+          <section style={{ padding: 'clamp(48px,8vw,96px) clamp(16px,4vw,32px)' }}>
+            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+              <Reveal>
+                <p style={{ fontFamily: mono, fontSize: 12, color: A, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>Portfolio</p>
+                <h1 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(32px,6vw,56px)', textTransform: 'uppercase', color: '#fff', marginBottom: 48 }}>Our Work</h1>
+              </Reveal>
+              {photos.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(250px,30vw,350px), 1fr))', gap: 4 }}>
+                  {photos.map((p, i) => (
+                    <Reveal key={i}>
+                      <div onClick={() => setLb(i)} style={{ position: 'relative', paddingBottom: '75%', cursor: 'pointer', overflow: 'hidden' }}>
+                        <img src={p} alt={`Project ${i + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }}
+                          onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.03)')} onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')} />
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '24px 12px 8px', background: 'linear-gradient(transparent, rgba(28,31,38,0.9))' }}>
+                          <span style={{ fontFamily: mono, fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 2 }}>Project {String(i + 1).padStart(2, '0')}</span>
+                        </div>
+                      </div>
+                    </Reveal>
+                  ))}
+                </div>
+              ) : (
+                <Reveal>
+                  <div style={{ textAlign: 'center', padding: 'clamp(48px,8vw,96px) 16px', background: '#252830', border: '2px solid rgba(255,255,255,0.06)', position: 'relative' }}>
+                    <Camera size={48} color={A} style={{ opacity: 0.3, marginBottom: 16 }} />
+                    <p style={{ fontFamily: head, fontWeight: 600, fontSize: 'clamp(18px,3vw,24px)', textTransform: 'uppercase', color: '#fff', marginBottom: 8 }}>Project Photos Coming Soon</p>
+                    <p style={{ fontSize: 14, color: '#9CA3AF', fontWeight: 300 }}>We are currently updating our portfolio. Check back soon.</p>
+                    <Bolts />
+                  </div>
+                </Reveal>
+              )}
+              <Reveal>
+                <div style={{ textAlign: 'center', marginTop: 48 }}>
+                  <button onClick={onCTAClick} className="ic-press" style={{ fontFamily: head, fontWeight: 600, fontSize: 15, background: A, color: '#1C1F26', padding: '16px 36px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 2 }}>Start Your Project</button>
+                </div>
+              </Reveal>
+            </div>
+          </section>
+        </div>
+
+        {/* ══════════════ CONTACT ══════════════ */}
+        <div data-page="contact" style={{ display: page === 'contact' ? 'block' : 'none' }}>
+          <section style={{ padding: 'clamp(48px,8vw,96px) clamp(16px,4vw,32px)' }}>
+            <div style={{ maxWidth: 900, margin: '0 auto' }}>
+              <Reveal>
+                <p style={{ fontFamily: mono, fontSize: 12, color: A, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>Contact</p>
+                <h1 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(32px,6vw,56px)', textTransform: 'uppercase', color: '#fff', marginBottom: 16 }}>Get In Touch</h1>
+                <div style={{ width: 60, height: 6, background: A, marginBottom: 48 }} />
+              </Reveal>
+
+              {/* Contact info + Service area */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 32, marginBottom: 48 }}>
+                <Reveal>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    {phone && (
+                      <button onClick={onCallClick} className="ic-press" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 20, background: '#252830', borderLeft: `4px solid ${A}`, border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+                        <Phone size={20} color={A} />
+                        <div>
+                          <div style={{ fontFamily: mono, fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>Call Us</div>
+                          <div style={{ fontSize: 16, color: '#fff', fontWeight: 500 }}>{fmt(phone)}</div>
+                        </div>
+                      </button>
+                    )}
+                    {city && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 20, background: '#252830', borderLeft: `4px solid ${A}` }}>
+                        <MapPin size={20} color={A} />
+                        <div>
+                          <div style={{ fontFamily: mono, fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>Location</div>
+                          <div style={{ fontSize: 16, color: '#fff', fontWeight: 500 }}>{loc}</div>
+                        </div>
+                      </div>
+                    )}
+                    <button onClick={onCTAClick} className="ic-press" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 20, background: '#252830', borderLeft: `4px solid ${A}`, border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+                      <Mail size={20} color={A} />
+                      <div>
+                        <div style={{ fontFamily: mono, fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 }}>Email</div>
+                        <div style={{ fontSize: 16, color: '#fff', fontWeight: 500 }}>Send a Message</div>
+                      </div>
+                    </button>
+                  </div>
+                </Reveal>
+                <Reveal>
+                  <div style={{ padding: 'clamp(20px,3vw,32px)', background: '#252830', borderLeft: `4px solid ${A}` }}>
+                    <h3 style={{ fontFamily: head, fontWeight: 600, fontSize: 'clamp(18px,2.5vw,22px)', textTransform: 'uppercase', color: '#fff', marginBottom: 12 }}>Service Area</h3>
+                    <p style={{ fontSize: 'clamp(14px,1.5vw,16px)', color: '#9CA3AF', lineHeight: 1.7, fontWeight: 300 }}>
+                      {wc?.serviceAreaText || `We proudly serve ${loc || 'the local area'} and surrounding communities. Our crews are dispatched daily across the region, so chances are we cover your neighborhood. Call to confirm availability at your address.`}
+                    </p>
+                  </div>
+                </Reveal>
+              </div>
+
+              {/* Contact FAQ */}
+              <Reveal>
+                <h2 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(22px,3.5vw,32px)', textTransform: 'uppercase', color: '#fff', marginBottom: 24 }}>Frequently Asked</h2>
+              </Reveal>
+              <div style={{ borderTop: `3px solid ${A}`, marginBottom: 48 }}>
+                {faqs.slice(0, 4).map((f, i) => {
+                  const idx = i + 100
+                  return (
+                    <Reveal key={i}>
+                      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                        <button onClick={() => setFaqOpen(faqOpen === idx ? null : idx)}
+                          style={{ width: '100%', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'clamp(14px,2vw,20px) 0', background: 'none', border: 'none', cursor: 'pointer', gap: 16 }}>
+                          <span style={{ fontFamily: head, fontWeight: 500, fontSize: 'clamp(14px,1.8vw,17px)', color: '#E8E6E1', textTransform: 'uppercase', letterSpacing: 1 }}>{f.q}</span>
+                          {faqOpen === idx ? <Minus size={16} color={A} /> : <Plus size={16} color="#9CA3AF" />}
+                        </button>
+                        <div style={{ maxHeight: faqOpen === idx ? 200 : 0, overflow: 'hidden', transition: 'max-height 0.3s ease' }}>
+                          <p style={{ fontSize: 'clamp(13px,1.4vw,15px)', color: '#9CA3AF', lineHeight: 1.7, paddingBottom: 16, fontWeight: 300 }}>{f.a}</p>
+                        </div>
+                      </div>
+                    </Reveal>
+                  )
+                })}
+              </div>
+
+              {/* Estimate Form CTA */}
+              <Reveal>
+                <div style={{ background: '#252830', padding: 'clamp(28px,4vw,48px)', borderTop: `4px solid ${A}`, position: 'relative' }}>
+                  <h3 style={{ fontFamily: head, fontWeight: 600, fontSize: 'clamp(20px,3vw,28px)', textTransform: 'uppercase', color: '#fff', marginBottom: 12 }}>Request an Estimate</h3>
+                  <p style={{ fontSize: 'clamp(14px,1.5vw,16px)', color: '#9CA3AF', lineHeight: 1.7, marginBottom: 24, fontWeight: 300 }}>Tell us about your project and we&rsquo;ll get back to you with a detailed, no-obligation quote.</p>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    <button onClick={onCTAClick} className="ic-press" style={{ fontFamily: head, fontWeight: 600, fontSize: 15, background: A, color: '#1C1F26', padding: '16px 36px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 2, flex: '1 1 auto' }}>Get Free Estimate</button>
+                    {phone && <button onClick={onCallClick} className="ic-press" style={{ fontFamily: head, fontWeight: 600, fontSize: 15, color: '#fff', background: 'none', border: '2px solid rgba(255,255,255,0.15)', padding: '16px 36px', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 2, flex: '1 1 auto' }}>
+                      <Phone size={16} style={{ display: 'inline', verticalAlign: -3, marginRight: 8 }} />{fmt(phone)}
+                    </button>}
+                  </div>
+                  <Bolts />
+                </div>
+              </Reveal>
+            </div>
+          </section>
+        </div>
+
+        {/* FOOTER */}
+        <footer style={{ background: '#15171D', borderTop: `3px solid ${A}`, padding: 'clamp(32px,5vw,48px) clamp(16px,4vw,32px)', textAlign: 'center' }}>
+          <p style={{ fontFamily: head, fontWeight: 600, fontSize: 16, color: '#fff', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 8 }}>{name}</p>
+          {loc && <p style={{ fontFamily: mono, fontSize: 11, color: '#6B7280', letterSpacing: 1, marginBottom: 8 }}>{loc}</p>}
+          <p style={{ fontFamily: mono, fontSize: 11, color: '#6B7280', letterSpacing: 1 }}>&copy; {new Date().getFullYear()} {name}. All rights reserved.</p>
+        </footer>
+      </div>
+
+      {/* LIGHTBOX with prev/next */}
+      {lb !== null && photos[lb] && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={() => setLb(null)} style={{ position: 'absolute', inset: 0 }} />
+          <img src={photos[lb]} alt="" style={{ maxWidth: '85vw', maxHeight: '85vh', objectFit: 'contain', position: 'relative', zIndex: 1 }} />
+          <button onClick={() => setLb(null)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', color: '#fff', cursor: 'pointer', zIndex: 2 }}><X size={28} /></button>
+          {photos.length > 1 && <>
+            <button onClick={e => { e.stopPropagation(); setLb((lb - 1 + photos.length) % photos.length) }} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.08)', border: 'none', color: '#fff', cursor: 'pointer', padding: 12, zIndex: 2 }}><ChevronLeft size={28} /></button>
+            <button onClick={e => { e.stopPropagation(); setLb((lb + 1) % photos.length) }} style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.08)', border: 'none', color: '#fff', cursor: 'pointer', padding: 12, zIndex: 2 }}><ChevronRight size={28} /></button>
+          </>}
+          <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 2 }}>
+            <span style={{ fontFamily: mono, fontSize: 12, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 2 }}>
+              {String(lb + 1).padStart(2, '0')} / {String(photos.length).padStart(2, '0')}
+            </span>
           </div>
         </div>
-      </footer>
+      )}
 
-      {/* ═══════ CHATBOT ═══════ */}
-      <ChatbotWidget companyName={lead.companyName} accentColor={brandAccent(config, '#15803d')} />
-
-      <div className="h-16 sm:h-0" />
+      {/* CHAT WIDGET */}
+      {chatOpen && (
+        <div style={{ position: 'fixed', bottom: 80, right: 16, zIndex: 9997, width: 'min(360px, calc(100vw - 32px))', background: '#1C1F26', border: `2px solid ${A}30`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ padding: '14px 16px', background: '#252830', borderBottom: `2px solid ${A}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontFamily: head, fontWeight: 600, fontSize: 14, color: '#fff', textTransform: 'uppercase', letterSpacing: 1 }}>{name}</span>
+            <button onClick={() => setChatOpen(false)} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer' }}><X size={18} /></button>
+          </div>
+          <div style={{ padding: 16, flex: 1 }}>
+            <div style={{ background: '#252830', padding: 12, borderLeft: `3px solid ${A}`, marginBottom: 12 }}>
+              <p style={{ fontSize: 13, color: '#D1CFC9' }}>How can we help? We typically respond within minutes.</p>
+            </div>
+          </div>
+          <div style={{ padding: 12, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 8 }}>
+            <input type="text" placeholder="Type a message..." style={{ flex: 1, padding: '10px 14px', background: '#252830', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: 13, outline: 'none', fontFamily: body }} />
+            <button onClick={onCTAClick} style={{ background: A, border: 'none', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Send size={16} color="#1C1F26" /></button>
+          </div>
+        </div>
+      )}
+      <button onClick={() => setChatOpen(!chatOpen)}
+        style={{ position: 'fixed', bottom: 16, right: 16, zIndex: 9997, width: 52, height: 52, background: A, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {chatOpen ? <X size={22} color="#1C1F26" /> : <MessageCircle size={22} color="#1C1F26" />}
+      </button>
     </div>
   )
 }

@@ -701,3 +701,22 @@ export async function addImportProcessingJob(data: {
     return null
   }
 }
+
+export async function addSessionAnalysisJob(data: { sessionId: string }) {
+  const queue = await getSequenceQueue()
+  if (!queue || !isRedisAvailable) {
+    console.warn('[QUEUE] Sequence queue unavailable for session analysis')
+    return null
+  }
+
+  try {
+    return await queue.add('session-analysis', data, {
+      attempts: 2,
+      backoff: { type: 'exponential', delay: 2000 },
+      removeOnComplete: true,
+    })
+  } catch (err) {
+    console.warn('Failed to add session analysis job:', err)
+    return null
+  }
+}

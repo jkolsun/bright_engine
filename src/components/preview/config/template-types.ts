@@ -64,3 +64,19 @@ export interface TemplateProps {
   onCallClick: () => Promise<void>
   websiteCopy?: WebsiteCopy
 }
+
+export const TEMPLATE_DISPLAY_NAMES: Record<TemplateVariant, string> = {
+  'modern': 'Horizon',
+  'modern-b': 'Zephyr',
+  'bold': 'Obsidian',
+  'bold-b': 'Carbon',
+  'classic': 'Cornerstone',
+  'classic-b': 'Ironclad',
+  'premium': 'Sovereign',
+  'premium-b': 'Meridian',
+  'premium-c': 'Atelier',
+}
+
+export const COMING_SOON_TEMPLATES: Set<TemplateVariant> = new Set([
+  'premium', 'premium-b', 'premium-c',
+])

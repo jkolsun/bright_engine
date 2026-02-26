@@ -175,6 +175,19 @@ export function getIndustryConfig(industry: string, companyName?: string): Indus
   return variants[variantIndex]
 }
 
+/**
+ * Get all template variants for an industry, plus the default (hash-selected) index.
+ * Used by the template switcher so clients can toggle between designs.
+ */
+export function getAllIndustryVariants(industry: string, companyName?: string): { configs: IndustryConfig[]; defaultIndex: number } {
+  const entry = industryVariantsMap[industry] || defaultVariants
+  const variants = entry.variants
+  const defaultIndex = (variants.length > 1 && companyName)
+    ? hashString(companyName) % variants.length
+    : 0
+  return { configs: variants, defaultIndex }
+}
+
 // Backwards-compatible export for any code using the old flat map
 export const industryTemplateMap: Record<string, IndustryConfig> = Object.fromEntries(
   Object.entries(industryVariantsMap).map(([key, val]) => [key, val.variants[0]])
