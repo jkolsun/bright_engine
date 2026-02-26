@@ -580,6 +580,13 @@ server.tool(
 
 // ─── Connect ─────────────────────────────────────────────────────
 
-const transport = new StdioServerTransport()
-await server.connect(transport)
-console.log('[MCP] Bright Engine MCP server connected')
+async function main() {
+  const transport = new StdioServerTransport()
+  await server.connect(transport)
+  console.log('[MCP] Bright Engine MCP server connected')
+}
+
+main().catch((err) => {
+  console.error('[MCP] Fatal error:', err)
+  process.exit(1)
+})
