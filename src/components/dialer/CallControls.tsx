@@ -1,12 +1,24 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDialer } from './DialerProvider'
-import { Phone, PhoneOff, Mic, MicOff, Voicemail, SkipForward, Power, Pause, Play, Info } from 'lucide-react'
+import { Phone, PhoneOff, Mic, MicOff, Voicemail, SkipForward, Power, Pause, Play, Info, Grid3X3, PhoneOutgoing } from 'lucide-react'
+
+const DTMF_KEYS = [
+  { digit: '1', letters: '' }, { digit: '2', letters: 'ABC' }, { digit: '3', letters: 'DEF' },
+  { digit: '4', letters: 'GHI' }, { digit: '5', letters: 'JKL' }, { digit: '6', letters: 'MNO' },
+  { digit: '7', letters: 'PQRS' }, { digit: '8', letters: 'TUV' }, { digit: '9', letters: 'WXYZ' },
+  { digit: '*', letters: '' }, { digit: '0', letters: '' }, { digit: '#', letters: '' },
+]
 
 export function CallControls() {
-  const { session, twilioDevice, timer, currentCall, dial, hangup, queue, endSessionFull, activeCallerId } = useDialer()
+  const { session, twilioDevice, timer, currentCall, dial, hangup, queue, endSessionFull, activeCallerId, manualDialState, startManualDial } = useDialer()
   const [vmDropping, setVmDropping] = useState(false)
   const [showTooltip, setShowTooltip] = useState(false)
+  const [showKeypad, setShowKeypad] = useState(false)
+  const [pressedDigit, setPressedDigit] = useState<string | null>(null)
+  const [showManualDial, setShowManualDial] = useState(false)
+  const [manualDialPhone, setManualDialPhone] = useState('')
+  const [manualDialing, setManualDialing] = useState(false)
 
   const formatCallerId = (num: string) => {
     const digits = num.replace(/\D/g, '')
@@ -18,6 +30,24 @@ export function CallControls() {
       return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
     }
     return num
+  }
+
+  const normalizePhone = (input: string): string | null => {
+    const digits = input.replace(/\D/g, '')
+    if (digits.length === 10) return `+1${digits}`
+    if (digits.length === 11 && digits[0] === '1') return `+${digits}`
+    return null
+  }
+
+  // Auto-close keypad when call disconnects
+  useEffect(() => {
+    if (!currentCall || currentCall.status !== 'CONNECTED') setShowKeypad(false)
+  }, [currentCall?.status])
+
+  const handleDTMF = (digit: string) => {
+    twilioDevice.activeCall?.sendDigits(digit)
+    setPressedDigit(digit)
+    setTimeout(() => setPressedDigit(null), 150)
   }
 
   if (currentCall) console.log('[CallControls] render — activeCallerId:', activeCallerId, 'callStatus:', currentCall.status)
@@ -51,8 +81,23 @@ export function CallControls() {
     } finally { setVmDropping(false) }
   }
 
+  const handleManualDial = async () => {
+    const normalized = normalizePhone(manualDialPhone)
+    if (!normalized) return
+    setManualDialing(true)
+    try {
+      await startManualDial(normalized)
+      setShowManualDial(false)
+      setManualDialPhone('')
+    } catch (err: any) {
+      console.error('[CallControls] Manual dial error:', err.message)
+    } finally {
+      setManualDialing(false)
+    }
+  }
+
   return (
-    <div className="border-t border-gray-200 bg-white px-6 py-3 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
+    <div className="relative border-t border-gray-200 bg-white px-6 py-3 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
       <div className="flex items-center justify-between">
         {/* Left: Session stats + status */}
         <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
@@ -105,6 +150,33 @@ export function CallControls() {
                 </button>
               )}
 
+              <button
+                onClick={() => setShowKeypad(prev => !prev)}
+                className={`p-3 rounded-full transition-colors ${showKeypad ? 'bg-teal-100 text-teal-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                title="Keypad"
+              >
+                <Grid3X3 className="w-5 h-5" />
+              </button>
+
+              {showKeypad && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white rounded-xl shadow-lg border border-gray-200 p-3 z-50">
+                  <div className="grid grid-cols-3 gap-2">
+                    {DTMF_KEYS.map(({ digit, letters }) => (
+                      <button
+                        key={digit}
+                        onClick={() => handleDTMF(digit)}
+                        className={`w-12 h-12 rounded-lg border flex flex-col items-center justify-center transition-all ${
+                          pressedDigit === digit ? 'bg-teal-200 scale-95' : 'bg-gray-50 hover:bg-teal-50'
+                        }`}
+                      >
+                        <span className="text-lg font-semibold text-gray-900">{digit}</span>
+                        {letters && <span className="text-[8px] text-gray-400 leading-none">{letters}</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {activeCallerId && (
                 <span className="text-xs text-gray-400 font-medium">
                   From: <span className="text-gray-600">{formatCallerId(activeCallerId)}</span>
@@ -134,6 +206,38 @@ export function CallControls() {
                 <Phone className="w-4 h-4" />
                 Dial
               </button>
+
+              <button
+                onClick={() => setShowManualDial(!showManualDial)}
+                className={`flex items-center gap-1.5 px-4 py-3 rounded-xl font-semibold text-sm transition-colors ${
+                  showManualDial ? 'bg-teal-100 text-teal-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+                title="Manual Dial"
+              >
+                <PhoneOutgoing className="w-4 h-4" />
+                Manual
+              </button>
+
+              {showManualDial && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="tel"
+                    placeholder="(555) 123-4567"
+                    value={manualDialPhone}
+                    onChange={(e) => setManualDialPhone(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleManualDial(); if (e.key === 'Escape') setShowManualDial(false) }}
+                    autoFocus
+                    className="w-40 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+                  />
+                  <button
+                    onClick={handleManualDial}
+                    disabled={manualDialing || !manualDialPhone.trim()}
+                    className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-semibold hover:bg-teal-700 disabled:opacity-50"
+                  >
+                    {manualDialing ? 'Calling...' : 'Call'}
+                  </button>
+                </div>
+              )}
 
               {/* Device status — show when dialer has a problem */}
               {twilioDevice.deviceState === 'error' && (

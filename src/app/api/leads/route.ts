@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
           companyName: true,
           email: true,
           phone: true,
+          secondaryPhone: true,
           industry: true,
           city: true,
           state: true,

@@ -50,6 +50,10 @@ interface DialerContextValue {
   handleSwapToNewCall: () => void
   endSessionFull: () => Promise<void>
   activeCallerId: string | null
+  manualDialState: { active: boolean; phone: string | null; sessionId: string | null; twilioCallSid: string | null } | null
+  startManualDial: (phone: string) => Promise<void>
+  linkManualDial: (leadId: string, options?: { saveAsSecondary?: boolean }) => Promise<void>
+  createLeadFromManualDialFn: (companyName: string, contactName?: string) => Promise<void>
 }
 
 const DialerContext = createContext<DialerContextValue | null>(null)
@@ -67,6 +71,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
   const timer = useCallTimer()
   const [currentCall, setCurrentCall] = useState<DialerCall | null>(null)
   const [activeCallerId, setActiveCallerId] = useState<string | null>(null)
+  const [manualDialState, setManualDialState] = useState<{ active: boolean; phone: string | null; sessionId: string | null; twilioCallSid: string | null } | null>(null)
 
   // Auto-dial state
   const [autoDialState, setAutoDialState] = useState<AutoDialState>('IDLE')
@@ -577,20 +582,170 @@ export function DialerProvider({ children }: { children: ReactNode }) {
   const hangup = useCallback(async () => {
     twilioDevice.hangup()
     timer.stop()
-    if (currentCall) {
+    if (currentCall && !currentCall.id.startsWith('manual-')) {
       await fetch('/api/dialer/call/end', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ callId: currentCall.id }),
       }).catch(err => console.warn('[DialerProvider] Call end API failed:', err))
     }
-  }, [currentCall, twilioDevice])
+    // Clear manual dial state on hangup
+    if (manualDialState?.active) {
+      setManualDialState(null)
+    }
+  }, [currentCall, twilioDevice, manualDialState])
+
+  // Manual Dial: initiate a call to an arbitrary phone number (no lead yet)
+  const startManualDial = useCallback(async (phone: string) => {
+    if (!sessionHook.session) throw new Error('No active session')
+    const res = await fetch('/api/dialer/manual-dial', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, sessionId: sessionHook.session.id }),
+    })
+    const data = await res.json()
+    if (data.error) throw new Error(data.error)
+
+    setManualDialState({ active: true, phone, sessionId: sessionHook.session.id, twilioCallSid: null })
+    queue.setSelectedLeadId(null)
+
+    // Set temporary currentCall so on-call controls appear
+    const tempCall = {
+      id: `manual-${Date.now()}`,
+      leadId: '',
+      repId: '',
+      status: 'INITIATED',
+      direction: 'OUTBOUND',
+      startedAt: new Date().toISOString(),
+      wasRecommended: false,
+      previewSentDuringCall: false,
+      previewOpenedDuringCall: false,
+      ctaClickedDuringCall: false,
+      vmDropped: false,
+    } as any
+    setCurrentCall(tempCall)
+    currentCallRef.current = tempCall
+
+    const call = await twilioDevice.makeCall({ To: data.phoneToCall })
+    timer.reset()
+
+    if (call) {
+      call.on('accept', () => {
+        setCurrentCall(prev => prev ? { ...prev, status: 'CONNECTED' } : null)
+        if (currentCallRef.current) currentCallRef.current = { ...currentCallRef.current, status: 'CONNECTED' }
+        timer.start()
+      })
+      call.on('disconnect', () => {
+        setCurrentCall(prev => prev ? { ...prev, status: 'COMPLETED' } : null)
+        if (currentCallRef.current) currentCallRef.current = { ...currentCallRef.current, status: 'COMPLETED' }
+        timer.stop()
+      })
+      call.on('cancel', () => {
+        setCurrentCall(prev => prev ? { ...prev, status: 'FAILED' } : null)
+        if (currentCallRef.current) currentCallRef.current = { ...currentCallRef.current, status: 'FAILED' }
+        timer.stop()
+      })
+      // Capture Twilio Call SID
+      const sid = (call as any).parameters?.CallSid || null
+      if (sid) setManualDialState(prev => prev ? { ...prev, twilioCallSid: sid } : prev)
+    }
+  }, [sessionHook.session, twilioDevice, queue, timer])
+
+  // Link a manual dial to an existing lead
+  const linkManualDial = useCallback(async (leadId: string, options?: { saveAsSecondary?: boolean }) => {
+    if (!manualDialState?.active || !manualDialState.phone) throw new Error('No active manual dial')
+    const res = await fetch('/api/dialer/manual-dial/attach', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        leadId,
+        phone: manualDialState.phone,
+        sessionId: manualDialState.sessionId,
+        twilioCallSid: manualDialState.twilioCallSid,
+      }),
+    })
+    const callData = await res.json()
+    if (callData.error) throw new Error(callData.error)
+
+    // Optionally save dialed number as secondaryPhone
+    if (options?.saveAsSecondary) {
+      await fetch(`/api/leads/${leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secondaryPhone: manualDialState.phone,
+          _editedField: 'secondaryPhone',
+          _previousValue: '',
+          _editedBy: 'rep',
+        }),
+      }).catch(err => console.warn('[ManualDial] Save secondary phone failed:', err))
+    }
+
+    // Promote to real call
+    const realCall = {
+      id: callData.id,
+      leadId,
+      repId: callData.repId || '',
+      status: currentCall?.status || 'CONNECTED',
+      direction: 'OUTBOUND' as const,
+      startedAt: callData.startedAt || new Date().toISOString(),
+      wasRecommended: false,
+      previewSentDuringCall: false,
+      previewOpenedDuringCall: false,
+      ctaClickedDuringCall: false,
+      vmDropped: false,
+    } as any
+    setCurrentCall(realCall)
+    currentCallRef.current = realCall
+    queue.setSelectedLeadId(leadId)
+    setManualDialState(null)
+  }, [manualDialState, currentCall?.status, queue])
+
+  // Create a new lead from a manual dial
+  const createLeadFromManualDialFn = useCallback(async (companyName: string, contactName?: string) => {
+    if (!manualDialState?.active || !manualDialState.phone) throw new Error('No active manual dial')
+    const res = await fetch('/api/dialer/manual-dial/create-lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone: manualDialState.phone,
+        sessionId: manualDialState.sessionId,
+        twilioCallSid: manualDialState.twilioCallSid,
+        companyName,
+        contactName,
+      }),
+    })
+    const data = await res.json()
+    if (data.error) throw new Error(data.error)
+
+    // Inject new lead into queue
+    queue.injectLead(data.lead)
+    queue.setSelectedLeadId(data.lead.id)
+
+    // Promote to real call
+    const realCall = {
+      id: data.call.id,
+      leadId: data.lead.id,
+      repId: data.call.repId || '',
+      status: currentCall?.status || 'CONNECTED',
+      direction: 'OUTBOUND' as const,
+      startedAt: data.call.startedAt || new Date().toISOString(),
+      wasRecommended: false,
+      previewSentDuringCall: false,
+      previewOpenedDuringCall: false,
+      ctaClickedDuringCall: false,
+      vmDropped: false,
+    } as any
+    setCurrentCall(realCall)
+    currentCallRef.current = realCall
+    setManualDialState(null)
+  }, [manualDialState, currentCall?.status, queue])
 
   // Full session teardown: kill SDK calls, clear all state, then end backend session
   const endSessionFull = useCallback(async () => {
     // 0. Auto-disposition any active/pending calls so leads don't get orphaned
     //    (fire-and-forget — don't block session teardown)
-    if (currentCallRef.current?.id) {
+    if (currentCallRef.current?.id && !currentCallRef.current.id.startsWith('manual-')) {
       fetch('/api/dialer/call/auto-disposition', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -626,6 +781,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     setPendingCall(null)
     pendingCallRef.current = null
     setActiveCallerId(null)
+    setManualDialState(null)
     wasConnectedRef.current = false
     lastCalledLeadIdRef.current = null
     calledLeadIdsRef.current = new Set()
@@ -646,6 +802,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       session: sessionHook, twilioDevice, sse, queue, timer,
       currentCall, setCurrentCall, dial, hangup,
       autoDialState, autoDialBanner, bannerUrgent, handleAutoDialNext, handleSwapToNewCall, endSessionFull, activeCallerId,
+      manualDialState, startManualDial, linkManualDial, createLeadFromManualDialFn,
     }}>
       {children}
     </DialerContext.Provider>

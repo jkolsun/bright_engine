@@ -184,6 +184,16 @@ export function useDialerQueue() {
     }
   }, [fetchCallbacks])
 
+  // Patch a lead's data in-place across all queue arrays
+  const updateLeadInQueue = useCallback((leadId: string, updates: Partial<QueueLead>) => {
+    const patcher = (prev: QueueLead[]) =>
+      prev.map(l => l.id === leadId ? { ...l, ...updates } : l)
+    setFreshLeads(patcher)
+    setRetryLeads(patcher)
+    setCalledLeads(patcher)
+    setTempLeads(patcher)
+  }, [])
+
   return {
     activeTab, setActiveTab,
     leads, freshLeads, retryLeads, calledLeads,
@@ -191,6 +201,6 @@ export function useDialerQueue() {
     selectedLeadId, setSelectedLeadId, selectedLead,
     searchQuery, setSearchQuery,
     refresh, fetchFresh, fetchRetry, fetchCalled, fetchCallbacks, fetchMissed,
-    selectNext, selectPrev, removeCallback, moveLeadAfterDisposition, injectLead,
+    selectNext, selectPrev, removeCallback, moveLeadAfterDisposition, injectLead, updateLeadInQueue,
   }
 }

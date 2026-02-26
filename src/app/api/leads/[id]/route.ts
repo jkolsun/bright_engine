@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
 
 // GET /api/leads/[id] - Get lead detail with timeline
 export async function GET(
@@ -78,7 +79,19 @@ export async function PUT(
 ) {
   try {
     const { id } = await context.params
+
+    // Auth check
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || !['ADMIN', 'REP'].includes(session.role)) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
     const data = await request.json()
+
+    // Extract metadata before whitelist filtering
+    const _editedField = data._editedField as string | undefined
+    const _previousValue = data._previousValue as string | undefined
 
     // Whitelist allowed fields to prevent injection
     const allowed: Record<string, any> = {}
@@ -90,6 +103,7 @@ export async function PUT(
       'lastName',
       'email',
       'phone',
+      'secondaryPhone',
       'companyName',
       'city',
       'state',
@@ -119,9 +133,45 @@ export async function PUT(
           leadId: lead.id,
           eventType: 'STAGE_CHANGE',
           toStage: data.status,
-          actor: 'admin',
+          actor: session.role === 'ADMIN' ? 'admin' : `rep:${session.userId}`,
         },
       })
+    }
+
+    // Contact field edit side-effects (fire-and-forget)
+    if (_editedField && ['phone', 'secondaryPhone', 'email'].includes(_editedField)) {
+      // Auto-archive old primary phone as LeadContact
+      if (_editedField === 'phone' && _previousValue && _previousValue !== allowed.phone) {
+        prisma.leadContact.findFirst({ where: { leadId: id, value: _previousValue } }).then(existing => {
+          if (!existing) {
+            return prisma.leadContact.create({
+              data: { leadId: id, type: 'PHONE', value: _previousValue, label: 'Previous Primary', addedBy: session.userId }
+            })
+          }
+        }).catch(err => console.error('[LeadUpdate] Auto-archive failed:', err))
+      }
+
+      // LeadEvent
+      prisma.leadEvent.create({
+        data: {
+          leadId: id,
+          eventType: 'STAGE_CHANGE',
+          actor: `rep:${session.userId}`,
+          metadata: { source: 'dialer_edit', field: _editedField, previousValue: _previousValue, newValue: allowed[_editedField], editedBy: session.userId },
+        },
+      }).catch(err => console.error('[LeadUpdate] Event write failed:', err))
+
+      // Admin notification
+      prisma.user.findUnique({ where: { id: session.userId }, select: { name: true } }).then(rep => {
+        return prisma.notification.create({
+          data: {
+            type: 'SYSTEM_ALERT',
+            title: 'Lead Contact Updated',
+            message: `${rep?.name || 'A rep'} changed ${_editedField} on ${lead.companyName} from "${_previousValue || '(empty)'}" to "${allowed[_editedField]}"`,
+            metadata: { leadId: id, field: _editedField, previousValue: _previousValue, newValue: allowed[_editedField], repId: session.userId },
+          },
+        })
+      }).catch(err => console.error('[LeadUpdate] Notification write failed:', err))
     }
 
     return NextResponse.json({ lead })
