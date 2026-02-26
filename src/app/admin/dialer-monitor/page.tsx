@@ -652,14 +652,7 @@ export default function DialerMonitorPage() {
                     className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        {s.name ? (
-                          <span className="font-semibold text-gray-900 truncate">{s.name}</span>
-                        ) : (
-                          <span className="text-gray-400 italic">Unnamed Session</span>
-                        )}
-                        <span className="text-xs text-gray-400">{s.repName}</span>
-                      </div>
+                      <div className="font-semibold text-gray-900 truncate">{s.name || 'Unnamed Session'}</div>
                       <div className="text-xs text-gray-500 mt-0.5">
                         {formatSessionTime(s.startedAt, s.endedAt)}
                       </div>
