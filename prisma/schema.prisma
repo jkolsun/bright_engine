@@ -1063,6 +1063,7 @@ enum UserStatus {
 
 enum LeadStatus {
   NEW
+  IMPORT_STAGING
   HOT_LEAD
   QUALIFIED
   INFO_COLLECTED

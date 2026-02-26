@@ -292,7 +292,16 @@ async function startWorkers() {
           } catch { /* start fresh */ }
         }
 
-        const progress = {
+        const progress: {
+          status: string
+          processed: number
+          total: number
+          failed: number
+          errors: string[]
+          results: Record<string, { enrichment?: boolean; preview?: boolean; personalization?: boolean }>
+          rateLimitHit?: boolean
+          rateLimitMessage?: string
+        } = {
           status: 'processing',
           processed: existingProgress?.processed || 0,
           total: leadIds.length,
@@ -300,6 +309,9 @@ async function startWorkers() {
           errors: (existingProgress?.errors || []) as string[],
           results: (existingProgress?.results || {}) as Record<string, { enrichment?: boolean; preview?: boolean; personalization?: boolean }>,
         }
+
+        // Rate limit flag — when SerpAPI daily limit is hit, skip enrichment for all remaining leads
+        let skipEnrichment = existingProgress?.rateLimitHit || false
 
         // Determine where to resume from (skip already-processed leads on retry)
         const startIndex = existingProgress?.processed || 0
@@ -338,14 +350,26 @@ async function startWorkers() {
             }
 
             // Enrichment
-            if (options.enrichment) {
+            if (options.enrichment && !skipEnrichment) {
               try {
                 await enrichLead(leadId)
                 leadResult.enrichment = true
               } catch (err) {
-                leadResult.enrichment = false
-                console.warn(`[IMPORT] Enrichment failed for ${leadId}:`, err)
+                const errMsg = err instanceof Error ? err.message : String(err)
+                if (errMsg === 'SERPAPI_DAILY_LIMIT_REACHED') {
+                  skipEnrichment = true
+                  leadResult.enrichment = false
+                  progress.rateLimitHit = true
+                  progress.rateLimitMessage = 'SerpAPI daily limit reached. Enrichment paused. Remaining leads will process without enrichment or can be retried tomorrow.'
+                  console.warn(`[IMPORT] SerpAPI daily limit reached at lead ${leadId}. Skipping enrichment for remaining leads.`)
+                } else {
+                  leadResult.enrichment = false
+                  console.warn(`[IMPORT] Enrichment failed for ${leadId}:`, err)
+                }
               }
+            } else if (options.enrichment && skipEnrichment) {
+              // Rate limit hit earlier — skip enrichment for this lead
+              leadResult.enrichment = false
             }
 
             // Preview generation
@@ -368,6 +392,23 @@ async function startWorkers() {
               } catch (err) {
                 leadResult.personalization = false
                 console.warn(`[IMPORT] Personalization failed for ${leadId}:`, err)
+              }
+            }
+
+            // Graduation check: if all selected steps succeeded, graduate from IMPORT_STAGING to NEW
+            const enrichmentOk = !options.enrichment || skipEnrichment || leadResult.enrichment === true
+            const previewOk = !options.preview || leadResult.preview === true
+            const personalizationOk = !options.personalization || leadResult.personalization === true
+
+            if (enrichmentOk && previewOk && personalizationOk) {
+              try {
+                await prisma.lead.update({
+                  where: { id: leadId, status: 'IMPORT_STAGING' },
+                  data: { status: 'NEW' },
+                })
+              } catch (gradErr) {
+                // Safety: if lead was already graduated or doesn't exist, this is a no-op
+                console.warn(`[IMPORT] Graduation update failed for ${leadId}:`, gradErr)
               }
             }
 

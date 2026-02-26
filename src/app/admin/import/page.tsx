@@ -8,7 +8,8 @@ import {
   Upload, X, AlertCircle, AlertTriangle, Loader2,
   CheckCircle, XCircle, Clock,
   FolderPlus, FolderOpen, Plus, History,
-  Info, Search, Eye, Brain, Download, ChevronRight, ChevronDown, ChevronUp, ArrowLeft
+  Info, Search, Eye, Brain, Download, ChevronRight, ChevronDown, ChevronUp, ArrowLeft,
+  UserPlus
 } from 'lucide-react'
 
 type ProcessOptions = {
@@ -70,14 +71,19 @@ export default function ImportPage() {
   const [importJobId, setImportJobId] = useState<string | null>(null)
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Folder state
-  const [folders, setFolders] = useState<any[]>([])
-  const [folderDialogOpen, setFolderDialogOpen] = useState(false)
+  // Batch settings state
+  const [batchName, setBatchName] = useState('')
   const [selectedFolderId, setSelectedFolderId] = useState<string>('')
+  const [assignTo, setAssignTo] = useState<string>('')
+  const [folders, setFolders] = useState<any[]>([])
+  const [reps, setReps] = useState<any[]>([])
   const [newFolderName, setNewFolderName] = useState('')
   const [creatingFolder, setCreatingFolder] = useState(false)
-  const [addingToFolder, setAddingToFolder] = useState(false)
-  const [folderSuccess, setFolderSuccess] = useState('')
+  const [showNewFolderInput, setShowNewFolderInput] = useState(false)
+
+  // Rate limit state
+  const [rateLimitHit, setRateLimitHit] = useState(false)
+  const [rateLimitMessage, setRateLimitMessage] = useState('')
 
   // Import history state
   const [importHistory, setImportHistory] = useState<any[]>([])
@@ -97,10 +103,6 @@ export default function ImportPage() {
     finally { setLoadingHistory(false) }
   }
 
-  useEffect(() => {
-    fetchImportHistory()
-  }, [])
-
   const fetchFolders = async () => {
     try {
       const res = await fetch('/api/folders')
@@ -108,6 +110,20 @@ export default function ImportPage() {
       setFolders(data.folders || [])
     } catch { /* ignore */ }
   }
+
+  const fetchReps = async () => {
+    try {
+      const res = await fetch('/api/users?role=REP')
+      const data = await res.json()
+      setReps((data.users || []).filter((u: any) => u.status === 'ACTIVE'))
+    } catch { /* ignore */ }
+  }
+
+  useEffect(() => {
+    fetchImportHistory()
+    fetchFolders()
+    fetchReps()
+  }, [])
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return
@@ -122,30 +138,11 @@ export default function ImportPage() {
         const data = await res.json()
         setSelectedFolderId(data.folder.id)
         setNewFolderName('')
+        setShowNewFolderInput(false)
         fetchFolders()
       }
     } catch { /* ignore */ }
     finally { setCreatingFolder(false) }
-  }
-
-  const handleAddToFolder = async () => {
-    if (!selectedFolderId || feedLeads.length === 0) return
-    setAddingToFolder(true)
-    try {
-      const leadIds = feedLeads.filter(l => l.status === 'done').map(l => l.id)
-      const assignRes = await fetch('/api/folders/assign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leadIds, folderId: selectedFolderId }),
-      })
-      if (assignRes.ok) {
-        const result = await assignRes.json()
-        const folderName = folders.find(f => f.id === selectedFolderId)?.name || 'folder'
-        setFolderSuccess(`${result.updated} leads added to "${folderName}"`)
-        setFolderDialogOpen(false)
-      }
-    } catch { /* ignore */ }
-    finally { setAddingToFolder(false) }
   }
 
   // Fetch import detail
@@ -257,6 +254,12 @@ export default function ImportPage() {
           feedRef.current?.querySelector(`[data-lead-index="${currentIdx}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
         }, 100)
 
+        // Check for rate limit
+        if (data.rateLimitHit && !rateLimitHit) {
+          setRateLimitHit(true)
+          setRateLimitMessage(data.rateLimitMessage || 'SerpAPI daily limit reached.')
+        }
+
         // Check if done
         if (data.status === 'completed') {
           setFeedDone(true)
@@ -288,6 +291,10 @@ export default function ImportPage() {
       const formData = new FormData()
       formData.append('file', file)
 
+      // Pre-populate batch name from filename (minus extension)
+      const fileBaseName = file.name.replace(/\.[^/.]+$/, '')
+      setBatchName(fileBaseName)
+
       const res = await fetch('/api/leads/import-create', {
         method: 'POST',
         body: formData,
@@ -313,6 +320,8 @@ export default function ImportPage() {
         setFeedLeads(leads)
         setFeedDone(false)
         setFeedStats({ enriched: 0, previews: 0, personalized: 0, errors: 0 })
+        setRateLimitHit(false)
+        setRateLimitMessage('')
         setImportResult({
           created: data.created.length,
           skipped: data.skipped,
@@ -335,11 +344,71 @@ export default function ImportPage() {
     }
   }
 
+  const applyBatchSettings = async (graduate: boolean = false) => {
+    const leadIds = feedLeads.map(l => l.id)
+    try {
+      const res = await fetch('/api/leads/import-create/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadIds,
+          batchName: batchName.trim(),
+          folderId: selectedFolderId || undefined,
+          assignTo: assignTo || undefined,
+          graduate,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        console.error('Batch update failed:', data.error)
+        return false
+      }
+      return true
+    } catch (err) {
+      console.error('Batch update error:', err)
+      return false
+    }
+  }
+
+  const handleSkipProcessing = async () => {
+    if (!batchName.trim()) {
+      alert('Please enter a batch name before proceeding.')
+      return
+    }
+    // Apply batch settings and graduate all leads immediately
+    const ok = await applyBatchSettings(true)
+    if (ok) {
+      setStep('upload')
+      setFeedLeads([])
+      fetchImportHistory()
+    } else {
+      alert('Failed to apply batch settings. Please try again.')
+    }
+  }
+
   const startProcessing = async () => {
+    if (!batchName.trim()) {
+      alert('Please enter a batch name before proceeding.')
+      return
+    }
+
     const anyProcessing = processOptions.enrichment || processOptions.preview || processOptions.personalization
     if (!anyProcessing) {
-      setFeedDone(true)
-      setStep('feed')
+      // No processing selected — apply batch settings with graduation and go back
+      const ok = await applyBatchSettings(true)
+      if (ok) {
+        setFeedDone(true)
+        setStep('feed')
+      } else {
+        alert('Failed to apply batch settings. Please try again.')
+      }
+      return
+    }
+
+    // Apply batch settings first (without graduation — worker handles that)
+    const batchOk = await applyBatchSettings(false)
+    if (!batchOk) {
+      alert('Failed to apply batch settings. Please try again.')
       return
     }
 
@@ -810,6 +879,84 @@ export default function ImportPage() {
             </Card>
           )}
 
+          {/* Batch Settings */}
+          <Card className="p-6">
+            <h4 className="font-semibold text-gray-900 mb-1">Batch Settings</h4>
+            <p className="text-sm text-gray-500 mb-4">Name this import and optionally assign a folder and rep</p>
+            <div className="space-y-4">
+              {/* Batch Name */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Batch Name <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={batchName}
+                  onChange={(e) => setBatchName(e.target.value)}
+                  placeholder="e.g., Restaurants Phoenix - Instantly"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Folder */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Folder</label>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedFolderId}
+                    onChange={(e) => {
+                      if (e.target.value === '__new__') {
+                        setShowNewFolderInput(true)
+                        setSelectedFolderId('')
+                      } else {
+                        setSelectedFolderId(e.target.value)
+                        setShowNewFolderInput(false)
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="">No folder</option>
+                    {folders.map((f) => (
+                      <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                    <option value="__new__">+ Create new folder</option>
+                  </select>
+                </div>
+                {showNewFolderInput && (
+                  <div className="flex gap-2 mt-2">
+                    <input
+                      type="text"
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      placeholder="New folder name..."
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
+                    />
+                    <Button size="sm" onClick={handleCreateFolder} disabled={creatingFolder || !newFolderName.trim()}>
+                      {creatingFolder ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => { setShowNewFolderInput(false); setNewFolderName('') }}>
+                      <X size={16} />
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Rep Assignment */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">Assign to Rep</label>
+                <select
+                  value={assignTo}
+                  onChange={(e) => setAssignTo(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                >
+                  <option value="">No assignment</option>
+                  {reps.map((r) => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </Card>
+
           {/* Processing Options */}
           <Card className="p-6">
             <h4 className="font-semibold text-gray-900 mb-1">Processing Steps</h4>
@@ -864,11 +1011,7 @@ export default function ImportPage() {
 
           {/* Action Buttons */}
           <div className="flex items-center justify-between">
-            <Button variant="outline" onClick={() => {
-              setStep('upload')
-              setFeedLeads([])
-              fetchImportHistory()
-            }}>
+            <Button variant="outline" onClick={handleSkipProcessing}>
               Skip Processing
             </Button>
             <Button onClick={startProcessing} className="px-8">
@@ -941,6 +1084,20 @@ export default function ImportPage() {
             </div>
           </Card>
 
+          {/* Rate Limit Banner */}
+          {rateLimitHit && (
+            <Card className="p-4 border-l-4 border-amber-400 bg-amber-50">
+              <div className="flex items-start gap-3">
+                <AlertTriangle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-amber-900 text-sm">SerpAPI daily limit reached</h4>
+                  <p className="text-sm text-amber-800 mt-1">Enrichment skipped for remaining leads. Preview and personalization continue.</p>
+                  <p className="text-xs text-amber-600 mt-1">You can reprocess these leads tomorrow from the import history.</p>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {/* Live Feed */}
           <Card className="p-4">
             <div ref={feedRef} className="max-h-[500px] overflow-y-auto space-y-1">
@@ -1001,102 +1158,23 @@ export default function ImportPage() {
           {/* Done Actions */}
           {feedDone && (
             <Card className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => {
-                    setStep('upload')
-                    setFeedLeads([])
-                    setFeedDone(false)
-                    setFeedStats({ enriched: 0, previews: 0, personalized: 0, errors: 0 })
-                    fetchImportHistory()
-                  }}>
-                    Import More Leads
-                  </Button>
-                  <Button onClick={() => window.location.href = '/admin/leads'}>
-                    View in Leads
-                  </Button>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => { setFolderDialogOpen(true); fetchFolders() }}
-                >
-                  <FolderPlus size={16} className="mr-1" />
-                  Add to Folder
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => {
+                  setStep('upload')
+                  setFeedLeads([])
+                  setFeedDone(false)
+                  setFeedStats({ enriched: 0, previews: 0, personalized: 0, errors: 0 })
+                  setRateLimitHit(false)
+                  setRateLimitMessage('')
+                  fetchImportHistory()
+                }}>
+                  Import More Leads
+                </Button>
+                <Button onClick={() => window.location.href = '/admin/leads'}>
+                  View in Leads
                 </Button>
               </div>
-
-              {folderSuccess && (
-                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-center">
-                  <CheckCircle size={20} className="text-green-600 mx-auto mb-1" />
-                  <p className="text-sm font-medium text-green-900">{folderSuccess}</p>
-                </div>
-              )}
             </Card>
-          )}
-
-          {/* Folder Dialog */}
-          {folderDialogOpen && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setFolderDialogOpen(false)}>
-              <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Add Imported Leads to Folder</h3>
-                  <button onClick={() => setFolderDialogOpen(false)} className="text-gray-400 hover:text-gray-600">
-                    <X size={20} />
-                  </button>
-                </div>
-
-                <div className="mb-4">
-                  <label className="text-sm font-medium text-gray-700 block mb-1">Create New Folder</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newFolderName}
-                      onChange={(e) => setNewFolderName(e.target.value)}
-                      placeholder="e.g., January Import, Texas Leads..."
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
-                    />
-                    <Button size="sm" onClick={handleCreateFolder} disabled={creatingFolder || !newFolderName.trim()}>
-                      <Plus size={16} />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <label className="text-sm font-medium text-gray-700 block mb-2">Or Choose Existing Folder</label>
-                  <div className="space-y-1 max-h-48 overflow-y-auto">
-                    {folders.map((folder) => (
-                      <button
-                        key={folder.id}
-                        onClick={() => setSelectedFolderId(folder.id)}
-                        className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors text-left ${
-                          selectedFolderId === folder.id
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:bg-gray-50'
-                        }`}
-                      >
-                        <FolderOpen size={18} style={{ color: folder.color }} />
-                        <div className="flex-1">
-                          <div className="font-medium text-gray-900 text-sm">{folder.name}</div>
-                          <div className="text-xs text-gray-500">{folder._count?.leads || 0} leads</div>
-                        </div>
-                      </button>
-                    ))}
-                    {folders.length === 0 && (
-                      <p className="text-sm text-gray-500 text-center py-4">No folders yet. Create one above.</p>
-                    )}
-                  </div>
-                </div>
-
-                <Button
-                  className="w-full"
-                  onClick={handleAddToFolder}
-                  disabled={!selectedFolderId || addingToFolder}
-                >
-                  {addingToFolder ? 'Adding...' : 'Add Leads to Folder'}
-                </Button>
-              </div>
-            </div>
           )}
         </div>
       )}

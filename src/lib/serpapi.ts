@@ -36,7 +36,7 @@ export async function enrichLead(leadId: string): Promise<EnrichmentResult> {
 
   if (todayUsage >= DAILY_SERPAPI_LIMIT) {
     console.log(`[ENRICHMENT] Daily SerpAPI limit reached (${todayUsage}/${DAILY_SERPAPI_LIMIT}). Skipping enrichment for lead ${leadId}.`)
-    return {}
+    throw new Error('SERPAPI_DAILY_LIMIT_REACHED')
   }
 
   const lead = await prisma.lead.findUnique({

@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       where.status = status
     }
   } else {
-    where.status = { notIn: ['CLOSED_LOST', 'PAID'] }
+    where.status = { notIn: ['CLOSED_LOST', 'PAID', 'IMPORT_STAGING'] }
   }
   
   if (source) where.source = source
