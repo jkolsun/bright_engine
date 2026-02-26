@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    const { previewId } = await request.json()
+    const { previewId, selectedTemplate } = await request.json()
 
     if (!previewId) {
       return NextResponse.json({ error: 'previewId required' }, { status: 400 })
@@ -22,15 +22,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     }
 
-    // Always log the click event
+    // Always log the click event (include selected template if provided)
     await prisma.leadEvent.create({
       data: {
         leadId: lead.id,
         eventType: 'PREVIEW_CTA_CLICKED',
-        metadata: { source: 'cta_banner', previewId },
+        metadata: { source: 'cta_banner', previewId, ...(selectedTemplate ? { selectedTemplate } : {}) },
         actor: 'client',
       },
     })
+
+    // Store the selected template on the lead record
+    if (selectedTemplate) {
+      await prisma.lead.update({
+        where: { id: lead.id },
+        data: { selectedTemplate },
+      })
+    }
 
     // Check for active dialer call BEFORE deciding on hot lead promotion
     let activeCall: { id: string; repId: string } | null = null

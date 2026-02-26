@@ -30,10 +30,11 @@ export default function PreviewCTABanner({ previewId }: { previewId: string }) {
     if (loading || submitted) return
     setLoading(true)
     try {
+      const selectedTemplate = (window as any).__brightSelectedTemplate || null
       const res = await fetch('/api/preview/cta-click', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ previewId }),
+        body: JSON.stringify({ previewId, selectedTemplate }),
       })
       if (res.ok) {
         setSubmitted(true)

@@ -111,6 +111,11 @@ export default function PreviewTemplate({ lead, websiteCopy }: { lead: any; webs
     } catch {}
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Expose active template name for CTA banner to read
+  useEffect(() => {
+    (window as any).__brightSelectedTemplate = allVariants[activeIndex]?.template
+  }, [activeIndex, allVariants])
+
   // Apply colorPrefs override to whichever variant is active
   const baseConfig = allVariants[activeIndex]
   const cp = typedLead.colorPrefs

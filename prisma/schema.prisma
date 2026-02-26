@@ -172,6 +172,7 @@ model Lead {
   upsellTags             UpsellTag[]              @relation("LeadUpsellTags")
   callbackSchedules      CallbackSchedule[]       @relation("LeadCallbacks")
   siteEditVersion        Int                      @default(0) @map("site_edit_version")
+  selectedTemplate       String?                  @map("selected_template")
   siteVersions           SiteVersion[]
 
   @@index([status])
