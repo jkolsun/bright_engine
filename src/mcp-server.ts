@@ -29,6 +29,41 @@ const server = new McpServer({
   version: '1.0.0',
 })
 
+// ─── Debug: db_check ─────────────────────────────────────────────
+
+server.tool(
+  'db_check',
+  'Debug tool: check database connection and list tables.',
+  {},
+  async () => {
+    try {
+      const dbUrl = process.env.DATABASE_URL
+      const masked = dbUrl ? dbUrl.replace(/:([^@]+)@/, ':***@') : 'NOT SET'
+      const tables = await prisma.$queryRaw<{tablename: string}[]>`
+        SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' ORDER BY tablename
+      `
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({
+            databaseUrl: masked,
+            tableCount: tables.length,
+            tables: tables.map(t => t.tablename),
+          }, null, 2),
+        }],
+      }
+    } catch (err) {
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `DB Error: ${err instanceof Error ? err.message : String(err)}\nDATABASE_URL set: ${!!process.env.DATABASE_URL}`,
+        }],
+        isError: true,
+      }
+    }
+  },
+)
+
 // ─── Tool 1: search_sites ────────────────────────────────────────
 
 server.tool(
@@ -581,6 +616,16 @@ server.tool(
 // ─── Connect ─────────────────────────────────────────────────────
 
 async function main() {
+  // Verify database connection on startup
+  try {
+    const tables = await prisma.$queryRaw<{tablename: string}[]>`
+      SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' ORDER BY tablename
+    `
+    console.log(`[MCP] Database connected — ${tables.length} tables found:`, tables.map(t => t.tablename).join(', '))
+  } catch (dbErr) {
+    console.error('[MCP] Database connection failed:', dbErr)
+  }
+
   const transport = new StdioServerTransport()
   await server.connect(transport)
   console.log('[MCP] Bright Engine MCP server connected')
