@@ -3,28 +3,13 @@
 import { useState, useEffect } from 'react'
 
 export default function PreviewCTABanner({ previewId }: { previewId: string }) {
-  const [dismissed, setDismissed] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [bannerPrice, setBannerPrice] = useState<number>(188)
 
   useEffect(() => {
-    const wasDismissed = sessionStorage.getItem(`cta_dismissed_${previewId}`)
-    if (wasDismissed) setDismissed(true)
     fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => { if (d?.firstMonthTotal) setBannerPrice(d.firstMonthTotal) }).catch(err => console.warn('[PreviewCTA] Pricing fetch failed:', err))
   }, [previewId])
-
-  useEffect(() => {
-    if (submitted) {
-      const timer = setTimeout(() => setDismissed(true), 5000)
-      return () => clearTimeout(timer)
-    }
-  }, [submitted])
-
-  const handleDismiss = () => {
-    setDismissed(true)
-    sessionStorage.setItem(`cta_dismissed_${previewId}`, '1')
-  }
 
   const handleClick = async () => {
     if (loading || submitted) return
@@ -46,18 +31,8 @@ export default function PreviewCTABanner({ previewId }: { previewId: string }) {
     }
   }
 
-  if (dismissed) return null
-
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0D7377] text-white shadow-lg">
-      <button
-        onClick={handleDismiss}
-        className="absolute top-2 right-3 text-white/70 hover:text-white text-xl leading-none"
-        aria-label="Dismiss"
-      >
-        &times;
-      </button>
-
       {submitted ? (
         <div className="flex items-center justify-center gap-2 py-4 px-6">
           <svg className="w-5 h-5 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,7 +43,7 @@ export default function PreviewCTABanner({ previewId }: { previewId: string }) {
           </span>
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-2 py-3 px-6 pr-10">
+        <div className="flex flex-col items-center gap-2 py-3 px-6">
           <span className="text-sm sm:text-base font-semibold text-center">
             Get This Site Live &mdash; ${bannerPrice}
           </span>

@@ -15,20 +15,27 @@ import PremiumCTemplate from './templates/PremiumCTemplate'
 import PreviewQAChecker from './shared/PreviewQAChecker'
 import TemplateSwitcher from './shared/TemplateSwitcher'
 
+/** Known label patterns that the AI parser uses */
+const LABEL_PATTERN = /(?:HERO_(?:HEADLINE|SUBHEADLINE)|ABOUT_P[0-9]|VP[0-9]_(?:TITLE|DESC)|CLOSING_(?:HEADLINE|BODY)|TESTIMONIAL_(?:QUOTE|AUTHOR|[0-9]_QUOTE|[0-9]_AUTHOR)|YEARS_BADGE|SERVICE_AREA_TEXT|SVC_[A-Z_0-9]+|PROCESS_STEP_[0-9]_(?:TITLE|DESC)|WHY_[0-9]_(?:TITLE|DESC)|BRAND_[0-9])/
+
 /** Detect if a string is a raw placeholder label leaked from the AI parser */
 function isPlaceholder(text: string): boolean {
   const t = text.trim()
-  return /^(VP[0-9]_|ABOUT_P[0-9]|HERO_|CLOSING_|SVC_|TESTIMONIAL_|YEARS_|SERVICE_AREA|PROCESS_STEP_|WHY_[0-9]|BRAND_[0-9])/i.test(t)
+  return LABEL_PATTERN.test(t) && t.indexOf(':') <= 40
 }
 
-/** Strip leading "LABEL:" prefix that may have leaked through parsing */
+/** Strip leading AND embedded "LABEL:" tokens that may have leaked through parsing */
 function cleanField(text: string | undefined): string {
   if (!text) return ''
   if (isPlaceholder(text)) return ''
   // Strip any leading LABEL: prefix (e.g. "ABOUT_P1: actual text here")
-  const stripped = text.replace(/^[A-Z][A-Z0-9_]+:\s*/, '')
-  if (isPlaceholder(stripped)) return ''
-  return stripped
+  let cleaned = text.replace(/^[A-Z][A-Z0-9_]+:\s*/, '')
+  // Strip ANY embedded known label tokens (e.g. "... good text PROCESS_STEP_1_DESC: leaked text")
+  cleaned = cleaned.replace(new RegExp(`\\s*${LABEL_PATTERN.source}[A-Z_0-9]*:\\s*`, 'g'), ' ').trim()
+  if (isPlaceholder(cleaned)) return ''
+  // If stripping labels left behind only short fragments, return empty
+  if (cleaned.length < 3) return ''
+  return cleaned
 }
 
 /** Sanitize websiteCopy to remove any raw placeholder labels from AI output */

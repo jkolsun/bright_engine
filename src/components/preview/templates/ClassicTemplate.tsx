@@ -332,9 +332,13 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
             {svcData.map((s,i)=>(
               <Reveal key={i} delay={i*60}>
                 <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 items-center py-10 ${i<svcData.length-1?'':''}`.trim()} style={{borderBottom:i<svcData.length-1?'1px solid #e8e2d8':'none'}}>
-                  {s.img&&<div className={`cs-photo-hover ${i%2===1?'lg:order-2':''}`} style={{aspectRatio:'4/3'}}>
-                    <img src={s.img} alt={s.name} className="w-full h-full object-cover" style={{display:'block'}} onError={e=>{(e.target as HTMLImageElement).parentElement!.style.display='none'}}/>
-                  </div>}
+                  <div className={`cs-photo-hover ${i%2===1?'lg:order-2':''}`} style={{aspectRatio:'4/3'}}>
+                    {s.img ? (
+                      <img src={s.img} alt={s.name} className="w-full h-full object-cover" style={{display:'block'}} onError={e=>{(e.target as HTMLImageElement).parentElement!.style.display='none'}}/>
+                    ) : (
+                      <PhotoPlaceholder accent={A} style={{width:'100%',height:'100%'}} />
+                    )}
+                  </div>
                   <div className={i%2===1?'lg:order-1':''}>
                     <span style={{fontFamily:serif,fontSize:48,fontWeight:700,color:`${A}25`,lineHeight:1,display:'block',marginBottom:8}}>{String(i+1).padStart(2,'0')}</span>
                     <h3 style={{fontFamily:serif,fontSize:'clamp(22px,3vw,32px)',fontWeight:700,marginBottom:12}}>{s.name}</h3>

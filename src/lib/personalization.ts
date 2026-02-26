@@ -925,9 +925,11 @@ function parseWebsiteCopyResponse(raw: string, services: string[]): WebsiteCopy 
       .replace(/\*\*([A-Z][A-Z_0-9]+)\*\*\s*:/g, '$1:') // **HERO_HEADLINE**: → HERO_HEADLINE:
       .replace(/^#+\s*([A-Z][A-Z_0-9]+):/gm, '$1:')     // ## HERO_HEADLINE: → HERO_HEADLINE:
       .replace(/^\*\*\s*$/gm, '')                          // Stray ** on its own line
+      // Ensure ALL known labels start on their own line (fixes inline label bleed)
+      .replace(/(?<!\n)((?:HERO_HEADLINE|HERO_SUBHEADLINE|ABOUT_P[12]|VP[0-9]_(?:TITLE|DESC)|CLOSING_(?:HEADLINE|BODY)|TESTIMONIAL_(?:QUOTE|AUTHOR|[0-9]_QUOTE|[0-9]_AUTHOR)|YEARS_BADGE|SERVICE_AREA_TEXT|SVC_[A-Z_0-9]+|PROCESS_STEP_[0-9]_(?:TITLE|DESC)|WHY_[0-9]_(?:TITLE|DESC)|BRAND_[0-9])):/g, '\n$1:')
 
     const get = (label: string): string => {
-      const regex = new RegExp(`${label}:\\s*(.+?)(?=\\n[A-Z_]+:|$)`, 's')
+      const regex = new RegExp(`${label}:\\s*(.+?)(?=\\n[A-Z][A-Z_0-9]+:|$)`, 's')
       const match = normalized.match(regex)
       if (!match) return ''
       // Clean markdown artifacts from the extracted value

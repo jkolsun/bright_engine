@@ -388,7 +388,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
                 {svcData.map((s, i) => (
                   <Reveal key={i}>
                     <div className="ic-table-row" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(16px,3vw,24px)', padding: 'clamp(16px,3vw,24px) clamp(12px,2vw,20px)', borderBottom: '1px solid rgba(255,255,255,0.06)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
-                      {s.img && <img src={s.img} alt={s.name} style={{ width: 'clamp(56px,8vw,80px)', height: 'clamp(56px,8vw,80px)', objectFit: 'cover', flexShrink: 0 }} />}
+                      {s.img ? <img src={s.img} alt={s.name} style={{ width: 'clamp(56px,8vw,80px)', height: 'clamp(56px,8vw,80px)', objectFit: 'cover', flexShrink: 0 }} /> : <PhotoPlaceholder accent={A} variant="dark" style={{ width: 'clamp(56px,8vw,80px)', height: 'clamp(56px,8vw,80px)', flexShrink: 0 }} iconSize={20} />}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
                           <span style={{ fontFamily: mono, fontSize: 'clamp(10px,1.1vw,12px)', color: A, flexShrink: 0 }}>{String(i + 1).padStart(2, '0')}</span>

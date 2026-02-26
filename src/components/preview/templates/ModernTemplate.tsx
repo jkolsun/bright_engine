@@ -363,8 +363,12 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
           <div style={{maxWidth:1200,margin:'0 auto'}}>{svcData.map((s,i)=>(
             <Reveal key={i} delay={i*60}>
               <div className={`grid grid-cols-1 md:grid-cols-2 gap-0 mb-5 hz-lift overflow-hidden bg-white rounded-xl`} style={{borderLeft:`4px solid ${A}`}}>
-                {i%2===0 && s.img && <div className="relative overflow-hidden" style={{minHeight:240}}>
-                  <img src={s.img} alt={s.name} className="w-full h-full object-cover hz-img-zoom" style={{display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                {i%2===0 && <div className="relative overflow-hidden" style={{minHeight:240}}>
+                  {s.img ? (
+                    <img src={s.img} alt={s.name} className="w-full h-full object-cover hz-img-zoom" style={{display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                  ) : (
+                    <PhotoPlaceholder accent={A} style={{width:'100%',height:'100%',minHeight:240}} />
+                  )}
                   <div className="absolute top-4 left-4"><span style={{fontFamily:mono,fontSize:11,color:'#fff',background:'rgba(0,0,0,0.5)',padding:'6px 12px',borderRadius:999,letterSpacing:'0.1em',backdropFilter:'blur(4px)'}}>{String(i+1).padStart(2,'0')}</span></div>
                 </div>}
                 <div className="flex flex-col justify-center p-8 md:p-10">
@@ -372,8 +376,12 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
                   <p className="text-[15px] leading-relaxed mb-5" style={{color:'#888'}}>{s.desc}</p>
                   <button onClick={()=>{onCTAClick();go('contact')}} className="flex items-center gap-2 text-sm font-semibold p-0" style={{background:'none',border:'none',color:A,cursor:'pointer'}}>Get estimate <ArrowRight size={14}/></button>
                 </div>
-                {i%2!==0 && s.img && <div className="relative overflow-hidden hidden md:block" style={{minHeight:240}}>
-                  <img src={s.img} alt={s.name} className="w-full h-full object-cover hz-img-zoom" style={{display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                {i%2!==0 && <div className="relative overflow-hidden hidden md:block" style={{minHeight:240}}>
+                  {s.img ? (
+                    <img src={s.img} alt={s.name} className="w-full h-full object-cover hz-img-zoom" style={{display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                  ) : (
+                    <PhotoPlaceholder accent={A} style={{width:'100%',height:'100%',minHeight:240}} />
+                  )}
                   <div className="absolute top-4 right-4"><span style={{fontFamily:mono,fontSize:11,color:'#fff',background:'rgba(0,0,0,0.5)',padding:'6px 12px',borderRadius:999,letterSpacing:'0.1em',backdropFilter:'blur(4px)'}}>{String(i+1).padStart(2,'0')}</span></div>
                 </div>}
               </div>

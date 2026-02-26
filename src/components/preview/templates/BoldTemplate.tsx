@@ -376,10 +376,14 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           <div style={{maxWidth:1200,margin:'0 auto'}}>{svcData.map((s,i)=>(
             <Reveal key={i} delay={i*60}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-0 mb-5 obsidian-lift" style={{background:'#161616',border:'1px solid rgba(255,255,255,0.05)',overflow:'hidden'}}>
-                {s.img && <div className="relative overflow-hidden" style={{minHeight:220}}>
-                  <img src={s.img} alt={s.name} className="w-full h-full object-cover" style={{display:'block',filter:'brightness(0.8)'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                <div className="relative overflow-hidden" style={{minHeight:220}}>
+                  {s.img ? (
+                    <img src={s.img} alt={s.name} className="w-full h-full object-cover" style={{display:'block',filter:'brightness(0.8)'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                  ) : (
+                    <PhotoPlaceholder accent={A} variant="dark" style={{width:'100%',height:'100%',minHeight:220}} />
+                  )}
                   <div className="absolute top-4 left-4"><span style={{fontFamily:mono,fontSize:11,color:A,background:'rgba(0,0,0,0.7)',padding:'6px 12px',letterSpacing:'0.15em'}}>{String(i+1).padStart(2,'0')}</span></div>
-                </div>}
+                </div>
                 <div className="flex flex-col justify-between p-8 md:p-10">
                   <div>
                     <h3 className="text-2xl font-bold mb-4">{s.name}</h3>

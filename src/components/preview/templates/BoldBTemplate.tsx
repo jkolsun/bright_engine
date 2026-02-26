@@ -352,9 +352,13 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         <section style={{padding:'clamp(48px,6vw,80px) clamp(16px,4vw,48px)',background:'#050505'}}>
           <div style={{maxWidth:1200,margin:'0 auto'}}>{svcData.map((s,i)=>(
             <Reveal key={i} delay={i*60} x={-30}><div className="carbon-glow flex flex-col md:flex-row gap-6 border-b border-white/5 py-10 cursor-pointer" onClick={()=>{onCTAClick();go('contact')}}>
-              {s.img&&<div className="w-full md:w-48 h-40 md:h-36 flex-shrink-0 overflow-hidden carbon-clip-img">
-                <img src={s.img} alt={s.name} className="w-full h-full object-cover" style={{display:'block',clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
-              </div>}
+              <div className="w-full md:w-48 h-40 md:h-36 flex-shrink-0 overflow-hidden carbon-clip-img">
+                {s.img ? (
+                  <img src={s.img} alt={s.name} className="w-full h-full object-cover" style={{display:'block',clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                ) : (
+                  <PhotoPlaceholder accent={A} variant="dark" style={{width:'100%',height:'100%',clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}} />
+                )}
+              </div>
               <div className="flex-1 flex items-start gap-5">
                 <span style={{fontFamily:mono,fontSize:14,color:'rgba(255,255,255,0.12)',letterSpacing:'0.1em',minWidth:40}}>{String(i+1).padStart(2,'0')}</span>
                 <div className="flex-1"><h3 className="text-2xl font-bold mb-2">{s.name}</h3>
