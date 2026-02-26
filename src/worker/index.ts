@@ -122,9 +122,9 @@ async function startWorkers() {
         return { success: true }
       },
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-      { connection, concurrency: 2 }
+      { connection, concurrency: 3 }
     )
-    
+
     console.log('[WORKER-INIT] Enrichment worker created successfully')
     
     // Add enrichment worker event listeners
@@ -149,7 +149,7 @@ async function startWorkers() {
         return result
       },
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-      { connection }
+      { connection, concurrency: 3 }
     )
 
     // Personalization worker
@@ -168,7 +168,7 @@ async function startWorkers() {
         return { success: true, result }
       },
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-      { connection }
+      { connection, concurrency: 3 }
     )
 
     // Script worker
@@ -184,7 +184,7 @@ async function startWorkers() {
         return { success: !!script }
       },
       // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
-      { connection }
+      { connection, concurrency: 2 }
     )
 
     // Distribution worker
@@ -313,27 +313,28 @@ async function startWorkers() {
           }
         }
 
-        for (let i = startIndex; i < leadIds.length; i++) {
-          const leadId = leadIds[i]
-          const leadResult: { enrichment?: boolean; preview?: boolean; personalization?: boolean } = {}
+        // Batch size: read from env, default 5, clamp 1-10
+        const batchSize = Math.max(1, Math.min(10, parseInt(process.env.IMPORT_BATCH_SIZE || '5', 10) || 5))
+        console.log(`[IMPORT] Using batch size ${batchSize} for ${leadIds.length - startIndex} remaining leads`)
 
-          // Extend the BullMQ lock every 5 leads to prevent stall detection
-          if (i % 5 === 0) {
-            try {
-              await job.extendLock(job.token!, IMPORT_LOCK_DURATION)
-            } catch (lockErr) {
-              console.warn(`[IMPORT] Lock extension failed at lead ${i}:`, lockErr)
-            }
+        for (let batchStart = startIndex; batchStart < leadIds.length; batchStart += batchSize) {
+          const batchEnd = Math.min(batchStart + batchSize, leadIds.length)
+          const batchLeadIds = leadIds.slice(batchStart, batchEnd)
+
+          // Extend the BullMQ lock before each batch to prevent stall detection
+          try {
+            await job.extendLock(job.token!, IMPORT_LOCK_DURATION)
+          } catch (lockErr) {
+            console.warn(`[IMPORT] Lock extension failed at batch ${batchStart}:`, lockErr)
           }
 
-          try {
+          // Process all leads in this batch simultaneously
+          const batchPromises = batchLeadIds.map(async (leadId) => {
+            const leadResult: { enrichment?: boolean; preview?: boolean; personalization?: boolean } = {}
+
             const lead = await prisma.lead.findUnique({ where: { id: leadId } })
             if (!lead) {
-              progress.failed++
-              progress.errors.push(`Lead ${leadId} not found`)
-              progress.processed++
-              await updateProgress()
-              continue
+              return { leadId, success: false as const, error: 'Lead not found' }
             }
 
             // Enrichment
@@ -370,13 +371,27 @@ async function startWorkers() {
               }
             }
 
-            progress.results[leadId] = leadResult
-          } catch (err) {
-            progress.failed++
-            progress.errors.push(`Lead ${leadId}: ${err instanceof Error ? err.message : String(err)}`)
+            return { leadId, success: true as const, result: leadResult }
+          })
+
+          const batchResults = await Promise.allSettled(batchPromises)
+
+          // Process batch results
+          for (const settled of batchResults) {
+            if (settled.status === 'fulfilled') {
+              if (settled.value.success) {
+                progress.results[settled.value.leadId] = settled.value.result
+              } else {
+                progress.failed++
+                progress.errors.push(`Lead ${settled.value.leadId}: ${settled.value.error}`)
+              }
+            } else {
+              progress.failed++
+              progress.errors.push(settled.reason instanceof Error ? settled.reason.message : String(settled.reason))
+            }
+            progress.processed++
           }
 
-          progress.processed++
           await updateProgress()
         }
 
@@ -656,10 +671,10 @@ async function startWorkers() {
     })
 
     console.log('Workers started successfully')
-    console.log('- Enrichment worker (concurrency: 2)')
-    console.log('- Preview worker')
-    console.log('- Personalization worker')
-    console.log('- Script worker')
+    console.log('- Enrichment worker (concurrency: 3)')
+    console.log('- Preview worker (concurrency: 3)')
+    console.log('- Personalization worker (concurrency: 3)')
+    console.log('- Script worker (concurrency: 2)')
     console.log('- Distribution worker')
     console.log('- Sequence worker')
     console.log('- Monitoring worker (+ pending state escalation every 2h)')
