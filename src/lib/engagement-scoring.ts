@@ -21,6 +21,8 @@ export interface EngagementScore {
   temperature: string // COLD (0-30), WARM (31-70), HOT (71-100)
   lastEngagement?: Date
   trend: 'up' | 'down' | 'flat'
+  priorityChanged: boolean
+  newPriority: 'HOT' | 'WARM' | 'COLD'
 }
 
 /**
@@ -65,11 +67,26 @@ export async function calculateEngagementScore(
       },
       temperature: 'COLD',
       trend: 'flat',
+      priorityChanged: false,
+      newPriority: 'COLD',
     }
   }
 
   // Already a client = HOT (or conversion happened)
   if (lead.client) {
+    const previousPriority = lead.priority
+    // Persist score for clients too
+    try {
+      await prisma.lead.update({
+        where: { id: leadId },
+        data: {
+          engagementScore: 100,
+          engagementLevel: 'HOT',
+          engagementUpdatedAt: new Date(),
+          priority: 'HOT',
+        },
+      })
+    } catch (e) { console.warn('[Scoring] Persist failed for client lead:', e) }
     return {
       leadId,
       score: 100,
@@ -83,6 +100,8 @@ export async function calculateEngagementScore(
       },
       temperature: 'HOT',
       trend: 'flat',
+      priorityChanged: previousPriority !== 'HOT',
+      newPriority: 'HOT',
     }
   }
 
@@ -213,14 +232,44 @@ export async function calculateEngagementScore(
   const eventDates = lead.events.map((e) => new Date(e.createdAt).getTime())
   const outboundDates = outboundEvents.map((e) => new Date(e.sentAt).getTime())
   const allDates = [...eventDates, ...outboundDates]
-  
+
   if (allDates.length > 0) {
     lastEngagement = new Date(Math.max(...allDates))
   }
 
+  // Persist score + derive priority from score
+  const finalScore = Math.min(100, totalScore)
+  const newPriority: 'HOT' | 'WARM' | 'COLD' = finalScore >= 71 ? 'HOT' : finalScore >= 31 ? 'WARM' : 'COLD'
+  const previousPriority = lead.priority
+  const priorityChanged = previousPriority !== newPriority
+
+  try {
+    await prisma.lead.update({
+      where: { id: leadId },
+      data: {
+        engagementScore: finalScore,
+        engagementLevel: level,
+        engagementUpdatedAt: new Date(),
+        priority: newPriority,
+      },
+    })
+  } catch (e) { console.warn('[Scoring] Persist failed:', e) }
+
+  // If priority just crossed to HOT, fire notification + SMS (dynamic import to avoid circular dep)
+  if (priorityChanged && newPriority === 'HOT') {
+    try {
+      const { processHotLeadEvent } = await import('./hot-lead-notifications')
+      await processHotLeadEvent({
+        leadId,
+        eventType: 'ENGAGEMENT_SCORE_HOT',
+        metadata: { score: finalScore, previousPriority, components: { previewEngagement: previewEngagementScore, emailEngagement: emailEngagementScore, outboundRecency: recencyScore, conversionSignals: conversionSignalScore, callEngagement: callEngagementScore } },
+      })
+    } catch (e) { console.warn('[Scoring] Hot lead notification failed:', e) }
+  }
+
   return {
     leadId,
-    score: Math.min(100, totalScore),
+    score: finalScore,
     level,
     components: {
       previewEngagement: previewEngagementScore,
@@ -232,6 +281,8 @@ export async function calculateEngagementScore(
     temperature,
     lastEngagement,
     trend,
+    priorityChanged,
+    newPriority,
   }
 }
 
@@ -240,12 +291,21 @@ export async function calculateEngagementScore(
  */
 export async function recalculateAllEngagementScores() {
   const leads = await prisma.lead.findMany({
+    where: { status: { notIn: ['CLOSED_LOST', 'DO_NOT_CONTACT', 'PAID'] } },
     select: { id: true },
   })
 
-  const scores = await Promise.all(
-    leads.map((lead) => calculateEngagementScore(lead.id))
-  )
+  const scores: EngagementScore[] = []
+  // Process in chunks of 10 to avoid connection exhaustion
+  for (let i = 0; i < leads.length; i += 10) {
+    const chunk = leads.slice(i, i + 10)
+    const chunkScores = await Promise.allSettled(
+      chunk.map((lead) => calculateEngagementScore(lead.id))
+    )
+    for (const result of chunkScores) {
+      if (result.status === 'fulfilled') scores.push(result.value)
+    }
+  }
 
   return scores
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { calculateEngagementScore } from '@/lib/engagement-scoring'
 
 // GET /api/preview/[id] - Get preview data
 export async function GET(
@@ -37,13 +38,8 @@ export async function GET(
       }
     })
 
-    // Update priority AND status to HOT if not already
-    if (lead.priority !== 'HOT') {
-      await prisma.lead.update({
-        where: { id: lead.id },
-        data: { priority: 'HOT', status: 'HOT_LEAD' }
-      })
-    }
+    // Recalculate engagement score (persists score + derives priority)
+    try { await calculateEngagementScore(lead.id) } catch (e) { console.warn('[Preview] Score calc failed:', e) }
 
     return NextResponse.json({ lead })
   } catch (error) {

@@ -174,28 +174,19 @@ export async function POST(request: NextRequest) {
       console.warn('[Preview Track] Dialer SSE push failed:', dialerErr)
     }
 
-    // If high engagement AND no active call, mark as HOT and dispatch webhook (Bug A fix)
-    // During active calls, engagement is expected (rep told them to open it) — not organic
-    if (!activeCall && ((duration && duration > 60) || event === 'cta_click' || event === 'call_click' || event === 'contact_form')) {
+    // Recalculate engagement score (persists score + derives priority)
+    let scoreResult: Awaited<ReturnType<typeof calculateEngagementScore>> | null = null
+    try { scoreResult = await calculateEngagementScore(lead.id) } catch (e) { console.warn('Engagement recalc failed:', e) }
+
+    // If score crossed to HOT AND no active call (organic engagement), update status + webhook
+    if (!activeCall && scoreResult?.priorityChanged && scoreResult.newPriority === 'HOT') {
       try {
         const urgencyScore = event === 'call_click' ? 90 : event === 'contact_form' ? 85 : event === 'cta_click' ? 80 : duration > 120 ? 75 : 65
 
-        if (lead.priority !== 'HOT') {
-          await prisma.lead.update({
-            where: { id: lead.id },
-            data: { priority: 'HOT', status: 'HOT_LEAD' }
-          })
-
-          // Create hot lead notification
-          await prisma.notification.create({
-            data: {
-              type: 'HOT_LEAD',
-              title: 'Hot Lead Alert',
-              message: `${lead.firstName} at ${lead.companyName} engaged with preview: ${event}`,
-              metadata: { leadId: lead.id, event },
-            }
-          })
-        }
+        await prisma.lead.update({
+          where: { id: lead.id },
+          data: { status: 'HOT_LEAD' }
+        })
 
         await dispatchWebhook(WebhookEvents.HOT_ENGAGEMENT(
           lead.id,
@@ -207,9 +198,6 @@ export async function POST(request: NextRequest) {
         console.warn('[Preview Track] Hot lead promotion failed:', hotLeadErr)
       }
     }
-
-    // After logging the event, recalculate engagement:
-    try { await calculateEngagementScore(lead.id) } catch (e) { console.warn('Engagement recalc failed:', e) }
 
     return NextResponse.json({ success: true })
   } catch (error) {

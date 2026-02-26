@@ -37,7 +37,7 @@ export type InitiateCallResponse = InitiateCallResult | InitiateCallError
 
 // Disposition result → Lead status mapping (only valid LeadStatus enum values)
 const DISPOSITION_STATUS_MAP: Record<string, string> = {
-  WANTS_TO_MOVE_FORWARD: 'HOT_LEAD',
+  WANTS_TO_MOVE_FORWARD: 'QUALIFIED',
   NOT_INTERESTED: 'CLOSED_LOST',
   DNC: 'DO_NOT_CONTACT',
   CALLBACK: 'QUALIFIED',
@@ -896,6 +896,9 @@ export async function autoDisposition(callId: string, result: string) {
   if (autoField) {
     await upsertRepActivityIncremental(call.repId, { [autoField]: 1 })
   }
+
+  // Recalculate engagement score after auto-disposition
+  try { await calculateEngagementScore(call.leadId) } catch (e) { console.warn('[DialerService] Auto-disposition score calc failed:', e) }
 
   return { success: true }
 }

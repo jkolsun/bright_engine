@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { pushToRep, pushToAllAdmins } from '@/lib/dialer-events'
+import { calculateEngagementScore } from '@/lib/engagement-scoring'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,24 +62,20 @@ export async function POST(request: NextRequest) {
       console.warn('[Preview CTA] Dialer SSE push failed:', dialerErr)
     }
 
-    // Only promote to HOT, create notification, send admin email, and trigger Close Engine
+    // Recalculate engagement score (persists score + derives priority)
+    let scoreResult: Awaited<ReturnType<typeof calculateEngagementScore>> | null = null
+    try { scoreResult = await calculateEngagementScore(lead.id) } catch (e) { console.warn('[Preview CTA] Score calc failed:', e) }
+
+    // Only promote status, send admin email, and trigger Close Engine
     // for organic engagement (Bug A fix). During active calls, the rep told the lead to click.
     if (!activeCall) {
-      // Update lead priority AND status to HOT
-      await prisma.lead.update({
-        where: { id: lead.id },
-        data: { priority: 'HOT', status: 'HOT_LEAD' },
-      })
-
-      // Create HOT_LEAD notification
-      await prisma.notification.create({
-        data: {
-          type: 'HOT_LEAD',
-          title: 'Preview CTA Clicked!',
-          message: `${lead.firstName} at ${lead.companyName} clicked "Get Started" on their preview`,
-          metadata: { leadId: lead.id, previewId, source: 'cta_banner' },
-        },
-      })
+      // If score crossed to HOT, set status to HOT_LEAD
+      if (scoreResult?.priorityChanged && scoreResult.newPriority === 'HOT') {
+        await prisma.lead.update({
+          where: { id: lead.id },
+          data: { status: 'HOT_LEAD' },
+        })
+      }
 
       // Send urgent email notification to admin via Resend
       try {

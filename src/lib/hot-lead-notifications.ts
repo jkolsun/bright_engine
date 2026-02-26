@@ -160,14 +160,6 @@ async function createHotLeadNotification(trigger: HotLeadTrigger) {
     }
   }
 
-  // Update lead priority if not already hot
-  if (lead.priority !== 'HOT') {
-    await prisma.lead.update({
-      where: { id: trigger.leadId },
-      data: { priority: 'HOT' }
-    })
-  }
-
   return notification
 }
 
@@ -190,11 +182,11 @@ export async function checkForStaleHotLeads() {
   })
 
   for (const lead of staleHotLeads) {
-    // Downgrade priority to WARM
-    await prisma.lead.update({
-      where: { id: lead.id },
-      data: { priority: 'WARM' }
-    })
+    // Recalculate engagement score — recency decay naturally lowers the score
+    try {
+      const { calculateEngagementScore } = await import('./engagement-scoring')
+      await calculateEngagementScore(lead.id)
+    } catch (e) { console.warn('[StaleCheck] Score calc failed for lead:', lead.id, e) }
 
     // Create follow-up notification
     await prisma.notification.create({
@@ -202,7 +194,7 @@ export async function checkForStaleHotLeads() {
         type: 'ESCALATION',
         title: 'Stale Hot Lead',
         message: `${lead.companyName} was hot but has gone cold (no activity 48h)`,
-        metadata: { 
+        metadata: {
           leadId: lead.id,
           previousPriority: 'HOT',
           assignedTo: lead.assignedTo?.name

@@ -5,6 +5,7 @@
 
 import { prisma } from './db'
 import { getPricingConfig } from './pricing-config'
+import { calculateEngagementScore } from './engagement-scoring'
 
 const INSTANTLY_API_BASE = 'https://api.instantly.ai/api/v2'
 const SAFETY_BUFFER = 0.85 // Only tunable config — conservative margin
@@ -652,6 +653,9 @@ export async function handleInstantlyWebhook(event: any) {
             })
           }
         }
+
+        // Recalculate engagement score after reply processing
+        try { await calculateEngagementScore(lead.id) } catch (e) { console.warn('[Instantly] Score calc failed:', e) }
         break
 
       case 'bounce':
@@ -688,6 +692,8 @@ export async function handleInstantlyWebhook(event: any) {
           data: { status: 'OPENED', openedAt: new Date() },
         })
         console.log(`[Instantly] Lead ${email} opened email`)
+        // Recalculate engagement score
+        try { await calculateEngagementScore(lead.id) } catch (e) { console.warn('[Instantly] Score calc failed:', e) }
         break
 
       case 'link_clicked':
@@ -705,22 +711,8 @@ export async function handleInstantlyWebhook(event: any) {
           where: { leadId: lead.id, channel: 'INSTANTLY', clickedAt: null },
           data: { status: 'CLICKED', clickedAt: new Date() },
         })
-        // Check for hot lead promotion (clicked preview = high engagement)
-        if (lead.status === 'NEW' || lead.status === 'BUILDING') {
-          await prisma.lead.update({
-            where: { id: lead.id },
-            data: { status: 'HOT_LEAD', priority: 'HOT' },
-          })
-          // Create hot lead notification
-          await prisma.notification.create({
-            data: {
-              type: 'HOT_LEAD',
-              title: `Preview Clicked: ${lead.companyName}`,
-              message: `${lead.firstName} at ${lead.companyName} clicked their preview link from Instantly campaign. Follow up ASAP.`,
-              metadata: { leadId: lead.id, source: 'instantly_click' },
-            },
-          })
-        }
+        // Recalculate engagement score (persists score + derives priority)
+        try { await calculateEngagementScore(lead.id) } catch (e) { console.warn('[Instantly] Score calc failed:', e) }
         console.log(`[Instantly] Lead ${email} clicked link (likely preview)`)
         break
 

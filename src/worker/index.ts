@@ -1236,44 +1236,14 @@ async function checkHotLeads() {
         in: ['PREVIEW_VIEWED', 'PREVIEW_CTA_CLICKED', 'PREVIEW_CALL_CLICKED', 'PREVIEW_RETURN_VISIT'],
       },
     },
-    include: {
-      lead: true,
-    },
+    select: { leadId: true },
   })
 
-  // Create notifications for each hot lead (prevent duplicates)
-  for (const event of hotEvents) {
-    // Check for existing notification in last hour (more conservative)
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
-    
-    const existing = await prisma.notification.findFirst({
-      where: {
-        type: 'HOT_LEAD',
-        metadata: { path: ['leadId'], equals: event.leadId },
-        createdAt: { gte: oneHourAgo },
-      },
-    })
-
-    // Only create if not already notified recently
-    if (!existing) {
-      const hotMsg = `${event.lead.firstName} at ${event.lead.companyName} just ${event.eventType.toLowerCase()} their preview`
-      await prisma.notification.create({
-        data: {
-          type: 'HOT_LEAD',
-          title: 'Hot Lead Alert',
-          message: hotMsg,
-          metadata: { leadId: event.leadId, eventType: event.eventType, timestamp: Date.now() },
-        },
-      })
-
-      // SMS alert to admin phone
-      try {
-        const { notifyAdmin } = await import('@/lib/notifications')
-        await notifyAdmin('hot_lead', 'Hot Lead', `${event.lead.companyName} is engaging with their preview`)
-      } catch (err) {
-        console.error('[Worker] Admin SMS notification failed:', err)
-      }
-    }
+  // Deduplicate by leadId and recalculate engagement scores
+  // The scoring engine handles notifications + SMS when crossing HOT threshold
+  const uniqueLeadIds = [...new Set(hotEvents.map(e => e.leadId))]
+  for (const leadId of uniqueLeadIds) {
+    try { await calculateEngagementScore(leadId) } catch (e) { console.warn('[Worker] Score calc failed for lead:', leadId, e) }
   }
 }
 

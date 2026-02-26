@@ -418,7 +418,7 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
             {activeTab === 'analytics' && (
               <Card className="p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Engagement Analytics</h3>
-                <EngagementPanel leadId={id} />
+                <EngagementPanel leadId={id} persistedScore={lead?.engagementScore} persistedLevel={lead?.engagementLevel} />
               </Card>
             )}
           </div>
@@ -713,15 +713,19 @@ function DispositionBadge({ result }: { result: string }) {
   )
 }
 
-function EngagementPanel({ leadId }: { leadId: string }) {
-  const [score, setScore] = useState<any>(null)
+function EngagementPanel({ leadId, persistedScore, persistedLevel }: { leadId: string; persistedScore?: number | null; persistedLevel?: string | null }) {
+  const [score, setScore] = useState<any>(
+    persistedScore != null ? { score: persistedScore, temperature: persistedLevel || 'COLD', trend: 'flat', components: null } : null
+  )
 
   useEffect(() => {
+    // Only fetch from API if no persisted score available
+    if (persistedScore != null) return
     fetch(`/api/engagement-score?leadId=${leadId}`)
       .then(r => r.json())
       .then(setScore)
       .catch(console.error)
-  }, [leadId])
+  }, [leadId, persistedScore])
 
   if (!score) return <p className="text-gray-500">Loading engagement data...</p>
 

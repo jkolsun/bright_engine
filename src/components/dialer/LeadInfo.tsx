@@ -12,8 +12,8 @@ export function LeadInfo({ lead }: { lead: QueueLead }) {
         </div>
         <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${
           lead.priority === 'HOT' ? 'bg-red-100 text-red-700' :
-          lead.priority === 'HIGH' ? 'bg-orange-100 text-orange-700' :
-          lead.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
+          lead.priority === 'WARM' ? 'bg-amber-100 text-amber-700' :
+          lead.priority === 'COLD' ? 'bg-blue-100 text-blue-700' :
           'bg-gray-100 text-gray-600'
         }`}>
           {lead.priority || 'NORMAL'}

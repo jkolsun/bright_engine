@@ -157,8 +157,8 @@ function personalizeScript(text: string, lead: Lead | null, repName: string, pri
 }
 
 function getTemperature(score: number): { label: string; color: string; bg: string } {
-  if (score >= 50) return { label: 'HOT', color: 'text-red-600', bg: 'bg-red-50 border-red-200' }
-  if (score >= 20) return { label: 'WARM', color: 'text-orange-600', bg: 'bg-orange-50 border-orange-200' }
+  if (score >= 71) return { label: 'HOT', color: 'text-red-600', bg: 'bg-red-50 border-red-200' }
+  if (score >= 31) return { label: 'WARM', color: 'text-orange-600', bg: 'bg-orange-50 border-orange-200' }
   return { label: 'COLD', color: 'text-gray-500', bg: 'bg-gray-50 border-gray-200' }
 }
 

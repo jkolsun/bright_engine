@@ -106,6 +106,9 @@ model Lead {
   photos                 Json?
   previewExpiresAt       DateTime?                @map("preview_expires_at")
   priority               LeadPriority             @default(COLD)
+  engagementScore        Int?                     @map("engagement_score")
+  engagementLevel        String?                  @map("engagement_level")
+  engagementUpdatedAt    DateTime?                @map("engagement_updated_at")
   services               Json?
   status                 LeadStatus               @default(NEW)
   timezone               String?                  @default("America/New_York")

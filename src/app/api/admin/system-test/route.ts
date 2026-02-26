@@ -199,17 +199,19 @@ export async function POST(request: NextRequest) {
       results.push({ name: 'Preview Generation', category: 'Features', status: 'fail', detail: err.message, ms: 0 })
     }
 
-    // --- 10. HOT LEAD PIPELINE ---
+    // --- 10. HOT LEAD PIPELINE (score-based) ---
     try {
       const t = Date.now()
-      const hotLeads = await prisma.lead.count({ where: { status: 'HOT_LEAD' } })
       const hotPriority = await prisma.lead.count({ where: { priority: 'HOT' } })
-      const mismatch = hotPriority - hotLeads
+      const hotEngagement = await prisma.lead.count({ where: { engagementLevel: 'HOT' } })
+      const hotStatus = await prisma.lead.count({ where: { status: 'HOT_LEAD' } })
+      const scoredLeads = await prisma.lead.count({ where: { engagementScore: { not: null } } })
+      const totalLeads = await prisma.lead.count()
       results.push({
         name: 'Hot Lead Pipeline',
         category: 'Features',
-        status: mismatch === 0 ? 'pass' : 'warn',
-        detail: `HOT_LEAD status: ${hotLeads}, HOT priority: ${hotPriority}${mismatch > 0 ? ` — ${mismatch} leads have HOT priority but not HOT_LEAD status` : ''}`,
+        status: hotPriority === hotEngagement ? 'pass' : 'warn',
+        detail: `priority=HOT: ${hotPriority}, engagementLevel=HOT: ${hotEngagement}, status=HOT_LEAD: ${hotStatus} (info). Scored: ${scoredLeads}/${totalLeads}`,
         ms: Date.now() - t,
       })
     } catch (err: any) {

@@ -112,12 +112,17 @@ export async function triggerCloseEngine(options: {
     await prisma.lead.update({
       where: { id: leadId },
       data: {
-        status: lead.status === 'HOT_LEAD' ? 'HOT_LEAD' : 'QUALIFIED',
-        priority: 'HOT',
+        status: 'QUALIFIED',
         closeEntryPoint: entryPoint,
         formUrl: `${baseUrl}/onboard/${leadId}`,
       },
     })
+
+    // Recalculate engagement score (persists score + derives priority)
+    try {
+      const { calculateEngagementScore } = await import('./engagement-scoring')
+      await calculateEngagementScore(leadId)
+    } catch (e) { console.warn('[CloseEngine] Score calc failed:', e) }
 
     // 4. Create CloseEngineConversation (delete old terminal one if exists)
     if (existing && TERMINAL_STAGES.includes(existing.stage)) {

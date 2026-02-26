@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { calculateEngagementScore } from '@/lib/engagement-scoring'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,29 +41,8 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Mark lead as HOT if not already
-    if (lead.priority !== 'HOT') {
-      await prisma.lead.update({
-        where: { id: lead.id },
-        data: { priority: 'HOT', status: 'HOT_LEAD' },
-      })
-    }
-
-    // Create notification for admin
-    await prisma.notification.create({
-      data: {
-        type: 'HOT_LEAD',
-        title: 'Preview Contact Form Submitted',
-        message: `${name || 'Someone'} submitted a contact form on ${lead.companyName}'s preview${email ? ` (${email})` : ''}`,
-        metadata: {
-          leadId: lead.id,
-          submitterName: name,
-          submitterEmail: email,
-          submitterPhone: phone,
-          submitterMessage: message,
-        },
-      },
-    })
+    // Recalculate engagement score (persists score + derives priority)
+    try { await calculateEngagementScore(lead.id) } catch (e) { console.warn('[Preview Contact] Score calc failed:', e) }
 
     return NextResponse.json({ success: true })
   } catch (error) {

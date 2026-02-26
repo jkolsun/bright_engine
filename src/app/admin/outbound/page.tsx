@@ -24,7 +24,6 @@ export default function SalesRepTrackerPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterView, setFilterView] = useState('all')
-  const [engagementScores, setEngagementScores] = useState<Record<string, any>>({})
 
   // Assignment state
   const [reps, setReps] = useState<any[]>([])
@@ -36,21 +35,6 @@ export default function SalesRepTrackerPage() {
   useEffect(() => {
     loadData()
     fetchReps()
-    const interval = setInterval(() => {
-      fetch('/api/engagement-score?all=true')
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-          if (data?.scores) {
-            const scoresMap: Record<string, any> = {}
-            data.scores.forEach((score: any) => {
-              scoresMap[score.leadId] = score
-            })
-            setEngagementScores(scoresMap)
-          }
-        })
-        .catch(err => console.warn('[Outbound] Engagement score fetch failed:', err))
-    }, 30000)
-    return () => clearInterval(interval)
   }, [])
 
   const loadData = async () => {
@@ -79,23 +63,6 @@ export default function SalesRepTrackerPage() {
       }
     } catch {
       // Stats are non-critical, ignore
-    }
-
-    // Fetch engagement scores (non-critical)
-    try {
-      const scoresRes = await fetch('/api/engagement-score?all=true')
-      if (scoresRes.ok) {
-        const data = await scoresRes.json()
-        const scoresMap: Record<string, any> = {}
-        if (data.scores) {
-          data.scores.forEach((score: any) => {
-            scoresMap[score.leadId] = score
-          })
-        }
-        setEngagementScores(scoresMap)
-      }
-    } catch {
-      // Scores are non-critical, ignore
     }
 
     if (errors.length > 0) {
@@ -175,7 +142,7 @@ export default function SalesRepTrackerPage() {
       lead.companyName?.toLowerCase().includes(searchTerm.toLowerCase())
 
     if (filterView === 'all') return matchesSearch
-    if (filterView === 'hot') return matchesSearch && lead.status === 'HOT_LEAD'
+    if (filterView === 'hot') return matchesSearch && lead.priority === 'HOT'
     if (filterView === 'qualified') return matchesSearch && lead.status === 'QUALIFIED'
     if (filterView === 'building') return matchesSearch && lead.status === 'BUILDING'
 
@@ -183,13 +150,11 @@ export default function SalesRepTrackerPage() {
   })
 
   const getEngagementScore = (lead: any) => {
-    const scoreData = engagementScores[lead.id]
-    return scoreData?.score || 0
+    return lead.engagementScore ?? 0
   }
 
-  const getTemperature = (leadId: string) => {
-    const scoreData = engagementScores[leadId]
-    const temperature = scoreData?.temperature || 'COLD'
+  const getTemperature = (lead: any) => {
+    const temperature = lead.engagementLevel || 'COLD'
 
     const colorMap: Record<string, string> = {
       'COLD': 'bg-blue-100 text-blue-800',
@@ -197,7 +162,7 @@ export default function SalesRepTrackerPage() {
       'HOT': 'bg-red-100 text-red-800',
     }
 
-    return { label: temperature, color: colorMap[temperature] }
+    return { label: temperature, color: colorMap[temperature] || colorMap['COLD'] }
   }
 
   if (loading) {
@@ -369,7 +334,7 @@ export default function SalesRepTrackerPage() {
             <Phone size={20} className="text-red-600" />
           </div>
           <div className="text-3xl font-bold text-gray-900">
-            {leads.filter(l => l.status === 'HOT_LEAD').length}
+            {leads.filter(l => l.priority === 'HOT').length}
           </div>
           <div className="text-sm text-gray-500 mt-2">Needs attention</div>
         </Card>
@@ -391,7 +356,7 @@ export default function SalesRepTrackerPage() {
               size="sm"
               onClick={() => setFilterView('hot')}
             >
-              Hot ({leads.filter(l => l.status === 'HOT_LEAD').length})
+              Hot ({leads.filter(l => l.priority === 'HOT').length})
             </Button>
             <Button
               variant={filterView === 'qualified' ? 'default' : 'outline'}
@@ -465,7 +430,7 @@ export default function SalesRepTrackerPage() {
               <tbody className="divide-y divide-gray-200">
                 {filteredLeads.map((lead) => {
                   const score = getEngagementScore(lead)
-                  const temp = getTemperature(lead.id)
+                  const temp = getTemperature(lead)
 
                   return (
                     <tr key={lead.id} className={`hover:bg-gray-50 ${selectedLeads.has(lead.id) ? 'bg-blue-50' : ''}`}>
