@@ -238,6 +238,7 @@ server.tool(
         return { content: [{ type: 'text' as const, text: 'Error: HTML exceeds 2MB limit' }], isError: true }
       }
 
+      // Atomic optimistic lock: read current state, then updateMany with version guard
       const lead = await prisma.lead.findUnique({
         where: { id: leadId },
         select: { id: true, siteEditVersion: true, buildStep: true },
@@ -247,27 +248,30 @@ server.tool(
         return { content: [{ type: 'text' as const, text: `Error: Lead ${leadId} not found` }], isError: true }
       }
 
-      // Optimistic lock check
-      if (lead.siteEditVersion !== expectedVersion) {
-        return {
-          content: [{
-            type: 'text' as const,
-            text: `Version conflict: you read version ${expectedVersion} but current is ${lead.siteEditVersion}. Re-read the site with get_site and try again.`,
-          }],
-          isError: true,
-        }
-      }
-
       // Auto-advance buildStep (matches existing /api/site-editor/[id]/save pattern)
       let nextBuildStep = lead.buildStep
       if (lead.buildStep === 'QA_REVIEW') nextBuildStep = 'EDITING'
       else if (lead.buildStep === 'BUILDING' && html.length > 500) nextBuildStep = 'QA_REVIEW'
 
       const newVersion = expectedVersion + 1
-      await prisma.lead.update({
-        where: { id: leadId },
+
+      // Atomic version check + update (prevents TOCTOU race)
+      const updated = await prisma.lead.updateMany({
+        where: { id: leadId, siteEditVersion: expectedVersion },
         data: { siteHtml: html, siteEditVersion: newVersion, buildStep: nextBuildStep },
       })
+
+      if (updated.count === 0) {
+        // Re-read to get current version for error message
+        const current = await prisma.lead.findUnique({ where: { id: leadId }, select: { siteEditVersion: true } })
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `Version conflict: you expected version ${expectedVersion} but current is ${current?.siteEditVersion ?? 'unknown'}. Re-read the site with get_site and try again.`,
+          }],
+          isError: true,
+        }
+      }
 
       return {
         content: [{
@@ -322,29 +326,27 @@ server.tool(
       }
 
       if (autoSave) {
-        // Re-check version for optimistic lock
-        const currentLead = await prisma.lead.findUnique({
-          where: { id: leadId },
-          select: { siteEditVersion: true },
+        let nextBuildStep = lead.buildStep
+        if (lead.buildStep === 'QA_REVIEW') nextBuildStep = 'EDITING'
+
+        const baseVersion = lead.siteEditVersion ?? 0
+        const newVersion = baseVersion + 1
+
+        // Atomic version check + update (prevents TOCTOU race)
+        const updated = await prisma.lead.updateMany({
+          where: { id: leadId, siteEditVersion: baseVersion },
+          data: { siteHtml: result.html, siteEditVersion: newVersion, buildStep: nextBuildStep },
         })
-        if (currentLead && currentLead.siteEditVersion !== lead.siteEditVersion) {
+
+        if (updated.count === 0) {
           return {
             content: [{
               type: 'text' as const,
-              text: `Version conflict during save. Someone else edited the site. Use get_site to reload and try again.\n\nAI edit summary: ${result.summary}`,
+              text: `Version conflict during save. Someone else edited the site while AI was processing. Use get_site to reload and try again.\n\nAI edit summary: ${result.summary}`,
             }],
             isError: true,
           }
         }
-
-        let nextBuildStep = lead.buildStep
-        if (lead.buildStep === 'QA_REVIEW') nextBuildStep = 'EDITING'
-
-        const newVersion = (lead.siteEditVersion ?? 0) + 1
-        await prisma.lead.update({
-          where: { id: leadId },
-          data: { siteHtml: result.html, siteEditVersion: newVersion, buildStep: nextBuildStep },
-        })
 
         return {
           content: [{
@@ -509,7 +511,7 @@ server.tool(
     try {
       const edit = await prisma.editRequest.findUnique({
         where: { id: editRequestId },
-        select: { id: true, status: true, editFlowState: true, editSummary: true, clientId: true },
+        select: { id: true, status: true, editFlowState: true, editSummary: true, clientId: true, leadId: true, postEditHtml: true },
       })
 
       if (!edit) {
@@ -520,18 +522,24 @@ server.tool(
         return { content: [{ type: 'text' as const, text: `Already approved/confirmed. Current status: ${edit.status}, flow: ${edit.editFlowState}` }] }
       }
 
-      // Update edit request status
+      if (!edit.leadId) {
+        return { content: [{ type: 'text' as const, text: `Error: Edit request has no linked lead — cannot push to build queue.` }], isError: true }
+      }
+
+      if (!edit.postEditHtml) {
+        return { content: [{ type: 'text' as const, text: `Error: No post-edit HTML available. The AI edit may not have completed. Review the edit first.` }], isError: true }
+      }
+
+      // Mark as approved (pushEditToBuildQueue will advance to 'live')
       await prisma.editRequest.update({
         where: { id: editRequestId },
         data: {
-          status: 'approved',
-          editFlowState: 'confirmed',
           approvedBy: 'mcp_admin',
           approvedAt: new Date(),
         },
       })
 
-      // Push to build queue (handles siteHtml update, buildStep, SMS, notification)
+      // Push to build queue (handles siteHtml update, buildStep, status→live, SMS, notification)
       await pushEditToBuildQueue(editRequestId)
 
       return {
@@ -574,23 +582,29 @@ server.tool(
         return { content: [{ type: 'text' as const, text: 'Already rejected.' }] }
       }
 
-      // Revert HTML if we have pre-edit backup
+      // Revert HTML if we have pre-edit backup and a linked lead
       let reverted = false
+      let revertMessage = 'Edit rejected.'
       if (edit.preEditHtml && edit.leadId) {
         await prisma.lead.update({
           where: { id: edit.leadId },
-          data: { siteHtml: edit.preEditHtml },
+          data: { siteHtml: edit.preEditHtml, siteEditVersion: { increment: 1 } },
         })
         reverted = true
+        revertMessage = 'Edit rejected and site reverted to pre-edit state (version bumped).'
+      } else if (edit.preEditHtml && !edit.leadId) {
+        revertMessage = 'Edit rejected. Pre-edit HTML exists but no linked lead to revert.'
+      } else {
+        revertMessage = 'Edit rejected (no pre-edit HTML was available to revert).'
       }
 
-      // Update edit request
+      // Update edit request — preserve original editSummary, add rejection reason separately
       await prisma.editRequest.update({
         where: { id: editRequestId },
         data: {
           status: 'rejected',
           editFlowState: 'failed',
-          editSummary: reason ? `Rejected: ${reason}` : edit.editSummary,
+          ...(reason ? { editSummary: `[Rejected: ${reason}] ${edit.editSummary || ''}`.trim() } : {}),
         },
       })
 
@@ -600,9 +614,7 @@ server.tool(
           text: JSON.stringify({
             success: true,
             reverted,
-            message: reverted
-              ? 'Edit rejected and site reverted to pre-edit state.'
-              : 'Edit rejected (no pre-edit HTML was available to revert).',
+            message: revertMessage,
             reason: reason || null,
           }, null, 2),
         }],
