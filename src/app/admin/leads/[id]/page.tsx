@@ -214,6 +214,12 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
                     <Phone size={14} />
                     {lead.phone ? formatPhone(lead.phone) : '—'}
                   </div>
+                  {lead.secondaryPhone && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Phone size={14} />
+                      {formatPhone(lead.secondaryPhone)} (2nd)
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Mail size={14} />
                     {lead.email || '—'}
@@ -439,6 +445,12 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
                     {new Date(lead.createdAt).toLocaleDateString()}
                   </p>
                 </div>
+                {lead.secondaryPhone && (
+                  <div>
+                    <p className="text-gray-600">Secondary Phone</p>
+                    <p className="font-medium text-gray-900">{formatPhone(lead.secondaryPhone)}</p>
+                  </div>
+                )}
                 {lead.estimatedValue && (
                   <div>
                     <p className="text-gray-600">Estimated Value</p>

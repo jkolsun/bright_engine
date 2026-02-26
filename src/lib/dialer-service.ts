@@ -102,7 +102,7 @@ export async function endSession(sessionId: string) {
     where: { id: sessionId },
     include: {
       calls: {
-        select: { duration: true, connectedAt: true, dispositionResult: true },
+        select: { id: true, status: true, duration: true, connectedAt: true, dispositionResult: true },
       },
     },
   })
@@ -122,6 +122,39 @@ export async function endSession(sessionId: string) {
       avgCallDuration: avgDuration,
     },
   })
+
+  // Sweep orphaned calls — give fallback dispositions so they appear in Lead Bank
+  const orphanedCalls = session.calls.filter(c => !c.dispositionResult)
+
+  if (orphanedCalls.length > 0) {
+    const vmIds = orphanedCalls
+      .filter(c => c.status === 'VOICEMAIL')
+      .map(c => c.id)
+    const otherIds = orphanedCalls
+      .filter(c => c.status !== 'VOICEMAIL')
+      .map(c => c.id)
+
+    const updates: Promise<any>[] = []
+    if (vmIds.length > 0) {
+      updates.push(
+        prisma.dialerCall.updateMany({
+          where: { id: { in: vmIds }, dispositionResult: null },
+          data: { dispositionResult: 'VOICEMAIL' },
+        })
+      )
+    }
+    if (otherIds.length > 0) {
+      updates.push(
+        prisma.dialerCall.updateMany({
+          where: { id: { in: otherIds }, dispositionResult: null },
+          data: { dispositionResult: 'NO_ANSWER' },
+        })
+      )
+    }
+
+    await Promise.all(updates)
+    console.log(`[SessionEnd] Fallback-dispositioned ${orphanedCalls.length} orphaned calls (${vmIds.length} VM, ${otherIds.length} other)`)
+  }
 
   // Safety net log only — real RepActivity updates happen incrementally in initiateCall (dials),
   // autoDisposition (voicemails/noAnswers), and logDisposition (conversations + per-disposition).
@@ -829,9 +862,12 @@ export async function cancelCallback(callbackId: string) {
 export async function autoDisposition(callId: string, result: string) {
   const call = await prisma.dialerCall.findUnique({
     where: { id: callId },
-    select: { id: true, repId: true, leadId: true, sessionId: true, connectedAt: true },
+    select: { id: true, repId: true, leadId: true, sessionId: true, connectedAt: true, dispositionResult: true },
   })
   if (!call) throw new Error('Call not found')
+
+  // Idempotency guard — skip if already dispositioned (prevents double stat increments from race conditions)
+  if (call.dispositionResult) return
 
   // Update DialerCall with disposition
   await prisma.dialerCall.update({
