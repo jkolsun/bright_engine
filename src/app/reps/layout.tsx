@@ -40,6 +40,7 @@ export default function RepsLayout({
   // Onboarding is now handled by middleware + /reps/onboarding page
   // If rep is on the onboarding page, render children (the wizard) without sidebar
   const isOnboardingPage = pathname === '/reps/onboarding'
+  const isDialerPage = pathname === '/reps/dialer'
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -92,8 +93,8 @@ export default function RepsLayout({
 
   return (
     <div className="flex h-screen bg-mesh-teal" style={{ background: 'linear-gradient(135deg, #f8fafc 0%, #f0fdfa 40%, #ecfdf5 70%, #f0f9ff 100%)' }}>
-      {/* Sidebar */}
-      <aside className="w-[280px] gradient-dark-teal text-white hidden md:flex flex-col shadow-2xl relative overflow-hidden">
+      {/* Sidebar — hidden on dialer page for full-screen experience */}
+      {!isDialerPage && <aside className="w-[280px] gradient-dark-teal text-white hidden md:flex flex-col shadow-2xl relative overflow-hidden">
         {/* Ambient glow */}
         <div className="absolute top-0 left-0 w-full h-full bg-mesh-dark pointer-events-none" />
 
@@ -157,17 +158,17 @@ export default function RepsLayout({
             {isLoggingOut ? 'Signing out...' : 'Sign Out'}
           </button>
         </div>
-      </aside>
+      </aside>}
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto pb-20 md:pb-0">
+      <main className={`flex-1 overflow-auto ${isDialerPage ? '' : 'pb-20 md:pb-0'}`}>
         <DialerProvider>
           {children}
         </DialerProvider>
       </main>
 
-      {/* Mobile Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-gray-200 shadow-lg">
+      {/* Mobile Bottom Nav — hidden on dialer page */}
+      {!isDialerPage && <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white border-t border-gray-200 shadow-lg">
         <div className="flex items-center justify-around h-16">
           {navItems.map((item) => {
             const isActive = item.exact
@@ -187,7 +188,7 @@ export default function RepsLayout({
             )
           })}
         </div>
-      </nav>
+      </nav>}
 
       {/* Feedback Dialog */}
       {feedbackOpen && (

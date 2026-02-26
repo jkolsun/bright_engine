@@ -8,7 +8,9 @@ import { CallControls } from './CallControls'
 import { InboundCallBanner } from './InboundCallBanner'
 import { SessionRecap } from './SessionRecap'
 import { AutoDialBanner } from './AutoDialBanner'
-import { PanelLeftOpen } from 'lucide-react'
+import { PanelLeftOpen, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 function DialerContent() {
   const { session, queue } = useDialer()
@@ -37,7 +39,7 @@ function DialerContent() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
+    <div className="flex flex-col flex-1">
       <InboundCallBanner />
       <AutoDialBanner />
       <div className="flex flex-1 overflow-hidden">
@@ -96,5 +98,19 @@ function SessionStart() {
 
 // Provider is now in the rep/part-time layout — this just renders content
 export default function DialerLayout() {
-  return <DialerContent />
+  const pathname = usePathname()
+  const backHref = pathname?.startsWith('/part-time') ? '/part-time' : '/reps'
+
+  return (
+    <div className="flex flex-col h-screen">
+      {/* Back bar */}
+      <div className="flex items-center px-4 py-2 border-b border-gray-100 bg-white flex-shrink-0">
+        <Link href={backHref} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back</span>
+        </Link>
+      </div>
+      <DialerContent />
+    </div>
+  )
 }
