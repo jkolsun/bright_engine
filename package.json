@@ -13,7 +13,8 @@
     "db:studio": "prisma studio",
     "worker": "NODE_OPTIONS='--max-old-space-size=384' tsx src/worker/index.ts",
     "test:workflow": "npx tsx tests/workflow-test.ts",
-    "test:contact-edit": "npx tsx tests/test-lead-contact-edit.ts"
+    "test:contact-edit": "npx tsx tests/test-lead-contact-edit.ts",
+    "mcp": "tsx src/mcp-server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
@@ -56,9 +57,11 @@
     "tailwind-merge": "^2.2.1",
     "tailwindcss-animate": "^1.0.7",
     "twilio": "^4.20.0",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "@modelcontextprotocol/sdk": "^1.12.0"
   },
   "devDependencies": {
+    "dotenv": "^16.4.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jest": "^29.5.8",
     "@types/node": "^20.11.20",
