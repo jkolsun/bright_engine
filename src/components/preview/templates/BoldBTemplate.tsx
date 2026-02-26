@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Phone, MapPin, Star, CheckCircle, ArrowRight, Mail, Camera, MessageCircle, X, Send, Menu, Minus, Plus, Quote, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
+import PhotoPlaceholder from '../shared/PhotoPlaceholder'
 
 function fmt(phone: string): string {
   const d = phone.replace(/\D/g, '')
@@ -120,7 +121,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
   const hasR = lead.enrichedRating && lead.enrichedRating > 0
   const A = getAccent(config)
 
-  const svcData = svc.map((n,i) => ({ name:n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services.`, img: photos[i % photos.length] }))
+  const svcData = svc.map((n,i) => ({ name:n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services.`, img: photos.length > 0 ? photos[i % photos.length] : undefined }))
   const testis = [
     { text: wc?.testimonialQuote || `Called ${lead.companyName} at midnight — crew was here in two hours. Absolute lifesavers.`, name: wc?.testimonialAuthor || 'Mike T.', loc: lead.city||'Local' },
     ...(wc?.additionalTestimonials?.map(t=>({text:t.quote,name:t.author,loc:lead.city||'Local'})) || [
@@ -203,7 +204,11 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         {/* HERO — diagonal split */}
         <section className="relative overflow-hidden" style={{minHeight:'100vh',display:'flex',alignItems:'center'}}>
           <div className="absolute inset-0" style={{background:'#000'}}/>
-          {photos[0]&&<div className="absolute inset-0" style={{backgroundImage:`url(${photos[0]})`,backgroundSize:'cover',backgroundPosition:'center',clipPath:'polygon(45% 0,100% 0,100% 100%,25% 100%)',opacity:0.7}}/>}
+          {photos[0] ? (
+            <div className="absolute inset-0" style={{backgroundImage:`url(${photos[0]})`,backgroundSize:'cover',backgroundPosition:'center',clipPath:'polygon(45% 0,100% 0,100% 100%,25% 100%)',opacity:0.7}}/>
+          ) : (
+            <div className="absolute inset-0" style={{background:`linear-gradient(135deg, ${A}15 0%, ${A}30 100%)`,clipPath:'polygon(45% 0,100% 0,100% 100%,25% 100%)'}} />
+          )}
           <div className="absolute inset-0" style={{background:'linear-gradient(90deg,#000 35%,transparent 70%)'}}/>
           <div className="relative w-full" style={{maxWidth:1440,margin:'0 auto',padding:'120px clamp(16px,4vw,48px) clamp(60px,8vh,100px)'}}>
             <Reveal x={-50}><p style={{fontFamily:mono,fontSize:12,color:A,letterSpacing:'0.25em',textTransform:'uppercase',marginBottom:24}}>{loc||'24/7 Emergency'} &mdash; Licensed &amp; Insured</p></Reveal>
@@ -254,13 +259,17 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         </section>)}
 
         {/* PHOTO BREAK */}
-        {photos[1]&&<Reveal x={0}><section className="relative overflow-hidden" style={{height:'50vh',minHeight:350,clipPath:'polygon(0 4vw,100% 0,100% calc(100% - 4vw),0 100%)'}}>
-          <div className="absolute inset-0" style={{backgroundImage:`url(${photos[1]})`,backgroundSize:'cover',backgroundPosition:'center'}}/>
-          <div className="absolute inset-0" style={{background:'rgba(0,0,0,0.5)'}}/>
+        <Reveal x={0}><section className="relative overflow-hidden" style={{height:'50vh',minHeight:350,clipPath:'polygon(0 4vw,100% 0,100% calc(100% - 4vw),0 100%)'}}>
+          {photos[1] ? (
+            <div className="absolute inset-0" style={{backgroundImage:`url(${photos[1]})`,backgroundSize:'cover',backgroundPosition:'center'}}/>
+          ) : (
+            <div className="absolute inset-0" style={{background:`linear-gradient(135deg, ${A}20 0%, ${A}40 100%)`}} />
+          )}
+          <div className="absolute inset-0" style={{background: photos[1] ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.3)'}}/>
           <div className="relative h-full flex items-center justify-center text-center p-6">
             <p style={{fontFamily:head,fontSize:'clamp(28px,5vw,56px)',lineHeight:1.1,letterSpacing:'0.03em',textTransform:'uppercase',maxWidth:700}}>{wc?.closingHeadline||`${loc||'Your community'} trusts ${lead.companyName}`}</p>
           </div>
-        </section></Reveal>}
+        </section></Reveal>
 
         {/* ABOUT PREVIEW */}
         <section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)',background:'#050505'}}>
@@ -276,9 +285,13 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               </div>
               <button onClick={()=>go('about')} className="mt-8 flex items-center gap-2 text-[13px] font-bold uppercase" style={{background:'none',border:'none',color:A,cursor:'pointer',letterSpacing:'0.12em',fontFamily:mono}}>Our Story <ArrowRight size={14}/></button>
             </div></Reveal>
-            {photos[2]&&<Reveal delay={150} x={40}><div className="overflow-hidden relative carbon-clip-img" style={{minHeight:300}}>
-              <img src={photos[2]} alt="" className="w-full h-full object-cover" style={{display:'block',clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
-            </div></Reveal>}
+            <Reveal delay={150} x={40}><div className="overflow-hidden relative carbon-clip-img" style={{minHeight:300}}>
+              {photos[2] ? (
+                <img src={photos[2]} alt="" className="w-full h-full object-cover" style={{display:'block',clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+              ) : (
+                <PhotoPlaceholder accent={A} variant="dark" style={{width:'100%',height:'100%',minHeight:300,clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}} />
+              )}
+            </div></Reveal>
           </div>
         </section>
 
@@ -299,7 +312,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         </section>
 
         {/* PORTFOLIO PREVIEW */}
-        {photos.length>2&&(<section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)',background:'#050505'}}>
+        <section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)',background:'#050505'}}>
           <div style={{maxWidth:1440,margin:'0 auto'}}>
             <Reveal><div className="flex flex-wrap justify-between items-end gap-4 mb-10">
               <div><p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.25em',marginBottom:8}}>PORTFOLIO</p>
@@ -307,10 +320,10 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               <button onClick={()=>go('work')} className="carbon-btn-o" style={{padding:'10px 24px',fontSize:11}}>View All <ArrowRight size={14}/></button>
             </div></Reveal>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*80} x={-20}><div className="overflow-hidden cursor-pointer carbon-glow" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover transition-transform duration-500 hover:scale-105" style={{aspectRatio:i===0?'16/10':'1',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>))}
+              {photos.length > 0 ? photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*80} x={-20}><div className="overflow-hidden cursor-pointer carbon-glow" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover transition-transform duration-500 hover:scale-105" style={{aspectRatio:i===0?'16/10':'1',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>)) : Array.from({length:3},(_,i)=>(<Reveal key={i} delay={i*80} x={-20}><PhotoPlaceholder accent={A} variant="dark" aspectRatio={i===0?'16/10':'1'} /></Reveal>))}
             </div>
           </div>
-        </section>)}
+        </section>
 
         {/* CTA BAND */}
         <section className="relative overflow-hidden" style={{padding:'clamp(80px,10vw,140px) clamp(16px,4vw,48px)',background:A,clipPath:'polygon(0 0,100% 3vw,100% 100%,0 calc(100% - 3vw))'}}>
@@ -393,10 +406,10 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         <section style={{padding:'clamp(48px,6vw,80px) clamp(16px,4vw,48px)',background:'#050505'}}><div style={{maxWidth:1200,margin:'0 auto'}}>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
             <div>
-              {photos[3]&&<Reveal><div className="overflow-hidden mb-8 carbon-clip-img" style={{clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}}><img src={photos[3]} alt="" className="w-full object-cover" style={{height:340,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>}
+              <Reveal><div className="overflow-hidden mb-8 carbon-clip-img" style={{clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}}>{photos[3] ? <img src={photos[3]} alt="" className="w-full object-cover" style={{height:340,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/> : <PhotoPlaceholder accent={A} variant="dark" height={340} />}</div></Reveal>
               {wc?.aboutParagraph2&&<Reveal delay={80}><p className="text-base leading-relaxed" style={{color:'rgba(255,255,255,0.4)'}}>{wc.aboutParagraph2}</p></Reveal>}
             </div>
-            {photos[4]&&<Reveal delay={120} x={40}><div className="overflow-hidden carbon-clip-img" style={{clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}}><img src={photos[4]} alt="" className="w-full object-cover" style={{height:'100%',minHeight:300,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>}
+            <Reveal delay={120} x={40}><div className="overflow-hidden carbon-clip-img" style={{clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}}>{photos[4] ? <img src={photos[4]} alt="" className="w-full object-cover" style={{height:'100%',minHeight:300,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/> : <PhotoPlaceholder accent={A} variant="dark" style={{minHeight:300,height:'100%'}} />}</div></Reveal>
           </div>
 
           {/* Why Choose Us */}

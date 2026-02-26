@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Phone, MapPin, Star, CheckCircle, ArrowRight, Mail, Camera, MessageCircle, X, Send, Menu, Minus, Plus, Quote, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
+import PhotoPlaceholder from '../shared/PhotoPlaceholder'
 
 function fmt(phone: string): string {
   const d = phone.replace(/\D/g, '')
@@ -121,7 +122,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
   const hasR = lead.enrichedRating && lead.enrichedRating > 0
   const A = getAccent(config)
 
-  const svcData = svc.map((n,i) => ({ name:n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services you can count on.`, img: photos[i % (photos.length||1)] }))
+  const svcData = svc.map((n,i) => ({ name:n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services you can count on.`, img: photos.length > 0 ? photos[i % photos.length] : undefined }))
   const testis = [
     { text: wc?.testimonialQuote || `We loved working with ${lead.companyName}. They really listened and delivered exactly what we wanted.`, name: wc?.testimonialAuthor || 'Anna B.', loc: lead.city||'Local' },
     ...(wc?.additionalTestimonials?.map(t=>({text:t.quote,name:t.author,loc:lead.city||'Local'})) || [
@@ -221,10 +222,14 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
                 <span className="text-sm font-medium" style={{color:'#999'}}>{lead.enrichedRating}/5 from {lead.enrichedReviews||'many'} reviews</span>
               </div></Reveal>}
             </div>
-            {photos[0]&&<Reveal delay={200}><div className="relative">
-              <img src={photos[0]} alt="" className="w-full object-cover" style={{borderRadius:20,aspectRatio:'4/3',display:'block',boxShadow:'0 24px 64px rgba(0,0,0,.08)'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+            <Reveal delay={200}><div className="relative">
+              {photos[0] ? (
+                <img src={photos[0]} alt="" className="w-full object-cover" style={{borderRadius:20,aspectRatio:'4/3',display:'block',boxShadow:'0 24px 64px rgba(0,0,0,.08)'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+              ) : (
+                <PhotoPlaceholder accent={A} aspectRatio="4/3" style={{borderRadius:20,boxShadow:'0 24px 64px rgba(0,0,0,.08)'}} />
+              )}
               <div className="absolute -bottom-3 -right-3 w-32 h-32 opacity-[0.08] -z-10" style={{background:A,borderRadius:'40%'}}/>
-            </div></Reveal>}
+            </div></Reveal>
           </div>
         </section>
 
@@ -261,13 +266,17 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
         </section>
 
         {/* PHOTO BREAK */}
-        {photos[1]&&<Reveal><section className="relative overflow-hidden" style={{margin:'0 clamp(16px,4vw,48px)',borderRadius:20,height:'50vh',minHeight:320}}>
-          <div className="absolute inset-0"><img src={photos[1]} alt="" className="w-full h-full object-cover" onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div>
-          <div className="absolute inset-0" style={{background:'rgba(45,45,45,0.45)'}}/>
+        <Reveal><section className="relative overflow-hidden" style={{margin:'0 clamp(16px,4vw,48px)',borderRadius:20,height:'50vh',minHeight:320}}>
+          {photos[1] ? (
+            <div className="absolute inset-0"><img src={photos[1]} alt="" className="w-full h-full object-cover" onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div>
+          ) : (
+            <div className="absolute inset-0" style={{background:`linear-gradient(135deg, ${A}18 0%, ${A}35 100%)`}} />
+          )}
+          <div className="absolute inset-0" style={{background: photos[1] ? 'rgba(45,45,45,0.45)' : 'transparent'}}/>
           <div className="relative h-full flex items-center justify-center text-center p-6">
-            <p className="text-white" style={{fontFamily:sans,fontSize:'clamp(24px,3.5vw,40px)',fontWeight:700,lineHeight:1.2,maxWidth:600}}>"{wc?.closingHeadline||`Quality you can see. Service you can feel.`}"</p>
+            <p style={{fontFamily:sans,fontSize:'clamp(24px,3.5vw,40px)',fontWeight:700,lineHeight:1.2,maxWidth:600,color: photos[1] ? '#fff' : '#333'}}>"{wc?.closingHeadline||`Quality you can see. Service you can feel.`}"</p>
           </div>
-        </section></Reveal>}
+        </section></Reveal>
 
         {/* TESTIMONIALS */}
         <section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)',background:'#FFF8F0'}}>
@@ -312,10 +321,14 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
           <div style={{maxWidth:1200,margin:'0 auto'}}>{svcData.map((s,i)=>(
             <Reveal key={i} delay={i*60}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-0 mb-5 zephyr-lift overflow-hidden" style={{background:'#fff',borderRadius:20,border:'1px solid rgba(0,0,0,0.04)'}}>
-                {s.img && photos.length>0 && <div className="relative overflow-hidden" style={{minHeight:220}}>
-                  <img src={s.img} alt={s.name} className="w-full h-full object-cover" style={{display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                <div className="relative overflow-hidden" style={{minHeight:220}}>
+                  {s.img ? (
+                    <img src={s.img} alt={s.name} className="w-full h-full object-cover" style={{display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                  ) : (
+                    <PhotoPlaceholder accent={A} style={{width:'100%',height:'100%',minHeight:220}} />
+                  )}
                   <div className="absolute top-4 left-4"><span className="text-xs font-bold px-3 py-1.5 text-white" style={{background:`${A}cc`,borderRadius:999}}>{String(i+1).padStart(2,'0')}</span></div>
-                </div>}
+                </div>
                 <div className="flex flex-col justify-between p-8 md:p-10">
                   <div>
                     <h3 className="text-xl font-bold mb-3" style={{fontFamily:sans}}>{s.name}</h3>
@@ -368,7 +381,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
 
         {/* Photo + second paragraph */}
         <section style={{padding:'0 clamp(16px,4vw,48px) clamp(60px,8vw,80px)'}}><div style={{maxWidth:1200,margin:'0 auto'}}>
-          {photos[3]&&<Reveal><div className="overflow-hidden mb-10" style={{borderRadius:20}}><img src={photos[3]} alt="" className="w-full object-cover" style={{height:380,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>}
+          <Reveal><div className="overflow-hidden mb-10" style={{borderRadius:20}}>{photos[3] ? <img src={photos[3]} alt="" className="w-full object-cover" style={{height:380,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/> : <PhotoPlaceholder accent={A} height={380} style={{borderRadius:20}} />}</div></Reveal>
           {wc?.aboutParagraph2&&<Reveal><p className="text-base leading-relaxed mb-10" style={{color:'#777',maxWidth:680}}>{wc.aboutParagraph2}</p></Reveal>}
         </div></section>
 
@@ -462,10 +475,10 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
             )}
           </div>
         </section>
-        {photos.length>0&&<section className="text-center" style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)',background:'#FFF8F0'}}>
+        <section className="text-center" style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)',background:'#FFF8F0'}}>
           <Reveal><h2 style={{fontFamily:sans,fontSize:'clamp(24px,3vw,36px)',fontWeight:700,marginBottom:32}}>Like what you see?</h2>
           <button onClick={()=>{onCTAClick();go('contact')}} className="zephyr-btn">Discuss Your Project <ArrowRight size={14}/></button></Reveal>
-        </section>}
+        </section>
       </div>
 
       {/* ═══════════════ CONTACT PAGE ═══════════════ */}

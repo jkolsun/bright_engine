@@ -10,6 +10,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Phone, MapPin, Star, CheckCircle, ArrowRight, Mail, Camera, MessageCircle, X, Send, Menu, Minus, Plus, Quote, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
+import PhotoPlaceholder from '../shared/PhotoPlaceholder'
 
 function fmt(phone: string): string {
   const d = phone.replace(/\D/g, '')
@@ -95,7 +96,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
   const aboutText = wc?.aboutParagraph1 || `${name} delivers dependable ${indLabel} services with precision, transparency, and a relentless focus on quality. We show up on time, do the job right, and stand behind every project.`
   const aboutText2 = wc?.aboutParagraph2 || `From day one our mission has been simple: do honest work at fair prices. Every crew member is trained, every job is inspected, and every client gets our direct number.`
 
-  const svcData = svc.map((n, i) => ({ name: n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services.`, img: photos[i % (photos.length || 1)] }))
+  const svcData = svc.map((n, i) => ({ name: n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services.`, img: photos.length > 0 ? photos[i % photos.length] : undefined }))
   const testis = [
     { text: wc?.testimonialQuote || `${name} exceeded our expectations. Professional, on time, and the quality speaks for itself.`, author: wc?.testimonialAuthor || 'Verified Customer' },
     ...(wc?.additionalTestimonials?.map(t => ({ text: t.quote, author: t.author })) || [
@@ -165,7 +166,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
           <button onClick={() => nav('home')} style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(18px,3vw,24px)', color: '#fff', textTransform: 'uppercase', letterSpacing: 2, background: 'none', border: 'none', cursor: 'pointer' }}>
             {name}
           </button>
-          <div style={{ display: 'flex', gap: 0, alignItems: 'center' }} className="hidden md:flex">
+          <div className="hidden md:flex items-center gap-0">
             {navItems.map(n => (
               <button key={n.key} onClick={() => nav(n.key)}
                 style={{ fontFamily: head, fontWeight: 500, fontSize: 13, color: page === n.key ? A : '#9CA3AF', textTransform: 'uppercase', letterSpacing: 2, background: 'none', border: 'none', cursor: 'pointer', padding: '8px 16px', borderBottom: page === n.key ? `3px solid ${A}` : '3px solid transparent', transition: 'all 0.2s' }}>
@@ -177,7 +178,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
               <Phone size={14} style={{ display: 'inline', verticalAlign: -2, marginRight: 6 }} />CALL NOW
             </button>
           </div>
-          <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden" style={{ background: '#252830', border: `1px solid rgba(255,255,255,0.08)`, color: '#fff', cursor: 'pointer', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={() => setMenuOpen(!menuOpen)} className="flex md:hidden items-center justify-center" style={{ background: '#252830', border: `1px solid rgba(255,255,255,0.08)`, color: '#fff', cursor: 'pointer', width: 44, height: 44 }}>
             {menuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
@@ -202,7 +203,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
         <div data-page="home" style={{ display: page === 'home' ? 'block' : 'none' }}>
           {/* HERO */}
           <section style={{ position: 'relative', minHeight: 'clamp(500px,70vh,700px)', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }}>
-            {heroPhoto && <img src={heroPhoto} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+            {heroPhoto ? <img src={heroPhoto} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${A}15 0%, ${A}30 100%)` }} />}
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #1C1F26 10%, rgba(28,31,38,0.85) 50%, rgba(28,31,38,0.6) 100%)' }} />
             <div style={{ position: 'relative', zIndex: 2, maxWidth: 1200, margin: '0 auto', padding: 'clamp(32px,6vw,80px) clamp(16px,4vw,32px)', width: '100%' }}>
               <Reveal>
@@ -292,37 +293,39 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
           </section>
 
           {/* WORK PREVIEW */}
-          {photos.length > 0 && (
-            <section style={{ background: '#252830', padding: 'clamp(48px,8vw,96px) clamp(16px,4vw,32px)' }}>
-              <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-                <Reveal>
-                  <p style={{ fontFamily: mono, fontSize: 12, color: A, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>Project Gallery</p>
-                  <h2 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(28px,5vw,48px)', textTransform: 'uppercase', color: '#fff', marginBottom: 40 }}>Our Work</h2>
-                </Reveal>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(250px,30vw,350px), 1fr))', gap: 4 }}>
-                  {photos.slice(0, 6).map((p, i) => (
-                    <Reveal key={i}>
-                      <div onClick={() => setLb(i)} style={{ position: 'relative', paddingBottom: '75%', cursor: 'pointer', overflow: 'hidden' }}>
-                        <img src={p} alt={`Project ${i + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }}
-                          onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.03)')} onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')} />
-                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '24px 12px 8px', background: 'linear-gradient(transparent, rgba(28,31,38,0.9))' }}>
-                          <span style={{ fontFamily: mono, fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 2 }}>Project {String(i + 1).padStart(2, '0')}</span>
-                        </div>
-                        <Camera size={16} color="#fff" style={{ position: 'absolute', top: 10, right: 10, opacity: 0.5 }} />
+          <section style={{ background: '#252830', padding: 'clamp(48px,8vw,96px) clamp(16px,4vw,32px)' }}>
+            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+              <Reveal>
+                <p style={{ fontFamily: mono, fontSize: 12, color: A, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>Project Gallery</p>
+                <h2 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(28px,5vw,48px)', textTransform: 'uppercase', color: '#fff', marginBottom: 40 }}>Our Work</h2>
+              </Reveal>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(250px,30vw,350px), 1fr))', gap: 4 }}>
+                {photos.length > 0 ? photos.slice(0, 6).map((p, i) => (
+                  <Reveal key={i}>
+                    <div onClick={() => setLb(i)} style={{ position: 'relative', paddingBottom: '75%', cursor: 'pointer', overflow: 'hidden' }}>
+                      <img src={p} alt={`Project ${i + 1}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }}
+                        onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.03)')} onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')} />
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '24px 12px 8px', background: 'linear-gradient(transparent, rgba(28,31,38,0.9))' }}>
+                        <span style={{ fontFamily: mono, fontSize: 10, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 2 }}>Project {String(i + 1).padStart(2, '0')}</span>
                       </div>
-                    </Reveal>
-                  ))}
-                </div>
-                {photos.length > 6 && (
-                  <Reveal><div style={{ textAlign: 'center', marginTop: 28 }}>
-                    <button onClick={() => nav('work')} className="ic-press" style={{ fontFamily: head, fontWeight: 600, fontSize: 14, color: A, background: 'none', border: `2px solid ${A}`, padding: '14px 32px', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 2 }}>
-                      View All Work <ArrowRight size={14} style={{ display: 'inline', verticalAlign: -2, marginLeft: 8 }} />
-                    </button>
-                  </div></Reveal>
-                )}
+                      <Camera size={16} color="#fff" style={{ position: 'absolute', top: 10, right: 10, opacity: 0.5 }} />
+                    </div>
+                  </Reveal>
+                )) : [0, 1, 2].map(i => (
+                  <Reveal key={i}>
+                    <PhotoPlaceholder accent={A} variant="dark" aspectRatio="4/3" iconSize={36} style={{ position: 'relative' }} />
+                  </Reveal>
+                ))}
               </div>
-            </section>
-          )}
+              {photos.length > 6 && (
+                <Reveal><div style={{ textAlign: 'center', marginTop: 28 }}>
+                  <button onClick={() => nav('work')} className="ic-press" style={{ fontFamily: head, fontWeight: 600, fontSize: 14, color: A, background: 'none', border: `2px solid ${A}`, padding: '14px 32px', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 2 }}>
+                    View All Work <ArrowRight size={14} style={{ display: 'inline', verticalAlign: -2, marginLeft: 8 }} />
+                  </button>
+                </div></Reveal>
+              )}
+            </div>
+          </section>
 
           {/* TESTIMONIALS */}
           <section style={{ background: '#1C1F26', padding: 'clamp(48px,8vw,96px) clamp(16px,4vw,32px)' }}>
@@ -441,14 +444,16 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
                 <h1 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(32px,6vw,56px)', textTransform: 'uppercase', color: '#fff', marginBottom: 16 }}>{name}</h1>
                 <div style={{ width: 60, height: 6, background: A, marginBottom: 40 }} />
               </Reveal>
-              {photos[1] && (
-                <Reveal>
-                  <div style={{ marginBottom: 48, position: 'relative' }}>
+              <Reveal>
+                <div style={{ marginBottom: 48, position: 'relative' }}>
+                  {photos[1] ? (
                     <img src={photos[1]} alt="About" style={{ width: '100%', height: 'clamp(250px,40vw,400px)', objectFit: 'cover' }} />
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 40%, #1C1F26)' }} />
-                  </div>
-                </Reveal>
-              )}
+                  ) : (
+                    <PhotoPlaceholder accent={A} variant="dark" height="clamp(250px,40vw,400px)" iconSize={48} style={{ width: '100%' }} />
+                  )}
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(transparent 40%, #1C1F26)' }} />
+                </div>
+              </Reveal>
               <Reveal>
                 <p style={{ fontSize: 'clamp(15px,1.8vw,18px)', lineHeight: 1.9, color: '#D1CFC9', fontWeight: 300, marginBottom: 24 }}>{aboutText}</p>
                 <p style={{ fontSize: 'clamp(14px,1.6vw,16px)', lineHeight: 1.8, color: '#9CA3AF', fontWeight: 300, marginBottom: 48 }}>{aboutText2}</p>
@@ -589,14 +594,13 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
                   ))}
                 </div>
               ) : (
-                <Reveal>
-                  <div style={{ textAlign: 'center', padding: 'clamp(48px,8vw,96px) 16px', background: '#252830', border: '2px solid rgba(255,255,255,0.06)', position: 'relative' }}>
-                    <Camera size={48} color={A} style={{ opacity: 0.3, marginBottom: 16 }} />
-                    <p style={{ fontFamily: head, fontWeight: 600, fontSize: 'clamp(18px,3vw,24px)', textTransform: 'uppercase', color: '#fff', marginBottom: 8 }}>Project Photos Coming Soon</p>
-                    <p style={{ fontSize: 14, color: '#9CA3AF', fontWeight: 300 }}>We are currently updating our portfolio. Check back soon.</p>
-                    <Bolts />
-                  </div>
-                </Reveal>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(250px,30vw,350px), 1fr))', gap: 4 }}>
+                  {[0, 1, 2, 3, 4, 5].map(i => (
+                    <Reveal key={i}>
+                      <PhotoPlaceholder accent={A} variant="dark" aspectRatio="4/3" iconSize={36} />
+                    </Reveal>
+                  ))}
+                </div>
               )}
               <Reveal>
                 <div style={{ textAlign: 'center', marginTop: 48 }}>

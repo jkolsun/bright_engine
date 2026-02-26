@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Phone, MapPin, Star, CheckCircle, ArrowRight, Mail, Camera, MessageCircle, X, Send, Menu, Minus, Plus, Quote, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
+import PhotoPlaceholder from '../shared/PhotoPlaceholder'
 
 function fmt(phone: string): string {
   const d = phone.replace(/\D/g, '')
@@ -124,7 +125,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
   const hasR = lead.enrichedRating && lead.enrichedRating > 0
   const A = getAccent(config)
 
-  const svcData = svc.map((n,i) => ({ name:n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services built on quality and trust.`, img: photos[i % photos.length] }))
+  const svcData = svc.map((n,i) => ({ name:n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services built on quality and trust.`, img: photos.length > 0 ? photos[i % photos.length] : undefined }))
   const testis = [
     { text: wc?.testimonialQuote || `${lead.companyName} did outstanding work. The craftsmanship speaks for itself. Couldn't be happier.`, name: wc?.testimonialAuthor || 'Robert M.', loc: lead.city||'Local' },
     ...(wc?.additionalTestimonials?.map(t=>({text:t.quote,name:t.author,loc:lead.city||'Local'})) || [
@@ -194,7 +195,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
           <div className="flex items-center gap-4">
             {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-[13px]" style={{fontFamily:label,color:'#8a8078',textDecoration:'none'}}><Phone size={14}/>{fmt(lead.phone)}</a>}
             <button onClick={()=>{onCTAClick();go('contact')}} className="cs-btn hidden sm:inline-flex" style={{padding:'10px 22px',fontSize:12}}>Get Estimate</button>
-            <button onClick={()=>setMobNav(!mobNav)} className="lg:hidden" style={{background:'none',border:`1.5px solid #d5cfc5`,borderRadius:4,color:'#2C2520',cursor:'pointer',padding:'6px 8px',display:'flex',alignItems:'center',justifyContent:'center'}}><Menu size={20}/></button>
+            <button onClick={()=>setMobNav(!mobNav)} className="flex lg:hidden items-center justify-center" style={{background:'none',border:`1.5px solid #d5cfc5`,borderRadius:4,color:'#2C2520',cursor:'pointer',padding:'6px 8px'}}><Menu size={20}/></button>
           </div>
         </div>
       </nav>
@@ -218,17 +219,21 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
       <div data-page="home" style={{display:page==='home'?'block':'none'}}>
         {/* HERO — magazine cover with thick white border frame */}
         <section className="relative overflow-hidden" style={{marginTop:76}}>
-          {photos[0]?<div style={{padding:'clamp(12px,2vw,24px)'}}>
+          <div style={{padding:'clamp(12px,2vw,24px)'}}>
             <div className="relative overflow-hidden" style={{maxWidth:1340,margin:'0 auto',border:'6px solid #fff',boxShadow:'0 4px 40px rgba(44,37,32,0.08)'}}>
-              <img src={photos[0]} alt="" className="w-full object-cover" style={{height:'clamp(400px,60vh,640px)',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
-              <div className="absolute inset-0" style={{background:'linear-gradient(to top, rgba(44,37,32,0.7) 0%, transparent 50%)'}}/>
+              {photos[0] ? (
+                <img src={photos[0]} alt="" className="w-full object-cover" style={{height:'clamp(400px,60vh,640px)',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+              ) : (
+                <PhotoPlaceholder accent={A} height="clamp(400px,60vh,640px)" iconSize={56} />
+              )}
+              <div className="absolute inset-0" style={{background: photos[0] ? 'linear-gradient(to top, rgba(44,37,32,0.7) 0%, transparent 50%)' : 'linear-gradient(to top, rgba(44,37,32,0.3) 0%, transparent 50%)'}}/>
               <div className="absolute bottom-0 left-0 right-0 p-8">
                 <div className="inline-block px-6 py-4" style={{background:'#FAF8F4'}}>
                   <Reveal><h1 style={{fontFamily:serif,fontSize:'clamp(28px,4vw,48px)',fontWeight:700,lineHeight:1.15,color:'#2C2520',maxWidth:600}}>{wc?.heroHeadline||config.tagline||`Trusted ${indLabel} since day one.`}</h1></Reveal>
                 </div>
               </div>
             </div>
-          </div>:<div style={{paddingTop:60}}/>}
+          </div>
           <div style={{maxWidth:1200,margin:'0 auto',padding:'clamp(24px,4vw,48px) clamp(16px,4vw,48px)'}}>
             {wc?.heroSubheadline&&<Reveal><p className="text-lg mb-6" style={{color:'#8a8078',lineHeight:1.7,maxWidth:540,fontStyle:'italic'}}>{wc.heroSubheadline}</p></Reveal>}
             <Reveal delay={100}><div className="flex flex-wrap gap-3">
@@ -283,7 +288,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
         </section>
 
         {/* PORTFOLIO PREVIEW */}
-        {photos.length>2&&(<section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)'}}>
+        <section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)'}}>
           <div style={{maxWidth:1280,margin:'0 auto'}}>
             <Reveal><div className="flex flex-wrap justify-between items-end gap-4 mb-10">
               <div><p style={{fontFamily:label,fontSize:12,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:6}}>Portfolio</p>
@@ -291,10 +296,10 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
               <button onClick={()=>go('work')} className="cs-btn-o" style={{padding:'10px 20px',fontSize:12}}>View all <ArrowRight size={14}/></button>
             </div></Reveal>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*80}><div className="cs-photo-hover" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover" style={{aspectRatio:'4/3',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>))}
+              {photos.length > 0 ? photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*80}><div className="cs-photo-hover" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover" style={{aspectRatio:'4/3',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>)) : Array.from({length:3},(_,i)=>(<Reveal key={i} delay={i*80}><PhotoPlaceholder accent={A} aspectRatio="4/3" /></Reveal>))}
             </div>
           </div>
-        </section>)}
+        </section>
 
         {/* CTA BAND */}
         <section style={{background:'#EDE8DF',padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)'}}>
@@ -382,9 +387,9 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
 
         {/* Story + photos */}
         <section style={{padding:'0 clamp(16px,4vw,48px) clamp(60px,8vw,100px)'}}><div style={{maxWidth:1100,margin:'0 auto'}}>
-          {photos.length>=2&&<Reveal><div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-            {photos.slice(0,2).map((p,i)=><div key={i} className="overflow-hidden"><img src={p} alt="" className="w-full object-cover" style={{height:320,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div>)}
-          </div></Reveal>}
+          <Reveal><div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+            {photos.length >= 2 ? photos.slice(0,2).map((p,i)=><div key={i} className="overflow-hidden"><img src={p} alt="" className="w-full object-cover" style={{height:320,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div>) : Array.from({length:2},(_,i)=>(<div key={i} className="overflow-hidden"><PhotoPlaceholder accent={A} height={320} /></div>))}
+          </div></Reveal>
           {wc?.aboutParagraph2&&<Reveal><p className="leading-relaxed mb-10" style={{color:'#8a8078',maxWidth:700}}>{wc.aboutParagraph2}</p></Reveal>}
         </div></section>
 
@@ -490,13 +495,13 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
         </section>
 
         {/* CTA */}
-        {photos.length>0&&<section style={{background:'#EDE8DF',padding:'clamp(48px,6vw,80px) clamp(16px,4vw,48px)'}}>
+        <section style={{background:'#EDE8DF',padding:'clamp(48px,6vw,80px) clamp(16px,4vw,48px)'}}>
           <Reveal><div className="text-center" style={{maxWidth:500,margin:'0 auto'}}>
             <h3 style={{fontFamily:serif,fontSize:'clamp(24px,3vw,36px)',fontWeight:700,marginBottom:12}}>Like what you see?</h3>
             <p className="mb-6" style={{color:'#8a8078',fontStyle:'italic'}}>Let us bring the same quality to your project.</p>
             <button onClick={()=>{onCTAClick();go('contact')}} className="cs-btn">Start Your Project <ArrowRight size={15}/></button>
           </div></Reveal>
-        </section>}
+        </section>
       </div>
 
       {/* =============== CONTACT PAGE =============== */}

@@ -68,14 +68,14 @@ export default function PreviewCTABanner({ previewId }: { previewId: string }) {
           </span>
         </div>
       ) : (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 py-3 px-6 pr-10">
-          <span className="text-sm sm:text-base font-semibold text-center sm:text-left">
+        <div className="flex flex-col items-center gap-2 py-3 px-6 pr-10">
+          <span className="text-sm sm:text-base font-semibold text-center">
             Get This Site Live &mdash; ${bannerPrice}
           </span>
           <button
             onClick={handleClick}
             disabled={loading}
-            className="bg-white text-[#0D7377] font-semibold text-sm px-6 py-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-70 whitespace-nowrap"
+            className="bg-white text-[#0D7377] font-semibold text-sm px-8 py-2.5 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-70 whitespace-nowrap"
           >
             {loading ? 'Sending...' : 'Get Started'}
           </button>

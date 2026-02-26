@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Phone, MapPin, Star, Shield, Clock, CheckCircle, ArrowRight, Mail, Camera, MessageCircle, X, Send, Menu, Minus, Plus, Quote, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
+import PhotoPlaceholder from '../shared/PhotoPlaceholder'
 
 function fmt(phone: string): string {
   const d = phone.replace(/\D/g, '')
@@ -135,7 +136,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
   const hasR = lead.enrichedRating && lead.enrichedRating > 0
   const A = getAccent(config)
 
-  const svcData = svc.map((n,i) => ({ name:n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services.`, img: photos[i % photos.length] }))
+  const svcData = svc.map((n,i) => ({ name:n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services.`, img: photos.length > 0 ? photos[i % photos.length] : undefined }))
   const testis = [
     { text: wc?.testimonialQuote || `Called on a Monday, had a crew here by Wednesday. Finished ahead of schedule. Already told three neighbors about ${lead.companyName}.`, name: wc?.testimonialAuthor || 'Sarah M.', loc:lead.city||'Local' },
     ...(wc?.additionalTestimonials?.map(t=>({text:t.quote,name:t.author,loc:lead.city||'Local'})) || [
@@ -220,7 +221,11 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       <div data-page="home" style={{display:page==='home'?'block':'none'}}>
         {/* HERO */}
         <section className="relative flex items-end overflow-hidden" style={{height:'100vh',minHeight:700}}>
-          {photos[0]&&<div className="absolute inset-0" style={{backgroundImage:`url(${photos[0]})`,backgroundSize:'cover',backgroundPosition:'center',transform:`scale(${1+sY*0.0003})`,transition:'transform .1s linear'}}/>}
+          {photos[0] ? (
+            <div className="absolute inset-0" style={{backgroundImage:`url(${photos[0]})`,backgroundSize:'cover',backgroundPosition:'center',transform:`scale(${1+sY*0.0003})`,transition:'transform .1s linear'}}/>
+          ) : (
+            <div className="absolute inset-0" style={{background:`linear-gradient(135deg, ${A}15 0%, ${A}30 50%, rgba(10,10,10,0.95) 100%)`}} />
+          )}
           <div className="absolute inset-0" style={{background:'linear-gradient(to top,#0a0a0a 0%,rgba(10,10,10,.6) 40%,rgba(10,10,10,.3) 100%)'}}/>
           <div className="relative w-full" style={{maxWidth:1440,margin:'0 auto',padding:'0 clamp(16px,4vw,48px) clamp(60px,10vh,120px)'}}>
             <Reveal y={40}><p style={{fontFamily:mono,fontSize:12,fontWeight:500,color:A,letterSpacing:'0.2em',textTransform:'uppercase',marginBottom:20}}>{loc?`24/7 Emergency Response · ${loc}`:'24/7 Emergency Response'}</p></Reveal>
@@ -272,13 +277,17 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         </section>)}
 
         {/* PHOTO BREAK */}
-        {photos[1]&&<Reveal><section className="relative overflow-hidden" style={{height:'60vh',minHeight:400}}>
-          <div className="absolute inset-0" style={{backgroundImage:`url(${photos[1]})`,backgroundSize:'cover',backgroundPosition:'center',backgroundAttachment:'fixed'}}/>
-          <div className="absolute inset-0" style={{background:'rgba(10,10,10,0.5)'}}/>
+        <Reveal><section className="relative overflow-hidden" style={{height:'60vh',minHeight:400}}>
+          {photos[1] ? (
+            <div className="absolute inset-0" style={{backgroundImage:`url(${photos[1]})`,backgroundSize:'cover',backgroundPosition:'center',backgroundAttachment:'fixed'}}/>
+          ) : (
+            <div className="absolute inset-0" style={{background:`linear-gradient(135deg, ${A}20 0%, ${A}40 100%)`}} />
+          )}
+          <div className="absolute inset-0" style={{background: photos[1] ? 'rgba(10,10,10,0.5)' : 'rgba(10,10,10,0.3)'}}/>
           <div className="relative h-full flex items-center justify-center text-center p-5">
             <p style={{fontFamily:serif,fontSize:'clamp(28px,4vw,52px)',fontWeight:700,lineHeight:1.2,maxWidth:700}}>{wc?.closingHeadline?`"${wc.closingHeadline}"`:`"${loc||'Your community'} trusts ${lead.companyName}."`}</p>
           </div>
-        </section></Reveal>}
+        </section></Reveal>
 
         {/* BENTO */}
         <section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)',background:'#0a0a0a'}}>
@@ -294,10 +303,14 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
               </div>
               <button onClick={()=>go('about')} className="mt-8 flex items-center gap-2 text-[13px] font-bold uppercase" style={{background:'none',border:'none',color:A,cursor:'pointer',letterSpacing:'0.08em'}}>Our Story <ArrowRight size={14}/></button>
             </div></Reveal>
-            {photos[2]&&<Reveal delay={100}><div className="overflow-hidden relative" style={{minHeight:260}}>
-              <img src={photos[2]} alt="" className="w-full h-full object-cover obsidian-zoom" style={{display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+            <Reveal delay={100}><div className="overflow-hidden relative" style={{minHeight:260}}>
+              {photos[2] ? (
+                <img src={photos[2]} alt="" className="w-full h-full object-cover obsidian-zoom" style={{display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+              ) : (
+                <PhotoPlaceholder accent={A} variant="dark" style={{width:'100%',height:'100%',minHeight:260}} />
+              )}
               <div className="absolute bottom-0 left-0 right-0 p-6" style={{background:'linear-gradient(to top,rgba(0,0,0,.7),transparent)'}}><p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.15em',textTransform:'uppercase'}}>Recent Project</p></div>
-            </div></Reveal>}
+            </div></Reveal>
             <Reveal delay={200}><div className="obsidian-lift flex flex-col justify-between" style={{background:A,color:'#000',padding:'clamp(28px,3vw,40px)'}}>
               <div><p style={{fontFamily:mono,fontSize:11,fontWeight:600,letterSpacing:'0.2em',textTransform:'uppercase',marginBottom:16,opacity:.5}}>Our Process</p>
               <h3 style={{fontFamily:serif,fontSize:28,fontWeight:800,lineHeight:1.15,marginBottom:12}}>4 steps to done.</h3>
@@ -324,17 +337,17 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
         </section>
 
         {/* PORTFOLIO PREVIEW */}
-        {photos.length>2&&(<section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)',background:'#0a0a0a'}}>
+        <section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)',background:'#0a0a0a'}}>
           <div style={{maxWidth:1440,margin:'0 auto'}}>
             <Reveal><div className="flex flex-wrap justify-between items-end gap-5 mb-12"><div>
               <p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.2em',textTransform:'uppercase',marginBottom:12}}>Portfolio</p>
               <h2 style={{fontFamily:serif,fontSize:'clamp(32px,4vw,56px)',fontWeight:800,letterSpacing:'-0.02em'}}>Our work<span style={{color:A}}>.</span></h2>
             </div><button onClick={()=>go('work')} className="obsidian-bo" style={{padding:'12px 28px',fontSize:12}}>View All <ArrowRight size={14}/></button></div></Reveal>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" style={{gridTemplateColumns:photos.length>=3?'2fr 1fr 1fr':'1fr 1fr'}}>
-              {photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*100}><div className="overflow-hidden cursor-pointer" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover obsidian-zoom" style={{aspectRatio:i===0?'16/10':'1',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>))}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" style={{gridTemplateColumns:'2fr 1fr 1fr'}}>
+              {photos.length > 0 ? photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*100}><div className="overflow-hidden cursor-pointer" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover obsidian-zoom" style={{aspectRatio:i===0?'16/10':'1',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>)) : Array.from({length:3},(_,i)=>(<Reveal key={i} delay={i*100}><PhotoPlaceholder accent={A} variant="dark" aspectRatio={i===0?'16/10':'1'} /></Reveal>))}
             </div>
           </div>
-        </section>)}
+        </section>
 
         {/* CTA */}
         <section className="relative overflow-hidden text-center" style={{padding:'clamp(80px,12vw,160px) clamp(16px,4vw,48px)',background:A}}>
@@ -416,7 +429,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
 
         {/* Photo + second paragraph */}
         <section style={{padding:'0 clamp(16px,4vw,48px) clamp(60px,8vw,80px)'}}><div style={{maxWidth:1200,margin:'0 auto'}}>
-          {photos[3]&&<Reveal><div className="overflow-hidden mb-10"><img src={photos[3]} alt="" className="w-full object-cover" style={{height:400,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>}
+          <Reveal><div className="overflow-hidden mb-10">{photos[3] ? <img src={photos[3]} alt="" className="w-full object-cover" style={{height:400,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/> : <PhotoPlaceholder accent={A} variant="dark" height={400} />}</div></Reveal>
           {wc?.aboutParagraph2&&<Reveal><p className="text-base leading-relaxed mb-10" style={{color:'rgba(255,255,255,0.4)',maxWidth:700}}>{wc.aboutParagraph2}</p></Reveal>}
         </div></section>
 
@@ -504,10 +517,10 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
             )}
           </div>
         </section>
-        {photos.length>0&&<section className="text-center" style={{padding:'clamp(40px,6vw,80px) clamp(16px,4vw,48px)',background:'#0f0f0f',borderTop:'1px solid rgba(255,255,255,0.04)'}}>
+        <section className="text-center" style={{padding:'clamp(40px,6vw,80px) clamp(16px,4vw,48px)',background:'#0f0f0f',borderTop:'1px solid rgba(255,255,255,0.04)'}}>
           <Reveal><h2 style={{fontFamily:serif,fontSize:'clamp(24px,3vw,36px)',fontWeight:800,marginBottom:32}}>Like what you see?</h2>
           <button onClick={()=>{onCTAClick();go('contact')}} className="obsidian-bp">Discuss Your Project <ArrowRight size={14}/></button></Reveal>
-        </section>}
+        </section>
       </div>
 
       {/* ═══════════════ CONTACT PAGE ═══════════════ */}

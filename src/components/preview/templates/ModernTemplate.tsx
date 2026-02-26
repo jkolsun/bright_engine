@@ -10,6 +10,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Phone, MapPin, Star, CheckCircle, ArrowRight, Mail, Camera, MessageCircle, X, Send, Menu, Minus, Plus, Quote, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
+import PhotoPlaceholder from '../shared/PhotoPlaceholder'
 
 /* ── Helpers ─────────────────────────────────────────── */
 
@@ -125,7 +126,7 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
   const hasR = lead.enrichedRating && lead.enrichedRating > 0
   const A = getAccent(config)
 
-  const svcData = svc.map((n,i) => ({ name:n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services tailored to your needs.`, img: photos[i % photos.length] }))
+  const svcData = svc.map((n,i) => ({ name:n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services tailored to your needs.`, img: photos.length > 0 ? photos[i % photos.length] : undefined }))
   const testis = [
     { text: wc?.testimonialQuote || `${lead.companyName} exceeded expectations. On time, clean work, great communication throughout.`, name: wc?.testimonialAuthor || 'Rachel M.', loc:lead.city||'Local' },
     ...(wc?.additionalTestimonials?.map(t=>({text:t.quote,name:t.author,loc:lead.city||'Local'})) || [
@@ -244,13 +245,17 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
                 ))}
               </div></Reveal>
             </div>
-            {photos[0]&&<Reveal delay={200} y={30}><div className="relative">
-              <img src={photos[0]} alt="" className="w-full object-cover" style={{borderRadius:16,aspectRatio:'4/3',display:'block',boxShadow:'0 20px 60px rgba(0,0,0,0.08)'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+            <Reveal delay={200} y={30}><div className="relative">
+              {photos[0] ? (
+                <img src={photos[0]} alt="" className="w-full object-cover" style={{borderRadius:16,aspectRatio:'4/3',display:'block',boxShadow:'0 20px 60px rgba(0,0,0,0.08)'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+              ) : (
+                <PhotoPlaceholder accent={A} aspectRatio="4/3" style={{borderRadius:16,boxShadow:'0 20px 60px rgba(0,0,0,0.08)'}} />
+              )}
               {lead.enrichedReviews&&<div className="absolute -bottom-4 -left-4 px-4 py-2.5 rounded-xl bg-white shadow-lg border border-gray-100 flex items-center gap-2">
                 <div className="flex gap-0.5">{Array.from({length:5},(_,i)=><Star key={i} size={12} className="fill-current" style={{color:'#f59e0b'}}/>)}</div>
                 <span className="text-sm font-semibold">{lead.enrichedReviews}+ reviews</span>
               </div>}
-            </div></Reveal>}
+            </div></Reveal>
           </div>
         </section>
 
@@ -275,13 +280,17 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
         </section>)}
 
         {/* PHOTO + QUOTE band */}
-        {photos[1]&&<Reveal><section className="relative overflow-hidden" style={{height:'50vh',minHeight:340}}>
-          <div className="absolute inset-0"><img src={photos[1]} alt="" className="w-full h-full object-cover" onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div>
-          <div className="absolute inset-0" style={{background:'rgba(26,26,26,0.55)'}}/>
+        <Reveal><section className="relative overflow-hidden" style={{height:'50vh',minHeight:340}}>
+          {photos[1] ? (
+            <div className="absolute inset-0"><img src={photos[1]} alt="" className="w-full h-full object-cover" onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div>
+          ) : (
+            <div className="absolute inset-0" style={{background:`linear-gradient(135deg, ${A}18 0%, ${A}35 100%)`}} />
+          )}
+          <div className="absolute inset-0" style={{background: photos[1] ? 'rgba(26,26,26,0.55)' : 'transparent'}}/>
           <div className="relative h-full flex items-center justify-center text-center p-6">
-            <p className="text-white" style={{fontFamily:sans,fontSize:'clamp(24px,3.5vw,44px)',fontWeight:700,lineHeight:1.2,maxWidth:650,letterSpacing:'-0.02em'}}>"{wc?.closingHeadline||`Trusted by families across ${loc||'your community'}.`}"</p>
+            <p style={{fontFamily:sans,fontSize:'clamp(24px,3.5vw,44px)',fontWeight:700,lineHeight:1.2,maxWidth:650,letterSpacing:'-0.02em',color: photos[1] ? '#fff' : '#333'}}>"{wc?.closingHeadline||`Trusted by families across ${loc||'your community'}.`}"</p>
           </div>
-        </section></Reveal>}
+        </section></Reveal>
 
         {/* STATS */}
         <section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)'}}>
@@ -312,7 +321,7 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
         </section>
 
         {/* PORTFOLIO PREVIEW */}
-        {photos.length>2&&(<section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)'}}>
+        <section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)'}}>
           <div style={{maxWidth:1280,margin:'0 auto'}}>
             <Reveal><div className="flex flex-wrap justify-between items-end gap-4 mb-10">
               <div><p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:8}}>Our Work</p>
@@ -320,10 +329,10 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
               <button onClick={()=>go('work')} className="hz-pill-o" style={{padding:'10px 24px',fontSize:13}}>View all <ArrowRight size={14}/></button>
             </div></Reveal>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*80}><div className="overflow-hidden rounded-xl cursor-pointer hz-lift" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover" style={{aspectRatio:'4/3',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>))}
+              {photos.length > 0 ? photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*80}><div className="overflow-hidden rounded-xl cursor-pointer hz-lift" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover" style={{aspectRatio:'4/3',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>)) : Array.from({length:3},(_,i)=>(<Reveal key={i} delay={i*80}><PhotoPlaceholder accent={A} aspectRatio="4/3" style={{borderRadius:12}} /></Reveal>))}
             </div>
           </div>
-        </section>)}
+        </section>
 
         {/* CTA */}
         <section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)',background:'#F5F3EF'}}>
@@ -417,7 +426,7 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
 
         {/* Photo + second paragraph */}
         <section style={{padding:'0 clamp(16px,4vw,48px) clamp(60px,8vw,80px)'}}><div style={{maxWidth:1200,margin:'0 auto'}}>
-          {photos[3]&&<Reveal><div className="overflow-hidden rounded-xl mb-10"><img src={photos[3]} alt="" className="w-full object-cover" style={{height:400,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>}
+          <Reveal><div className="overflow-hidden rounded-xl mb-10">{photos[3] ? <img src={photos[3]} alt="" className="w-full object-cover" style={{height:400,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/> : <PhotoPlaceholder accent={A} height={400} style={{borderRadius:12}} />}</div></Reveal>
           {wc?.aboutParagraph2&&<Reveal><p className="text-base leading-relaxed mb-10" style={{color:'#777',maxWidth:700}}>{wc.aboutParagraph2}</p></Reveal>}
         </div></section>
 
@@ -517,11 +526,11 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
         </section>
 
         {/* Portfolio CTA */}
-        {photos.length>0&&<section className="text-center" style={{padding:'clamp(40px,6vw,80px) clamp(16px,4vw,48px)',background:'#F5F3EF'}}>
+        <section className="text-center" style={{padding:'clamp(40px,6vw,80px) clamp(16px,4vw,48px)',background:'#F5F3EF'}}>
           <Reveal><h2 style={{fontFamily:sans,fontSize:'clamp(24px,3vw,36px)',fontWeight:700,letterSpacing:'-0.02em',marginBottom:12}}>Like what you see?</h2>
           <p className="text-base mb-8" style={{color:'#999'}}>Let us bring the same quality to your project.</p>
           <button onClick={()=>{onCTAClick();go('contact')}} className="hz-pill-btn">Discuss Your Project <ArrowRight size={14}/></button></Reveal>
-        </section>}
+        </section>
       </div>
 
       {/* ================================================================ */}
