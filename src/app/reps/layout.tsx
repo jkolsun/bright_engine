@@ -9,6 +9,7 @@ import {
   Phone,
   DollarSign,
   Target,
+  Clock,
   LogOut,
   Award,
   MessageCircle,
@@ -78,6 +79,7 @@ export default function RepsLayout({
 
   const navItems = [
     { href: '/reps', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+    { href: '/reps/lead-bank', icon: Clock, label: 'Lead Bank' },
     { href: '/reps/dialer', icon: Phone, label: 'Dialer' },
     { href: '/reps/earnings', icon: DollarSign, label: 'Earnings' },
     { href: '/reps/tasks', icon: Target, label: 'Tasks' },

@@ -49,10 +49,16 @@ export async function POST(request: NextRequest) {
       }
 
       case 'status': {
+        const updateData: any = { status: payload.status, priority: payload.priority }
+        if (payload.status === 'DO_NOT_CONTACT') {
+          updateData.dncAt = new Date()
+          updateData.dncReason = 'Admin bulk action from LeadBank'
+          updateData.dncAddedBy = 'admin'
+        }
         const [updateResult] = await prisma.$transaction([
           prisma.lead.updateMany({
             where: { id: { in: leadIds } },
-            data: { status: payload.status, priority: payload.priority },
+            data: updateData,
           }),
           prisma.leadEvent.createMany({
             data: leadIds.map((leadId: string) => ({

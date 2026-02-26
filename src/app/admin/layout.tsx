@@ -19,6 +19,7 @@ import {
   Hammer,
   Wallet,
   Activity,
+  Clock,
 } from 'lucide-react'
 import { BriefingModal } from '@/components/admin/BriefingModal'
 
@@ -121,6 +122,9 @@ export default function AdminLayout({
           </NavLink>
           <NavLink href="/admin/outbound" icon={<Target size={20} />}>
             Sales Rep Tracker
+          </NavLink>
+          <NavLink href="/admin/lead-bank" icon={<Clock size={20} />}>
+            Lead Bank
           </NavLink>
           <NavLink href="/admin/instantly" icon={<Mail size={20} />}>
             Instantly Campaigns
