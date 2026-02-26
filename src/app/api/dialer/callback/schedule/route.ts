@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const { leadId, scheduledAt, notes, callId } = await request.json()
+    const { leadId, scheduledAt, notes, callId, isAllDay } = await request.json()
 
     if (!leadId || !scheduledAt) {
       return NextResponse.json({ error: 'leadId and scheduledAt are required' }, { status: 400 })
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       leadId,
       repId: session.userId,
       scheduledAt: new Date(scheduledAt),
-      notes,
+      notes: isAllDay ? `[ALL_DAY]${notes || ''}` : notes,
       callId,
     })
 

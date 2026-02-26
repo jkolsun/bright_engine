@@ -266,9 +266,13 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
                 >
                   <div className="text-sm font-medium text-gray-900 truncate">{cb.lead?.companyName || 'Unknown'}</div>
                   <div className="text-xs text-gray-500 mt-0.5">
-                    {new Date(cb.scheduledAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    {cb.notes?.startsWith('[ALL_DAY]')
+                      ? `${new Date(cb.scheduledAt).toLocaleDateString([], { month: 'short', day: 'numeric' })} — All Day`
+                      : new Date(cb.scheduledAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                   </div>
-                  {cb.notes && <div className="text-xs text-gray-400 mt-0.5 truncate">{cb.notes}</div>}
+                  {cb.notes && cb.notes.replace('[ALL_DAY]', '').trim() && (
+                    <div className="text-xs text-gray-400 mt-0.5 truncate">{cb.notes.replace('[ALL_DAY]', '').trim()}</div>
+                  )}
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleCancelCallback(cb.id) }}

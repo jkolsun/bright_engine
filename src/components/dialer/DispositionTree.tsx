@@ -13,6 +13,7 @@ export function DispositionTree() {
   const [submitting, setSubmitting] = useState(false)
   const [callbackDate, setCallbackDate] = useState('')
   const [callbackTime, setCallbackTime] = useState('09:00')
+  const [allDay, setAllDay] = useState(false)
   const [dncChecked, setDncChecked] = useState(false)
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [queuedDisposition, setQueuedDisposition] = useState<{ result: string; extra?: Record<string, unknown> } | null>(null)
@@ -35,6 +36,7 @@ export function DispositionTree() {
     setL1Choice(null)
     setCallbackDate('')
     setCallbackTime('09:00')
+    setAllDay(false)
     setDncChecked(false)
     setQueuedDisposition(null)
   }, [currentCall?.id])
@@ -100,6 +102,7 @@ export function DispositionTree() {
             leadId: currentCall.leadId,
             scheduledAt: extra.callbackAt,
             callId: currentCall.id,
+            isAllDay: extra.isAllDay || false,
           }),
         }).catch(err => console.warn('[Disposition] Callback schedule failed:', err))
       }
@@ -160,8 +163,10 @@ export function DispositionTree() {
 
   const handleCallbackSubmit = () => {
     if (!callbackDate) return
-    const callbackAt = new Date(`${callbackDate}T${callbackTime}:00`).toISOString()
-    handleDisposition('CALLBACK', { callbackAt })
+    const callbackAt = allDay
+      ? new Date(`${callbackDate}T00:00:00`).toISOString()
+      : new Date(`${callbackDate}T${callbackTime}:00`).toISOString()
+    handleDisposition('CALLBACK', { callbackAt, ...(allDay ? { isAllDay: true } : {}) })
   }
 
   if (submitting) {
@@ -294,7 +299,7 @@ export function DispositionTree() {
               </button>
               {callbackDate && (
                 <div className="mt-2 ml-4 space-y-2">
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
                     <input
                       type="date"
                       value={callbackDate}
@@ -302,13 +307,24 @@ export function DispositionTree() {
                       min={new Date().toISOString().split('T')[0]}
                       className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 flex-1"
                     />
-                    <input
-                      type="time"
-                      value={callbackTime}
-                      onChange={(e) => setCallbackTime(e.target.value)}
-                      className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 w-24"
-                    />
+                    {!allDay && (
+                      <input
+                        type="time"
+                        value={callbackTime}
+                        onChange={(e) => setCallbackTime(e.target.value)}
+                        className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 w-24"
+                      />
+                    )}
                   </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={allDay}
+                      onChange={(e) => setAllDay(e.target.checked)}
+                      className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                    />
+                    <span className="text-xs text-teal-700 font-medium">All Day</span>
+                  </label>
                   <button
                     onClick={handleCallbackSubmit}
                     disabled={submitting}
