@@ -39,10 +39,10 @@ function DialerContent() {
   }
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       <InboundCallBanner />
       <AutoDialBanner />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Left: Queue Panel — collapsible */}
         {queueCollapsed ? (
           <div className="w-11 flex-shrink-0 border-r border-gray-200 bg-gray-50 flex flex-col items-center pt-3">
