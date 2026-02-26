@@ -21,7 +21,7 @@ import {
   Search, Filter, Plus, Eye, TrendingUp, UserPlus, UserMinus, Users,
   FolderOpen, FolderPlus, ArrowLeft, Target, Mail, MoreVertical, Pencil, Trash2,
   ChevronDown, ChevronRight, Sparkles, Globe, Star, MapPin, Clock, Wrench, MessageSquare, ExternalLink,
-  LayoutGrid, List, ChevronLeft, RefreshCw
+  LayoutGrid, List, ChevronLeft, RefreshCw, Phone
 } from 'lucide-react'
 
 class LeadsErrorBoundary extends React.Component<
@@ -124,6 +124,8 @@ function LeadsPageInner() {
   const [expandedLead, setExpandedLead] = useState<string | null>(null)
   const [expandedLeadEvents, setExpandedLeadEvents] = useState<Record<string, any[]>>({})
   const [expandedLeadData, setExpandedLeadData] = useState<Record<string, any>>({})
+  const [expandedLeadNotes, setExpandedLeadNotes] = useState<Record<string, string>>({})
+  const [savingNotes, setSavingNotes] = useState<Record<string, boolean>>({})
   const [refreshing, setRefreshing] = useState(false)
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -177,6 +179,28 @@ function LeadsPageInner() {
       }
     } catch {
       setExpandedLeadEvents(prev => ({ ...prev, [leadId]: [] }))
+    }
+  }
+
+  const saveLeadNotes = async (leadId: string) => {
+    const text = expandedLeadNotes[leadId]?.trim()
+    if (!text) return
+    setSavingNotes(prev => ({ ...prev, [leadId]: true }))
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: text }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setLeads(prev => prev.map(l => l.id === leadId ? { ...l, notes: text } : l))
+        setExpandedLeadData(prev => ({ ...prev, [leadId]: { ...prev[leadId], notes: text } }))
+      }
+    } catch (err) {
+      console.error('Failed to save notes:', err)
+    } finally {
+      setSavingNotes(prev => ({ ...prev, [leadId]: false }))
     }
   }
 
@@ -1376,10 +1400,122 @@ function LeadsPageInner() {
                       {isExpanded && (
                         <tr className="bg-gray-50/70">
                           <td colSpan={16} className="p-0">
-                            <div className="px-6 py-5 space-y-4 border-t border-b border-gray-200">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="px-6 py-5 border-t border-b border-gray-200">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-                                {/* Personalization Panel */}
+                                {/* Rep Call Notes — full width */}
+                                <div className="col-span-1 md:col-span-3 bg-white rounded-lg border border-blue-200 p-4 shadow-sm">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <div className="w-7 h-7 rounded-md bg-blue-100 flex items-center justify-center">
+                                      <Phone size={15} className="text-blue-600" />
+                                    </div>
+                                    <h4 className="font-semibold text-gray-900 text-sm">Rep Call Notes</h4>
+                                  </div>
+                                  {(() => {
+                                    const calls = (expandedLeadData[lead.id]?.dialerCalls || []).filter((c: any) => c.notes)
+                                    if (calls.length === 0) return <p className="text-sm text-gray-400 italic">No rep notes yet</p>
+                                    return (
+                                      <div className="space-y-3 max-h-48 overflow-y-auto">
+                                        {calls.map((call: any) => (
+                                          <div key={call.id} className="border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                                            <div className="flex items-center flex-wrap gap-2 text-xs text-gray-600 mb-1">
+                                              <span className="font-semibold text-gray-800">{call.rep?.name || 'Unknown'}</span>
+                                              <span className="text-gray-400">{new Date(call.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${call.connectedAt ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                                {call.connectedAt ? 'Connected' : 'Not Connected'}
+                                              </span>
+                                              {call.dispositionResult && (
+                                                <span className={`px-1.5 py-0.5 rounded font-semibold text-[10px] ${
+                                                  ['WANTS_TO_MOVE_FORWARD', 'CALLBACK', 'WANTS_CHANGES'].includes(call.dispositionResult) ? 'bg-green-100 text-green-700' :
+                                                  ['DNC', 'WRONG_NUMBER'].includes(call.dispositionResult) ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+                                                }`}>{call.dispositionResult.replace(/_/g, ' ')}</span>
+                                              )}
+                                              {call.duration != null && <span className="text-gray-400">{Math.floor(call.duration / 60)}m {call.duration % 60}s</span>}
+                                            </div>
+                                            <p className="text-sm text-gray-500 italic pl-1">&ldquo;{call.notes}&rdquo;</p>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )
+                                  })()}
+                                </div>
+
+                                {/* Lead Info */}
+                                <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <div className="w-7 h-7 rounded-md bg-gray-100 flex items-center justify-center">
+                                      <Eye size={15} className="text-gray-600" />
+                                    </div>
+                                    <h4 className="font-semibold text-gray-900 text-sm">Lead Info</h4>
+                                  </div>
+                                  <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Status</span>
+                                      <Badge variant={lead.status === 'PAID' ? 'default' : 'secondary'} className="text-xs">{lead.status?.replace(/_/g, ' ') || '—'}</Badge>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Created</span>
+                                      <span className="text-gray-800 text-xs">{new Date(lead.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Assigned To</span>
+                                      <span className="text-gray-800 text-xs font-medium">{expandedLeadData[lead.id]?.assignedTo?.name || 'Unassigned'}</span>
+                                    </div>
+                                    {expandedLeadData[lead.id]?.secondaryPhone && (
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-500">2nd Phone</span>
+                                        <span className="text-gray-800 text-xs">{expandedLeadData[lead.id].secondaryPhone}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Industry</span>
+                                      <span className="text-gray-800 text-xs">{lead.industry || '—'}</span>
+                                    </div>
+                                    {lead.priority && (
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-500">Priority</span>
+                                        <Badge variant={lead.priority === 'HOT' ? 'destructive' : lead.priority === 'WARM' ? 'secondary' : 'outline'} className="text-xs">{lead.priority}</Badge>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Alt Contacts */}
+                                <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <div className="w-7 h-7 rounded-md bg-gray-100 flex items-center justify-center">
+                                      <Users size={15} className="text-gray-600" />
+                                    </div>
+                                    <h4 className="font-semibold text-gray-900 text-sm">Alt Contacts</h4>
+                                  </div>
+                                  <div className="space-y-2 text-sm">
+                                    {lead.phone && (
+                                      <div className="flex items-center gap-2 text-gray-700">
+                                        <Phone size={13} className="text-gray-400" />
+                                        <span>{lead.phone}</span>
+                                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Primary</span>
+                                      </div>
+                                    )}
+                                    {lead.email && (
+                                      <div className="flex items-center gap-2 text-gray-700">
+                                        <Mail size={13} className="text-gray-400" />
+                                        <span className="truncate">{lead.email}</span>
+                                      </div>
+                                    )}
+                                    {(expandedLeadData[lead.id]?.alternateContacts || []).map((c: any) => (
+                                      <div key={c.id} className="flex items-center gap-2 text-gray-700">
+                                        {c.type === 'PHONE' ? <Phone size={13} className="text-gray-400" /> : <Mail size={13} className="text-gray-400" />}
+                                        <span className="truncate">{c.value}</span>
+                                        {c.label && <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{c.label}</span>}
+                                      </div>
+                                    ))}
+                                    {!lead.phone && !lead.email && !(expandedLeadData[lead.id]?.alternateContacts?.length) && (
+                                      <p className="text-gray-400 italic">No contacts available</p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* AI Personalization */}
                                 <div className="bg-white rounded-lg border border-purple-200 p-4 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
                                     <div className="w-7 h-7 rounded-md bg-purple-100 flex items-center justify-center">
@@ -1435,7 +1571,33 @@ function LeadsPageInner() {
                                   )}
                                 </div>
 
-                                {/* Enrichment Panel */}
+                                {/* Editable Notes */}
+                                <div className="bg-white rounded-lg border border-amber-200 p-4 shadow-sm">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-7 h-7 rounded-md bg-amber-100 flex items-center justify-center">
+                                        <Pencil size={15} className="text-amber-600" />
+                                      </div>
+                                      <h4 className="font-semibold text-gray-900 text-sm">Notes</h4>
+                                    </div>
+                                    <button
+                                      onClick={() => saveLeadNotes(lead.id)}
+                                      disabled={savingNotes[lead.id]}
+                                      className="px-3 py-1 text-xs font-semibold bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 border border-amber-200/60 disabled:opacity-50 transition-all"
+                                    >
+                                      {savingNotes[lead.id] ? 'Saving...' : 'Save'}
+                                    </button>
+                                  </div>
+                                  <textarea
+                                    rows={3}
+                                    value={expandedLeadNotes[lead.id] ?? lead.notes ?? ''}
+                                    onChange={(e) => setExpandedLeadNotes(prev => ({ ...prev, [lead.id]: e.target.value }))}
+                                    placeholder="Add notes about this lead..."
+                                    className="w-full text-sm p-2.5 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-300 placeholder:text-gray-300"
+                                  />
+                                </div>
+
+                                {/* Enrichment Data */}
                                 <div className="bg-white rounded-lg border border-teal-200 p-4 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
                                     <div className="w-7 h-7 rounded-md bg-teal-100 flex items-center justify-center">
@@ -1494,63 +1656,62 @@ function LeadsPageInner() {
                                   )}
                                 </div>
 
-                                {/* Lead Details Panel */}
+                                {/* Call History */}
                                 <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
                                     <div className="w-7 h-7 rounded-md bg-gray-100 flex items-center justify-center">
-                                      <MessageSquare size={15} className="text-gray-600" />
+                                      <Clock size={15} className="text-gray-600" />
                                     </div>
-                                    <h4 className="font-semibold text-gray-900 text-sm">Details</h4>
+                                    <h4 className="font-semibold text-gray-900 text-sm">Call History</h4>
                                   </div>
-                                  <div className="space-y-3">
-                                    {lead.campaign && (
-                                      <div>
-                                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Campaign</div>
-                                        <p className="text-sm text-gray-800">{lead.campaign}</p>
+                                  {(() => {
+                                    const ld = expandedLeadData[lead.id]
+                                    if (!ld) return <p className="text-sm text-gray-400 italic">Loading...</p>
+                                    const calls = ld.dialerCalls || []
+                                    const upsellCount = ld.upsellTags?.length || 0
+                                    const nextCallback = ld.callbackSchedules?.find((cb: any) => cb.status !== 'COMPLETED')
+                                    return (
+                                      <div className="space-y-2">
+                                        {calls.length === 0 ? (
+                                          <p className="text-sm text-gray-400 italic">No calls yet</p>
+                                        ) : (
+                                          <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                                            {calls.slice(0, 5).map((call: any) => (
+                                              <div key={call.id} className="flex items-center flex-wrap gap-2 text-xs text-gray-600 py-1 border-b border-gray-50 last:border-0">
+                                                <span className="text-gray-400">{new Date(call.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                                <span className="font-medium text-gray-700">{call.rep?.name || '—'}</span>
+                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${call.connectedAt ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                                  {call.connectedAt ? 'Conn' : 'No Ans'}
+                                                </span>
+                                                {call.dispositionResult && (
+                                                  <span className={`px-1.5 py-0.5 rounded font-semibold text-[10px] ${
+                                                    ['WANTS_TO_MOVE_FORWARD', 'CALLBACK', 'WANTS_CHANGES'].includes(call.dispositionResult) ? 'bg-green-100 text-green-700' :
+                                                    ['DNC', 'WRONG_NUMBER'].includes(call.dispositionResult) ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+                                                  }`}>{call.dispositionResult.replace(/_/g, ' ')}</span>
+                                                )}
+                                                {call.duration != null && <span className="text-gray-400 ml-auto">{Math.floor(call.duration / 60)}m {call.duration % 60}s</span>}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {upsellCount > 0 && (
+                                          <p className="text-xs text-teal-600 font-medium pt-1">{upsellCount} upsell{upsellCount !== 1 ? 's' : ''} tagged</p>
+                                        )}
+                                        {nextCallback && (
+                                          <p className="text-xs text-blue-600 font-medium">Callback: {new Date(nextCallback.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {nextCallback.rep?.name || ''}</p>
+                                        )}
                                       </div>
-                                    )}
-                                    {lead.sourceDetail && (
-                                      <div>
-                                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Source Detail</div>
-                                        <p className="text-sm text-gray-800">{lead.sourceDetail}</p>
-                                      </div>
-                                    )}
-                                    {lead.notes && (
-                                      <div>
-                                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Notes</div>
-                                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{lead.notes}</p>
-                                      </div>
-                                    )}
-                                    {lead.previewUrl && (
-                                      <div>
-                                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Preview</div>
-                                        <a href={lead.previewUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
-                                          <ExternalLink size={13} />
-                                          View Preview Site
-                                        </a>
-                                      </div>
-                                    )}
-                                    {lead.priority && (
-                                      <div>
-                                        <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Priority</div>
-                                        <Badge variant={lead.priority === 'HOT' ? 'destructive' : lead.priority === 'WARM' ? 'secondary' : 'outline'} className="text-xs">
-                                          {lead.priority}
-                                        </Badge>
-                                      </div>
-                                    )}
-                                    {!lead.campaign && !lead.sourceDetail && !lead.notes && !lead.previewUrl && (
-                                      <p className="text-sm text-gray-400 italic">No additional details</p>
-                                    )}
-                                  </div>
+                                    )
+                                  })()}
                                 </div>
 
-                                {/* Event Timeline Panel */}
-                                <div className="bg-white rounded-lg border border-blue-200 p-4 shadow-sm">
+                                {/* Recent Activity — full width */}
+                                <div className="col-span-1 md:col-span-3 bg-white rounded-lg border border-blue-200 p-4 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
                                     <div className="w-7 h-7 rounded-md bg-blue-100 flex items-center justify-center">
                                       <Clock size={15} className="text-blue-600" />
                                     </div>
-                                    <h4 className="font-semibold text-gray-900 text-sm">Event Timeline</h4>
+                                    <h4 className="font-semibold text-gray-900 text-sm">Recent Activity</h4>
                                   </div>
                                   {(() => {
                                     const events = expandedLeadEvents[lead.id]
@@ -1573,8 +1734,8 @@ function LeadsPageInner() {
                                       }
                                     }
                                     return (
-                                      <div className="space-y-1.5 max-h-72 overflow-y-auto">
-                                        {events.map((event: any) => (
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 max-h-48 overflow-y-auto">
+                                        {events.slice(0, 8).map((event: any) => (
                                           <div key={event.id} className="flex items-start gap-2 text-sm py-1.5 border-b border-gray-50">
                                             <span className="text-base flex-shrink-0">{getIcon(event.eventType)}</span>
                                             <div className="flex-1 min-w-0">
@@ -1592,38 +1753,6 @@ function LeadsPageInner() {
                                     )
                                   })()}
                                 </div>
-
-                                {/* Call & Upsell Summary */}
-                                {(() => {
-                                  const ld = expandedLeadData[lead.id]
-                                  if (!ld) return null
-                                  const lastCall = ld.dialerCalls?.[0]
-                                  const upsellCount = ld.upsellTags?.length || 0
-                                  if (!lastCall && !upsellCount) return null
-                                  return (
-                                    <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-                                      <h4 className="font-semibold text-gray-900 text-sm mb-2">Rep Activity</h4>
-                                      {lastCall && (
-                                        <div className="flex items-center gap-2 text-xs text-gray-600 mb-1">
-                                          <span>Last call:</span>
-                                          <span className="font-medium">{new Date(lastCall.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                                          {lastCall.dispositionResult && (
-                                            <span className={`px-1.5 py-0.5 rounded font-semibold text-[10px] ${
-                                              ['WANTS_TO_MOVE_FORWARD', 'CALLBACK', 'WANTS_CHANGES'].includes(lastCall.dispositionResult)
-                                                ? 'bg-green-100 text-green-700'
-                                                : ['DNC', 'WRONG_NUMBER'].includes(lastCall.dispositionResult)
-                                                  ? 'bg-red-100 text-red-700'
-                                                  : 'bg-gray-100 text-gray-600'
-                                            }`}>{lastCall.dispositionResult.replace(/_/g, ' ')}</span>
-                                          )}
-                                        </div>
-                                      )}
-                                      {upsellCount > 0 && (
-                                        <p className="text-xs text-teal-600 font-medium">{upsellCount} upsell{upsellCount !== 1 ? 's' : ''} tagged</p>
-                                      )}
-                                    </div>
-                                  )
-                                })()}
 
                               </div>
                             </div>

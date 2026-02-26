@@ -17,6 +17,7 @@ export function DispositionTree() {
   const [dncChecked, setDncChecked] = useState(false)
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [queuedDisposition, setQueuedDisposition] = useState<{ result: string; extra?: Record<string, unknown> } | null>(null)
+  const [lastClicked, setLastClicked] = useState<string | null>(null)
 
   const isOnCall = !!currentCall && ['INITIATED', 'RINGING', 'CONNECTED'].includes(currentCall.status)
   const callEnded = !!currentCall && ['COMPLETED', 'VOICEMAIL', 'NO_ANSWER', 'BUSY', 'FAILED'].includes(currentCall.status)
@@ -143,7 +144,13 @@ export function DispositionTree() {
     }
   }, [isOnCall, submitDisposition])
 
+  const flashButton = (id: string) => {
+    setLastClicked(id)
+    setTimeout(() => setLastClicked(null), 600)
+  }
+
   const handleL1 = (choice: Layer1) => {
+    flashButton(choice)
     // Single-click outcomes
     if (choice === 'voicemail') { handleDisposition('VOICEMAIL'); return }
     if (choice === 'no_answer') { handleDisposition('NO_ANSWER'); return }
@@ -154,6 +161,7 @@ export function DispositionTree() {
   }
 
   const handleL2 = (result: string) => {
+    flashButton(result)
     if (result === 'NOT_INTERESTED') {
       handleDisposition(dncChecked ? 'DNC' : 'NOT_INTERESTED')
       return
@@ -199,7 +207,7 @@ export function DispositionTree() {
             <button
               onClick={() => handleDisposition(topRec.outcome)}
               disabled={submitting}
-              className="px-4 py-2 bg-purple-600 text-white text-xs font-semibold rounded-lg hover:bg-purple-700 transition-colors whitespace-nowrap flex-shrink-0"
+              className="px-4 py-2 bg-purple-600 text-white text-xs font-semibold rounded-lg hover:bg-purple-700 transition-all duration-150 whitespace-nowrap flex-shrink-0 active:scale-[0.95]"
             >
               Use This
             </button>
@@ -246,28 +254,44 @@ export function DispositionTree() {
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => handleL1('connected')}
-              className="flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-300 transition-all font-medium text-sm"
+              className={`flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 transition-all duration-150 font-medium text-sm active:scale-[0.95] ${
+                lastClicked === 'connected'
+                  ? 'border-green-400 bg-green-200 text-green-800 scale-[1.03] ring-2 ring-green-300 ring-offset-1'
+                  : 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-300'
+              }`}
             >
               <Phone size={20} />
               Connected
             </button>
             <button
               onClick={() => handleL1('voicemail')}
-              className="flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:border-orange-300 transition-all font-medium text-sm"
+              className={`flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 transition-all duration-150 font-medium text-sm active:scale-[0.95] ${
+                lastClicked === 'voicemail'
+                  ? 'border-orange-400 bg-orange-200 text-orange-800 scale-[1.03] ring-2 ring-orange-300 ring-offset-1'
+                  : 'border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 hover:border-orange-300'
+              }`}
             >
               <Voicemail size={20} />
               Voicemail
             </button>
             <button
               onClick={() => handleL1('no_answer')}
-              className="flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:border-gray-300 transition-all font-medium text-sm"
+              className={`flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 transition-all duration-150 font-medium text-sm active:scale-[0.95] ${
+                lastClicked === 'no_answer'
+                  ? 'border-gray-400 bg-gray-200 text-gray-800 scale-[1.03] ring-2 ring-gray-300 ring-offset-1'
+                  : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
+              }`}
             >
               <PhoneMissed size={20} />
               No Answer
             </button>
             <button
               onClick={() => handleL1('bad_number')}
-              className="flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:border-red-300 transition-all font-medium text-sm"
+              className={`flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 transition-all duration-150 font-medium text-sm active:scale-[0.95] ${
+                lastClicked === 'bad_number'
+                  ? 'border-red-400 bg-red-200 text-red-800 scale-[1.03] ring-2 ring-red-300 ring-offset-1'
+                  : 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:border-red-300'
+              }`}
             >
               <Ban size={20} />
               Bad Number
@@ -282,7 +306,13 @@ export function DispositionTree() {
             <button
               onClick={() => handleL2('WANTS_TO_MOVE_FORWARD')}
               disabled={submitting}
-              className="w-full px-3 py-2.5 rounded-xl border-2 border-green-300 bg-green-50 text-green-800 hover:bg-green-100 transition-all font-semibold text-sm text-left disabled:opacity-50"
+              className={`w-full px-3 py-2.5 rounded-xl border-2 transition-all duration-150 font-semibold text-sm text-left disabled:opacity-50 active:scale-[0.97] ${
+                lastClicked === 'WANTS_TO_MOVE_FORWARD'
+                  ? 'border-green-400 bg-green-200 text-green-900 scale-[1.02] ring-2 ring-green-300 ring-offset-1 shadow-md'
+                  : queuedDisposition?.result === 'WANTS_TO_MOVE_FORWARD'
+                    ? 'border-green-400 bg-green-100 text-green-800 ring-1 ring-green-300'
+                    : 'border-green-300 bg-green-50 text-green-800 hover:bg-green-100'
+              }`}
             >
               Wants to Move Forward
               <span className="block text-xs font-normal text-green-600 mt-0.5">Ready to buy — triggers payment link flow</span>
@@ -291,8 +321,14 @@ export function DispositionTree() {
             {/* Callback */}
             <div>
               <button
-                onClick={() => { if (callbackDate) { setCallbackDate(''); setAllDay(false) } else { setCallbackDate(new Date().toISOString().split('T')[0]) } }}
-                className="w-full px-3 py-2.5 rounded-xl border-2 border-teal-200 bg-teal-50 text-teal-800 hover:bg-teal-100 transition-all font-semibold text-sm text-left"
+                onClick={() => { flashButton('CALLBACK'); if (callbackDate) { setCallbackDate(''); setAllDay(false) } else { setCallbackDate(new Date().toISOString().split('T')[0]) } }}
+                className={`w-full px-3 py-2.5 rounded-xl border-2 transition-all duration-150 font-semibold text-sm text-left active:scale-[0.97] ${
+                  lastClicked === 'CALLBACK'
+                    ? 'border-teal-400 bg-teal-200 text-teal-900 scale-[1.02] ring-2 ring-teal-300 ring-offset-1 shadow-md'
+                    : queuedDisposition?.result === 'CALLBACK'
+                      ? 'border-teal-400 bg-teal-100 text-teal-800 ring-1 ring-teal-300'
+                      : 'border-teal-200 bg-teal-50 text-teal-800 hover:bg-teal-100'
+                }`}
               >
                 Interested — Callback
                 <span className="block text-xs font-normal text-teal-600 mt-0.5">Schedule a follow-up call</span>
@@ -328,7 +364,7 @@ export function DispositionTree() {
                   <button
                     onClick={handleCallbackSubmit}
                     disabled={submitting}
-                    className="w-full py-2 bg-teal-600 text-white text-xs font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-50"
+                    className="w-full py-2 bg-teal-600 text-white text-xs font-semibold rounded-lg hover:bg-teal-700 disabled:opacity-50 active:scale-[0.97] transition-all duration-150"
                   >
                     Schedule & Log
                   </button>
@@ -340,7 +376,13 @@ export function DispositionTree() {
             <button
               onClick={() => handleL2('WANTS_CHANGES')}
               disabled={submitting}
-              className="w-full px-3 py-2.5 rounded-xl border-2 border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100 transition-all font-semibold text-sm text-left disabled:opacity-50"
+              className={`w-full px-3 py-2.5 rounded-xl border-2 transition-all duration-150 font-semibold text-sm text-left disabled:opacity-50 active:scale-[0.97] ${
+                lastClicked === 'WANTS_CHANGES'
+                  ? 'border-blue-400 bg-blue-200 text-blue-900 scale-[1.02] ring-2 ring-blue-300 ring-offset-1 shadow-md'
+                  : queuedDisposition?.result === 'WANTS_CHANGES'
+                    ? 'border-blue-400 bg-blue-100 text-blue-800 ring-1 ring-blue-300'
+                    : 'border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100'
+              }`}
             >
               Wants Changes
               <span className="block text-xs font-normal text-blue-600 mt-0.5">Likes it but wants edits to preview</span>
@@ -350,7 +392,13 @@ export function DispositionTree() {
             <button
               onClick={() => handleL2('WILL_LOOK_LATER')}
               disabled={submitting}
-              className="w-full px-3 py-2.5 rounded-xl border-2 border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-all font-semibold text-sm text-left disabled:opacity-50"
+              className={`w-full px-3 py-2.5 rounded-xl border-2 transition-all duration-150 font-semibold text-sm text-left disabled:opacity-50 active:scale-[0.97] ${
+                lastClicked === 'WILL_LOOK_LATER'
+                  ? 'border-amber-400 bg-amber-200 text-amber-900 scale-[1.02] ring-2 ring-amber-300 ring-offset-1 shadow-md'
+                  : queuedDisposition?.result === 'WILL_LOOK_LATER'
+                    ? 'border-amber-400 bg-amber-100 text-amber-800 ring-1 ring-amber-300'
+                    : 'border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100'
+              }`}
             >
               Will Look Later
               <span className="block text-xs font-normal text-amber-600 mt-0.5">Soft interest — will review preview on their own</span>
@@ -361,7 +409,13 @@ export function DispositionTree() {
               <button
                 onClick={() => handleL2('NOT_INTERESTED')}
                 disabled={submitting}
-                className="w-full px-3 py-2.5 rounded-xl border-2 border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-all font-medium text-sm text-left disabled:opacity-50"
+                className={`w-full px-3 py-2.5 rounded-xl border-2 transition-all duration-150 font-medium text-sm text-left disabled:opacity-50 active:scale-[0.97] ${
+                  lastClicked === 'NOT_INTERESTED'
+                    ? 'border-gray-400 bg-gray-200 text-gray-900 scale-[1.02] ring-2 ring-gray-300 ring-offset-1 shadow-md'
+                    : queuedDisposition?.result === 'NOT_INTERESTED' || queuedDisposition?.result === 'DNC'
+                      ? 'border-gray-400 bg-gray-100 text-gray-700 ring-1 ring-gray-300'
+                      : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'
+                }`}
               >
                 Not Interested
               </button>

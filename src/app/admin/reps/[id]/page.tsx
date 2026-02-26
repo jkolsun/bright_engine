@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft, Phone, Mail, Target, DollarSign, TrendingUp,
-  CheckCircle, Clock, AlertCircle, User
+  CheckCircle, Clock, AlertCircle, User, ChevronLeft, ChevronRight
 } from 'lucide-react'
 
 interface RepDetailPageProps {
@@ -19,6 +19,8 @@ export default function RepDetailPage({ params }: RepDetailPageProps) {
   const [rep, setRep] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [repLeadPage, setRepLeadPage] = useState(0)
+  const REP_LEADS_PER_PAGE = 50
 
   useEffect(() => {
     const fetchRep = async () => {
@@ -64,6 +66,13 @@ export default function RepDetailPage({ params }: RepDetailPageProps) {
     .filter((c: any) => c.status === 'PENDING')
     .reduce((sum: number, c: any) => sum + (c.amount || 0), 0)
   const pendingTasks = tasks.filter((t: any) => t.status === 'PENDING').length
+
+  const totalRepLeadPages = Math.ceil(leads.length / REP_LEADS_PER_PAGE)
+  const safeRepLeadPage = Math.min(repLeadPage, Math.max(0, totalRepLeadPages - 1))
+  const paginatedRepLeads = leads.slice(
+    safeRepLeadPage * REP_LEADS_PER_PAGE,
+    (safeRepLeadPage + 1) * REP_LEADS_PER_PAGE
+  )
 
   const statusColor: Record<string, string> = {
     ACTIVE: 'bg-green-100 text-green-800',
@@ -153,22 +162,40 @@ export default function RepDetailPage({ params }: RepDetailPageProps) {
           {leads.length === 0 ? (
             <div className="p-8 text-center text-gray-500">No leads assigned</div>
           ) : (
-            <div className="divide-y max-h-96 overflow-y-auto">
-              {leads.map((lead: any) => (
-                <Link key={lead.id} href={`/admin/leads/${lead.id}`} className="block p-4 hover:bg-gray-50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900">{lead.firstName} {lead.lastName}</p>
-                      <p className="text-sm text-gray-600">{lead.companyName} - {lead.city}, {lead.state}</p>
+            <>
+              <div className="divide-y">
+                {paginatedRepLeads.map((lead: any) => (
+                  <Link key={lead.id} href={`/admin/leads/${lead.id}`} className="block p-4 hover:bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900">{lead.firstName} {lead.lastName}</p>
+                        <p className="text-sm text-gray-600">{lead.companyName} - {lead.city}, {lead.state}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {lead.status === 'HOT_LEAD' && <Badge variant="destructive">HOT</Badge>}
+                        <LeadStatusBadge status={lead.status} />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {lead.status === 'HOT_LEAD' && <Badge variant="destructive">HOT</Badge>}
-                      <LeadStatusBadge status={lead.status} />
-                    </div>
+                  </Link>
+                ))}
+              </div>
+              {totalRepLeadPages > 1 && (
+                <div className="p-4 border-t flex items-center justify-between">
+                  <span className="text-sm text-gray-500">
+                    Showing {safeRepLeadPage * REP_LEADS_PER_PAGE + 1}–{Math.min((safeRepLeadPage + 1) * REP_LEADS_PER_PAGE, leads.length)} of {leads.length} leads
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" disabled={safeRepLeadPage === 0} onClick={() => setRepLeadPage(p => p - 1)}>
+                      <ChevronLeft size={16} />
+                    </Button>
+                    <span className="text-sm text-gray-600">Page {safeRepLeadPage + 1} of {totalRepLeadPages}</span>
+                    <Button variant="outline" size="sm" disabled={safeRepLeadPage >= totalRepLeadPages - 1} onClick={() => setRepLeadPage(p => p + 1)}>
+                      <ChevronRight size={16} />
+                    </Button>
                   </div>
-                </Link>
-              ))}
-            </div>
+                </div>
+              )}
+            </>
           )}
         </Card>
 

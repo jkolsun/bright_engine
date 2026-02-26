@@ -21,7 +21,6 @@ export async function GET(
       include: {
         assignedLeads: {
           orderBy: { createdAt: 'desc' },
-          take: 50,
           select: {
             id: true,
             firstName: true,

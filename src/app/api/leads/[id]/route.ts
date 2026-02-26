@@ -33,6 +33,10 @@ export async function GET(
           take: 50
         },
         client: true,
+        alternateContacts: {
+          select: { id: true, type: true, value: true, label: true, addedAt: true },
+          orderBy: { addedAt: 'desc' },
+        },
         upsellTags: {
           where: { removedAt: null },
           select: { id: true, productName: true, productPrice: true, taggedAt: true, addedByRepId: true },
