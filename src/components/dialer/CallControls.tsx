@@ -97,33 +97,52 @@ export function CallControls() {
   }
 
   return (
-    <div className="relative border-t border-gray-200 bg-white px-6 py-3 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
+    <div className="relative border-t border-gray-200/60 bg-white/95 backdrop-blur-sm px-6 py-4 shadow-[0_-2px_12px_rgba(0,0,0,0.06)]">
+      {/* Top row: session stats ticker */}
+      <div className="flex items-center justify-center flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400 mb-3 font-medium">
+        <span className="text-gray-500 font-semibold">{session.session?.totalCalls || 0} dials</span>
+        <span className="text-gray-300">|</span>
+        <span className="text-gray-500 font-semibold">{session.session?.connectedCalls || 0} connected</span>
+        {(() => {
+          const DISPOSITION_DISPLAY: { field: string; label: string; color: string }[] = [
+            { field: 'wantsToMoveForwardCount', label: 'move fwd', color: 'text-green-600' },
+            { field: 'callbackCount', label: 'callback', color: 'text-teal-600' },
+            { field: 'interestedVerbalCount', label: 'verbal int', color: 'text-green-500' },
+            { field: 'wantsChangesCount', label: 'changes', color: 'text-blue-600' },
+            { field: 'willLookLaterCount', label: 'look later', color: 'text-amber-600' },
+            { field: 'notInterestedCount', label: 'not int', color: 'text-gray-500' },
+            { field: 'voicemails', label: 'VM', color: 'text-gray-400' },
+            { field: 'noAnswers', label: 'no ans', color: 'text-gray-400' },
+            { field: 'wrongNumberCount', label: 'wrong #', color: 'text-red-500' },
+            { field: 'disconnectedCount', label: 'disconn', color: 'text-red-500' },
+            { field: 'dncCount', label: 'DNC', color: 'text-red-600' },
+          ]
+          return DISPOSITION_DISPLAY.map(({ field, label, color }) => {
+            const count = (session.session as any)?.[field] || 0
+            return count > 0 ? <span key={field}><span className="text-gray-300">|</span> <span className={`${color} font-semibold`}>{count} {label}</span></span> : null
+          })
+        })()}
+      </div>
+
       <div className="flex items-center justify-between">
-        {/* Left: Session stats + status */}
-        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-          <span>{session.session?.totalCalls || 0} dials</span>
-          <span>{session.session?.connectedCalls || 0} connected</span>
-          {(() => {
-            const DISPOSITION_DISPLAY: { field: string; label: string; color: string }[] = [
-              { field: 'wantsToMoveForwardCount', label: 'move fwd', color: 'text-green-700' },
-              { field: 'callbackCount', label: 'callback', color: 'text-teal-700' },
-              { field: 'interestedVerbalCount', label: 'verbal int', color: 'text-green-600' },
-              { field: 'wantsChangesCount', label: 'changes', color: 'text-blue-700' },
-              { field: 'willLookLaterCount', label: 'look later', color: 'text-amber-700' },
-              { field: 'notInterestedCount', label: 'not int', color: 'text-gray-600' },
-              { field: 'voicemails', label: 'VM', color: 'text-gray-500' },
-              { field: 'noAnswers', label: 'no ans', color: 'text-gray-500' },
-              { field: 'wrongNumberCount', label: 'wrong #', color: 'text-red-600' },
-              { field: 'disconnectedCount', label: 'disconn', color: 'text-red-600' },
-              { field: 'dncCount', label: 'DNC', color: 'text-red-700' },
-            ]
-            return DISPOSITION_DISPLAY.map(({ field, label, color }) => {
-              const count = (session.session as any)?.[field] || 0
-              return count > 0 ? <span key={field} className={color}>{count} {label}</span> : null
-            })
-          })()}
-          <span className={`font-semibold ${isAutoDialOn ? 'text-green-600' : 'text-amber-600'}`}>
-            {isAutoDialOn ? 'AUTO-DIAL ON' : 'PAUSED'}
+        {/* Left: Auto-dial status */}
+        <div className="flex items-center gap-2.5 min-w-[160px]">
+          <button
+            onClick={() => session.toggleAutoDial(!isAutoDialOn)}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl transition-all duration-200 ${
+              isAutoDialOn
+                ? 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
+                : 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
+            }`}
+          >
+            {isAutoDialOn ? (
+              <><Pause className="w-3.5 h-3.5" />Pause</>
+            ) : (
+              <><Play className="w-3.5 h-3.5" />Resume</>
+            )}
+          </button>
+          <span className={`text-[11px] font-bold tracking-wider ${isAutoDialOn ? 'text-green-500' : 'text-amber-500'}`}>
+            {isAutoDialOn ? 'AUTO' : 'PAUSED'}
           </span>
         </div>
 
@@ -133,7 +152,11 @@ export function CallControls() {
             <>
               <button
                 onClick={() => twilioDevice.toggleMute()}
-                className={`p-3 rounded-full transition-colors ${twilioDevice.isMuted ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                  twilioDevice.isMuted
+                    ? 'bg-red-100 text-red-600 ring-2 ring-red-200'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
                 title={twilioDevice.isMuted ? 'Unmute (M)' : 'Mute (M)'}
               >
                 {twilioDevice.isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
@@ -143,7 +166,7 @@ export function CallControls() {
                 <button
                   onClick={handleVmDrop}
                   disabled={vmDropping || currentCall.vmDropped}
-                  className="p-3 rounded-full bg-purple-100 text-purple-600 hover:bg-purple-200 disabled:opacity-50"
+                  className="w-11 h-11 rounded-xl flex items-center justify-center bg-purple-100 text-purple-600 hover:bg-purple-200 disabled:opacity-50 transition-all duration-200"
                   title="Drop Voicemail (V)"
                 >
                   <Voicemail className="w-5 h-5" />
@@ -152,25 +175,27 @@ export function CallControls() {
 
               <button
                 onClick={() => setShowKeypad(prev => !prev)}
-                className={`p-3 rounded-full transition-colors ${showKeypad ? 'bg-teal-100 text-teal-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                  showKeypad ? 'bg-teal-100 text-teal-600 ring-2 ring-teal-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
                 title="Keypad"
               >
                 <Grid3X3 className="w-5 h-5" />
               </button>
 
               {showKeypad && (
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white rounded-xl shadow-lg border border-gray-200 p-3 z-50">
-                  <div className="grid grid-cols-3 gap-2">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white rounded-2xl shadow-2xl border border-gray-200/80 p-4 z-50">
+                  <div className="grid grid-cols-3 gap-2.5">
                     {DTMF_KEYS.map(({ digit, letters }) => (
                       <button
                         key={digit}
                         onClick={() => handleDTMF(digit)}
-                        className={`w-12 h-12 rounded-lg border flex flex-col items-center justify-center transition-all ${
-                          pressedDigit === digit ? 'bg-teal-200 scale-95' : 'bg-gray-50 hover:bg-teal-50'
+                        className={`w-14 h-14 rounded-xl border flex flex-col items-center justify-center transition-all duration-100 ${
+                          pressedDigit === digit ? 'bg-teal-100 border-teal-300 scale-95' : 'bg-gray-50 border-gray-200 hover:bg-teal-50 hover:border-teal-200'
                         }`}
                       >
-                        <span className="text-lg font-semibold text-gray-900">{digit}</span>
-                        {letters && <span className="text-[8px] text-gray-400 leading-none">{letters}</span>}
+                        <span className="text-lg font-bold text-gray-900">{digit}</span>
+                        {letters && <span className="text-[8px] text-gray-400 leading-none font-medium">{letters}</span>}
                       </button>
                     ))}
                   </div>
@@ -183,13 +208,15 @@ export function CallControls() {
                 </span>
               )}
 
-              <div className="text-lg font-mono font-semibold text-gray-900 mx-4 min-w-[60px] text-center">
-                {timer.formatted}
+              <div className="bg-gray-50 rounded-xl px-5 py-2 min-w-[80px] text-center">
+                <div className="text-xl font-mono font-bold text-gray-900 tracking-tight">
+                  {timer.formatted}
+                </div>
               </div>
 
               <button
                 onClick={hangup}
-                className="p-3 rounded-full bg-red-500 text-white hover:bg-red-600 shadow-lg"
+                className="w-12 h-12 rounded-xl bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/25 flex items-center justify-center transition-all duration-200 hover:scale-105"
                 title="Hang Up (Space)"
               >
                 <PhoneOff className="w-5 h-5" />
@@ -200,17 +227,19 @@ export function CallControls() {
               <button
                 onClick={handleDial}
                 disabled={!canDial || isCalledTab}
-                className="flex items-center gap-2 px-6 py-3 gradient-primary text-white rounded-xl font-semibold text-sm hover:opacity-90 shadow-teal disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2.5 px-8 py-3.5 gradient-primary text-white rounded-2xl font-bold text-sm hover:opacity-90 shadow-lg shadow-teal-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all duration-200"
                 title={isCalledTab ? 'Cannot dial from Called tab' : 'Dial (Space)'}
               >
-                <Phone className="w-4 h-4" />
+                <Phone className="w-5 h-5" />
                 Dial
               </button>
 
               <button
                 onClick={() => setShowManualDial(!showManualDial)}
-                className={`flex items-center gap-1.5 px-4 py-3 rounded-xl font-semibold text-sm transition-colors ${
-                  showManualDial ? 'bg-teal-100 text-teal-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                className={`flex items-center gap-2 px-5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-200 ${
+                  showManualDial
+                    ? 'bg-teal-50 text-teal-700 border border-teal-200 ring-2 ring-teal-100'
+                    : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 hover:border-gray-300'
                 }`}
                 title="Manual Dial"
               >
@@ -227,12 +256,12 @@ export function CallControls() {
                     onChange={(e) => setManualDialPhone(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleManualDial(); if (e.key === 'Escape') setShowManualDial(false) }}
                     autoFocus
-                    className="w-40 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+                    className="w-44 px-4 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 transition-all"
                   />
                   <button
                     onClick={handleManualDial}
                     disabled={manualDialing || !manualDialPhone.trim()}
-                    className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-semibold hover:bg-teal-700 disabled:opacity-50"
+                    className="px-5 py-2.5 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 disabled:opacity-50 transition-all duration-200 shadow-sm"
                   >
                     {manualDialing ? 'Calling...' : 'Call'}
                   </button>
@@ -241,20 +270,20 @@ export function CallControls() {
 
               {/* Device status — show when dialer has a problem */}
               {twilioDevice.deviceState === 'error' && (
-                <span className="text-xs text-red-500 max-w-[200px] truncate" title={twilioDevice.errorMessage || 'Dialer error'}>
+                <span className="text-xs text-red-500 max-w-[200px] truncate font-medium" title={twilioDevice.errorMessage || 'Dialer error'}>
                   Dialer error — contact admin
                 </span>
               )}
               {twilioDevice.deviceState === 'registering' && (
-                <span className="text-xs text-amber-500 animate-pulse">Connecting dialer...</span>
+                <span className="text-xs text-amber-500 animate-pulse font-medium">Connecting dialer...</span>
               )}
               {twilioDevice.deviceState === 'unregistered' && (
-                <span className="text-xs text-gray-400">Dialer not connected</span>
+                <span className="text-xs text-gray-400 font-medium">Dialer not connected</span>
               )}
 
               <button
                 onClick={() => queue.selectNext()}
-                className="p-3 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
+                className="w-11 h-11 rounded-xl bg-gray-50 border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700 hover:border-gray-300 flex items-center justify-center transition-all duration-200"
                 title="Skip / Next"
               >
                 <SkipForward className="w-5 h-5" />
@@ -263,35 +292,19 @@ export function CallControls() {
           )}
         </div>
 
-        {/* Right: Pause/Resume toggle + Info + End session */}
-        <div className="flex items-center gap-2">
-          {/* Pause/Resume toggle */}
-          <button
-            onClick={() => session.toggleAutoDial(!isAutoDialOn)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-              isAutoDialOn
-                ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                : 'bg-green-100 text-green-700 hover:bg-green-200'
-            }`}
-          >
-            {isAutoDialOn ? (
-              <><Pause className="w-3.5 h-3.5" />Pause</>
-            ) : (
-              <><Play className="w-3.5 h-3.5" />Resume</>
-            )}
-          </button>
-
+        {/* Right: Info + End session */}
+        <div className="flex items-center gap-2.5 min-w-[160px] justify-end">
           {/* Info tooltip */}
           <div className="relative">
             <button
               onMouseEnter={() => setShowTooltip(true)}
               onMouseLeave={() => setShowTooltip(false)}
-              className="p-1 text-gray-400 hover:text-gray-600"
+              className="p-1.5 text-gray-300 hover:text-gray-500 transition-colors"
             >
-              <Info className="w-3.5 h-3.5" />
+              <Info className="w-4 h-4" />
             </button>
             {showTooltip && (
-              <div className="absolute bottom-full right-0 mb-2 w-64 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg z-50">
+              <div className="absolute bottom-full right-0 mb-2 w-64 px-4 py-3 bg-gray-900 text-white text-xs rounded-xl shadow-xl z-50 leading-relaxed">
                 Auto-dial calls the next lead automatically when you finish a call. Saves 30-60 minutes per 200 calls. Pause anytime to take a break.
                 <div className="absolute bottom-0 right-4 transform translate-y-1 rotate-45 w-2 h-2 bg-gray-900" />
               </div>
@@ -300,7 +313,7 @@ export function CallControls() {
 
           <button
             onClick={() => endSessionFull()}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-600 border border-red-200 rounded-lg hover:bg-red-50"
+            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-red-600 border border-red-200 rounded-xl hover:bg-red-50 hover:border-red-300 transition-all duration-200"
           >
             <Power className="w-3.5 h-3.5" />
             End Session

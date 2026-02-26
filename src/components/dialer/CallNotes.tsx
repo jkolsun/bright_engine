@@ -48,20 +48,20 @@ export function CallNotes() {
   if (!leadId) return null
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-        <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Call Notes</h3>
+    <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
+      <div className="px-4 py-3 bg-gray-50/80 border-b border-gray-100 flex items-center justify-between">
+        <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Call Notes</h3>
         {currentCall && (
-          <span className="text-[10px] text-green-600 font-medium">Auto-saving to call</span>
+          <span className="text-[10px] text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full">Auto-saving</span>
         )}
       </div>
 
       {/* Previous notes */}
       {previousNotes.length > 0 && (
-        <div className="px-4 py-2 bg-gray-50/50 border-b border-gray-100 max-h-24 overflow-y-auto">
+        <div className="px-4 py-2.5 bg-gray-50/30 border-b border-gray-100 max-h-28 overflow-y-auto">
           {previousNotes.slice(0, 5).map((note, i) => (
-            <div key={i} className="text-xs text-gray-500 py-1 border-b border-gray-50 last:border-0">
-              <span className="text-gray-400">{note.date}</span>
+            <div key={i} className="text-xs text-gray-500 py-1.5 border-b border-gray-100/60 last:border-0">
+              <span className="text-gray-400 font-medium">{note.date}</span>
               {note.actor && <span className="text-gray-400"> · {note.actor}</span>}
               {' — '}
               {note.text}
@@ -74,8 +74,8 @@ export function CallNotes() {
       <textarea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        placeholder="Type notes..."
-        className="w-full h-16 text-sm p-3 resize-none focus:outline-none focus:ring-0 border-0"
+        placeholder="Type notes for this call..."
+        className="w-full h-24 text-sm p-4 resize-none focus:outline-none focus:ring-0 border-0 placeholder:text-gray-300"
       />
     </div>
   )

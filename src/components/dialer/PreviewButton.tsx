@@ -41,23 +41,23 @@ export function PreviewButton({ lead }: { lead: QueueLead }) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-3">
-      <h3 className="text-sm font-semibold text-gray-900 mb-1.5">Preview</h3>
-      <div className="flex items-center gap-2">
+    <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-4">
+      <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">Preview</h3>
+      <div className="flex items-center gap-2.5">
         <button
           onClick={handleSend}
           disabled={sending || !lead.previewUrl && !lead.previewId}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold bg-teal-50 text-teal-700 rounded-xl hover:bg-teal-100 border border-teal-200/60 disabled:opacity-40 transition-all duration-200"
         >
-          <Send className="w-3 h-3" />
+          <Send className="w-3.5 h-3.5" />
           {sent ? 'Sent!' : sending ? 'Sending...' : 'Text Preview'}
         </button>
         <button
           onClick={handleSendEmail}
           disabled={sendingEmail || !lead.email || (!lead.previewUrl && !lead.previewId)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 border border-blue-200/60 disabled:opacity-40 transition-all duration-200"
         >
-          <Mail className="w-3 h-3" />
+          <Mail className="w-3.5 h-3.5" />
           {sentEmail ? 'Sent!' : sendingEmail ? 'Sending...' : 'Email Preview'}
         </button>
         {(lead.previewUrl || lead.previewId) && (
@@ -65,9 +65,9 @@ export function PreviewButton({ lead }: { lead: QueueLead }) {
             href={lead.previewUrl || `${window.location.origin}/preview/${lead.previewId}`}
             target="_blank"
             rel="noopener"
-            className="flex items-center gap-1 px-3 py-1.5 text-xs text-gray-600 hover:text-gray-900"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-800 rounded-xl hover:bg-gray-50 transition-all duration-200"
           >
-            <ExternalLink className="w-3 h-3" /> View
+            <ExternalLink className="w-3.5 h-3.5" /> View
           </a>
         )}
       </div>

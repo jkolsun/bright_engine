@@ -268,55 +268,64 @@ export function LeadCard() {
   const lastCall = callHistory?.calls?.[0]
 
   return (
-    <div className="p-4 space-y-3 overflow-y-auto">
-      <LeadInfo lead={lead} />
-      <QuickStats lead={lead} />
+    <div className="p-6 lg:p-8 overflow-y-auto h-full">
+      <div className="max-w-3xl mx-auto space-y-5">
+        <LeadInfo lead={lead} />
+        <QuickStats lead={lead} />
 
-      {/* Last Call summary — shows when lead has previous calls */}
-      {lastCall && (
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-500 uppercase">Last Call</span>
-              <span className="text-xs text-slate-400">
-                {new Date(lastCall.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </span>
-              {lastCall.rep?.name && <span className="text-xs text-slate-400">by {lastCall.rep.name}</span>}
+        {/* Last Call summary — shows when lead has previous calls */}
+        {lastCall && (
+          <div className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-2xl border border-slate-200/80 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-slate-200/60 flex items-center justify-center">
+                  <Phone className="w-3.5 h-3.5 text-slate-500" />
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Last Call</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-slate-400">
+                      {new Date(lastCall.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                    {lastCall.rep?.name && <span className="text-xs text-slate-400">by {lastCall.rep.name}</span>}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {lastCall.connectedAt && lastCall.duration && (
+                  <span className="text-sm font-mono text-slate-500">{Math.floor(lastCall.duration / 60)}:{String(lastCall.duration % 60).padStart(2, '0')}</span>
+                )}
+                {lastCall.dispositionResult && (
+                  <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${DISPOSITION_COLORS[lastCall.dispositionResult] || 'bg-gray-100 text-gray-600'}`}>
+                    {lastCall.dispositionResult.replace(/_/g, ' ')}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              {lastCall.connectedAt && lastCall.duration && (
-                <span className="text-xs text-slate-400">{Math.floor(lastCall.duration / 60)}:{String(lastCall.duration % 60).padStart(2, '0')}</span>
-              )}
-              {lastCall.dispositionResult && (
-                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${DISPOSITION_COLORS[lastCall.dispositionResult] || 'bg-gray-100 text-gray-600'}`}>
-                  {lastCall.dispositionResult.replace(/_/g, ' ')}
-                </span>
-              )}
-            </div>
+            {callHistory?.nextCallback && (
+              <p className="text-xs text-teal-600 font-medium mt-2 ml-11">
+                Callback scheduled: {callHistory.nextCallback.notes?.startsWith('[ALL_DAY]')
+                  ? `${new Date(callHistory.nextCallback.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — All Day`
+                  : new Date(callHistory.nextCallback.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </p>
+            )}
           </div>
-          {callHistory?.nextCallback && (
-            <p className="text-xs text-teal-600 font-medium mt-1.5">
-              Callback scheduled: {callHistory.nextCallback.notes?.startsWith('[ALL_DAY]')
-                ? `${new Date(callHistory.nextCallback.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — All Day`
-                : new Date(callHistory.nextCallback.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-            </p>
-          )}
+        )}
+
+        <div className="grid grid-cols-2 gap-4">
+          <PreviewButton lead={lead} />
+          <UpsellTags leadId={lead.id} />
         </div>
-      )}
 
-      <div className="grid grid-cols-2 gap-3">
-        <PreviewButton lead={lead} />
-        <UpsellTags leadId={lead.id} />
+        {/* Notes — ALWAYS visible (before, during, after call) */}
+        <CallNotes />
+
+        {/* Disposition — visible during and after call */}
+        {showDisposition && <DispositionTree />}
+
+        {/* Live Feed — always visible */}
+        <LiveFeed />
       </div>
-
-      {/* Notes — ALWAYS visible (before, during, after call) */}
-      <CallNotes />
-
-      {/* Disposition — visible during and after call */}
-      {showDisposition && <DispositionTree />}
-
-      {/* Live Feed — always visible */}
-      <LiveFeed />
     </div>
   )
 }
