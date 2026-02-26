@@ -81,6 +81,10 @@ export default function ImportPage() {
   const [creatingFolder, setCreatingFolder] = useState(false)
   const [showNewFolderInput, setShowNewFolderInput] = useState(false)
 
+  // Abandoned staging leads state
+  const [abandonedLeads, setAbandonedLeads] = useState<{ count: number; leads: any[] } | null>(null)
+  const [deletingAbandoned, setDeletingAbandoned] = useState(false)
+
   // Rate limit state
   const [rateLimitHit, setRateLimitHit] = useState(false)
   const [rateLimitMessage, setRateLimitMessage] = useState('')
@@ -119,10 +123,24 @@ export default function ImportPage() {
     } catch { /* ignore */ }
   }
 
+  const fetchAbandonedLeads = async () => {
+    try {
+      const res = await fetch('/api/leads/staging')
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.count > 0) {
+        setAbandonedLeads({ count: data.count, leads: data.leads })
+      } else {
+        setAbandonedLeads(null)
+      }
+    } catch { /* ignore */ }
+  }
+
   useEffect(() => {
     fetchImportHistory()
     fetchFolders()
     fetchReps()
+    fetchAbandonedLeads()
   }, [])
 
   const handleCreateFolder = async () => {
@@ -381,8 +399,50 @@ export default function ImportPage() {
       setStep('upload')
       setFeedLeads([])
       fetchImportHistory()
+      fetchAbandonedLeads()
     } else {
       alert('Failed to apply batch settings. Please try again.')
+    }
+  }
+
+  const handleResumeAbandoned = () => {
+    if (!abandonedLeads) return
+    // Build feedLeads array from abandoned staging leads
+    const leads: LeadEntry[] = abandonedLeads.leads.map((l: any) => ({
+      id: l.id,
+      name: l.firstName || 'Unknown',
+      company: l.companyName || '',
+      status: 'pending' as const,
+    }))
+    setFeedLeads(leads)
+    setFeedDone(false)
+    setFeedStats({ enriched: 0, previews: 0, personalized: 0, errors: 0 })
+    setRateLimitHit(false)
+    setRateLimitMessage('')
+    setImportResult({ created: abandonedLeads.count, skipped: 0 })
+    setBatchName('')
+    setStep('configure')
+  }
+
+  const handleDeleteAbandoned = async () => {
+    if (!abandonedLeads) return
+    if (!window.confirm(`Delete ${abandonedLeads.count} unprocessed staging leads? This cannot be undone.`)) return
+    setDeletingAbandoned(true)
+    try {
+      const res = await fetch('/api/leads/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'IMPORT_STAGING' }),
+      })
+      if (res.ok) {
+        setAbandonedLeads(null)
+      } else {
+        alert('Failed to delete staging leads. Please try again.')
+      }
+    } catch {
+      alert('Failed to delete staging leads. Please try again.')
+    } finally {
+      setDeletingAbandoned(false)
     }
   }
 
@@ -459,6 +519,39 @@ export default function ImportPage() {
       {/* ── STEP 1: UPLOAD ────────────────────────────────────────── */}
       {step === 'upload' && !viewingImport && (
         <div className="max-w-4xl mx-auto">
+          {/* Abandoned Staging Leads Banner */}
+          {abandonedLeads && abandonedLeads.count > 0 && (
+            <Card className="p-6 mb-6 border-l-4 border-amber-400 bg-amber-50/50">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle size={20} className="text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-gray-900">
+                    {abandonedLeads.count} unprocessed lead{abandonedLeads.count !== 1 ? 's' : ''} from a previous upload
+                  </h4>
+                  <p className="text-sm text-gray-600 mt-1">
+                    These leads were uploaded but never processed. They&apos;re blocking re-import of duplicates.
+                  </p>
+                  <div className="flex gap-3 mt-4">
+                    <Button onClick={handleResumeAbandoned}>
+                      Resume Processing
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="border-red-300 text-red-600 hover:bg-red-50"
+                      onClick={handleDeleteAbandoned}
+                      disabled={deletingAbandoned}
+                    >
+                      {deletingAbandoned ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
+                      Delete All
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {/* Upload Zone */}
           <Card className="p-12">
             <div className="text-center">
@@ -1167,6 +1260,7 @@ export default function ImportPage() {
                   setRateLimitHit(false)
                   setRateLimitMessage('')
                   fetchImportHistory()
+                  fetchAbandonedLeads()
                 }}>
                   Import More Leads
                 </Button>
