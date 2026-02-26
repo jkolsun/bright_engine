@@ -27,7 +27,7 @@ import {
   Sparkles,
   Loader2,
   History,
-  Check,
+  Trash2,
 } from 'lucide-react'
 
 interface LiveRep {
@@ -125,10 +125,7 @@ export default function DialerMonitorPage() {
     }
   })
   const [historyLoading, setHistoryLoading] = useState(false)
-  const [savingName, setSavingName] = useState<string | null>(null)
   const [generatingAI, setGeneratingAI] = useState<string | null>(null)
-  const [editingName, setEditingName] = useState<{ id: string; value: string } | null>(null)
-  const [savedName, setSavedName] = useState<string | null>(null)
 
   useEffect(() => {
     loadLiveStatus()
@@ -215,22 +212,16 @@ export default function DialerMonitorPage() {
     loadSessionHistory(1)
   }
 
-  const handleSaveName = async (sessionId: string, name: string) => {
-    setSavingName(sessionId)
+  const handleHideSession = async (sessionId: string) => {
+    if (!window.confirm('Hide this session from history?')) return
     try {
-      await fetch(`/api/dialer/admin/sessions/${sessionId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim() || '' }),
-      })
-      setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, name: name.trim() || null } : s))
-      setEditingName(null)
-      setSavedName(sessionId)
-      setTimeout(() => setSavedName(null), 2000)
+      const res = await fetch(`/api/dialer/admin/sessions/${sessionId}`, { method: 'DELETE' })
+      if (res.ok) {
+        setSessions(prev => prev.filter(s => s.id !== sessionId))
+        setExpandedSessionId(null)
+      }
     } catch (e) {
-      console.error('Failed to save session name:', e)
-    } finally {
-      setSavingName(null)
+      console.error('Failed to hide session:', e)
     }
   }
 
@@ -691,28 +682,16 @@ export default function DialerMonitorPage() {
                   {/* Expanded Detail */}
                   {isExpanded && (
                     <div className="border-t border-gray-100 p-4 bg-gray-50/50 space-y-4">
-                      {/* Editable Name */}
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs text-gray-500 shrink-0">Session Name:</label>
-                        <input
-                          type="text"
-                          value={editingName?.id === s.id ? editingName.value : (s.name || '')}
-                          placeholder="Name this session..."
-                          onChange={e => setEditingName({ id: s.id, value: e.target.value })}
-                          onBlur={() => {
-                            if (editingName?.id === s.id) {
-                              handleSaveName(s.id, editingName.value)
-                            }
-                          }}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter' && editingName?.id === s.id) {
-                              handleSaveName(s.id, editingName.value)
-                            }
-                          }}
-                          className="text-sm border border-gray-200 rounded px-2 py-1 flex-1 max-w-xs"
-                        />
-                        {savingName === s.id && <Loader2 size={14} className="animate-spin text-gray-400" />}
-                        {savedName === s.id && <Check size={14} className="text-green-500" />}
+                      {/* Session Name + Hide Button */}
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-gray-900">{s.name || 'Unnamed Session'}</h3>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleHideSession(s.id) }}
+                          className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50"
+                        >
+                          <Trash2 size={14} />
+                          Hide
+                        </button>
                       </div>
 
                       {/* Disposition Breakdown */}

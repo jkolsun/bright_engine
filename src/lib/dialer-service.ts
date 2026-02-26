@@ -74,18 +74,54 @@ const CLOSE_DISPOSITIONS = ['WANTS_TO_MOVE_FORWARD']
 // Session Management
 // ============================================
 
-export async function startSession(repId: string, autoDialEnabled: boolean = false, name?: string) {
+export async function startSession(repId: string, autoDialEnabled: boolean = false) {
   // End any existing active sessions for this rep
   await prisma.dialerSessionNew.updateMany({
     where: { repId, isActive: true },
     data: { isActive: false, endedAt: new Date() },
   })
 
+  // Auto-generate session name: "Session N - MMM DD, YYYY - RepName"
+  let sessionName = 'Session 1'
+  try {
+    const now = new Date()
+    const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0))
+    const endOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999))
+
+    const todayCount = await prisma.dialerSessionNew.count({
+      where: {
+        repId,
+        startedAt: { gte: startOfDay, lte: endOfDay },
+      },
+    })
+    const n = todayCount + 1
+
+    const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
+    const user = await prisma.user.findUnique({
+      where: { id: repId },
+      select: { name: true },
+    })
+    let repLabel = 'Unknown'
+    if (user?.name) {
+      const parts = user.name.trim().split(/\s+/)
+      if (parts.length >= 2) {
+        repLabel = `${parts[0]} ${parts[parts.length - 1][0]}`
+      } else {
+        repLabel = parts[0]
+      }
+    }
+
+    sessionName = `Session ${n} - ${dateStr} - ${repLabel}`
+  } catch (err) {
+    console.warn('[DialerService] Failed to generate session name:', err)
+  }
+
   const session = await prisma.dialerSessionNew.create({
     data: {
       repId,
       autoDialEnabled,
-      name: name || null,
+      name: sessionName,
     },
   })
 

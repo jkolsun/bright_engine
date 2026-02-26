@@ -13,8 +13,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { autoDialEnabled = false, name } = body
-    const dialerSession = await startSession(session.userId, autoDialEnabled, name)
+    const { autoDialEnabled = false } = body
+    const dialerSession = await startSession(session.userId, autoDialEnabled)
     return NextResponse.json(dialerSession)
   } catch (err) {
     console.error('[Dialer] Start session error:', err)

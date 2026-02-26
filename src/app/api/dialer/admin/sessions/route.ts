@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
 
     // Build where clause
-    const where: any = { isActive: false }
+    const where: any = { isActive: false, totalCalls: { gt: 0 }, hiddenAt: null }
     if (repId) where.repId = repId
     if (from || to) {
       where.startedAt = {}

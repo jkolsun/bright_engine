@@ -160,3 +160,36 @@ export async function PATCH(
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    const { id } = params
+
+    const dialerSession = await prisma.dialerSessionNew.findUnique({
+      where: { id },
+    })
+
+    if (!dialerSession) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+    }
+
+    await prisma.dialerSessionNew.update({
+      where: { id },
+      data: { hiddenAt: new Date() },
+    })
+
+    return NextResponse.json({ success: true, hidden: true })
+  } catch (error) {
+    console.error('[Session Detail API] DELETE error:', error)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
