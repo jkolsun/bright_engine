@@ -635,7 +635,9 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
                     <div key={cb.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm">
                       <div>
                         <span className="font-medium text-gray-800">
-                          {new Date(cb.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          {cb.notes?.startsWith('[ALL_DAY]')
+                            ? `${new Date(cb.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — All Day`
+                            : new Date(cb.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
                         {cb.rep?.name && <span className="text-gray-500 ml-2">by {cb.rep.name}</span>}
                       </div>

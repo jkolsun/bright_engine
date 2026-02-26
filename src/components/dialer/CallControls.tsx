@@ -4,9 +4,21 @@ import { useDialer } from './DialerProvider'
 import { Phone, PhoneOff, Mic, MicOff, Voicemail, SkipForward, Power, Pause, Play, Info } from 'lucide-react'
 
 export function CallControls() {
-  const { session, twilioDevice, timer, currentCall, dial, hangup, queue, endSessionFull } = useDialer()
+  const { session, twilioDevice, timer, currentCall, dial, hangup, queue, endSessionFull, activeCallerId } = useDialer()
   const [vmDropping, setVmDropping] = useState(false)
   const [showTooltip, setShowTooltip] = useState(false)
+
+  const formatCallerId = (num: string) => {
+    const digits = num.replace(/\D/g, '')
+    if (digits.length === 11 && digits[0] === '1') {
+      const d = digits.slice(1)
+      return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`
+    }
+    if (digits.length === 10) {
+      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+    }
+    return num
+  }
 
   const isOnCall = !!currentCall && ['INITIATED', 'RINGING', 'CONNECTED'].includes(currentCall.status)
   const isVoicemail = currentCall?.amdResult?.startsWith('machine') || currentCall?.status === 'VOICEMAIL'
@@ -89,6 +101,12 @@ export function CallControls() {
                 >
                   <Voicemail className="w-5 h-5" />
                 </button>
+              )}
+
+              {activeCallerId && (
+                <span className="text-xs text-gray-400 font-medium">
+                  From: <span className="text-gray-600">{formatCallerId(activeCallerId)}</span>
+                </span>
               )}
 
               <div className="text-lg font-mono font-semibold text-gray-900 mx-4 min-w-[60px] text-center">

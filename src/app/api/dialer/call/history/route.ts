@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     prisma.callbackSchedule.findFirst({
       where: { leadId, status: 'PENDING' },
       orderBy: { scheduledAt: 'asc' },
-      select: { scheduledAt: true, status: true },
+      select: { scheduledAt: true, status: true, notes: true },
     }),
   ])
 

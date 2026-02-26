@@ -22,6 +22,7 @@ interface PendingCall {
   leadId: string
   leadName: string
   status: string
+  callerId?: string
 }
 
 interface DialerContextValue {
@@ -48,6 +49,7 @@ interface DialerContextValue {
   handleAutoDialNext: () => Promise<void>
   handleSwapToNewCall: () => void
   endSessionFull: () => Promise<void>
+  activeCallerId: string | null
 }
 
 const DialerContext = createContext<DialerContextValue | null>(null)
@@ -64,6 +66,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
   const queue = useDialerQueue()
   const timer = useCallTimer()
   const [currentCall, setCurrentCall] = useState<DialerCall | null>(null)
+  const [activeCallerId, setActiveCallerId] = useState<string | null>(null)
 
   // Auto-dial state
   const [autoDialState, setAutoDialState] = useState<AutoDialState>('IDLE')
@@ -429,6 +432,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
         leadId: targetLead.id,
         leadName: targetLead.companyName || 'Unknown',
         status: 'INITIATED',
+        callerId: data.callerId,
       }
       setPendingCall(newPending)
 
@@ -480,6 +484,9 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       calledLeadIdsRef.current.add(prevLeadId)
     }
 
+    // Update caller ID to match the pending call's number
+    setActiveCallerId(pending.callerId || null)
+
     // Promote pending call to current call
     setCurrentCall({
       id: pending.callId,
@@ -525,6 +532,8 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     const data = await res.json()
     console.log('[DialerProvider] dial() initiate response:', data.error ? `ERROR: ${data.error}` : `OK callId=${data.callId}`)
     if (data.error) throw new Error(data.error)
+
+    setActiveCallerId(data.callerId || null)
 
     const newCall = { id: data.callId, leadId, repId: '', status: 'INITIATED', direction: 'OUTBOUND', startedAt: new Date().toISOString(), wasRecommended: false, previewSentDuringCall: false, previewOpenedDuringCall: false, ctaClickedDuringCall: false, vmDropped: false } as any
     setCurrentCall(newCall)
@@ -615,6 +624,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     currentCallRef.current = null
     setPendingCall(null)
     pendingCallRef.current = null
+    setActiveCallerId(null)
     wasConnectedRef.current = false
     lastCalledLeadIdRef.current = null
     calledLeadIdsRef.current = new Set()
@@ -634,7 +644,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     <DialerContext.Provider value={{
       session: sessionHook, twilioDevice, sse, queue, timer,
       currentCall, setCurrentCall, dial, hangup,
-      autoDialState, autoDialBanner, bannerUrgent, handleAutoDialNext, handleSwapToNewCall, endSessionFull,
+      autoDialState, autoDialBanner, bannerUrgent, handleAutoDialNext, handleSwapToNewCall, endSessionFull, activeCallerId,
     }}>
       {children}
     </DialerContext.Provider>

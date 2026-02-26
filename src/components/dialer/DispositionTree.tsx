@@ -291,7 +291,7 @@ export function DispositionTree() {
             {/* Callback */}
             <div>
               <button
-                onClick={() => setCallbackDate(callbackDate ? '' : new Date().toISOString().split('T')[0])}
+                onClick={() => { if (callbackDate) { setCallbackDate(''); setAllDay(false) } else { setCallbackDate(new Date().toISOString().split('T')[0]) } }}
                 className="w-full px-3 py-2.5 rounded-xl border-2 border-teal-200 bg-teal-50 text-teal-800 hover:bg-teal-100 transition-all font-semibold text-sm text-left"
               >
                 Interested — Callback

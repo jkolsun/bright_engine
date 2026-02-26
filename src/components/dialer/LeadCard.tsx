@@ -79,7 +79,9 @@ export function LeadCard() {
           </div>
           {callHistory?.nextCallback && (
             <p className="text-xs text-teal-600 font-medium mt-1.5">
-              Callback scheduled: {new Date(callHistory.nextCallback.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              Callback scheduled: {callHistory.nextCallback.notes?.startsWith('[ALL_DAY]')
+                ? `${new Date(callHistory.nextCallback.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — All Day`
+                : new Date(callHistory.nextCallback.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </p>
           )}
         </div>
