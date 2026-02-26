@@ -159,9 +159,8 @@ export default function AdminLeadBankPage() {
   // Fetch reps on mount
   useEffect(() => {
     fetch('/api/reps').then(r => r.json()).then(data => {
-      if (data && Array.isArray(data)) {
-        setReps(data.map((r: any) => ({ id: r.id, name: r.name })))
-      }
+      const list = data?.reps || []
+      setReps(list.filter((r: any) => r.status === 'ACTIVE').map((r: any) => ({ id: r.id, name: r.name })))
     }).catch(() => {})
   }, [])
 
