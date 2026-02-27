@@ -100,6 +100,7 @@ export async function GET(request: NextRequest) {
           engagementScore: true,
           engagementLevel: true,
           engagementUpdatedAt: true,
+          lastContactedAt: true,
           createdAt: true,
           updatedAt: true,
         },

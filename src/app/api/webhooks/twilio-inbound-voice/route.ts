@@ -61,6 +61,14 @@ export async function POST(request: NextRequest) {
           status: 'RINGING',
         },
       }).catch(() => null)
+
+      // Stamp lastContactedAt on lead for inbound calls too
+      if (call) {
+        await prisma.lead.update({
+          where: { id: lead.id },
+          data: { lastContactedAt: new Date() },
+        }).catch(err => console.error('[InboundVoice] lastContactedAt update failed:', err))
+      }
     }
 
     // Push INBOUND_CALL SSE to rep

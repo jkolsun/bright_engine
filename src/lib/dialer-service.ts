@@ -431,6 +431,12 @@ export async function initiateCall(
     },
   })
 
+  // Stamp lastContactedAt on lead
+  await prisma.lead.update({
+    where: { id: leadId },
+    data: { lastContactedAt: new Date() },
+  }).catch(err => console.error('[DialerService] lastContactedAt update failed:', err))
+
   // Increment session totalCalls
   if (sessionId) {
     await prisma.dialerSessionNew.update({
@@ -1167,7 +1173,7 @@ export async function attachManualDialToLead(params: {
 }) {
   const { repId, leadId, phone, sessionId, twilioCallSid } = params
 
-  return prisma.dialerCall.create({
+  const call = await prisma.dialerCall.create({
     data: {
       leadId,
       repId,
@@ -1178,6 +1184,14 @@ export async function attachManualDialToLead(params: {
       twilioCallSid,
     },
   })
+
+  // Stamp lastContactedAt on lead
+  await prisma.lead.update({
+    where: { id: leadId },
+    data: { lastContactedAt: new Date() },
+  }).catch(err => console.error('[DialerService] lastContactedAt update failed:', err))
+
+  return call
 }
 
 /**
@@ -1201,6 +1215,7 @@ export async function createLeadFromManualDial(params: {
       source: 'COLD_CALL',
       status: 'NEW',
       ownerRepId: repId,
+      lastContactedAt: new Date(),
     },
   })
 

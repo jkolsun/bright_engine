@@ -150,6 +150,7 @@ model Lead {
   dncAt                  DateTime?                @map("dnc_at")
   dncReason              String?                  @map("dnc_reason")
   dncAddedBy             String?                  @map("dnc_added_by")
+  lastContactedAt        DateTime?                @map("last_contacted_at")
   ownerRepId             String?                  @map("owner_rep_id")
   activities             Activity[]
   buildStatus            BuildStatus?
@@ -193,6 +194,7 @@ model Lead {
   @@index([ownerRepId])
   @@index([dncAt])
   @@index([importBatchId])
+  @@index([lastContactedAt])
   @@map("leads")
 }
 

@@ -18,6 +18,21 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 
+function formatTimeAgo(date: Date): string {
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 export default function SalesRepTrackerPage() {
   const [leads, setLeads] = useState<any[]>([])
   const [stats, setStats] = useState<any>(null)
@@ -25,6 +40,7 @@ export default function SalesRepTrackerPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterView, setFilterView] = useState('all')
+  const [contactedFilter, setContactedFilter] = useState('all')
 
   // Assignment state
   const [reps, setReps] = useState<any[]>([])
@@ -133,6 +149,33 @@ export default function SalesRepTrackerPage() {
       lead.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.companyName?.toLowerCase().includes(searchTerm.toLowerCase())
+
+    // Last contacted filter
+    const matchesContacted = (() => {
+      if (contactedFilter === 'all') return true
+      const lastContacted = lead.lastContactedAt ? new Date(lead.lastContactedAt) : null
+      const now = new Date()
+      if (contactedFilter === 'never') return !lastContacted
+      if (!lastContacted) return false
+      if (contactedFilter === 'today') {
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        return lastContacted >= startOfDay
+      }
+      if (contactedFilter === 'this_week') {
+        const dayOfWeek = now.getDay()
+        const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek)
+        return lastContacted >= startOfWeek
+      }
+      if (contactedFilter === '7days') {
+        return lastContacted >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      }
+      if (contactedFilter === '30days') {
+        return lastContacted >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      }
+      return true
+    })()
+
+    if (!matchesContacted) return false
 
     if (filterView === 'all') return matchesSearch
     if (filterView === 'hot') return matchesSearch && lead.priority === 'HOT'
@@ -375,6 +418,18 @@ export default function SalesRepTrackerPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          <select
+            value={contactedFilter}
+            onChange={(e) => { setContactedFilter(e.target.value); setSelectedLeads(new Set()) }}
+            className="h-10 px-3 rounded-md border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">Last Contacted</option>
+            <option value="today">Today</option>
+            <option value="this_week">This Week</option>
+            <option value="7days">Last 7 Days</option>
+            <option value="30days">Last 30 Days</option>
+            <option value="never">Never Contacted</option>
+          </select>
         </div>
       </Card>
 
@@ -416,6 +471,7 @@ export default function SalesRepTrackerPage() {
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Status</th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Temperature</th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Engagement</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Last Contacted</th>
                   <th className="text-right p-4 text-sm font-semibold text-gray-700">Actions</th>
                 </tr>
               </thead>
@@ -474,6 +530,11 @@ export default function SalesRepTrackerPage() {
                       </td>
                       <td className="p-4">
                         <div className="text-sm text-gray-700">Score: {score}</div>
+                      </td>
+                      <td className="p-4 text-sm text-gray-600 whitespace-nowrap">
+                        {lead.lastContactedAt ? formatTimeAgo(new Date(lead.lastContactedAt)) : (
+                          <span className="text-gray-400">Never</span>
+                        )}
                       </td>
                       <td className="p-4 text-right">
                         <Link href={`/admin/leads/${lead.id}`}>
