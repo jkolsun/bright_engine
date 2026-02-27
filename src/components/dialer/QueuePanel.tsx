@@ -231,7 +231,7 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
                       )}
                     </div>
                     <div className="text-xs text-gray-500 mt-0.5 truncate">
-                      {lead.firstName || lead.contactName || 'Unknown'} &middot; {lead.phone?.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-****')}
+                      {lead.firstName || lead.contactName || lead.city || 'Contact'} &middot; {lead.phone?.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-****')}
                     </div>
                   </button>
                 ))}
@@ -264,7 +264,7 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
                     )}
                   </div>
                   <div className="text-xs text-gray-500 mt-0.5 truncate">
-                    {lead.firstName || lead.contactName || 'Unknown'} &middot; {lead.phone?.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-****')}
+                    {lead.firstName || lead.contactName || lead.city || 'Contact'} &middot; {lead.phone?.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-****')}
                   </div>
                   {lead._count?.dialerCalls !== undefined && lead._count.dialerCalls > 0 && (
                     <div className="text-[10px] text-gray-400 mt-0.5">{lead._count.dialerCalls} calls</div>

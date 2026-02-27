@@ -56,7 +56,7 @@ const PROCESS_INFO: Record<keyof ProcessOptions, { icon: React.ReactNode; title:
   personalization: {
     icon: <Brain size={18} />,
     title: 'AI Personalization',
-    description: 'Uses Claude AI to write a custom first-line opener, call script, and email body for each lead. Combines Serper web research with business data for highly relevant messaging.',
+    description: 'Uses Claude AI to write a custom call script and first-line opener for each lead. Combines web research with business data for relevant talking points.',
   },
 }
 
@@ -426,7 +426,7 @@ export default function ImportPage() {
         // Initialize feed leads and go to configure step
         const leads: LeadEntry[] = data.created.map((l: any) => ({
           id: l.id,
-          name: l.name,
+          name: l.name || l.company || 'Unknown',
           company: l.company,
           status: 'pending' as const,
         }))
@@ -506,7 +506,7 @@ export default function ImportPage() {
     // Build feedLeads array from abandoned staging leads
     const leads: LeadEntry[] = abandonedLeads.leads.map((l: any) => ({
       id: l.id,
-      name: l.firstName || 'Unknown',
+      name: l.firstName || l.companyName || 'Unknown',
       company: l.companyName || '',
       status: 'pending' as const,
     }))
@@ -675,7 +675,7 @@ export default function ImportPage() {
       const data = await res.json()
       const leads: LeadEntry[] = (data.leads || []).map((l: any) => ({
         id: l.id,
-        name: l.firstName || 'Unknown',
+        name: l.firstName || l.companyName || 'Unknown',
         company: l.companyName || '',
         status: 'pending' as const,
       }))
@@ -827,7 +827,7 @@ export default function ImportPage() {
               <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Upload size={48} className="text-blue-600" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Drop Apollo CSV Here</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Upload Lead CSV</h3>
               <p className="text-gray-600 mb-6">or click to browse</p>
 
               <label className="inline-block">
@@ -848,12 +848,17 @@ export default function ImportPage() {
               </label>
 
               <div className="mt-12 pt-8 border-t border-gray-200">
-                <h4 className="font-semibold text-gray-900 mb-4">Expected Apollo Headers</h4>
+                <h4 className="font-semibold text-gray-900 mb-4">Accepted CSV Formats</h4>
                 <div className="text-left bg-gray-50 p-6 rounded-lg">
                   <code className="text-sm text-gray-700 block space-y-1">
                     <div>First Name, Last Name, Title, Company Name, Email</div>
                     <div>Industry, Keywords, Website, City, State, Company Phone</div>
                   </code>
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <p className="text-xs font-medium text-gray-500 mb-1">Also accepts minimal format:</p>
+                    <code className="text-sm text-gray-700">Company Name, Phone, Industry, City, State</code>
+                    <p className="text-xs text-gray-400 mt-1">First Name and Email are optional.</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1347,7 +1352,7 @@ export default function ImportPage() {
                   type="text"
                   value={batchName}
                   onChange={(e) => setBatchName(e.target.value)}
-                  placeholder="e.g., Restaurants Phoenix - Instantly"
+                  placeholder="e.g., GBP Roofing Batch 1, Apollo Legal Dallas"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
