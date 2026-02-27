@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { ExternalLink, Check, Loader2, ChevronDown, ChevronUp, Send } from 'lucide-react'
+import { ExternalLink, Check, Loader2, ChevronDown, ChevronUp, Send, Image as ImageIcon } from 'lucide-react'
+import MobileImageManager from './MobileImageManager'
 
 interface SiteCardProps {
   lead: {
@@ -82,8 +83,50 @@ export function MobileSiteCard({ lead, onApproved }: SiteCardProps) {
   const [editResult, setEditResult] = useState<string | null>(null)
   const [approveLoading, setApproveLoading] = useState(false)
   const [approved, setApproved] = useState(false)
+  const [showImages, setShowImages] = useState(false)
+  const [siteHtml, setSiteHtml] = useState<string | null>(null)
+  const [imagesLoading, setImagesLoading] = useState(false)
+  const [imageSaveMsg, setImageSaveMsg] = useState<string | null>(null)
 
   const previewHref = lead.previewUrl || (lead.previewId ? `/preview/${lead.previewId}` : null)
+
+  async function handleToggleImages() {
+    if (showImages) { setShowImages(false); return }
+    if (siteHtml) { setShowImages(true); return }
+    setImagesLoading(true)
+    try {
+      const res = await fetch(`/api/site-editor/${lead.id}/save`)
+      if (!res.ok) throw new Error('Failed to load site HTML')
+      const data = await res.json()
+      if (!data.html) throw new Error('No HTML — run snapshot first')
+      setSiteHtml(data.html)
+      setShowImages(true)
+    } catch (err: any) {
+      setEditResult(`Error: ${err.message}`)
+    } finally {
+      setImagesLoading(false)
+    }
+  }
+
+  async function handleImageChange(newHtml: string) {
+    setSiteHtml(newHtml)
+    setImageSaveMsg(null)
+    try {
+      const loadRes = await fetch(`/api/site-editor/${lead.id}/save`)
+      if (!loadRes.ok) throw new Error('Failed to get version')
+      const loadData = await loadRes.json()
+      const saveRes = await fetch(`/api/site-editor/${lead.id}/save`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html: newHtml, expectedVersion: loadData.version }),
+      })
+      if (!saveRes.ok) throw new Error('Save failed')
+      setImageSaveMsg('Saved')
+      setTimeout(() => setImageSaveMsg(null), 2000)
+    } catch (err: any) {
+      setImageSaveMsg(`Error: ${err.message}`)
+    }
+  }
 
   async function handleAiEdit() {
     if (!editText.trim()) return
@@ -203,6 +246,36 @@ export function MobileSiteCard({ lead, onApproved }: SiteCardProps) {
               </div>
             )}
           </div>
+
+          {/* Images button */}
+          <button
+            onClick={handleToggleImages}
+            disabled={imagesLoading}
+            className={`w-full flex items-center justify-center gap-1.5 text-sm font-medium py-2.5 px-3 rounded-lg transition-colors ${
+              showImages
+                ? 'bg-blue-600 text-white'
+                : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+            }`}
+          >
+            {imagesLoading ? <Loader2 size={16} className="animate-spin" /> : <ImageIcon size={16} />}
+            {showImages ? 'Hide Images' : 'Manage Images'}
+          </button>
+
+          {/* Image manager */}
+          {showImages && siteHtml && (
+            <div className="bg-slate-900/50 rounded-xl p-3 border border-slate-700/50">
+              {imageSaveMsg && (
+                <p className={`text-xs mb-2 ${imageSaveMsg.startsWith('Error') ? 'text-red-400' : 'text-green-400'}`}>
+                  {imageSaveMsg}
+                </p>
+              )}
+              <MobileImageManager
+                html={siteHtml}
+                onHtmlChange={handleImageChange}
+                onClose={() => setShowImages(false)}
+              />
+            </div>
+          )}
 
           {/* AI Edit input */}
           <div className="space-y-2">

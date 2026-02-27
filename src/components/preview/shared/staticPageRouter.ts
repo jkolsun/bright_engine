@@ -9,13 +9,19 @@
  * - Mobile hamburger menu → dynamic overlay nav with client accent color
  * - Text-based nav link detection (fallback when data-nav-page missing)
  * - Chatbot widget button → navigate to contact page
+ * - FAQ accordion toggle (React state stripped in snapshots)
+ * - Active nav link highlighting
  * - Phone link tracking (tel: links work natively)
  */
 export const STATIC_PAGE_ROUTER_SCRIPT = `
+<!-- SP_ROUTER_V2 -->
 <style>
   @keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
   [data-page]{display:none}
   [data-page].active-page{display:block;animation:pageIn .3s ease-out}
+  /* Active nav link highlighting */
+  [data-nav-page].nav-active{color:var(--sp-accent,#2563eb)!important;position:relative}
+  [data-nav-page].nav-active::after{content:'';position:absolute;bottom:-2px;left:10%;width:80%;height:2px;background:var(--sp-accent,#2563eb);border-radius:1px}
   /* Mobile nav overlay — uses --sp-accent CSS variable for client colors */
   .sp-mobile-overlay{position:fixed;inset:0;z-index:90;display:none}
   .sp-mobile-overlay.open{display:block}
@@ -99,26 +105,27 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
   // ═══ CHATBOT DETECTION ═══
   function isChatbotButton(el){
     if(!el)return false;
-    // Chatbot widget buttons — look for the floating chat bubble
     var btn=el.closest('button');
     if(!btn)return false;
+    // Check aria-label for chat/message
+    var label=(btn.getAttribute('aria-label')||'').toLowerCase();
+    if(label==='chat'||label==='message'||label==='chatbot')return true;
+    // Check for fixed-position button with z-[100] (chatbot float pattern)
     var classes=btn.className||'';
-    // Chatbot buttons typically have fixed/absolute positioning and chat-related content
+    if(classes.indexOf('z-[100]')!==-1&&btn.querySelector('svg'))return true;
+    // Check for fixed/absolute with SVG and chat-related text
     if(classes.indexOf('fixed')!==-1||classes.indexOf('absolute')!==-1){
+      var text=(btn.textContent||'').toLowerCase().trim();
+      if(text.indexOf('chat')!==-1||text.indexOf('message')!==-1)return true;
+      // Check for chat icon SVG paths
       var svg=btn.querySelector('svg');
       if(svg){
-        // Check for MessageCircle icon (chatbot) or chat-related paths
         var paths=svg.querySelectorAll('path');
         for(var i=0;i<paths.length;i++){
           var d=paths[i].getAttribute('d')||'';
-          if(d.indexOf('M21 15a2')!==-1||d.indexOf('m3 21')!==-1||d.indexOf('M7.9')!==-1){
-            return true;
-          }
+          if(d.indexOf('M21 15a2')!==-1||d.indexOf('m3 21')!==-1||d.indexOf('M7.9')!==-1)return true;
         }
       }
-      // Also check for chat-related text
-      var text=(btn.textContent||'').toLowerCase();
-      if(text.indexOf('chat')!==-1||text.indexOf('message')!==-1){return true}
     }
     return false;
   }
@@ -176,10 +183,11 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
     if(!el)return false;
     var btn=el.closest('button');
     if(!btn)return false;
-    // Walk up: check btn, parent, and grandparent classes
+    // Walk up: check btn, parent, grandparent, and great-grandparent classes
     var classes=(btn.className||'');
     if(btn.parentElement) classes+=' '+(btn.parentElement.className||'');
     if(btn.parentElement&&btn.parentElement.parentElement) classes+=' '+(btn.parentElement.parentElement.className||'');
+    if(btn.parentElement&&btn.parentElement.parentElement&&btn.parentElement.parentElement.parentElement) classes+=' '+(btn.parentElement.parentElement.parentElement.className||'');
     // Check for responsive hide classes (lg:hidden or md:hidden)
     if((classes.indexOf('lg:hidden')!==-1 || classes.indexOf('md:hidden')!==-1) && btn.querySelector('svg')){
       return true;
@@ -191,9 +199,64 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
     return false;
   }
 
+  // ═══ FAQ ACCORDION ═══
+  function initFaqAccordions(){
+    // Find all buttons that are FAQ toggles — they have a sibling div with max-height:0
+    var allBtns=document.querySelectorAll('button');
+    for(var i=0;i<allBtns.length;i++){
+      var btn=allBtns[i];
+      var next=btn.nextElementSibling;
+      if(!next||next.tagName!=='DIV')continue;
+      var mh=next.style.maxHeight;
+      // Check if sibling has max-height:0 (collapsed FAQ answer)
+      if(mh==='0px'||mh==='0'){
+        (function(toggle,answer){
+          toggle.style.cursor='pointer';
+          toggle.setAttribute('data-faq-btn','');
+          answer.setAttribute('data-faq-answer','');
+          toggle.addEventListener('click',function(e){
+            e.preventDefault();
+            e.stopPropagation();
+            var isOpen=answer.style.maxHeight!=='0px'&&answer.style.maxHeight!=='0'&&answer.style.maxHeight!=='';
+            answer.style.maxHeight=isOpen?'0px':'300px';
+            answer.style.opacity=isOpen?'0':'1';
+            answer.style.overflow='hidden';
+            answer.style.transition='all .3s ease';
+            // Toggle +/- icon
+            var svgs=toggle.querySelectorAll('svg');
+            if(svgs.length>0){
+              var lastSvg=svgs[svgs.length-1];
+              // Rotate the icon to indicate state
+              lastSvg.style.transition='transform .2s';
+              lastSvg.style.transform=isOpen?'rotate(0deg)':'rotate(45deg)';
+            }
+          });
+        })(btn,next);
+      }
+    }
+  }
+
+  // ═══ CLEANUP: Remove elements that shouldn't be on static sites ═══
+  function cleanupStaticSite(){
+    // Remove "Change Style" / TemplateSwitcher button
+    var allDivs=document.querySelectorAll('div[style]');
+    for(var i=0;i<allDivs.length;i++){
+      var s=allDivs[i].style;
+      if(s.position==='fixed'&&(s.zIndex==='60'||s.zIndex==='59')&&(allDivs[i].textContent||'').indexOf('Change Style')!==-1){
+        allDivs[i].remove();
+      }
+    }
+    // Remove template mobile nav overlays (React ones that got baked in)
+    var hzOverlays=document.querySelectorAll('.hz-overlay');
+    for(var j=0;j<hzOverlays.length;j++){hzOverlays[j].remove()}
+  }
+
   // ═══ UNIFIED CLICK HANDLER ═══
   document.addEventListener('click',function(e){
     var target=e.target;
+
+    // 0. Skip FAQ buttons — handled separately
+    if(target.closest('[data-faq-btn]'))return;
 
     // 1. Nav page links via data-nav-page attribute
     var navEl=target.closest('[data-nav-page]');
@@ -203,7 +266,18 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
       return;
     }
 
-    // 2. Text-based nav link detection (buttons/links in nav/header areas)
+    // 2. Logo click — img or company name in nav/header → home
+    var imgEl=target.closest('img');
+    if(imgEl){
+      var logoBtn=imgEl.closest('button,a');
+      if(logoBtn&&logoBtn.closest('nav,header')){
+        e.preventDefault();
+        navigateTo('home');
+        return;
+      }
+    }
+
+    // 3. Text-based nav link detection (buttons/links in nav/header areas)
     var navBtn=target.closest('button,a');
     if(navBtn && navBtn.closest('nav,header,[role="navigation"]')){
       var navText=(navBtn.textContent||'').trim();
@@ -215,7 +289,7 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
       }
     }
 
-    // 3. Footer nav links (buttons/links inside footer)
+    // 4. Footer nav links (buttons/links inside footer)
     if(navBtn && navBtn.closest('footer')){
       var footerText=(navBtn.textContent||'').trim();
       var footerPage=getNavPageFromText(footerText);
@@ -226,7 +300,7 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
       }
     }
 
-    // 4. CTA buttons → contact page
+    // 5. CTA buttons → contact page
     var btn=target.closest('button');
     if(btn && isCTAButton(btn)){
       e.preventDefault();
@@ -244,14 +318,14 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
       }
     }
 
-    // 5. Chatbot widget button → contact page
+    // 6. Chatbot widget button → contact page
     if(isChatbotButton(target)){
       e.preventDefault();
       navigateTo('contact');
       return;
     }
 
-    // 6. Hamburger menu button
+    // 7. Hamburger menu button
     if(isHamburgerButton(target)){
       e.preventDefault();
       if(!mobileOverlay)createMobileNav();
@@ -262,15 +336,18 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
 
   window.addEventListener('hashchange',function(){showPage(getPage())});
 
-  // Initial setup: strip React inline styles from [data-page] sections and show the right page
+  // Initial setup
+  cleanupStaticSite();
   var allPages=document.querySelectorAll('[data-page]');
   for(var p=0;p<allPages.length;p++){
     allPages[p].style.display='none';
     allPages[p].classList.remove('active-page');
   }
   showPage(getPage());
+  initFaqAccordions();
 })();
 </script>
+<!-- /SP_ROUTER_V2 -->
 `
 
 /**
@@ -287,4 +364,18 @@ export const STATIC_PAGE_ROUTER_CSS = `
  */
 export function getAccentCssTag(hex?: string): string {
   return `<style>:root{--sp-accent:${hex || '#2563eb'}}</style>`
+}
+
+/**
+ * Strips any existing router script (old or new) from HTML.
+ * Call this BEFORE injecting the fresh router to avoid duplicates.
+ */
+export function stripOldRouter(html: string): string {
+  // Strip V2 marker-based router
+  html = html.replace(/<!-- SP_ROUTER_V2 -->[\s\S]*?<!-- \/SP_ROUTER_V2 -->/g, '')
+  // Strip V1 router (no markers — match by unique CSS + script pattern)
+  html = html.replace(/<style>\s*@keyframes pageIn[\s\S]*?sp-mobile-overlay[\s\S]*?<\/style>\s*<script>\s*\(function\(\)\{\s*var PAGES=[\s\S]*?\}\)\(\);\s*<\/script>/g, '')
+  // Strip old accent CSS variable tags
+  html = html.replace(/<style>:root\{--sp-accent:[^}]*\}<\/style>/g, '')
+  return html
 }

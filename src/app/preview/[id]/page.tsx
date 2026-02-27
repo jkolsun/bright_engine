@@ -3,7 +3,7 @@ import PreviewTemplate from '@/components/preview/PreviewTemplate'
 import PreviewTracker from '@/components/preview/PreviewTracker'
 import PreviewCTABanner from '@/components/preview/PreviewCTABanner'
 import { notFound } from 'next/navigation'
-import { STATIC_PAGE_ROUTER_SCRIPT, getAccentCssTag } from '@/components/preview/shared/staticPageRouter'
+import { STATIC_PAGE_ROUTER_SCRIPT, getAccentCssTag, stripOldRouter } from '@/components/preview/shared/staticPageRouter'
 
 // CRITICAL: Force dynamic rendering — client must always see the latest saved HTML
 export const dynamic = 'force-dynamic'
@@ -45,13 +45,12 @@ export default async function PreviewPage({ params }: { params: { id: string } }
     } else {
       cleanHtml = `${noindex}${killOverlay}${cleanHtml}`
     }
-    // Ensure the static page router is present (handles navigation, CTAs, hamburger menu)
-    if (cleanHtml.indexOf('sp-mobile-overlay') === -1) {
-      if (/<\/body>/i.test(cleanHtml)) {
-        cleanHtml = cleanHtml.replace(/<\/body>/i, `${accentTag}${STATIC_PAGE_ROUTER_SCRIPT}\n</body>`)
-      } else {
-        cleanHtml += accentTag + STATIC_PAGE_ROUTER_SCRIPT
-      }
+    // Always strip old router and inject the latest version
+    cleanHtml = stripOldRouter(cleanHtml)
+    if (/<\/body>/i.test(cleanHtml)) {
+      cleanHtml = cleanHtml.replace(/<\/body>/i, `${accentTag}${STATIC_PAGE_ROUTER_SCRIPT}\n</body>`)
+    } else {
+      cleanHtml += accentTag + STATIC_PAGE_ROUTER_SCRIPT
     }
 
     // Append tracking script before </body> or at end

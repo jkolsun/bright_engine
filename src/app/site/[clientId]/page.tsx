@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import { STATIC_PAGE_ROUTER_SCRIPT, getAccentCssTag } from '@/components/preview/shared/staticPageRouter'
+import { STATIC_PAGE_ROUTER_SCRIPT, getAccentCssTag, stripOldRouter } from '@/components/preview/shared/staticPageRouter'
 
 export const dynamic = 'force-dynamic'
 
@@ -63,6 +63,8 @@ export default async function ClientSitePage(
 
   // Clean the HTML — same pattern as preview renderer
   let cleanHtml = lead.siteHtml
+  // Strip old router from full HTML FIRST (before body extraction — handles missing <body> tag edge case)
+  cleanHtml = stripOldRouter(cleanHtml)
   // Strip CTA banner
   cleanHtml = cleanHtml.replace(
     /<div[^>]*class="[^"]*fixed bottom-0[^"]*bg-\[#0D7377\][^"]*"[^>]*>[\s\S]*?<\/div>\s*<\/div>/g,
@@ -77,11 +79,8 @@ export default async function ClientSitePage(
   const headContent = headMatch?.[1] || ''
   let bodyContent = bodyMatch?.[1] || cleanHtml
 
-  // Ensure the static page router is present (handles navigation, CTAs, hamburger menu)
-  // It may be missing if the site was saved before the router existed or if an AI edit stripped it
-  if (bodyContent.indexOf('sp-mobile-overlay') === -1) {
-    bodyContent += accentTag + STATIC_PAGE_ROUTER_SCRIPT
-  }
+  // Inject fresh router with client's accent color
+  bodyContent += accentTag + STATIC_PAGE_ROUTER_SCRIPT
 
   // Kill overlay CSS+script (no preview/disclaimer banners on live sites)
   const killOverlay = `<style>.fixed.inset-0[class*="z-[9999"]{display:none!important}.fixed.bottom-0[class*="bg-\\[#0D7377"]{display:none!important}</style><script>document.querySelectorAll('div').forEach(function(e){if(e.className&&(e.className.indexOf('z-[9999]')!==-1||(e.className.indexOf('fixed')!==-1&&e.className.indexOf('bg-[#0D7377')!==-1)))e.remove()})</script>`

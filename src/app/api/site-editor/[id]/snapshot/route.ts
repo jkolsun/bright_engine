@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
-import { STATIC_PAGE_ROUTER_SCRIPT, getAccentCssTag } from '@/components/preview/shared/staticPageRouter'
+import { STATIC_PAGE_ROUTER_SCRIPT, getAccentCssTag, stripOldRouter } from '@/components/preview/shared/staticPageRouter'
 
 export const dynamic = 'force-dynamic'
 
@@ -155,6 +155,10 @@ export async function POST(
     // Also strip the bottom padding wrapper that accommodates the banner
     html = html.replace(/<div class="pb-16">([\s\S]*?)<\/div>\s*$/m, '$1')
 
+    // Strip the "Change Style" / TemplateSwitcher button (shouldn't appear on final site)
+    html = html.replace(/<div[^>]*style="[^"]*position:\s*fixed[^"]*z-index:\s*60[^"]*"[^>]*>[\s\S]*?Change Style[\s\S]*?<\/div>/gi, '')
+    html = html.replace(/<div style="position: ?fixed; ?bottom: ?80[^"]*; ?left: ?16[^"]*; ?z-index: ?60[^"]*"[^>]*>[\s\S]*?<\/div>\s*<\/div>/gi, '')
+
     // Clean up any raw AI placeholder labels that leaked through (ABOUT_P1:, VP1_DESC, etc.)
     html = html.replace(/\bABOUT_P[0-9]:\s*/gi, '')
     html = html.replace(/\bVP[0-9]_(TITLE|DESC)\b:?\s*/gi, '')
@@ -165,10 +169,11 @@ export async function POST(
     html = html.replace(/\bYEARS_BADGE\b:?\s*/gi, '')
     html = html.replace(/\bSERVICE_AREA_TEXT\b:?\s*/gi, '')
 
-    // Inject multi-page hash router for static HTML — shows/hides [data-page] sections
+    // Strip any old router that may have been baked in, then inject fresh version
     const colorPrefs = lead.colorPrefs as { primary?: string; accent?: string } | null
     const accentHex = colorPrefs?.accent || colorPrefs?.primary || undefined
     const accentTag = getAccentCssTag(accentHex)
+    html = stripOldRouter(html)
     html = html.replace(/<\/body>/i, `${accentTag}${STATIC_PAGE_ROUTER_SCRIPT}\n</body>`)
 
     // Store in database
