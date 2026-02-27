@@ -172,17 +172,33 @@ export async function sendPaymentLink(conversationId: string): Promise<{ success
 
 // ============================================
 // getPaymentFollowUpMessage()
+// Reads from Settings > Scheduled Messages > Pre-Client Messages
 // ============================================
 
-export function getPaymentFollowUpMessage(hoursSinceSent: number, firstName: string): string | null {
-  if (hoursSinceSent >= 72) {
-    return `Last check-in — want me to hold your spot or should I free it up for someone else, ${firstName}?`
-  } else if (hoursSinceSent >= 48) {
-    return `Hey ${firstName}, your preview is looking great. Payment link is ready when you are!`
-  } else if (hoursSinceSent >= 24) {
-    return `Hey ${firstName}, just wanted to make sure you got the payment link. Any questions about getting your site live?`
-  } else if (hoursSinceSent >= 4) {
-    return `Hey ${firstName}, just checking — any questions about getting your site live?`
+export async function getPaymentFollowUpMessage(
+  hoursSinceSent: number,
+  firstName: string
+): Promise<{ message: string; threshold: string } | null> {
+  const { getAutomatedMessages, fillTemplate } = await import('./automated-messages')
+  const msgs = await getAutomatedMessages()
+
+  // Ordered longest delay → shortest — first match wins
+  const followUps = [
+    { key: 'payment_followup_72h' as const, tag: '72h', fallbackDelay: 72 },
+    { key: 'payment_followup_48h' as const, tag: '48h', fallbackDelay: 48 },
+    { key: 'payment_followup_24h' as const, tag: '24h', fallbackDelay: 24 },
+    { key: 'payment_followup_4h' as const, tag: '4h', fallbackDelay: 4 },
+  ]
+
+  for (const { key, tag, fallbackDelay } of followUps) {
+    const config = msgs[key]
+    if (!config.enabled) continue
+    const delay = config.delayHours ?? fallbackDelay
+    if (hoursSinceSent >= delay) {
+      const text = fillTemplate(config.text, { firstName: firstName || '' })
+      return { message: text, threshold: tag }
+    }
   }
-  return null // Too soon for follow-up
+
+  return null
 }

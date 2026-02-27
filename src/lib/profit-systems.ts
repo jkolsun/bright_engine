@@ -35,13 +35,9 @@ export async function generateUrgencyMessages(
     previewCreatedAt?: Date | null
   }
 ) {
-  const urgencyDays = [3, 5, 6, 7, 8, 10, 14]
-  if (!urgencyDays.includes(previewCreatedDaysAgo)) {
-    return null
-  }
-
-  // Templates by day — uses {name}, {company}, {date}, {preview_url}, {days_left}
-  const templates: Record<number, string> = {
+  // Read urgency schedule from settings (falls back to defaults if not customized)
+  const DEFAULT_URGENCY_DAYS = [3, 5, 6, 7, 8, 10, 14]
+  const DEFAULT_TEMPLATES: Record<number, string> = {
     3: '🔥 Hey {name}, your preview expires in {days_left} days. Take another look: {preview_url}',
     5: '⏰ {name}, {days_left} days left on your preview. Don\'t want to miss your window. Can we schedule a call?',
     6: '⚡ Quick question {name} — is time the only thing holding you back from launching?',
@@ -49,6 +45,28 @@ export async function generateUrgencyMessages(
     8: 'Last chance to save your spot at this price, {name}. Preview expires in {days_left} days: {preview_url}',
     10: 'Your {company} preview is ending soon. We can have you live TODAY if you say yes: {preview_url}',
     14: '{name}, your preview is gone in 24 hours. This is your final notice: {preview_url}',
+  }
+
+  let urgencyDays = DEFAULT_URGENCY_DAYS
+  let templates: Record<number, string> = DEFAULT_TEMPLATES
+
+  try {
+    const setting = await prisma.settings.findUnique({ where: { key: 'sequences' } })
+    if (setting?.value && typeof setting.value === 'object') {
+      const saved = setting.value as Record<string, any>
+      if (Array.isArray(saved.urgencyDays) && saved.urgencyDays.length > 0) {
+        urgencyDays = saved.urgencyDays
+      }
+      if (saved.urgencyTemplates && typeof saved.urgencyTemplates === 'object') {
+        templates = { ...DEFAULT_TEMPLATES, ...saved.urgencyTemplates }
+      }
+    }
+  } catch (err) {
+    console.warn('[URGENCY] Failed to load sequences settings, using defaults:', err)
+  }
+
+  if (!urgencyDays.includes(previewCreatedDaysAgo)) {
+    return null
   }
 
   let message = templates[previewCreatedDaysAgo]

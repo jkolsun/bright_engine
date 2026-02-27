@@ -1414,12 +1414,68 @@ async function closeEngineStallCheck() {
         },
       })
     } else if (lastInbound.createdAt < fourHoursAgo) {
-      // 4-72 hours — send nudge via Close Engine processor
-      try {
-        const { processCloseEngineInbound } = await import('../lib/close-engine-processor')
-        await processCloseEngineInbound(conv.id, '[SYSTEM: Lead has not responded in 4+ hours. Send a friendly follow-up nudge.]')
-      } catch (err) {
-        console.error(`[Worker] Nudge failed for ${conv.id}:`, err)
+      // 4-72 hours — check for template-based first nudge, then fall back to AI
+      let sentTemplate = false
+
+      // For COLLECTING_INFO: send form_nudge template as first nudge (if enabled)
+      // For PREVIEW_SENT: send preview_followup template as first nudge (if enabled)
+      const templateKey = conv.stage === 'COLLECTING_INFO' ? 'form_nudge' : conv.stage === 'PREVIEW_SENT' ? 'preview_followup' : null
+
+      if (templateKey) {
+        const triggerName = `automated_${templateKey}`
+        const alreadySent = await prisma.message.findFirst({
+          where: { leadId: conv.leadId, trigger: triggerName },
+        })
+
+        if (!alreadySent) {
+          try {
+            const { getAutomatedMessages, fillTemplate } = await import('../lib/automated-messages')
+            const msgs = await getAutomatedMessages()
+            const config = msgs[templateKey as keyof typeof msgs]
+
+            if (config?.enabled) {
+              const hoursSinceInbound = (Date.now() - lastInbound.createdAt.getTime()) / (1000 * 60 * 60)
+              const delay = config.delayHours ?? 24
+
+              if (hoursSinceInbound >= delay) {
+                // Build template variables
+                const vars: Record<string, string> = { firstName: conv.lead.firstName || '' }
+                if (templateKey === 'form_nudge') {
+                  const formUrl = conv.lead.formUrl || `${process.env.BASE_URL || ''}/onboard/${conv.leadId}`
+                  vars.formUrl = formUrl
+                }
+                if (templateKey === 'preview_followup' && conv.lead.previewUrl) {
+                  vars.previewUrl = conv.lead.previewUrl
+                }
+
+                const text = fillTemplate(config.text, vars)
+                const { sendSMSViaProvider } = await import('../lib/sms-provider')
+                await sendSMSViaProvider({
+                  to: conv.lead.phone,
+                  message: text,
+                  leadId: conv.leadId,
+                  trigger: triggerName,
+                  aiGenerated: false,
+                  conversationType: 'pre_client',
+                  sender: 'clawdbot',
+                })
+                sentTemplate = true
+              }
+            }
+          } catch (err) {
+            console.error(`[Worker] Template nudge (${templateKey}) failed for ${conv.id}:`, err)
+          }
+        }
+      }
+
+      // If no template was sent, fall back to AI nudge
+      if (!sentTemplate) {
+        try {
+          const { processCloseEngineInbound } = await import('../lib/close-engine-processor')
+          await processCloseEngineInbound(conv.id, '[SYSTEM: Lead has not responded in 4+ hours. Send a friendly follow-up nudge.]')
+        } catch (err) {
+          console.error(`[Worker] Nudge failed for ${conv.id}:`, err)
+        }
       }
     }
   }
@@ -1436,14 +1492,13 @@ async function closeEnginePaymentFollowUp() {
 
     const hoursSinceSent = (Date.now() - conv.paymentLinkSentAt.getTime()) / (1000 * 60 * 60)
 
-    // Get follow-up message for this time threshold
+    // Get follow-up message from settings (reads text, delay, enabled from automated_messages)
     const { getPaymentFollowUpMessage } = await import('../lib/close-engine-payment')
-    const followUpMsg = getPaymentFollowUpMessage(hoursSinceSent, conv.lead.firstName)
+    const result = await getPaymentFollowUpMessage(hoursSinceSent, conv.lead.firstName)
 
-    if (!followUpMsg) continue // Too soon
+    if (!result) continue // Too soon or all disabled
 
-    // Determine which threshold we're at
-    const threshold = hoursSinceSent >= 72 ? '72h' : hoursSinceSent >= 48 ? '48h' : hoursSinceSent >= 24 ? '24h' : '4h'
+    const { message: followUpMsg, threshold } = result
 
     // Check if we already sent this threshold's follow-up
     const existingFollowUp = await prisma.message.findFirst({
