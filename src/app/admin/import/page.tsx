@@ -697,6 +697,22 @@ export default function ImportPage() {
     } catch { /* ignore */ }
   }
 
+  const handleRestartBatch = async (batch: ImportBatchUI) => {
+    if (!window.confirm(`Restart "${batch.batchName}"? This will kill the stuck job and reprocess all ${batch.totalLeads} leads.`)) return
+    try {
+      const res = await fetch(`/api/import-queue/${batch.id}/start`, { method: 'POST' })
+      if (res.ok) {
+        const data = await res.json()
+        setQueueBatches(prev => prev.map(b =>
+          b.id === batch.id ? { ...b, status: 'PROCESSING' as const, jobId: data.jobId, processedLeads: 0, failedLeads: 0 } : b
+        ))
+      } else {
+        const err = await res.json().catch(() => ({}))
+        alert(err.error || 'Failed to restart batch')
+      }
+    } catch { alert('Failed to restart batch') }
+  }
+
   const handleReEnrich = async (batch: ImportBatchUI) => {
     if (!window.confirm(`Re-enrich ${batch.totalLeads} leads from "${batch.batchName}"? This will only run enrichment — previews and personalization are already done.`)) return
     try {
@@ -880,7 +896,15 @@ export default function ImportPage() {
                         )}
                       </div>
                       {isProcessing && (
-                        <Loader2 size={16} className="text-blue-500 animate-spin flex-shrink-0" />
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Loader2 size={16} className="text-blue-500 animate-spin" />
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleRestartBatch(batch) }}
+                            className="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors"
+                          >
+                            Restart
+                          </button>
+                        </div>
                       )}
                       {batch.status === 'COMPLETED' && batch.failedLeads > 0 && (
                         <div className="flex items-center gap-2 flex-shrink-0">
