@@ -25,6 +25,48 @@ export async function hasLeadViewedPreview(leadId: string): Promise<boolean> {
  * Send urgency texts on Days 3, 5, 6, 7, 8, 10, 14 after preview generation
  * ~$20-30 ARPU per text campaign
  */
+
+const DEFAULT_URGENCY_DAYS = [3, 5, 6, 7, 8, 10, 14]
+const DEFAULT_URGENCY_TEMPLATES: Record<number, string> = {
+  3: '🔥 Hey {name}, your preview expires in {days_left} days. Take another look: {preview_url}',
+  5: '⏰ {name}, {days_left} days left on your preview. Don\'t want to miss your window. Can we schedule a call?',
+  6: '⚡ Quick question {name} — is time the only thing holding you back from launching?',
+  7: '🚨 {name}, {days_left} days left. We\'re holding your spot but can\'t wait forever. Ready to move forward?',
+  8: 'Last chance to save your spot at this price, {name}. Preview expires in {days_left} days: {preview_url}',
+  10: 'Your {company} preview is ending soon. We can have you live TODAY if you say yes: {preview_url}',
+  14: '{name}, your preview is gone in 24 hours. This is your final notice: {preview_url}',
+}
+
+// 60-second cache for sequence settings (same pattern as automated-messages.ts)
+let cachedSequences: { urgencyDays: number[]; urgencyTemplates: Record<number, string> } | null = null
+let sequenceCacheTime = 0
+const SEQUENCE_CACHE_TTL = 60_000
+
+async function getSequenceSettings(): Promise<{ urgencyDays: number[]; urgencyTemplates: Record<number, string> }> {
+  const now = Date.now()
+  if (cachedSequences && (now - sequenceCacheTime) < SEQUENCE_CACHE_TTL) return cachedSequences
+
+  try {
+    const setting = await prisma.settings.findUnique({ where: { key: 'sequences' } })
+    if (setting?.value && typeof setting.value === 'object') {
+      const val = setting.value as Record<string, any>
+      cachedSequences = {
+        urgencyDays: Array.isArray(val.urgencyDays) && val.urgencyDays.length > 0
+          ? val.urgencyDays
+          : DEFAULT_URGENCY_DAYS,
+        urgencyTemplates: val.urgencyTemplates && typeof val.urgencyTemplates === 'object'
+          ? { ...DEFAULT_URGENCY_TEMPLATES, ...val.urgencyTemplates }
+          : DEFAULT_URGENCY_TEMPLATES,
+      }
+      sequenceCacheTime = now
+      return cachedSequences
+    }
+  } catch (err) {
+    console.error('[ProfitSystems] Failed to load sequence settings:', err)
+  }
+  return { urgencyDays: DEFAULT_URGENCY_DAYS, urgencyTemplates: DEFAULT_URGENCY_TEMPLATES }
+}
+
 export async function generateUrgencyMessages(
   previewCreatedDaysAgo: number,
   lead?: {
@@ -35,35 +77,7 @@ export async function generateUrgencyMessages(
     previewCreatedAt?: Date | null
   }
 ) {
-  // Read urgency schedule from settings (falls back to defaults if not customized)
-  const DEFAULT_URGENCY_DAYS = [3, 5, 6, 7, 8, 10, 14]
-  const DEFAULT_TEMPLATES: Record<number, string> = {
-    3: '🔥 Hey {name}, your preview expires in {days_left} days. Take another look: {preview_url}',
-    5: '⏰ {name}, {days_left} days left on your preview. Don\'t want to miss your window. Can we schedule a call?',
-    6: '⚡ Quick question {name} — is time the only thing holding you back from launching?',
-    7: '🚨 {name}, {days_left} days left. We\'re holding your spot but can\'t wait forever. Ready to move forward?',
-    8: 'Last chance to save your spot at this price, {name}. Preview expires in {days_left} days: {preview_url}',
-    10: 'Your {company} preview is ending soon. We can have you live TODAY if you say yes: {preview_url}',
-    14: '{name}, your preview is gone in 24 hours. This is your final notice: {preview_url}',
-  }
-
-  let urgencyDays = DEFAULT_URGENCY_DAYS
-  let templates: Record<number, string> = DEFAULT_TEMPLATES
-
-  try {
-    const setting = await prisma.settings.findUnique({ where: { key: 'sequences' } })
-    if (setting?.value && typeof setting.value === 'object') {
-      const saved = setting.value as Record<string, any>
-      if (Array.isArray(saved.urgencyDays) && saved.urgencyDays.length > 0) {
-        urgencyDays = saved.urgencyDays
-      }
-      if (saved.urgencyTemplates && typeof saved.urgencyTemplates === 'object') {
-        templates = { ...DEFAULT_TEMPLATES, ...saved.urgencyTemplates }
-      }
-    }
-  } catch (err) {
-    console.warn('[URGENCY] Failed to load sequences settings, using defaults:', err)
-  }
+  const { urgencyDays, urgencyTemplates: templates } = await getSequenceSettings()
 
   if (!urgencyDays.includes(previewCreatedDaysAgo)) {
     return null

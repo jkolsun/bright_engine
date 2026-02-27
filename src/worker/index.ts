@@ -635,6 +635,10 @@ async function startWorkers() {
             await retryFailedWebhooks()
             break
 
+          case 'urgency-check':
+            await runUrgencyCheck()
+            break
+
           default:
             console.log(`Unknown monitoring job: ${job.name}`)
         }
@@ -703,10 +707,11 @@ async function startWorkers() {
     })
 
     // Schedule recurring monitoring jobs
-    const { schedulePendingStateEscalation, scheduleNotificationCleanup, scheduleFailedWebhookRetry } = await import('./queue')
+    const { schedulePendingStateEscalation, scheduleNotificationCleanup, scheduleFailedWebhookRetry, scheduleUrgencyCheck } = await import('./queue')
     await schedulePendingStateEscalation()
     await scheduleNotificationCleanup()
     await scheduleFailedWebhookRetry()
+    await scheduleUrgencyCheck()
 
     // BUG 9.5: Worker health check endpoint
     const healthPort = parseInt(process.env.WORKER_HEALTH_PORT || '3001', 10)
@@ -735,7 +740,7 @@ async function startWorkers() {
     console.log('- Script worker (concurrency: 2)')
     console.log('- Distribution worker')
     console.log('- Sequence worker')
-    console.log('- Monitoring worker (+ pending state escalation every 2h)')
+    console.log('- Monitoring worker (+ pending state escalation every 2h, urgency check daily)')
 
     // Graceful shutdown
     const gracefulShutdown = async () => {
@@ -1355,6 +1360,110 @@ async function runDailyAudit() {
       metadata: { leadsImported, qualified, paid, sitesLive, revenue: revenue._sum.amount },
     },
   })
+}
+
+// ============================================
+// URGENCY CHECK — sends settings-driven urgency SMS
+// ============================================
+
+async function runUrgencyCheck() {
+  const { generateUrgencyMessages, hasLeadViewedPreview } = await import('../lib/profit-systems')
+
+  // Find leads with previews that are NOT in terminal states and NOT paid
+  const leads = await prisma.lead.findMany({
+    where: {
+      previewUrl: { not: null },
+      status: { notIn: ['PAID', 'CLOSED_LOST', 'DO_NOT_CONTACT', 'IMPORT_STAGING'] },
+      dncAt: null,
+    },
+    select: {
+      id: true,
+      firstName: true,
+      companyName: true,
+      phone: true,
+      previewUrl: true,
+      previewExpiresAt: true,
+      buildCompletedAt: true,
+      createdAt: true,
+      timezone: true,
+      state: true,
+    },
+  })
+
+  let sent = 0
+  let skipped = 0
+
+  for (const lead of leads) {
+    try {
+      // Calculate days since preview was generated
+      const previewDate = lead.buildCompletedAt || lead.createdAt
+      const daysSincePreview = Math.floor(
+        (Date.now() - new Date(previewDate).getTime()) / (1000 * 60 * 60 * 24)
+      )
+
+      // Generate urgency message (returns null if not an urgency day)
+      const message = await generateUrgencyMessages(daysSincePreview, {
+        firstName: lead.firstName || undefined,
+        companyName: lead.companyName,
+        previewUrl: lead.previewUrl || undefined,
+        previewExpiresAt: lead.previewExpiresAt,
+        previewCreatedAt: previewDate,
+      })
+
+      if (!message) continue
+
+      // Dedup: check if we already sent this day's urgency for this lead
+      const trigger = `urgency_day_${daysSincePreview}`
+      const alreadySent = await prisma.message.findFirst({
+        where: { leadId: lead.id, trigger },
+      })
+      if (alreadySent) { skipped++; continue }
+
+      // Skip if lead has active Close Engine conversation
+      const activeConv = await prisma.closeEngineConversation.findUnique({
+        where: { leadId: lead.id },
+      })
+      if (activeConv && !['COMPLETED', 'CLOSED_LOST', 'STALLED'].includes(activeConv.stage)) {
+        skipped++
+        continue
+      }
+
+      // Preview view gate — only send urgency if they've actually seen the preview
+      const hasViewed = await hasLeadViewedPreview(lead.id)
+      if (!hasViewed) { skipped++; continue }
+
+      // Timezone check: only send 8 AM - 9 PM
+      if (!canSendMessage(lead.timezone || getTimezoneFromState(lead.state || '') || 'America/New_York')) {
+        skipped++
+        continue
+      }
+
+      // Preview expired — skip (link is dead)
+      if (lead.previewExpiresAt && new Date(lead.previewExpiresAt) < new Date()) {
+        skipped++
+        continue
+      }
+
+      // Send urgency SMS
+      const { sendSMSViaProvider } = await import('../lib/sms-provider')
+      await sendSMSViaProvider({
+        to: lead.phone,
+        message,
+        leadId: lead.id,
+        trigger,
+        aiGenerated: false,
+        conversationType: 'pre_client',
+        sender: 'clawdbot',
+      })
+      sent++
+    } catch (err) {
+      console.error(`[UrgencyCheck] Error processing lead ${lead.id}:`, err)
+    }
+  }
+
+  if (sent > 0 || skipped > 0) {
+    console.log(`[UrgencyCheck] Sent: ${sent}, Skipped: ${skipped}, Total leads checked: ${leads.length}`)
+  }
 }
 
 // ============================================

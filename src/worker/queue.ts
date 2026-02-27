@@ -675,6 +675,29 @@ export async function scheduleFailedWebhookRetry() {
   }
 }
 
+export async function scheduleUrgencyCheck() {
+  const queue = await getMonitoringQueue()
+  if (!queue || !isRedisAvailable) {
+    console.warn('Monitoring queue unavailable, skipping urgency check')
+    return null
+  }
+
+  try {
+    return await queue.add(
+      'urgency-check',
+      {},
+      {
+        repeat: {
+          every: 24 * 60 * 60 * 1000, // Once per day
+        },
+      }
+    )
+  } catch (err) {
+    console.warn('Failed to schedule urgency check:', err)
+    return null
+  }
+}
+
 export async function addImportProcessingJob(data: {
   jobId: string
   leadIds: string[]
