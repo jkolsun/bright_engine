@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import { STATIC_PAGE_ROUTER_SCRIPT } from '@/components/preview/shared/staticPageRouter'
 
 export const dynamic = 'force-dynamic'
 
@@ -70,7 +71,13 @@ export default async function ClientSitePage(
   const headMatch = cleanHtml.match(/<head[^>]*>([\s\S]*?)<\/head>/i)
   const bodyMatch = cleanHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
   const headContent = headMatch?.[1] || ''
-  const bodyContent = bodyMatch?.[1] || cleanHtml
+  let bodyContent = bodyMatch?.[1] || cleanHtml
+
+  // Ensure the static page router is present (handles navigation, CTAs, hamburger menu)
+  // It may be missing if the site was saved before the router existed or if an AI edit stripped it
+  if (bodyContent.indexOf('sp-mobile-overlay') === -1) {
+    bodyContent += STATIC_PAGE_ROUTER_SCRIPT
+  }
 
   // Kill overlay CSS+script (no preview/disclaimer banners on live sites)
   const killOverlay = `<style>.fixed.inset-0[class*="z-[9999"]{display:none!important}.fixed.bottom-0[class*="bg-\\[#0D7377"]{display:none!important}</style><script>document.querySelectorAll('div').forEach(function(e){if(e.className&&(e.className.indexOf('z-[9999]')!==-1||(e.className.indexOf('fixed')!==-1&&e.className.indexOf('bg-[#0D7377')!==-1)))e.remove()})</script>`

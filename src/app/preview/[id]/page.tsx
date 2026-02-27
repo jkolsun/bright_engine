@@ -3,6 +3,7 @@ import PreviewTemplate from '@/components/preview/PreviewTemplate'
 import PreviewTracker from '@/components/preview/PreviewTracker'
 import PreviewCTABanner from '@/components/preview/PreviewCTABanner'
 import { notFound } from 'next/navigation'
+import { STATIC_PAGE_ROUTER_SCRIPT } from '@/components/preview/shared/staticPageRouter'
 
 // CRITICAL: Force dynamic rendering — client must always see the latest saved HTML
 export const dynamic = 'force-dynamic'
@@ -41,6 +42,15 @@ export default async function PreviewPage({ params }: { params: { id: string } }
     } else {
       cleanHtml = `${noindex}${killOverlay}${cleanHtml}`
     }
+    // Ensure the static page router is present (handles navigation, CTAs, hamburger menu)
+    if (cleanHtml.indexOf('sp-mobile-overlay') === -1) {
+      if (/<\/body>/i.test(cleanHtml)) {
+        cleanHtml = cleanHtml.replace(/<\/body>/i, `${STATIC_PAGE_ROUTER_SCRIPT}\n</body>`)
+      } else {
+        cleanHtml += STATIC_PAGE_ROUTER_SCRIPT
+      }
+    }
+
     // Append tracking script before </body> or at end
     if (/<\/body>/i.test(cleanHtml)) {
       cleanHtml = cleanHtml.replace(/<\/body>/i, `${trackScript}</body>`)
@@ -57,7 +67,7 @@ export default async function PreviewPage({ params }: { params: { id: string } }
         <body style={{ margin: 0, padding: 0, overflow: 'hidden' }}>
           <iframe
             srcDoc={cleanHtml}
-            sandbox="allow-scripts allow-same-origin"
+            sandbox="allow-scripts allow-same-origin allow-forms"
             style={{ width: '100%', height: '100vh', border: 'none' }}
             title={`Preview for ${lead.companyName}`}
           />
