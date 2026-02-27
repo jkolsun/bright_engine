@@ -12,6 +12,7 @@ import type { WebsiteCopy } from '@/components/preview/config/template-types'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
+  timeout: 60_000, // 60s timeout — prevents import worker from hanging on slow API calls
 })
 
 export interface PersonalizationResult {

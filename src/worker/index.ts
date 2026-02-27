@@ -341,7 +341,10 @@ async function startWorkers() {
           }
 
           // Process all leads in this batch simultaneously
+          // Each lead gets a 120s timeout to prevent one slow API call from blocking the entire import
+          const PER_LEAD_TIMEOUT = 120_000
           const batchPromises = batchLeadIds.map(async (leadId) => {
+            const leadProcessor = async () => {
             const leadResult: { enrichment?: boolean; preview?: boolean; personalization?: boolean } = {}
 
             const lead = await prisma.lead.findUnique({ where: { id: leadId } })
@@ -408,6 +411,25 @@ async function startWorkers() {
             }
 
             return { leadId, success: true as const, result: leadResult }
+            }
+
+            // Race the lead processor against a timeout
+            const timeoutPromise = new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error(`Lead ${leadId} timed out after ${PER_LEAD_TIMEOUT / 1000}s`)), PER_LEAD_TIMEOUT)
+            )
+            try {
+              return await Promise.race([leadProcessor(), timeoutPromise])
+            } catch (err) {
+              console.warn(`[IMPORT] Lead ${leadId} timed out — skipping to next lead`)
+              // Graduate timed-out leads so they're still callable
+              try {
+                await prisma.lead.updateMany({
+                  where: { id: leadId, status: 'IMPORT_STAGING' },
+                  data: { status: 'NEW' },
+                })
+              } catch { /* non-fatal */ }
+              return { leadId, success: false as const, error: 'Timed out' }
+            }
           })
 
           const batchResults = await Promise.allSettled(batchPromises)
