@@ -48,7 +48,7 @@ RULES:
 2. Keep it under 160 characters if possible, max 320 characters. SMS-friendly.
 3. Sound human and casual — not corporate. Like a text from someone who genuinely cares about their business.
 4. Include ONE specific, actionable suggestion based on their data.
-5. Use their first name.
+5. Use their first name if available. If name is empty or "(none)", write naturally without addressing by name.
 6. NEVER use: impressive, amazing, incredible, outstanding, excellent, fantastic, great, awesome, cutting-edge, world-class
 7. If recommending an upsell, frame it as solving a specific problem their data reveals — not a generic pitch.
 8. Numbers are powerful — use them. "47 visitors last month" beats "some visitors."
@@ -93,7 +93,7 @@ export async function generateRetentionMessage(
 
   if (!client) throw new Error('Client not found')
 
-  const firstName = client.lead?.firstName || client.contactName?.split(' ')[0] || 'there'
+  const firstName = client.lead?.firstName || client.contactName?.split(' ')[0] || ''
   const analytics = client.analytics
   const daysSinceLive = client.siteLiveDate
     ? Math.floor((Date.now() - new Date(client.siteLiveDate).getTime()) / (1000 * 60 * 60 * 24))
@@ -172,8 +172,8 @@ export async function generateRetentionMessage(
     console.error('[RETENTION] Claude error:', error)
     // Fallback to a simple template
     const fallback = analytics && analytics.totalVisits > 0
-      ? `Hey ${firstName}! Your ${client.companyName} site has ${analytics.totalVisits} visits so far. Want me to pull a full report?`
-      : `Hey ${firstName}! Quick check-in on your ${client.companyName} site. Everything looking good? Reply if you need anything.`
+      ? `Hey${firstName ? ` ${firstName}` : ''}! Your ${client.companyName} site has ${analytics.totalVisits} visits so far. Want me to pull a full report?`
+      : `Hey${firstName ? ` ${firstName}` : ''}! Quick check-in on your ${client.companyName} site. Everything looking good? Reply if you need anything.`
     return { message: fallback, cost: 0 }
   }
 }

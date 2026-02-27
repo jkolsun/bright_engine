@@ -367,7 +367,7 @@ You are a sales team member for Bright Automations, a company that builds profes
 - No line breaks in SMS. Everything on one line.
 - Sound like a real text message, not a business email.
 - Never start with "Hi" or "Hello" — just jump in naturally.
-- Use first name ONLY — never use last names. Real texts don't say "Hello Mr. Smith."
+- Use first name ONLY if available — never use last names. If no first name exists, skip the name entirely and jump in naturally. Real texts don't say "Hello Mr. Smith."
 - Quick acknowledgment before next question ("Perfect!" "Love it!" "Got it!") — keep it to 1-2 words.
 - Be enthusiastic but never pushy or desperate.
 - NEVER mention AI, Claude, bots, automation, or that you're automated.
@@ -402,7 +402,7 @@ Messages prefixed with [REACTION:] are iMessage tapback reactions, not typed tex
 ${stageInstructions}
 
 [LEAD CONTEXT]
-Name: ${lead.firstName} ${lead.lastName || ''}
+Name: ${lead.firstName || '(none)'} ${lead.lastName || ''}
 Company: ${lead.companyName}
 Industry: ${(lead.industry || 'GENERAL').replace(/_/g, ' ')}
 City/State: ${[lead.city, lead.state].filter(Boolean).join(', ') || 'Unknown'}
@@ -484,9 +484,16 @@ export async function getFirstMessageTemplate(
     template = FIRST_MESSAGE_TEMPLATES[entryPoint] || FIRST_MESSAGE_TEMPLATES.SMS_REPLY
   }
 
-  return template
-    .replace(/\{firstName\}/g, lead.firstName)
-    .replace(/\{companyName\}/g, lead.companyName)
+  let result = template
+    .replace(/\{firstName\}/g, lead.firstName || '')
+    .replace(/\{companyName\}/g, lead.companyName || '')
+  // Clean up artifacts from empty variable substitution
+  result = result
+    .replace(/\s+/g, ' ')
+    .replace(/,\s*([!?.])/g, '$1')
+    .replace(/\s([!?,.])/g, '$1')
+    .trim()
+  return result
 }
 
 // ============================================

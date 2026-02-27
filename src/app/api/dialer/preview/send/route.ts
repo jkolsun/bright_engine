@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
       const { sendEmail, wrapPreviewHtml } = await import('@/lib/resend')
       const previewHtml = wrapPreviewHtml({
-        recipientName: lead.firstName || 'there',
+        recipientName: lead.firstName || '',
         companyName: lead.companyName,
         previewUrl,
       })

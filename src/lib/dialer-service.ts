@@ -874,9 +874,8 @@ export async function dropVoicemail(callId: string) {
             toNumber = lead.phone
           }
 
-          const firstName = lead.firstName || 'there'
           const company = lead.companyName || 'your business'
-          const message = `Hey ${firstName}, I just left you a voicemail about ${company}. Check out the site I built for you: ${previewUrl}`
+          const message = `Hey${lead.firstName ? ` ${lead.firstName}` : ''}, I just left you a voicemail about ${company}. Check out the site I built for you: ${previewUrl}`
 
           const { sendSMSViaProvider } = await import('./sms-provider')
 

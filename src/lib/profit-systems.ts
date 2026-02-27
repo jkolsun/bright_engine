@@ -71,11 +71,18 @@ export async function generateUrgencyMessages(
 
   // Replace all template variables
   message = message
-    .replace(/\{name\}/g, lead?.firstName || 'there')
+    .replace(/\{name\}/g, lead?.firstName || '')
     .replace(/\{company\}/g, lead?.companyName || 'your company')
     .replace(/\{date\}/g, dateStr)
     .replace(/\{preview_url\}/g, lead?.previewUrl || '')
     .replace(/\{days_left\}/g, daysLeft)
+
+  // Clean up artifacts from empty variable substitution
+  message = message
+    .replace(/\s+/g, ' ')
+    .replace(/,\s*([!?.])/g, '$1')
+    .replace(/\s([!?,.])/g, '$1')
+    .trim()
 
   return message
 }

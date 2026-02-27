@@ -62,7 +62,7 @@ export async function POST(
         const dnsInstructions = getDnsInstructions(domain)
         if (client.lead?.phone) {
           const { text: dnsMessage, enabled: dnsEnabled } = await getSystemMessage('onboarding_dns_instructions', {
-            firstName: client.lead.firstName || 'there',
+            firstName: client.lead.firstName || '',
             domain,
             dnsInstructions,
           })
@@ -164,7 +164,7 @@ export async function POST(
         const dnsInstructions = getDnsInstructions(domain)
         if (client.lead?.phone) {
           const { text: dnsMessage, enabled: dnsEnabled } = await getSystemMessage('onboarding_dns_instructions', {
-            firstName: client.lead.firstName || 'there',
+            firstName: client.lead.firstName || '',
             domain,
             dnsInstructions,
           })
@@ -204,7 +204,7 @@ export async function POST(
         // Send go-live notification to client
         if (client.lead?.phone) {
           const { text: goLiveMessage, enabled } = await getSystemMessage('site_live', {
-            firstName: client.lead.firstName || 'there',
+            firstName: client.lead.firstName || '',
             companyName: client.companyName,
             siteUrl: siteUrl || domain || 'your website',
           })

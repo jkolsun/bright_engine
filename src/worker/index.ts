@@ -1694,7 +1694,7 @@ async function handleOnboardingAdvanceToDomain(clientId: string) {
   if (!client?.lead?.phone) return
 
   const { sendSMSViaProvider } = await import('../lib/sms-provider')
-  const firstName = client.lead.firstName || 'there'
+  const firstName = client.lead.firstName || ''
   const companyName = client.companyName
 
   // Use onboarding flow settings from Post-AQ settings
@@ -1750,7 +1750,7 @@ async function handleOnboardingGbpPrompt(clientId: string) {
   if (!flowSettings.gbpPrompt) return // Empty = disabled
 
   const { sendSMSViaProvider } = await import('../lib/sms-provider')
-  const firstName = client.lead.firstName || 'there'
+  const firstName = client.lead.firstName || ''
   const companyName = client.companyName
 
   const gbpMessage = interpolateTemplate(flowSettings.gbpPrompt, { firstName, companyName })
@@ -1878,7 +1878,7 @@ async function handleOnboardingDnsCheck(clientId: string) {
       const { sendSMSViaProvider } = await import('../lib/sms-provider')
       await sendSMSViaProvider({
         to: client.lead.phone,
-        message: `Hey ${client.lead.firstName || 'there'}, just checking in — have you had a chance to update your DNS settings for ${onboarding.customDomain}? If you need help, just text me the name of your domain registrar (like GoDaddy or Namecheap) and I'll walk you through it.`,
+        message: `Hey${client.lead.firstName ? ` ${client.lead.firstName}` : ''}, just checking in — have you had a chance to update your DNS settings for ${onboarding.customDomain}? If you need help, just text me the name of your domain registrar (like GoDaddy or Namecheap) and I'll walk you through it.`,
         clientId,
         sender: 'clawdbot',
         trigger: 'dns_nudge',
@@ -1891,7 +1891,7 @@ async function handleOnboardingDnsCheck(clientId: string) {
       const { sendSMSViaProvider } = await import('../lib/sms-provider')
       await sendSMSViaProvider({
         to: client.lead.phone,
-        message: `Hey ${client.lead.firstName || 'there'}, your site for ${onboarding.companyName} is ready to go live — we just need your DNS updated. Want us to hop on a quick call and walk you through it? Takes about 5 minutes.`,
+        message: `Hey${client.lead.firstName ? ` ${client.lead.firstName}` : ''}, your site for ${onboarding.companyName} is ready to go live — we just need your DNS updated. Want us to hop on a quick call and walk you through it? Takes about 5 minutes.`,
         clientId,
         sender: 'clawdbot',
         trigger: 'dns_nudge_2',

@@ -292,6 +292,12 @@ export function fillTemplate(
   for (const [key, value] of Object.entries(vars)) {
     result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), value || '')
   }
+  // Clean up artifacts from empty variable substitution (e.g. empty firstName)
+  result = result
+    .replace(/\s+/g, ' ')           // collapse multiple spaces
+    .replace(/,\s*([!?.])/g, '$1')  // orphaned comma before punctuation: ", !" → "!"
+    .replace(/\s([!?,.])/g, '$1')   // space before punctuation: " !" → "!"
+    .trim()
   return result
 }
 

@@ -74,6 +74,26 @@ export async function POST(request: NextRequest) {
         break
       }
 
+      case 'clear_names': {
+        const [updateResult] = await prisma.$transaction([
+          prisma.lead.updateMany({
+            where: { id: { in: leadIds } },
+            data: { firstName: '', lastName: null },
+          }),
+          prisma.leadEvent.createMany({
+            data: leadIds.map((leadId: string) => ({
+              leadId,
+              eventType: 'STAGE_CHANGE',
+              toStage: 'NAMES_CLEARED',
+              metadata: { bulkAction: true },
+              actor: 'admin',
+            })),
+          }),
+        ])
+        updated = updateResult.count
+        break
+      }
+
       case 'delete': {
         const result = await prisma.lead.updateMany({
           where: { id: { in: leadIds } },

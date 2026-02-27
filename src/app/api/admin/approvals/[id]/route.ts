@@ -148,7 +148,7 @@ async function executeApprovedAction(approval: any) {
         const { getSystemMessage } = await import('@/lib/system-messages')
         const paymentLead = approval.leadId ? await prisma.lead.findUnique({ where: { id: approval.leadId }, select: { firstName: true, companyName: true } }) : null
         const { text: paymentMessage } = await getSystemMessage('payment_link', {
-          firstName: paymentLead?.firstName || 'there',
+          firstName: paymentLead?.firstName || '',
           companyName: paymentLead?.companyName || 'your business',
           paymentLink: paymentUrl,
           firstMonthTotal: `$${pricingConfig.firstMonthTotal}`,
@@ -382,7 +382,7 @@ async function executeApprovedAction(approval: any) {
             try {
               const { sendSMSViaProvider } = await import('@/lib/sms-provider')
               const { getSystemMessage } = await import('@/lib/system-messages')
-              const firstName = lead.firstName || 'there'
+              const firstName = lead.firstName || ''
               const company = lead.companyName || 'your business'
               const { text: message, enabled: previewMsgEnabled } = await getSystemMessage('preview_sent', { firstName, companyName: company, previewUrl })
               if (!previewMsgEnabled) { console.log('[Approvals] preview_sent message disabled'); break }

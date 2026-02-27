@@ -22,7 +22,7 @@ import {
   Search, Filter, Plus, Eye, TrendingUp, UserPlus, UserMinus, Users,
   FolderOpen, FolderPlus, ArrowLeft, Target, Mail, MoreVertical, Pencil, Trash2,
   ChevronDown, ChevronRight, Sparkles, Globe, Star, MapPin, Clock, Wrench, MessageSquare, ExternalLink,
-  LayoutGrid, List, ChevronLeft, RefreshCw, Phone
+  LayoutGrid, List, ChevronLeft, RefreshCw, Phone, Eraser
 } from 'lucide-react'
 
 class LeadsErrorBoundary extends React.Component<
@@ -463,6 +463,30 @@ function LeadsPageInner() {
     window.location.href = `/admin/instantly?assignLeads=${leadIds}`
   }
 
+  const handleClearNames = async () => {
+    if (selectedLeads.size === 0) return
+    const count = selectedLeads.size
+    if (!confirm(`Clear first & last names for ${count} selected lead${count !== 1 ? 's' : ''}? This will remove their names so messaging uses generic greetings instead.`)) return
+    try {
+      const res = await fetch('/api/admin/bulk-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'clear_names', leadIds: Array.from(selectedLeads) }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        alert(`Cleared names for ${data.updated} leads`)
+        setSelectedLeads(new Set())
+        fetchLeads()
+      } else {
+        alert('Failed to clear names')
+      }
+    } catch (error) {
+      console.error('Error clearing names:', error)
+      alert('Failed to clear names')
+    }
+  }
+
   const handleDeleteSelected = async () => {
     if (selectedLeads.size === 0) {
       alert('No leads selected')
@@ -795,6 +819,15 @@ function LeadsPageInner() {
           >
             <FolderPlus size={18} className="mr-2" />
             Add to Folder {selectedLeads.size > 0 && `(${selectedLeads.size})`}
+          </Button>
+          {/* Clear Names button */}
+          <Button
+            variant="outline"
+            onClick={handleClearNames}
+            disabled={selectedLeads.size === 0}
+          >
+            <Eraser size={18} className="mr-2" />
+            Clear Names {selectedLeads.size > 0 && `(${selectedLeads.size})`}
           </Button>
           {/* Unassign button */}
           <Button

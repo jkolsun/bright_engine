@@ -146,14 +146,20 @@ function personalizeScript(text: string, lead: Lead | null, repName: string, pri
       .replace(/\{\{monthlyHosting\}\}/g, String(pricing.monthlyHosting))
   }
   if (!lead) return result
-  return result
-    .replace(/\{\{firstName\}\}/g, lead.firstName || 'there')
+  result = result
+    .replace(/\{\{firstName\}\}/g, lead.firstName || '')
     .replace(/\{\{companyName\}\}/g, lead.companyName || 'your company')
     .replace(/\{\{industry\}\}/g, lead.industry || 'your industry')
     .replace(/\{\{city\}\}/g, lead.city || 'your area')
     .replace(/\{\{location\}\}/g, [lead.city, lead.state].filter(Boolean).join(', ') || 'your area')
     .replace(/\[YOUR NAME\]/g, repName || '[YOUR NAME]')
     .replace(/\[REP\]/g, repName || '[REP]')
+  // Clean up artifacts from empty variable substitution
+  return result
+    .replace(/\s+/g, ' ')
+    .replace(/,\s*([!?.])/g, '$1')
+    .replace(/\s([!?,.])/g, '$1')
+    .trim()
 }
 
 function getTemperature(score: number): { label: string; color: string; bg: string } {
@@ -1871,7 +1877,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
     if (!currentLead?.previewUrl || !currentLead?.phone || previewSending) return
     setPreviewSending(true)
 
-    const message = `Hey ${currentLead.firstName || 'there'}, this is ${userName || 'us'} with Bright Automations. I built a new website for ${currentLead.companyName || 'your company'} — check it out: ${currentLead.previewUrl}`
+    const message = `Hey${currentLead.firstName ? ` ${currentLead.firstName}` : ''}, this is ${userName || 'us'} with Bright Automations. I built a new website for ${currentLead.companyName || 'your company'} — check it out: ${currentLead.previewUrl}`
 
     try {
       const res = await fetch('/api/messages', {

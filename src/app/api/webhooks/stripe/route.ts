@@ -381,7 +381,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     const { getOnboardingFlowSettings, interpolateTemplate } = await import('@/lib/onboarding')
     const flowSettings = await getOnboardingFlowSettings()
     const welcomeMessage = interpolateTemplate(flowSettings.welcome, {
-      firstName: lead.firstName || 'there',
+      firstName: lead.firstName || '',
       companyName: lead.companyName || 'your business',
     })
 

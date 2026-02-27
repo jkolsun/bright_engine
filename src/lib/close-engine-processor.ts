@@ -190,7 +190,7 @@ export async function processCloseEngineFirstMessage(conversationId: string): Pr
 Use this template as your approach (adapt naturally, don't copy word-for-word):
 "${template}"
 
-Lead: ${lead.firstName} from ${lead.companyName} (${lead.industry || 'service business'})
+Lead: ${lead.firstName || '(no name)'} from ${lead.companyName} (${lead.industry || 'service business'})${!lead.firstName ? '\nIMPORTANT: This lead has no name on file. Do NOT use any name in the message — just jump in naturally.' : ''}
 ${lead.previewUrl ? `Preview URL: ${lead.previewUrl}` : 'No preview yet.'}
 
 Write ONE text message. 1-2 sentences max. Casual and human. Do not include quotes around the message.`,

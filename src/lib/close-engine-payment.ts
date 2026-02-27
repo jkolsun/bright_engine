@@ -105,7 +105,7 @@ export async function sendPaymentLink(conversationId: string): Promise<{ success
   try {
     const { getSystemMessage } = await import('./system-messages')
     const { text } = await getSystemMessage('payment_link', {
-      firstName: lead.firstName || 'there',
+      firstName: lead.firstName || '',
       companyName: lead.companyName || 'your business',
       paymentLink: paymentUrl || '[no link configured]',
       firstMonthTotal: `$${config.firstMonthTotal}`,
