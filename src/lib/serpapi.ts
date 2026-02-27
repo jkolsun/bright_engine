@@ -32,10 +32,10 @@ export async function enrichLead(leadId: string): Promise<EnrichmentResult> {
 
   // Safety cap to prevent runaway API costs
   // NOTE: This counts raw API calls, not leads (each lead makes 3-5 queries)
-  // Override via SERPAPI_DAILY_LIMIT env var
-  const DAILY_SERPAPI_LIMIT = parseInt(process.env.SERPAPI_DAILY_LIMIT || '5000', 10)
+  // Override via SERPAPI_DAILY_LIMIT env var (set to 0 to disable limit)
+  const DAILY_SERPAPI_LIMIT = parseInt(process.env.SERPAPI_DAILY_LIMIT || '50000', 10)
 
-  if (todayUsage >= DAILY_SERPAPI_LIMIT) {
+  if (DAILY_SERPAPI_LIMIT > 0 && todayUsage >= DAILY_SERPAPI_LIMIT) {
     console.log(`[ENRICHMENT] Daily SerpAPI limit reached (${todayUsage}/${DAILY_SERPAPI_LIMIT}). Skipping enrichment for lead ${leadId}.`)
     throw new Error('SERPAPI_DAILY_LIMIT_REACHED')
   }
