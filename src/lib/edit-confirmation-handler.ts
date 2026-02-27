@@ -155,14 +155,32 @@ async function undoEdit(
     where: { id: editRequestId },
   })
 
-  if (!editRequest || !editRequest.preEditHtml || !editRequest.leadId) {
+  if (!editRequest) {
     return { handled: true, replyText: `No problem, I reverted that change. Let me know if you'd like something different!` }
   }
 
-  // Restore pre-edit HTML
+  // Safety check: if no pre-edit HTML backup exists, we can't actually revert.
+  // Don't lie to the client — escalate to admin for manual handling.
+  if (!editRequest.preEditHtml || !editRequest.leadId) {
+    console.warn(`[EditConfirmation] Cannot undo edit ${editRequestId} — no pre-edit HTML saved`)
+    await prisma.notification.create({
+      data: {
+        type: 'CLIENT_TEXT',
+        title: `Edit Undo Failed — No Backup`,
+        message: `Client tried to undo edit but no pre-edit HTML was saved. Manual revert needed.`,
+        metadata: { clientId, editRequestId },
+      },
+    })
+    return {
+      handled: true,
+      replyText: `I'll get the team to handle that revert for you — they'll have it sorted shortly!`,
+    }
+  }
+
+  // Restore pre-edit HTML (increment version to maintain atomic consistency)
   await prisma.lead.update({
     where: { id: editRequest.leadId },
-    data: { siteHtml: editRequest.preEditHtml },
+    data: { siteHtml: editRequest.preEditHtml, siteEditVersion: { increment: 1 } },
   })
 
   // Reset edit flow state

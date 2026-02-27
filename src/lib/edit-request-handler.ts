@@ -2,7 +2,7 @@
  * Edit Request Handler
  *
  * Three-tier edit flow:
- * - Simple: AI auto-applies + auto-pushes to build queue (no admin review)
+ * - Simple: AI auto-applies immediately (no admin review, no build queue noise)
  * - Medium: AI applies edit, awaits admin approval before pushing
  * - Complex: Alerts admin to edit manually in site editor (AI still attempts)
  *
@@ -125,9 +125,12 @@ async function handleSimpleEdit(
   if (!result) return
 
   // Atomic optimistic lock: only update if version hasn't changed during AI processing
+  // Simple edits do NOT change buildStep — /site/[clientId] serves siteHtml directly,
+  // so the change is live immediately. No need to add to admin QA queue (prevents
+  // queue noise at scale with 50+ clients).
   const updated = await prisma.lead.updateMany({
     where: { id: lead.id, siteEditVersion: result.baseVersion },
-    data: { siteHtml: result.html, buildStep: 'QA_REVIEW', siteEditVersion: result.baseVersion + 1 },
+    data: { siteHtml: result.html, siteEditVersion: result.baseVersion + 1 },
   })
   if (updated.count === 0) {
     console.warn(`[EditHandler] Version conflict for ${client.companyName}: expected v${result.baseVersion}. Re-queuing.`)
@@ -135,7 +138,7 @@ async function handleSimpleEdit(
     return
   }
 
-  // Mark as approved + auto-push
+  // Mark as approved + auto-applied (no admin review needed)
   await prisma.editRequest.update({
     where: { id: editRequestId },
     data: {
@@ -153,23 +156,23 @@ async function handleSimpleEdit(
     to: lead.phone,
     message: `Done! I made that change — it's been applied to your preview!`,
     clientId: client.id,
-    trigger: 'edit_simple_auto_pushed',
+    trigger: 'edit_simple_auto_applied',
     aiGenerated: true,
     conversationType: 'post_client',
     sender: 'clawdbot',
   })
 
-  // Dashboard notification
+  // Dashboard notification (info only — no admin action needed)
   await prisma.notification.create({
     data: {
       type: 'CLIENT_TEXT',
       title: `Simple Edit Auto-Applied — ${client.companyName}`,
-      message: `AI applied: "${result.summary}". Auto-pushed to build queue.`,
+      message: `AI applied: "${result.summary}". Change is live immediately.`,
       metadata: { clientId: client.id, editRequestId },
     },
   })
 
-  console.log(`[EditHandler] Simple edit auto-pushed for ${client.companyName}: ${result.summary}`)
+  console.log(`[EditHandler] Simple edit auto-applied for ${client.companyName}: ${result.summary}`)
 }
 
 // ─── Medium Edit: AI applies, awaits admin approval ──────────────

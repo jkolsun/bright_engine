@@ -28,9 +28,49 @@ interface PreviousEdit {
   summary: string
 }
 
+// ─── Styling Detection ────────────────────────────────────────────
+
+type StylingApproach = 'tailwind' | 'mixed' | 'custom'
+
+/**
+ * Detect whether the site uses pure Tailwind, a mix of Tailwind + custom CSS,
+ * or primarily custom CSS. This adapts the AI prompt so client edits match
+ * the styling approach used when the site was redesigned.
+ */
+function detectStylingApproach(html: string): StylingApproach {
+  const hasTailwindCdn = html.includes('cdn.tailwindcss.com')
+
+  // Count custom style blocks (exclude our infrastructure injections)
+  const styleBlocks = html.match(/<style[^>]*>[\s\S]*?<\/style>/gi) || []
+  const hasSubstantialCustomCss = styleBlocks.some(block => {
+    // Skip infrastructure styles we inject during snapshot
+    if (block.includes(':root{--accent:')) return false
+    if (block.includes('.preview-template')) return false
+    if (block.includes('opacity:1!important')) return false
+    if (block.includes('display:none!important')) return false
+    // Only count blocks with real CSS rules (not just variables or font declarations)
+    return block.length > 150
+  })
+
+  // Check for significant inline styles (a few is normal, many means custom-styled)
+  const inlineStyleCount = (html.match(/style="[^"]{20,}"/g) || []).length
+  const hasSignificantInlineStyles = inlineStyleCount > 5
+
+  if (!hasTailwindCdn) return 'custom'
+  if (hasSubstantialCustomCss || hasSignificantInlineStyles) return 'mixed'
+  return 'tailwind'
+}
+
 // ─── System Prompt ────────────────────────────────────────────────
 
-function buildSiteEditorPrompt(companyName: string): string {
+function buildSiteEditorPrompt(companyName: string, stylingApproach: StylingApproach = 'tailwind'): string {
+  // Rule #4 adapts based on the site's styling approach
+  const stylingRule = stylingApproach === 'mixed'
+    ? `4. This site uses a MIX of Tailwind CSS utility classes and custom CSS/inline styles. IMPORTANT: Match the styling approach of the section you're editing. If the surrounding elements use Tailwind classes (like "bg-blue-900 text-white p-8"), make your changes with Tailwind. If they use inline styles (style="background: #1a1a2e; padding: 2rem") or custom CSS classes, follow that same pattern. Do NOT mix approaches within the same section.`
+    : stylingApproach === 'custom'
+      ? `4. This site primarily uses custom CSS and inline styles. Use inline styles (style="...") or modify existing CSS to make changes. Tailwind CSS is available as a fallback but prefer matching the existing code style.`
+      : `4. The HTML uses Tailwind CSS via CDN. Use Tailwind utility classes for ALL styling changes.`
+
   return `You are a world-class web designer and front-end developer with 15+ years of experience building high-converting business websites. You have deep expertise in HTML, Tailwind CSS, typography, color theory, layout composition, and conversion optimization. You receive a complete static HTML document and a plain-English modification instruction. Apply the requested changes with the precision and taste of a senior design professional.
 
 RESPONSE FORMAT — Return ONLY valid JSON (no markdown fences, no explanation):
@@ -45,7 +85,7 @@ CRITICAL RULES:
 1. Each "search" MUST be copied EXACTLY from the provided HTML — character-for-character. If even one character is wrong, the change will fail.
 2. Include just enough surrounding context to make the search unique — typically one full opening tag with its class attribute and inner text is enough. When in doubt, include MORE context rather than less.
 3. Keep changes MINIMAL — only modify the specific classes/text/attributes requested. Do NOT rewrite surrounding HTML.
-4. The HTML uses Tailwind CSS via CDN. Use Tailwind utility classes for ALL styling changes.
+${stylingRule}
 5. When the user says "a little" or "slightly", make a SUBTLE change (one step on the scale). When they say "much" or "a lot", make a bigger change (2-3 steps).
 6. Always preserve existing responsive prefixes (sm:, md:, lg:, xl:) — if a class has md:text-4xl and the user wants it bigger, change to md:text-5xl.
 7. If an instruction is ambiguous, make the most visually tasteful choice based on professional web design standards.
@@ -229,7 +269,8 @@ export async function applyAiEdit(params: {
     return { error: 'HTML and instruction required' }
   }
 
-  const systemPrompt = buildSiteEditorPrompt(companyName)
+  const stylingApproach = detectStylingApproach(html)
+  const systemPrompt = buildSiteEditorPrompt(companyName, stylingApproach)
   const anthropic = getAnthropicClient()
 
   // Build multi-turn conversation for context

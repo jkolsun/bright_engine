@@ -28,25 +28,30 @@ export async function POST(request: NextRequest) {
     const { from, body, sid, mediaUrls, mediaTypes } = await provider.parseInboundWebhook(formData)
 
     // Normalize phone number for flexible matching
+    // Handles: E.164 (+15551234567), digits (5551234567), US formatted ((555) 123-4567, 555-123-4567)
     const digits = from.replace(/\D/g, '')
     const withPlus = digits.startsWith('1') ? `+${digits}` : `+1${digits}`
     const withoutPlus = digits.startsWith('1') ? digits : `1${digits}`
     const justNumber = digits.startsWith('1') ? digits.slice(1) : digits
 
+    // Build formatted US variants to match common DB storage formats
+    const phoneVariants: string[] = [from, withPlus, withoutPlus, justNumber, digits]
+    const tenDigits = digits.length >= 10
+      ? (digits.startsWith('1') ? digits.slice(1) : digits).slice(0, 10)
+      : ''
+    if (tenDigits.length === 10) {
+      phoneVariants.push(
+        `(${tenDigits.slice(0, 3)}) ${tenDigits.slice(3, 6)}-${tenDigits.slice(6)}`, // (555) 123-4567
+        `${tenDigits.slice(0, 3)}-${tenDigits.slice(3, 6)}-${tenDigits.slice(6)}`,   // 555-123-4567
+      )
+    }
+
     // Find lead by phone — prefer the one with an active Close Engine conversation
-    // Bug 2: Also match on secondaryPhone
+    // Also match on secondaryPhone
     const phoneFilter = {
       OR: [
-        { phone: from },
-        { phone: withPlus },
-        { phone: withoutPlus },
-        { phone: justNumber },
-        { phone: digits },
-        { secondaryPhone: from },
-        { secondaryPhone: withPlus },
-        { secondaryPhone: withoutPlus },
-        { secondaryPhone: justNumber },
-        { secondaryPhone: digits },
+        ...phoneVariants.map(p => ({ phone: p })),
+        ...phoneVariants.map(p => ({ secondaryPhone: p })),
       ]
     }
 
@@ -70,22 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     let client = await prisma.client.findFirst({
-      where: {
-        lead: {
-          OR: [
-            { phone: from },
-            { phone: withPlus },
-            { phone: withoutPlus },
-            { phone: justNumber },
-            { phone: digits },
-            { secondaryPhone: from },
-            { secondaryPhone: withPlus },
-            { secondaryPhone: withoutPlus },
-            { secondaryPhone: justNumber },
-            { secondaryPhone: digits },
-          ]
-        }
-      },
+      where: { lead: phoneFilter },
       include: { lead: true }
     })
 
@@ -95,7 +85,7 @@ export async function POST(request: NextRequest) {
         const alternateContact = await prisma.leadContact.findFirst({
           where: {
             type: 'PHONE',
-            value: { in: [from, withPlus, withoutPlus, justNumber, digits] },
+            value: { in: phoneVariants },
           },
           select: { leadId: true },
         })
