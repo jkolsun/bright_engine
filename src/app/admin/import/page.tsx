@@ -161,8 +161,11 @@ export default function ImportPage() {
       if (!res.ok) return
       const data = await res.json()
       const batches = (data.batches || []) as ImportBatchUI[]
-      // Only show PENDING and PROCESSING in the queue panel
-      const active = batches.filter(b => b.status === 'PENDING' || b.status === 'PROCESSING')
+      // Show PENDING, PROCESSING, and COMPLETED-with-failures in the queue panel
+      const active = batches.filter(b =>
+        b.status === 'PENDING' || b.status === 'PROCESSING' ||
+        (b.status === 'COMPLETED' && b.failedLeads > 0)
+      )
       setQueueBatches(active)
       return active
     } catch { return [] as ImportBatchUI[] }
@@ -695,6 +698,26 @@ export default function ImportPage() {
     } catch { /* ignore */ }
   }
 
+  const handleReEnrich = async (batch: ImportBatchUI) => {
+    if (!window.confirm(`Re-enrich ${batch.totalLeads} leads from "${batch.batchName}"? This will only run enrichment — previews and personalization are already done.`)) return
+    try {
+      const res = await fetch(`/api/import-queue/${batch.id}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ options: { enrichment: true, preview: false, personalization: false } }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setQueueBatches(prev => prev.map(b =>
+          b.id === batch.id ? { ...b, status: 'PROCESSING' as const, jobId: data.jobId, processedLeads: 0, failedLeads: 0 } : b
+        ))
+      } else {
+        const err = await res.json().catch(() => ({}))
+        alert(err.error || 'Failed to start re-enrichment')
+      }
+    } catch { alert('Failed to start re-enrichment') }
+  }
+
   const handleCancelBatch = async (batch: ImportBatchUI) => {
     if (!window.confirm(`Cancel "${batch.batchName}"? This will delete ${batch.totalLeads} staging leads.`)) return
     try {
@@ -851,6 +874,17 @@ export default function ImportPage() {
                       </div>
                       {isProcessing && (
                         <Loader2 size={16} className="text-blue-500 animate-spin flex-shrink-0" />
+                      )}
+                      {batch.status === 'COMPLETED' && batch.failedLeads > 0 && (
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-xs text-amber-600">{batch.failedLeads} failed</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleReEnrich(batch) }}
+                            className="px-3 py-1 text-xs font-medium bg-amber-100 text-amber-700 hover:bg-amber-200 rounded-lg transition-colors"
+                          >
+                            Re-enrich
+                          </button>
+                        </div>
                       )}
                       {batch.status === 'PENDING' && (
                         <div className="flex items-center gap-1 flex-shrink-0">

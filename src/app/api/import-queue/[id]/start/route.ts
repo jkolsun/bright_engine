@@ -27,8 +27,8 @@ export async function POST(
     if (!batch) {
       return NextResponse.json({ error: 'Batch not found' }, { status: 404 })
     }
-    if (batch.status !== 'PENDING') {
-      return NextResponse.json({ error: 'Batch is not PENDING' }, { status: 400 })
+    if (!['PENDING', 'COMPLETED'].includes(batch.status)) {
+      return NextResponse.json({ error: 'Batch must be PENDING or COMPLETED' }, { status: 400 })
     }
 
     // Get all lead IDs linked to this batch
@@ -42,8 +42,13 @@ export async function POST(
       return NextResponse.json({ error: 'No leads linked to this batch' }, { status: 400 })
     }
 
+    // Allow overriding options from request body (e.g. enrichment-only re-run)
+    let body: any = {}
+    try { body = await request.json() } catch { /* no body is fine */ }
+
     const jobId = uuidv4()
-    const options = (batch.options as any) || { enrichment: true, preview: true, personalization: true }
+    const batchOptions = (batch.options as any) || { enrichment: true, preview: true, personalization: true }
+    const options = body.options || batchOptions
 
     // Write initial progress to Redis (same pattern as /api/leads/import/process)
     try {
@@ -88,10 +93,10 @@ export async function POST(
       )
     }
 
-    // Update batch to PROCESSING with jobId
+    // Update batch to PROCESSING with jobId (reset counts for re-runs)
     await prisma.importBatch.update({
       where: { id },
-      data: { status: 'PROCESSING', jobId },
+      data: { status: 'PROCESSING', jobId, processedLeads: 0, failedLeads: 0, completedAt: null },
     })
 
     return NextResponse.json({
