@@ -24,8 +24,7 @@ export async function GET(request: NextRequest) {
 
     // Step A — Build the call filter (always scoped to this rep)
     const callWhere: any = {
-      direction: 'OUTBOUND',
-      dispositionResult: { not: null },
+      direction: { in: ['OUTBOUND', 'INBOUND'] },
       repId: session.userId,
     }
 

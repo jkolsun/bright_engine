@@ -66,7 +66,7 @@ interface LeadBankEntry {
   previewId: string | null
   lastCall: {
     id: string
-    dispositionResult: string
+    dispositionResult: string | null
     startedAt: string
     duration: number | null
     notes: string | null
@@ -369,7 +369,7 @@ export default function RepLeadBankPage() {
                 </tr>
               ) : (
                 leads.map(lead => {
-                  const disp = DISPOSITION_BADGE[lead.lastCall.dispositionResult]
+                  const disp = lead.lastCall.dispositionResult ? DISPOSITION_BADGE[lead.lastCall.dispositionResult] : null
                   const priority = lead.priority || 'NORMAL'
                   const tempBadge = priority === 'HOT'
                     ? 'bg-red-100 text-red-700'
@@ -401,8 +401,10 @@ export default function RepLeadBankPage() {
                           <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${disp.className}`}>
                             {disp.label}
                           </span>
-                        ) : (
+                        ) : lead.lastCall.dispositionResult ? (
                           <span className="text-gray-400 text-xs">{lead.lastCall.dispositionResult}</span>
+                        ) : (
+                          <span className="text-gray-400 text-xs">&mdash;</span>
                         )}
                       </td>
                       <td className="px-3 py-3">

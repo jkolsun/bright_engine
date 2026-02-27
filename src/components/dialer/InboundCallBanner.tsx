@@ -5,7 +5,7 @@ import { Phone, PhoneOff, PhoneIncoming } from 'lucide-react'
 import type { DialerCall } from '@/types/dialer'
 
 export function InboundCallBanner() {
-  const { sse, twilioDevice, currentCall, setCurrentCall, timer } = useDialer()
+  const { sse, twilioDevice, currentCall, setCurrentCall, timer, queue } = useDialer()
   const [inboundCall, setInboundCall] = useState<any>(null)
 
   useEffect(() => {
@@ -85,6 +85,23 @@ export function InboundCallBanner() {
       setCurrentCall(inboundDialerCall)
       timer.reset()
       timer.start()
+    }
+
+    // Inject inbound caller into queue so LeadCard can find them
+    if (inboundCall.leadId) {
+      fetch(`/api/dialer/lead/${inboundCall.leadId}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.lead) {
+            queue.injectLead(data.lead)
+            queue.setSelectedLeadId(inboundCall.leadId)
+            queue.setActiveTab('fresh')
+          }
+        })
+        .catch(() => {
+          // Even if fetch fails, set selection so at least we try to show something
+          queue.setSelectedLeadId(inboundCall.leadId)
+        })
     }
 
     fetch('/api/dialer/inbound/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callId: inboundCall.callId, callSid: inboundCall.callSid }) }).catch(err => console.warn('[InboundCall] Accept API failed:', err))
