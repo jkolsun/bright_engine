@@ -496,17 +496,29 @@ export async function triggerOnboardingSequence(clientId: string) {
 }
 
 export async function triggerPostLaunchSequence(clientId: string) {
+  // Email sequences
   await addSequenceJob('post-launch-day-3-email', { clientId }, 3 * DAY_MS)
   await addSequenceJob('post-launch-day-7-email', { clientId }, 7 * DAY_MS)
   await addSequenceJob('post-launch-day-14-email', { clientId }, 14 * DAY_MS)
   await addSequenceJob('post-launch-day-21-email', { clientId }, 21 * DAY_MS)
   await addSequenceJob('post-launch-day-28-email', { clientId }, 28 * DAY_MS)
+  // SMS sequences (reads templates from automated_messages settings)
+  await addSequenceJob('post-launch-day-3', { clientId }, 3 * DAY_MS)
+  await addSequenceJob('post-launch-day-7', { clientId }, 7 * DAY_MS)
+  await addSequenceJob('post-launch-day-14', { clientId }, 14 * DAY_MS)
+  await addSequenceJob('post-launch-day-21', { clientId }, 21 * DAY_MS)
+  await addSequenceJob('post-launch-day-28', { clientId }, 28 * DAY_MS)
 }
 
 export async function triggerWinBackSequence(clientId: string) {
+  // Email sequences
   await addSequenceJob('win-back-day-7-email', { clientId }, 7 * DAY_MS)
   await addSequenceJob('win-back-day-14-email', { clientId }, 14 * DAY_MS)
   await addSequenceJob('win-back-day-30-email', { clientId }, 30 * DAY_MS)
+  // SMS sequences (reads templates from automated_messages settings)
+  await addSequenceJob('win-back-day-7', { clientId }, 7 * DAY_MS)
+  await addSequenceJob('win-back-day-14', { clientId }, 14 * DAY_MS)
+  await addSequenceJob('win-back-day-30', { clientId }, 30 * DAY_MS)
 }
 
 export async function triggerReferralSequence(clientId: string) {

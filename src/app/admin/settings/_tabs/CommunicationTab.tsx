@@ -1517,9 +1517,9 @@ export default function CommunicationTab() {
               {/* Save Post-Client */}
               <div className="flex justify-end">
                 <SaveButton
-                  onClick={() => saveSetting('client_sequences', clientSequences)}
-                  saving={savingKey === 'client_sequences'}
-                  saved={savedKey === 'client_sequences'}
+                  onClick={() => { saveSetting('automated_messages', automatedMessages); saveSetting('client_sequences', clientSequences) }}
+                  saving={savingKey === 'client_sequences' || savingKey === 'automated_messages'}
+                  saved={savedKey === 'client_sequences' || savedKey === 'automated_messages'}
                 />
               </div>
             </>

@@ -479,8 +479,10 @@ async function startWorkers() {
 
         // Gate post-launch sequences behind onboarding completion
         const ONBOARDING_GATED_JOBS = new Set([
-          'post-launch-day-3', 'post-launch-day-7', 'post-launch-day-28',
-          'win-back-day-7', 'referral-day-45',
+          'post-launch-day-3', 'post-launch-day-7', 'post-launch-day-14',
+          'post-launch-day-21', 'post-launch-day-28',
+          'win-back-day-7', 'win-back-day-14', 'win-back-day-30',
+          'referral-day-45',
           'post-launch-day-3-email', 'post-launch-day-7-email', 'post-launch-day-14-email',
           'post-launch-day-21-email', 'post-launch-day-28-email',
           'win-back-day-7-email', 'win-back-day-14-email', 'win-back-day-30-email',
@@ -503,19 +505,35 @@ async function startWorkers() {
 
         switch (job.name) {
           case 'post-launch-day-3':
-            await sendPostLaunchDay3(job.data.clientId)
+            await sendPostLaunchSMS(job.data.clientId, 3, 'touchpoint_day_3')
             break
-            
+
           case 'post-launch-day-7':
-            await sendPostLaunchDay7(job.data.clientId)
+            await sendPostLaunchSMS(job.data.clientId, 7, 'touchpoint_day_7')
             break
-            
+
+          case 'post-launch-day-14':
+            await sendPostLaunchSMS(job.data.clientId, 14, 'touchpoint_day_14')
+            break
+
+          case 'post-launch-day-21':
+            await sendPostLaunchSMS(job.data.clientId, 21, 'touchpoint_day_21')
+            break
+
           case 'post-launch-day-28':
-            await sendPostLaunchDay28(job.data.clientId)
+            await sendPostLaunchSMS(job.data.clientId, 28, 'touchpoint_day_28')
             break
-            
+
           case 'win-back-day-7':
-            await sendWinBackDay7(job.data.clientId)
+            await sendWinBackSMS(job.data.clientId, 7, 'winback_day_7')
+            break
+
+          case 'win-back-day-14':
+            await sendWinBackSMS(job.data.clientId, 14, 'winback_day_14')
+            break
+
+          case 'win-back-day-30':
+            await sendWinBackSMS(job.data.clientId, 30, 'winback_day_30')
             break
             
           case 'referral-day-45':
@@ -774,8 +792,13 @@ async function startWorkers() {
 // SEQUENCE FUNCTIONS
 // ============================================
 
-// Generic AI-powered touchpoint sender (routes via channel router)
-async function sendAdaptiveTouchpoint(clientId: string, touchpointDay: number, nextTouchpoint?: string, nextDaysOffset?: number) {
+/**
+ * Unified post-launch SMS touchpoint sender.
+ * Reads from automated_messages settings first (checks enabled + uses template text).
+ * Falls back to AI-generated retention message if template is disabled.
+ * Respects client_sequences.enabled master toggle for the AI fallback path.
+ */
+async function sendPostLaunchSMS(clientId: string, touchpointDay: number, settingsKey: string) {
   const client = await prisma.client.findUnique({
     where: { id: clientId },
     include: { lead: true },
@@ -783,53 +806,106 @@ async function sendAdaptiveTouchpoint(clientId: string, touchpointDay: number, n
 
   if (!client || !client.lead) return
 
-  // BUG S.1: Skip post-launch messages if site isn't actually live yet
+  // Skip if site isn't actually live yet
   if (client.hostingStatus !== 'ACTIVE') {
-    console.log(`[Sequence] Skipping day ${touchpointDay} — client ${clientId} hostingStatus is ${client.hostingStatus}, not ACTIVE`)
+    console.log(`[Sequence] Skipping day ${touchpointDay} SMS — client ${clientId} hostingStatus is ${client.hostingStatus}, not ACTIVE`)
     return
   }
 
-  // Re-check DNC status right before sending (may have changed since job was queued)
+  // Re-check DNC status (may have changed since job was queued)
   const freshLead = await prisma.lead.findUnique({ where: { id: client.lead.id }, select: { dncAt: true } })
   if (freshLead?.dncAt) {
-    console.log(`[Sequence] Skipping day ${touchpointDay} — lead ${client.lead.id} is now DNC`)
+    console.log(`[Sequence] Skipping day ${touchpointDay} SMS — lead ${client.lead.id} is now DNC`)
     return
   }
 
   if (!canSendMessage(client.lead.timezone || getTimezoneFromState(client.lead.state || '') || 'America/New_York')) return
 
+  const trigger = `post_launch_day_${touchpointDay}_sms`
+
+  // Dedup: skip if already sent this day's SMS
+  const alreadySent = await prisma.message.findFirst({
+    where: { leadId: client.lead.id, trigger },
+  })
+  if (alreadySent) return
+
+  // Path 1: Read from automated_messages settings (template text + enabled + delayHours)
+  let messageContent: string | null = null
   try {
-    // Load custom guidance from settings if available
-    const settings = await prisma.settings.findFirst({ where: { key: 'client_sequences' } })
-    const clientSeq = settings?.value
-      ? (typeof settings.value === 'string' ? JSON.parse(settings.value as string) : settings.value)
-      : null
-    const guidance = clientSeq?.touchpointGuidance?.[touchpointDay] || undefined
+    const { getAutomatedMessages, fillTemplate } = await import('../lib/automated-messages')
+    const msgs = await getAutomatedMessages()
+    const config = msgs[settingsKey as keyof typeof msgs]
 
-    const { message } = await generateRetentionMessage(clientId, touchpointDay, guidance)
+    if (config && !config.enabled) {
+      console.log(`[Sequence] Touchpoint ${settingsKey} is disabled in settings — skipping SMS`)
+      return
+    }
 
+    if (config?.text) {
+      messageContent = fillTemplate(config.text, {
+        firstName: client.lead.firstName || '',
+        companyName: client.companyName || '',
+      })
+    }
+  } catch (err) {
+    console.warn(`[Sequence] Failed to load automated_messages for ${settingsKey}:`, err)
+  }
+
+  // Path 2: If no template text, fall back to AI retention (respects client_sequences.enabled)
+  if (!messageContent) {
+    try {
+      // Check client_sequences.enabled master toggle
+      const seqSettings = await prisma.settings.findFirst({ where: { key: 'client_sequences' } })
+      const clientSeq = seqSettings?.value
+        ? (typeof seqSettings.value === 'string' ? JSON.parse(seqSettings.value as string) : seqSettings.value)
+        : null
+      if (clientSeq?.enabled === false) {
+        console.log(`[Sequence] client_sequences.enabled is off — skipping AI fallback for day ${touchpointDay}`)
+        return
+      }
+      const guidance = clientSeq?.touchpointGuidance?.[touchpointDay] || undefined
+      const { message } = await generateRetentionMessage(clientId, touchpointDay, guidance)
+      messageContent = message
+    } catch (error) {
+      console.error(`[RETENTION] AI message failed for day ${touchpointDay}:`, error)
+      return
+    }
+  }
+
+  if (!messageContent) return
+
+  try {
     await routeAndSend({
       clientId: client.id,
-      trigger: `post_launch_day_${touchpointDay}`,
-      messageContent: message,
+      trigger,
+      messageContent,
       to: client.lead.phone,
       toEmail: client.lead.email || client.email || undefined,
       sender: 'system',
     })
   } catch (error) {
-    console.error(`[RETENTION] AI message failed for day ${touchpointDay}:`, error)
+    console.error(`[Sequence] Day ${touchpointDay} SMS send failed:`, error)
   }
 
-  if (nextTouchpoint && nextDaysOffset) {
-    await prisma.client.update({
-      where: { id: clientId },
-      data: { nextTouchpoint, nextTouchpointDate: new Date(Date.now() + nextDaysOffset * 24 * 60 * 60 * 1000) },
+  // Day 28: also notify for upsell conversation
+  if (touchpointDay === 28) {
+    await prisma.notification.create({
+      data: {
+        type: 'DAILY_AUDIT',
+        title: 'Day 28 Upsell Ready',
+        message: `Client ${client.companyName} ready for upsell conversation`,
+        metadata: { clientId },
+      },
     })
   }
 }
 
-// AI-enhanced version: sends a pre-generated message instead of calling generateRetentionMessage
-async function sendAdaptiveTouchpointWithMessage(clientId: string, message: string, nextTouchpoint?: string, nextDaysOffset?: number) {
+/**
+ * Unified win-back SMS sender.
+ * Reads from automated_messages settings (winback_day_7/14/30).
+ * Checks enabled toggle. Uses template text with fillTemplate().
+ */
+async function sendWinBackSMS(clientId: string, winbackDay: number, settingsKey: string) {
   const client = await prisma.client.findUnique({
     where: { id: clientId },
     include: { lead: true },
@@ -837,112 +913,69 @@ async function sendAdaptiveTouchpointWithMessage(clientId: string, message: stri
 
   if (!client || !client.lead) return
 
-  // BUG S.1: Skip post-launch messages if site isn't actually live yet
-  if (client.hostingStatus !== 'ACTIVE') {
-    console.log(`[Sequence] Skipping AI touchpoint — client ${clientId} hostingStatus is ${client.hostingStatus}, not ACTIVE`)
-    return
-  }
-
-  // Re-check DNC status right before sending (may have changed since job was queued)
-  const freshLead = await prisma.lead.findUnique({ where: { id: client.lead.id }, select: { dncAt: true } })
-  if (freshLead?.dncAt) {
-    console.log(`[Sequence] Skipping AI touchpoint — lead ${client.lead.id} is now DNC`)
-    return
-  }
-
-  if (!canSendMessage(client.lead.timezone || getTimezoneFromState(client.lead.state || '') || 'America/New_York')) return
-
-  try {
-    await routeAndSend({
-      clientId: client.id,
-      trigger: 'post_launch_ai_touchpoint',
-      messageContent: message,
-      to: client.lead.phone,
-      toEmail: client.lead.email || client.email || undefined,
-      sender: 'system',
-    })
-  } catch (error) {
-    console.error('[RETENTION] AI touchpoint send failed:', error)
-  }
-
-  if (nextTouchpoint && nextDaysOffset) {
-    await prisma.client.update({
-      where: { id: clientId },
-      data: { nextTouchpoint, nextTouchpointDate: new Date(Date.now() + nextDaysOffset * 24 * 60 * 60 * 1000) },
-    })
-  }
-}
-
-async function sendPostLaunchDay3(clientId: string) {
-  try {
-    const { generateTouchpointMessage } = await import('../lib/post-client-engine')
-    const aiMessage = await generateTouchpointMessage(clientId, 'post_launch_day_3')
-    if (aiMessage) {
-      await sendAdaptiveTouchpointWithMessage(clientId, aiMessage, 'day_7', 4)
-      return
-    }
-  } catch { /* fall through to default */ }
-  await sendAdaptiveTouchpoint(clientId, 3, 'day_7', 4)
-}
-
-async function sendPostLaunchDay7(clientId: string) {
-  try {
-    const { generateTouchpointMessage } = await import('../lib/post-client-engine')
-    const aiMessage = await generateTouchpointMessage(clientId, 'post_launch_day_7')
-    if (aiMessage) {
-      await sendAdaptiveTouchpointWithMessage(clientId, aiMessage, 'day_14', 7)
-      return
-    }
-  } catch { /* fall through to default */ }
-  await sendAdaptiveTouchpoint(clientId, 7, 'day_14', 7)
-}
-
-async function sendPostLaunchDay28(clientId: string) {
-  try {
-    const { generateTouchpointMessage } = await import('../lib/post-client-engine')
-    const aiMessage = await generateTouchpointMessage(clientId, 'post_launch_day_28')
-    if (aiMessage) {
-      await sendAdaptiveTouchpointWithMessage(clientId, aiMessage)
-    } else {
-      await sendAdaptiveTouchpoint(clientId, 30)
-    }
-  } catch {
-    await sendAdaptiveTouchpoint(clientId, 30)
-  }
-  // Also notify for upsell conversation
-  await prisma.notification.create({
-    data: {
-      type: 'DAILY_AUDIT',
-      title: 'Day 30 Upsell Ready',
-      message: `Client ready for upsell conversation`,
-      metadata: { clientId },
-    },
-  })
-}
-
-async function sendWinBackDay7(clientId: string) {
-  const client = await prisma.client.findUnique({
-    where: { id: clientId },
-    include: { lead: true },
-  })
-
-  if (!client || !client.lead) return
-
-  // BUG S.3: Skip win-back if client has reactivated
+  // Skip if client has reactivated
   if (client.hostingStatus === 'ACTIVE') {
-    console.log(`[Sequence] Skipping win-back — client ${clientId} has reactivated (status: ACTIVE)`)
+    console.log(`[Sequence] Skipping win-back day ${winbackDay} — client ${clientId} has reactivated`)
     return
   }
 
-  await routeAndSend({
-    clientId: client.id,
-    trigger: 'win_back_day_7',
-    messageContent: `Your hosting was cancelled. ${client.companyName}'s site goes offline in 7 days. Reply "keep it" to reactivate.`,
-    urgency: 'high',
-    to: client.lead.phone,
-    toEmail: client.lead.email || client.email || undefined,
-    sender: 'system',
+  // Re-check DNC
+  const freshLead = await prisma.lead.findUnique({ where: { id: client.lead.id }, select: { dncAt: true } })
+  if (freshLead?.dncAt) {
+    console.log(`[Sequence] Skipping win-back day ${winbackDay} — lead ${client.lead.id} is now DNC`)
+    return
+  }
+
+  if (!canSendMessage(client.lead.timezone || getTimezoneFromState(client.lead.state || '') || 'America/New_York')) return
+
+  const trigger = `win_back_day_${winbackDay}_sms`
+
+  // Dedup
+  const alreadySent = await prisma.message.findFirst({
+    where: { leadId: client.lead.id, trigger },
   })
+  if (alreadySent) return
+
+  // Read from automated_messages settings
+  let messageContent: string | null = null
+  try {
+    const { getAutomatedMessages, fillTemplate } = await import('../lib/automated-messages')
+    const msgs = await getAutomatedMessages()
+    const config = msgs[settingsKey as keyof typeof msgs]
+
+    if (config && !config.enabled) {
+      console.log(`[Sequence] Win-back ${settingsKey} is disabled in settings — skipping SMS`)
+      return
+    }
+
+    if (config?.text) {
+      messageContent = fillTemplate(config.text, {
+        companyName: client.companyName || '',
+        firstName: client.lead.firstName || '',
+      })
+    }
+  } catch (err) {
+    console.warn(`[Sequence] Failed to load automated_messages for ${settingsKey}:`, err)
+  }
+
+  if (!messageContent) {
+    console.warn(`[Sequence] No template for ${settingsKey} — skipping win-back SMS`)
+    return
+  }
+
+  try {
+    await routeAndSend({
+      clientId: client.id,
+      trigger,
+      messageContent,
+      urgency: 'high',
+      to: client.lead.phone,
+      toEmail: client.lead.email || client.email || undefined,
+      sender: 'system',
+    })
+  } catch (error) {
+    console.error(`[Sequence] Win-back day ${winbackDay} SMS send failed:`, error)
+  }
 }
 
 async function sendReferralDay45(clientId: string) {
