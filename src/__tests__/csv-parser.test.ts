@@ -95,6 +95,54 @@ Jane,Smith,BuildCo,jane@build.com,5559876543,HVAC,Los Angeles,CA
     expect(result.leads).toHaveLength(2)
   })
 
+  it('should accept lead with empty firstName and empty email (GBP scrape)', () => {
+    const row = {
+      firstName: '',
+      companyName: 'Acme Roofing',
+      email: '',
+      phone: '5551234567',
+      industry: 'ROOFING',
+      city: 'Denver',
+      state: 'CO',
+    }
+
+    const result = parseLead(row)
+
+    expect(result.isValid).toBe(true)
+    expect(result.firstName).toBe('')
+    expect(result.email).toBe('')
+    expect(result.errors).toHaveLength(0)
+  })
+
+  it('should accept lead with no email field at all', () => {
+    const row = {
+      companyName: 'TreePros LLC',
+      phone: '5559876543',
+      industry: 'LANDSCAPING',
+    }
+
+    const result = parseLead(row)
+
+    expect(result.isValid).toBe(true)
+    expect(result.email).toBe('')
+    expect(result.errors).toHaveLength(0)
+  })
+
+  it('should parse CSV with no email or firstName columns (GBP format)', () => {
+    const csv = `companyName,phone,industry,city,state
+Acme Roofing,5551234567,ROOFING,Denver,CO
+TreePros LLC,5559876543,LANDSCAPING,Atlanta,GA
+`
+
+    const result = parseCSV(csv)
+
+    expect(result.totalRows).toBe(2)
+    expect(result.validCount).toBe(2)
+    expect(result.invalidCount).toBe(0)
+    expect(result.leads[0].email).toBe('')
+    expect(result.leads[0].firstName).toBe('')
+  })
+
   it('should identify invalid rows', () => {
     const csv = `firstName,lastName,companyName,email,phone,industry
 John,Doe,Acme Corp,invalid-email,555,ROOFING

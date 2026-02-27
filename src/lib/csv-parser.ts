@@ -114,14 +114,16 @@ export function parseLead(row: RawLeadRow): ParsedLead {
   const source = (row.source || 'CSV_IMPORT').trim()
 
   // Validate required fields
-  if (!firstName) errors.push('First name is required')
+  // firstName is optional — GBP leads don't have owner names
+  // if (!firstName) errors.push('First name is required')
   if (!companyName) errors.push('Company name is required')
 
   const normalizedPhone = normalizePhone(phone)
   if (!normalizedPhone) errors.push('Phone must be a valid phone number (7+ digits)')
 
   const normalizedEmail = normalizeEmail(email)
-  if (!normalizedEmail) errors.push('Email must be valid (name@domain.com)')
+  // Email is optional — only flag as error if email was provided but is malformed
+  if (email && !normalizedEmail) errors.push('Email must be valid (name@domain.com)')
 
   const normalizedIndustry = normalizeIndustry(industry)
   // Industry is optional - use GENERAL_CONTRACTING as fallback if not provided
@@ -198,12 +200,34 @@ export function parseCSV(csvContent: string): {
     }
   }
 
+  // Map normalized header names to RawLeadRow keys
+  // Handles camelCase (firstName), snake_case (first_name), and space-separated (First Name)
+  const HEADER_ALIASES: Record<string, keyof RawLeadRow> = {
+    'firstname': 'firstName',
+    'first_name': 'firstName',
+    'lastname': 'lastName',
+    'last_name': 'lastName',
+    'companyname': 'companyName',
+    'company_name': 'companyName',
+    'company': 'company',
+    'company_phone': 'company_phone',
+    'email': 'email',
+    'phone': 'phone',
+    'industry': 'industry',
+    'city': 'city',
+    'state': 'state',
+    'website': 'website',
+    'campaign': 'campaign',
+    'source': 'source',
+  }
+
   // Parse header (first row)
   const headerLine = lines[0]
   const headerValues = parseCSVLine(headerLine)
-  const headers = headerValues.map((h) =>
-    h.toLowerCase().replace(/['"]/g, '').replace(/\s+/g, '_')
-  )
+  const headers = headerValues.map((h) => {
+    const normalized = h.toLowerCase().replace(/['"]/g, '').replace(/\s+/g, '_')
+    return HEADER_ALIASES[normalized] || normalized
+  })
 
   const errors = new Map<number, string[]>()
   const leads: ParsedLead[] = []
