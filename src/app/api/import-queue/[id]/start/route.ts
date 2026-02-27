@@ -31,11 +31,20 @@ export async function POST(
       return NextResponse.json({ error: 'Batch must be PENDING, COMPLETED, or PROCESSING (stuck)' }, { status: 400 })
     }
 
-    // If restarting a stuck PROCESSING batch, kill the old job first
+    // If restarting a stuck PROCESSING batch, clean up waiting duplicates and old progress
     if (batch.status === 'PROCESSING' && batch.jobId) {
       try {
-        const { removeImportProcessingJob } = await import('@/worker/queue')
+        // Remove any waiting/delayed duplicates (don't touch active jobs — they finish naturally)
+        const { removeImportProcessingJob, getImportQueue } = await import('@/worker/queue')
         await removeImportProcessingJob(batch.jobId)
+        // Also drain any other waiting jobs to prevent pile-up from repeated restarts
+        const queue = await getImportQueue()
+        if (queue) {
+          const waitingJobs = await queue.getJobs(['waiting', 'delayed'])
+          for (const job of waitingJobs) {
+            try { await job.remove() } catch { /* skip locked */ }
+          }
+        }
       } catch { /* non-fatal */ }
       try {
         const Redis = (await import('ioredis')).default

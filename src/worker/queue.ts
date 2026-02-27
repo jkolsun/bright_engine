@@ -753,30 +753,20 @@ export async function removeImportProcessingJob(jobId: string) {
   const queue = await getImportQueue()
   if (!queue) return
 
-  let removed = false
   try {
-    const jobs = await queue.getJobs(['active', 'waiting', 'delayed'])
+    // Only remove waiting/delayed jobs — never touch active (locked) jobs
+    // Active jobs will complete or be cleaned up by BullMQ stall detection
+    const jobs = await queue.getJobs(['waiting', 'delayed'])
     for (const job of jobs) {
       if (job.data?.jobId === jobId) {
         await job.remove()
-        console.log(`[QUEUE] Removed import job with jobId ${jobId}`)
-        removed = true
-        break
+        console.log(`[QUEUE] Removed waiting import job with jobId ${jobId}`)
+        return
       }
     }
+    console.log(`[QUEUE] Import job ${jobId} not found in waiting/delayed (may be active — will finish naturally)`)
   } catch (err) {
     console.warn('[QUEUE] Failed to remove import processing job:', err)
-  }
-
-  // If remove failed (locked by worker), obliterate the entire import queue
-  // Safe because we're about to create a fresh job anyway
-  if (!removed) {
-    try {
-      await queue.obliterate({ force: true })
-      console.log(`[QUEUE] Obliterated import queue to clear stuck jobs`)
-    } catch (err) {
-      console.warn('[QUEUE] Failed to obliterate import queue:', err)
-    }
   }
 }
 
