@@ -3,7 +3,7 @@ import PreviewTemplate from '@/components/preview/PreviewTemplate'
 import PreviewTracker from '@/components/preview/PreviewTracker'
 import PreviewCTABanner from '@/components/preview/PreviewCTABanner'
 import { notFound } from 'next/navigation'
-import { STATIC_PAGE_ROUTER_SCRIPT } from '@/components/preview/shared/staticPageRouter'
+import { STATIC_PAGE_ROUTER_SCRIPT, getAccentCssTag } from '@/components/preview/shared/staticPageRouter'
 
 // CRITICAL: Force dynamic rendering — client must always see the latest saved HTML
 export const dynamic = 'force-dynamic'
@@ -24,6 +24,9 @@ export default async function PreviewPage({ params }: { params: { id: string } }
   if (lead.siteHtml) {
     // Clean the HTML — strip any overlays, CTA banners, and placeholder text
     let cleanHtml = lead.siteHtml
+    const colorPrefs = lead.colorPrefs as { primary?: string; accent?: string } | null
+    const accentHex = colorPrefs?.accent || colorPrefs?.primary || undefined
+    const accentTag = getAccentCssTag(accentHex)
     // Strip CTA "Get This Site Live" banner if it survived snapshot generation
     cleanHtml = cleanHtml.replace(/<div[^>]*class="[^"]*fixed bottom-0[^"]*bg-\[#0D7377\][^"]*"[^>]*>[\s\S]*?<\/div>\s*<\/div>/g, '')
     // Strip any raw AI placeholder labels
@@ -45,9 +48,9 @@ export default async function PreviewPage({ params }: { params: { id: string } }
     // Ensure the static page router is present (handles navigation, CTAs, hamburger menu)
     if (cleanHtml.indexOf('sp-mobile-overlay') === -1) {
       if (/<\/body>/i.test(cleanHtml)) {
-        cleanHtml = cleanHtml.replace(/<\/body>/i, `${STATIC_PAGE_ROUTER_SCRIPT}\n</body>`)
+        cleanHtml = cleanHtml.replace(/<\/body>/i, `${accentTag}${STATIC_PAGE_ROUTER_SCRIPT}\n</body>`)
       } else {
-        cleanHtml += STATIC_PAGE_ROUTER_SCRIPT
+        cleanHtml += accentTag + STATIC_PAGE_ROUTER_SCRIPT
       }
     }
 

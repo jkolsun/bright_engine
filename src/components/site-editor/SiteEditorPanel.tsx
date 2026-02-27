@@ -5,9 +5,8 @@ import dynamic from 'next/dynamic'
 import {
   X, Save, RotateCcw, Monitor, Smartphone, Tablet,
   Loader2, Check, AlertCircle,
-  Eye, EyeOff, MessageSquare, Code,
+  Eye, EyeOff, Code,
 } from 'lucide-react'
-import AIChatPanel from './AIChatPanel'
 
 // Dynamic import Monaco — it cannot run server-side
 const MonacoEditor = dynamic(() => import('./MonacoEditorPanel'), {
@@ -57,17 +56,12 @@ export default function SiteEditorPanel({
   // Panel visibility
   const [showEditor, setShowEditor] = useState(true)
   const [showPreview, setShowPreview] = useState(true)
-  const [showChat, setShowChat] = useState(true)
 
   // Preview state
   const [deviceMode, setDeviceMode] = useState<DeviceMode>('desktop')
   const [refreshKey, setRefreshKey] = useState(0)
   const [debouncedHtml, setDebouncedHtml] = useState('')
 
-  // Site context + edit requests
-  const [siteContext, setSiteContext] = useState<{ serviceCount: number; photoCount: number; templateName: string | null }>()
-  const [pendingEditRequests, setPendingEditRequests] = useState<Array<{ id: string; requestText: string; status: string; createdAt: string }>>([])
-  const prevHtmlRef = useRef('')
   const htmlRef = useRef(html)
   const [needsRebuild, setNeedsRebuild] = useState(false)
   const [rebuilding, setRebuilding] = useState(false)
@@ -137,18 +131,7 @@ export default function SiteEditorPanel({
           setOriginalHtml(loadData.html)
           setDebouncedHtml(loadData.html)
           if (typeof loadData.version === 'number') setSiteVersion(loadData.version)
-          // Extract site context
-          setSiteContext({
-            serviceCount: loadData.serviceCount ?? 0,
-            photoCount: loadData.photoCount ?? 0,
-            templateName: loadData.templateName ?? null,
-          })
           setIsLoading(false)
-          // Fetch pending edit requests (non-blocking)
-          fetch(`/api/edit-requests?leadId=${leadId}&status=new`)
-            .then(r => r.ok ? r.json() : null)
-            .then(data => { if (data?.editRequests) setPendingEditRequests(data.editRequests) })
-            .catch(() => {})
           return
         }
       }
@@ -249,52 +232,6 @@ export default function SiteEditorPanel({
     }
   }, [originalHtml])
 
-  // ─── AI Chat (returns result for AIChatPanel) ─────────
-  const handleChatSubmit = useCallback(async (instruction: string): Promise<{ success: boolean; message: string }> => {
-    try {
-      const res = await fetch(`/api/site-editor/${leadId}/ai-edit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html: htmlRef.current, instruction }),
-      })
-      const data = await res.json()
-      if (res.ok && data.html) {
-        prevHtmlRef.current = htmlRef.current // Save for undo
-        setHtml(data.html)
-        setSaveStatus('unsaved')
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-        saveTimeoutRef.current = setTimeout(() => saveHtml(data.html), 1500)
-        return { success: true, message: data.summary || 'Changes applied' }
-      }
-      return { success: false, message: data.error || 'AI edit failed' }
-    } catch {
-      return { success: false, message: 'Network error — check your connection and try again' }
-    }
-  }, [leadId, saveHtml])
-
-  const handleUndo = useCallback(() => {
-    if (!prevHtmlRef.current) return
-    setHtml(prevHtmlRef.current)
-    setSaveStatus('unsaved')
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-    saveTimeoutRef.current = setTimeout(() => saveHtml(prevHtmlRef.current), 1500)
-    prevHtmlRef.current = ''
-  }, [saveHtml])
-
-  const handleEditRequestProcessed = useCallback(async (editRequestId: string) => {
-    await fetch(`/api/edit-requests/${editRequestId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        status: 'ready_for_review',
-        editFlowState: 'awaiting_approval',
-        postEditHtml: htmlRef.current,
-        preEditHtml: prevHtmlRef.current || undefined,
-      }),
-    }).catch(() => {})
-    setPendingEditRequests(prev => prev.filter(r => r.id !== editRequestId))
-  }, [])
-
   // ─── Approve (advance build step without leaving editor) ─
   const canApprove = ['QA_REVIEW', 'EDITING'].includes(currentBuildStep)
   const handleApprove = useCallback(async () => {
@@ -388,17 +325,6 @@ export default function SiteEditorPanel({
             {showPreview ? <Eye size={14} /> : <EyeOff size={14} />}
             Preview
           </button>
-          <button
-            onClick={() => setShowChat(c => !c)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded transition-colors ${
-              showChat ? 'bg-blue-600/20 text-blue-400' : 'text-gray-400 hover:text-white hover:bg-gray-600'
-            }`}
-            title="Toggle AI Chat"
-          >
-            <MessageSquare size={14} />
-            AI
-          </button>
-
           <div className="h-5 w-px bg-gray-600 mx-1" />
 
           {/* Device mode (only shown when preview is on) */}
@@ -525,22 +451,6 @@ export default function SiteEditorPanel({
           </div>
         )}
 
-        {/* ── AI Chat Panel ──────────────────────────── */}
-        {showChat && (
-          <div className="w-[340px] min-w-[300px] border-l border-gray-700">
-            <AIChatPanel
-              onSubmit={handleChatSubmit}
-              companyName={companyName}
-              leadId={leadId}
-              siteContext={siteContext}
-              editRequests={pendingEditRequests}
-              onEditRequestProcessed={handleEditRequestProcessed}
-              onUndo={handleUndo}
-              canUndo={!!prevHtmlRef.current}
-              autoInstruction={editInstruction}
-            />
-          </div>
-        )}
       </div>
     </div>
   )

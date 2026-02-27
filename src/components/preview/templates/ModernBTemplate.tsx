@@ -174,16 +174,16 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
       {/* NAV */}
       <nav style={{position:'fixed',top:0,left:0,right:0,zIndex:50,background:navSolid?'rgba(247,247,242,0.92)':'transparent',backdropFilter:navSolid?'blur(20px)':'none',borderBottom:navSolid?'1px solid rgba(0,0,0,0.05)':'none',transition:'all .4s',padding:'0 clamp(16px,4vw,48px)'}}>
         <div style={{maxWidth:1340,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'space-between',height:navSolid?60:76,transition:'height .4s'}}>
-          <button onClick={()=>go('home')} className="flex items-center gap-2.5" style={{background:'none',border:'none',cursor:'pointer'}}>
+          <button onClick={()=>go('home')} data-nav-page="home" className="flex items-center gap-2.5" style={{background:'none',border:'none',cursor:'pointer'}}>
             {lead.logo?<img src={lead.logo} alt="" className="h-7 w-7 object-cover" style={{borderRadius:'30%'}}/>:<div className="w-3 h-3" style={{background:A,borderRadius:'30%'}}/>}
             <span className="font-bold" style={{fontFamily:sans,fontSize:17}}>{lead.companyName}</span>
           </button>
           <div className="hidden lg:flex items-center gap-1">{PAGES.map(p=>(
-            <button key={p.k} onClick={()=>go(p.k)} className="text-[14px] font-medium px-4 py-2 transition-colors" style={{background:'none',border:'none',cursor:'pointer',color:page===p.k?A:'#888',borderRadius:12}}>{p.l}</button>
+            <button key={p.k} onClick={()=>go(p.k)} data-nav-page={p.k==='work'?'portfolio':p.k} className="text-[14px] font-medium px-4 py-2 transition-colors" style={{background:'none',border:'none',cursor:'pointer',color:page===p.k?A:'#888',borderRadius:12}}>{p.l}</button>
           ))}</div>
           <div className="flex items-center gap-3">
             {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-[13px] font-medium" style={{color:'#999',textDecoration:'none'}}><Phone size={14}/>{fmt(lead.phone)}</a>}
-            <button onClick={()=>{onCTAClick();go('contact')}} className="zephyr-btn hidden sm:inline-flex" style={{padding:'10px 24px',fontSize:13}}>Free Quote</button>
+            <button onClick={()=>{onCTAClick();go('contact')}} data-nav-page="contact" className="zephyr-btn hidden sm:inline-flex" style={{padding:'10px 24px',fontSize:13}}>Free Quote</button>
             <button onClick={()=>setMobNav(!mobNav)} className="lg:hidden flex items-center justify-center" style={{width:42,height:42,background:'rgba(45,45,45,0.06)',border:'1px solid rgba(0,0,0,0.08)',borderRadius:12,cursor:'pointer',color:'#2D2D2D'}}><Menu size={20}/></button>
           </div>
         </div>
@@ -195,7 +195,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
         <div className="fixed bottom-0 left-0 right-0 z-[90] p-5" style={{background:'#FFFCF7',borderRadius:'24px 24px 0 0',animation:'zephyr-sheet .3s ease forwards',boxShadow:'0 -10px 40px rgba(0,0,0,.1)'}}>
           <div className="w-10 h-1 rounded-full bg-gray-300 mx-auto mb-6"/>
           <div className="flex flex-col gap-1 mb-6">{PAGES.map(p=>(
-            <button key={p.k} onClick={()=>go(p.k)} className="text-left text-lg font-semibold py-3 px-4 rounded-xl transition-colors" style={{background:page===p.k?`${A}10`:'transparent',color:page===p.k?A:'#2D2D2D',border:'none',cursor:'pointer',fontFamily:sans}}>{p.l}</button>
+            <button key={p.k} onClick={()=>go(p.k)} data-nav-page={p.k==='work'?'portfolio':p.k} className="text-left text-lg font-semibold py-3 px-4 rounded-xl transition-colors" style={{background:page===p.k?`${A}10`:'transparent',color:page===p.k?A:'#2D2D2D',border:'none',cursor:'pointer',fontFamily:sans}}>{p.l}</button>
           ))}</div>
           {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} className="zephyr-btn w-full justify-center mb-2"><Phone size={16}/>{fmt(lead.phone)}</a>}
           <div style={{height:'env(safe-area-inset-bottom, 8px)'}}/>
@@ -530,7 +530,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
           <div><div className="flex items-center gap-2 mb-4">{lead.logo?<img src={lead.logo} alt="" className="h-6 w-6 object-cover" style={{borderRadius:'30%'}}/>:<div className="w-3 h-3" style={{background:A,borderRadius:'30%'}}/>}<span className="font-bold" style={{fontFamily:sans}}>{lead.companyName}</span></div>
           <p className="text-sm leading-relaxed" style={{color:'#aaa',maxWidth:300}}>Professional {indLabel}{loc?` in ${loc}`:''}.  Licensed and insured.</p></div>
           <div><p className="text-[10px] font-semibold uppercase mb-4" style={{color:'#ccc',letterSpacing:'0.12em'}}>Pages</p>
-          <div className="flex flex-col gap-2.5">{PAGES.map(p=><button key={p.k} onClick={()=>go(p.k)} className="text-sm text-left p-0" style={{background:'none',border:'none',color:'#999',cursor:'pointer'}}>{p.l}</button>)}</div></div>
+          <div className="flex flex-col gap-2.5">{PAGES.map(p=><button key={p.k} onClick={()=>go(p.k)} data-nav-page={p.k==='work'?'portfolio':p.k} className="text-sm text-left p-0" style={{background:'none',border:'none',color:'#999',cursor:'pointer'}}>{p.l}</button>)}</div></div>
           <div><p className="text-[10px] font-semibold uppercase mb-4" style={{color:'#ccc',letterSpacing:'0.12em'}}>Contact</p>
           <div className="flex flex-col gap-3 text-sm" style={{color:'#999'}}>
             {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} style={{textDecoration:'none',color:'inherit'}}>{fmt(lead.phone)}</a>}

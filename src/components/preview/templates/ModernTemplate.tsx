@@ -181,26 +181,26 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
       {/* ── FLOATING PILL NAV (Desktop) ── */}
       <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-50 hidden lg:block" style={{transition:'all .4s'}}>
         <div style={{background:navSolid?'rgba(255,255,255,0.92)':'rgba(255,255,255,0.8)',backdropFilter:'blur(20px)',borderRadius:999,border:'1px solid rgba(0,0,0,0.06)',padding:'8px 8px 8px 24px',display:'flex',alignItems:'center',gap:8,boxShadow:'0 4px 30px rgba(0,0,0,0.06)'}}>
-          <button onClick={()=>go('home')} className="flex items-center gap-2 mr-6" style={{background:'none',border:'none',cursor:'pointer'}}>
+          <button onClick={()=>go('home')} data-nav-page="home" className="flex items-center gap-2 mr-6" style={{background:'none',border:'none',cursor:'pointer'}}>
             {lead.logo?<img src={lead.logo} alt="" className="h-6 w-6 rounded-full object-cover"/>:<div className="w-2 h-2 rounded-full" style={{background:A}}/>}
             <span className="font-bold text-sm" style={{fontFamily:sans}}>{lead.companyName}</span>
           </button>
           {PAGES.map(p=>(
-            <button key={p.k} onClick={()=>go(p.k)} className="text-[13px] font-medium px-4 py-2 rounded-full transition-all" style={{background:page===p.k?`${A}12`:'transparent',color:page===p.k?A:'#666',border:'none',cursor:'pointer',fontFamily:body}}>{p.l}</button>
+            <button key={p.k} onClick={()=>go(p.k)} data-nav-page={p.k==='work'?'portfolio':p.k} className="text-[13px] font-medium px-4 py-2 rounded-full transition-all" style={{background:page===p.k?`${A}12`:'transparent',color:page===p.k?A:'#666',border:'none',cursor:'pointer',fontFamily:body}}>{p.l}</button>
           ))}
-          <button onClick={()=>{onCTAClick();go('contact')}} className="ml-3 text-[13px] font-semibold px-5 py-2.5 rounded-full text-white border-none cursor-pointer" style={{background:A}}>Get Quote</button>
+          <button onClick={()=>{onCTAClick();go('contact')}} data-nav-page="contact" className="ml-3 text-[13px] font-semibold px-5 py-2.5 rounded-full text-white border-none cursor-pointer" style={{background:A}}>Get Quote</button>
         </div>
       </nav>
 
       {/* ── MOBILE TOP BAR ── */}
       <nav className="lg:hidden fixed top-0 left-0 right-0 z-50" style={{background:'rgba(250,250,249,0.92)',backdropFilter:'blur(16px)',borderBottom:'1px solid rgba(0,0,0,0.05)',padding:'0 20px'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',height:60}}>
-          <button onClick={()=>go('home')} className="flex items-center gap-2" style={{background:'none',border:'none',cursor:'pointer'}}>
+          <button onClick={()=>go('home')} data-nav-page="home" className="flex items-center gap-2" style={{background:'none',border:'none',cursor:'pointer'}}>
             {lead.logo?<img src={lead.logo} alt="" className="h-6 w-6 rounded-full object-cover"/>:<div className="w-2 h-2 rounded-full" style={{background:A}}/>}
             <span className="font-bold text-sm" style={{fontFamily:sans}}>{lead.companyName}</span>
           </button>
           <div className="flex items-center gap-3">
-            <button onClick={()=>{onCTAClick();go('contact')}} className="text-[12px] font-semibold px-4 py-2 rounded-full text-white border-none cursor-pointer" style={{background:A}}>Quote</button>
+            <button onClick={()=>{onCTAClick();go('contact')}} data-nav-page="contact" className="text-[12px] font-semibold px-4 py-2 rounded-full text-white border-none cursor-pointer" style={{background:A}}>Quote</button>
             <button onClick={()=>setMobNav(!mobNav)} aria-label="Menu" style={{width:40,height:40,borderRadius:12,background:'#F5F3EF',border:'1.5px solid #e8e5df',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
               {mobNav?<X size={18} style={{color:'#666'}}/>:<Menu size={18} style={{color:'#666'}}/>}
             </button>
@@ -212,11 +212,11 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
       {mobNav&&<div className="hz-overlay lg:hidden">
         <div className="flex flex-col gap-2">
           {PAGES.map(p=>(
-            <button key={p.k} onClick={()=>go(p.k)} className="text-left text-2xl font-semibold py-3 px-2 rounded-xl transition-all" style={{background:page===p.k?`${A}08`:'transparent',color:page===p.k?A:'#444',border:'none',cursor:'pointer',fontFamily:sans}}>{p.l}</button>
+            <button key={p.k} onClick={()=>go(p.k)} data-nav-page={p.k==='work'?'portfolio':p.k} className="text-left text-2xl font-semibold py-3 px-2 rounded-xl transition-all" style={{background:page===p.k?`${A}08`:'transparent',color:page===p.k?A:'#444',border:'none',cursor:'pointer',fontFamily:sans}}>{p.l}</button>
           ))}
         </div>
         <div className="mt-auto flex flex-col gap-3">
-          <button onClick={()=>{onCTAClick();go('contact')}} className="hz-pill-btn justify-center">{config.ctaText||'Get Free Quote'} <ArrowRight size={16}/></button>
+          <button onClick={()=>{onCTAClick();go('contact')}} data-nav-page="contact" className="hz-pill-btn justify-center">{config.ctaText||'Get Free Quote'} <ArrowRight size={16}/></button>
           {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hz-pill-o justify-center"><Phone size={16}/>{fmt(lead.phone)}</a>}
         </div>
       </div>}
@@ -605,7 +605,7 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
           <div><div className="flex items-center gap-2 mb-4">{lead.logo?<img src={lead.logo} alt="" className="h-6 w-6 rounded-full object-cover"/>:<div className="w-2 h-2 rounded-full" style={{background:A}}/>}<span className="font-bold" style={{fontFamily:sans}}>{lead.companyName}</span></div>
           <p className="text-sm leading-relaxed" style={{color:'#aaa',maxWidth:300}}>Professional {indLabel}{loc?` in ${loc}`:''}.  Licensed and insured.</p></div>
           <div><p className="text-[10px] font-semibold uppercase mb-4" style={{color:'#ccc',letterSpacing:'0.12em'}}>Pages</p>
-          <div className="flex flex-col gap-2.5">{PAGES.map(p=><button key={p.k} onClick={()=>go(p.k)} className="text-sm text-left p-0" style={{background:'none',border:'none',color:'#999',cursor:'pointer'}}>{p.l}</button>)}</div></div>
+          <div className="flex flex-col gap-2.5">{PAGES.map(p=><button key={p.k} onClick={()=>go(p.k)} data-nav-page={p.k==='work'?'portfolio':p.k} className="text-sm text-left p-0" style={{background:'none',border:'none',color:'#999',cursor:'pointer'}}>{p.l}</button>)}</div></div>
           <div><p className="text-[10px] font-semibold uppercase mb-4" style={{color:'#ccc',letterSpacing:'0.12em'}}>Contact</p>
           <div className="flex flex-col gap-3 text-sm" style={{color:'#999'}}>
             {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} style={{textDecoration:'none',color:'inherit'}}>{fmt(lead.phone)}</a>}

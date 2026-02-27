@@ -6,7 +6,7 @@
  * Handles:
  * - Multi-page navigation via URL hash (#home, #services, etc.)
  * - CTA button clicks → navigate to contact page
- * - Mobile hamburger menu → dynamic overlay nav
+ * - Mobile hamburger menu → dynamic overlay nav with client accent color
  * - Text-based nav link detection (fallback when data-nav-page missing)
  * - Chatbot widget button → navigate to contact page
  * - Phone link tracking (tel: links work natively)
@@ -16,16 +16,16 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
   @keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
   [data-page]{display:none}
   [data-page].active-page{display:block;animation:pageIn .3s ease-out}
-  /* Mobile nav overlay */
+  /* Mobile nav overlay — uses --sp-accent CSS variable for client colors */
   .sp-mobile-overlay{position:fixed;inset:0;z-index:90;display:none}
   .sp-mobile-overlay.open{display:block}
   .sp-mobile-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.3);backdrop-filter:blur(4px)}
   .sp-mobile-drawer{position:absolute;right:0;top:0;bottom:0;width:300px;background:#fff;box-shadow:-4px 0 25px rgba(0,0,0,.15);padding:1.5rem;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s ease}
   .sp-mobile-overlay.open .sp-mobile-drawer{transform:translateX(0)}
   .sp-mobile-nav-link{display:block;width:100%;padding:0.875rem 1rem;border-radius:0.75rem;font-size:15px;font-weight:500;color:#1a1a1a;text-align:left;border:none;background:none;cursor:pointer;transition:background .15s}
-  .sp-mobile-nav-link:hover{background:#f0fdf4}
-  .sp-mobile-close{width:36px;height:36px;border-radius:8px;background:#f0fdf4;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:#374151}
-  .sp-mobile-cta{display:block;width:100%;padding:0.875rem;border-radius:0.75rem;font-size:14px;font-weight:600;color:#fff;text-align:center;border:none;cursor:pointer;background:linear-gradient(to right,#15803d,#059669);margin-top:0.75rem}
+  .sp-mobile-nav-link:hover{background:color-mix(in srgb, var(--sp-accent, #2563eb) 8%, white)}
+  .sp-mobile-close{width:36px;height:36px;border-radius:8px;background:color-mix(in srgb, var(--sp-accent, #2563eb) 8%, white);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:#374151}
+  .sp-mobile-cta{display:block;width:100%;padding:0.875rem;border-radius:0.75rem;font-size:14px;font-weight:600;color:#fff;text-align:center;border:none;cursor:pointer;background:var(--sp-accent, #2563eb);margin-top:0.75rem}
 </style>
 <script>
 (function(){
@@ -36,6 +36,7 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
   var TEXT_TO_PAGE={
     'home':'home','services':'services','about':'about','about us':'about',
     'our work':'portfolio','portfolio':'portfolio','gallery':'portfolio','projects':'portfolio',
+    'work':'portfolio',
     'contact':'contact','contact us':'contact','get in touch':'contact'
   };
 
@@ -87,7 +88,7 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
   }
 
   // ═══ CTA BUTTON DETECTION ═══
-  var CTA_WORDS=/free estimate|get estimate|free quote|get quote|get started|start your|request.*estimate|request.*quote|book.*now|schedule|consultation|let.*build|get.*website/i;
+  var CTA_WORDS=/free estimate|get estimate|free quote|get quote|get started|start your|request.*estimate|request.*quote|book.*now|schedule|consultation|let.*build|get.*website|^quote$|call now|call us|talk to us|contact us|learn more|discuss your|request examples|get.*free/i;
 
   function isCTAButton(el){
     if(!el)return false;
@@ -126,6 +127,7 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
   var mobileOverlay=null;
 
   function createMobileNav(){
+    var accent=getComputedStyle(document.documentElement).getPropertyValue('--sp-accent').trim()||'#2563eb';
     var overlay=document.createElement('div');
     overlay.className='sp-mobile-overlay';
     overlay.innerHTML='<div class="sp-mobile-backdrop"></div>'
@@ -147,7 +149,7 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
       var phoneText=phoneLink.textContent||phoneHref.replace('tel:','');
       var phoneBtn=document.createElement('a');
       phoneBtn.href=phoneHref;
-      phoneBtn.style.cssText='display:block;width:100%;padding:0.875rem;border-radius:0.75rem;font-size:14px;font-weight:600;color:#15803d;text-align:center;border:1px solid #d1d5db;margin-top:0.5rem;text-decoration:none';
+      phoneBtn.style.cssText='display:block;width:100%;padding:0.875rem;border-radius:0.75rem;font-size:14px;font-weight:600;color:'+accent+';text-align:center;border:1px solid #d1d5db;margin-top:0.5rem;text-decoration:none';
       phoneBtn.textContent='Call '+phoneText.replace(/[^0-9()+\\- ]/g,'').trim();
       overlay.querySelector('.sp-mobile-drawer').appendChild(phoneBtn);
     }
@@ -174,8 +176,16 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
     if(!el)return false;
     var btn=el.closest('button');
     if(!btn)return false;
-    var classes=(btn.className||'')+(btn.parentElement?(' '+(btn.parentElement.className||'')):'');
-    if(classes.indexOf('lg:hidden')!==-1 && btn.querySelector('svg')){
+    // Walk up: check btn, parent, and grandparent classes
+    var classes=(btn.className||'');
+    if(btn.parentElement) classes+=' '+(btn.parentElement.className||'');
+    if(btn.parentElement&&btn.parentElement.parentElement) classes+=' '+(btn.parentElement.parentElement.className||'');
+    // Check for responsive hide classes (lg:hidden or md:hidden)
+    if((classes.indexOf('lg:hidden')!==-1 || classes.indexOf('md:hidden')!==-1) && btn.querySelector('svg')){
+      return true;
+    }
+    // Fallback: detect by aria-label="Menu" on button with SVG
+    if(btn.getAttribute('aria-label')==='Menu' && btn.querySelector('svg')){
       return true;
     }
     return false;
@@ -270,3 +280,11 @@ export const STATIC_PAGE_ROUTER_SCRIPT = `
 export const STATIC_PAGE_ROUTER_CSS = `
 <style>[data-page]{display:none}[data-page].active-page{display:block}</style>
 `
+
+/**
+ * Returns a <style> tag setting the --sp-accent CSS variable.
+ * Inject this BEFORE the router script in snapshot/preview/production routes.
+ */
+export function getAccentCssTag(hex?: string): string {
+  return `<style>:root{--sp-accent:${hex || '#2563eb'}}</style>`
+}

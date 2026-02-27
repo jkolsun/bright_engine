@@ -193,18 +193,18 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       {/* ── NAV ── */}
       <nav style={{position:'fixed',top:0,left:0,right:0,zIndex:50,background:navSolid?'rgba(10,10,10,0.95)':'transparent',backdropFilter:navSolid?'blur(20px)':'none',borderBottom:navSolid?'1px solid rgba(255,255,255,0.05)':'none',transition:'all .4s',padding:'0 clamp(16px,4vw,48px)'}}>
         <div style={{maxWidth:1440,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'space-between',height:navSolid?64:80,transition:'height .4s'}}>
-          <button onClick={()=>go('home')} className="flex items-center gap-3" style={{background:'none',border:'none',cursor:'pointer'}}>
+          <button onClick={()=>go('home')} data-nav-page="home" className="flex items-center gap-3" style={{background:'none',border:'none',cursor:'pointer'}}>
             {lead.logo?<img src={lead.logo} alt="" className="h-8 w-8 object-cover"/>:<div style={{width:10,height:10,background:A,borderRadius:'50%'}}/>}
             <span className="text-lg font-extrabold text-white" style={{letterSpacing:'-0.02em'}}>{lead.companyName}</span>
           </button>
           <div className="hidden lg:flex items-center gap-1">{PAGES.map(p=>(
-            <button key={p.k} onClick={()=>go(p.k)} className="relative px-5 py-2 text-[13px] font-semibold uppercase bg-transparent border-none cursor-pointer transition-colors" style={{color:page===p.k?'#fff':'rgba(255,255,255,0.4)',letterSpacing:'0.05em'}}>
+            <button key={p.k} onClick={()=>go(p.k)} data-nav-page={p.k==='work'?'portfolio':p.k} className="relative px-5 py-2 text-[13px] font-semibold uppercase bg-transparent border-none cursor-pointer transition-colors" style={{color:page===p.k?'#fff':'rgba(255,255,255,0.4)',letterSpacing:'0.05em'}}>
               {p.l}{page===p.k&&<span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5" style={{background:A}}/>}
             </button>
           ))}</div>
           <div className="flex items-center gap-4">
             {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-[13px] font-semibold" style={{color:'rgba(255,255,255,0.4)',textDecoration:'none'}}><Phone size={14}/>{fmt(lead.phone)}</a>}
-            <button onClick={()=>{onCTAClick();go('contact')}} className="obsidian-bp hidden sm:inline-flex" style={{padding:'10px 24px',fontSize:12}}>Get Estimate</button>
+            <button onClick={()=>{onCTAClick();go('contact')}} data-nav-page="contact" className="obsidian-bp hidden sm:inline-flex" style={{padding:'10px 24px',fontSize:12}}>Get Estimate</button>
             <button onClick={()=>setMobNav(!mobNav)} className="lg:hidden flex items-center justify-center w-11 h-11" style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',cursor:'pointer',color:'#fff'}}>{mobNav?<X size={20}/>:<Menu size={20}/>}</button>
           </div>
         </div>
@@ -213,7 +213,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
       {/* ── MOBILE NAV ── */}
       {mobNav&&(<div className="fixed inset-0 z-[90] flex flex-col justify-center items-center gap-6" style={{background:'rgba(10,10,10,0.98)',backdropFilter:'blur(24px)'}}>
         <button onClick={()=>setMobNav(false)} className="absolute top-5 right-5 w-11 h-11 flex items-center justify-center" style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',color:'#fff',cursor:'pointer'}}><X size={20}/></button>
-        {PAGES.map((p,i)=>(<button key={p.k} onClick={()=>go(p.k)} className="text-3xl font-extrabold text-white" style={{background:'none',border:'none',cursor:'pointer',letterSpacing:'-0.02em',opacity:0,animation:`obsidian-slideIn .5s ease ${i*80}ms forwards`}}>{p.l}</button>))}
+        {PAGES.map((p,i)=>(<button key={p.k} onClick={()=>go(p.k)} data-nav-page={p.k==='work'?'portfolio':p.k} className="text-3xl font-extrabold text-white" style={{background:'none',border:'none',cursor:'pointer',letterSpacing:'-0.02em',opacity:0,animation:`obsidian-slideIn .5s ease ${i*80}ms forwards`}}>{p.l}</button>))}
         {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} className="obsidian-bp mt-6"><Phone size={16}/>{fmt(lead.phone)}</a>}
       </div>)}
 
@@ -572,7 +572,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
           <div><div className="flex items-center gap-3 mb-4">{lead.logo?<img src={lead.logo} alt="" className="h-6 w-6 object-cover"/>:<div className="w-2.5 h-2.5 rounded-full" style={{background:A}}/>}<span className="font-extrabold text-lg">{lead.companyName}</span></div>
           <p className="text-sm leading-relaxed" style={{color:'rgba(255,255,255,0.25)',maxWidth:320}}>Professional {indLabel}{loc?` in ${loc}`:''}.  Licensed, insured, 24/7.</p></div>
           <div><p style={{fontFamily:mono,fontSize:10,color:'rgba(255,255,255,0.25)',letterSpacing:'0.2em',textTransform:'uppercase',marginBottom:16}}>Navigation</p>
-          <div className="flex flex-col gap-2.5">{PAGES.map(p=><button key={p.k} onClick={()=>go(p.k)} className="text-sm font-medium text-left p-0" style={{background:'none',border:'none',color:'rgba(255,255,255,0.35)',cursor:'pointer'}}>{p.l}</button>)}</div></div>
+          <div className="flex flex-col gap-2.5">{PAGES.map(p=><button key={p.k} onClick={()=>go(p.k)} data-nav-page={p.k==='work'?'portfolio':p.k} className="text-sm font-medium text-left p-0" style={{background:'none',border:'none',color:'rgba(255,255,255,0.35)',cursor:'pointer'}}>{p.l}</button>)}</div></div>
           <div><p style={{fontFamily:mono,fontSize:10,color:'rgba(255,255,255,0.25)',letterSpacing:'0.2em',textTransform:'uppercase',marginBottom:16}}>Contact</p>
           <div className="flex flex-col gap-3 text-sm" style={{color:'rgba(255,255,255,0.35)'}}>
             {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} style={{textDecoration:'none',color:'inherit'}}>{fmt(lead.phone)}</a>}

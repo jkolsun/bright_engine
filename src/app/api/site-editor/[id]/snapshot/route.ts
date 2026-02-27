@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { verifySession } from '@/lib/session'
-import { STATIC_PAGE_ROUTER_SCRIPT } from '@/components/preview/shared/staticPageRouter'
+import { STATIC_PAGE_ROUTER_SCRIPT, getAccentCssTag } from '@/components/preview/shared/staticPageRouter'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,6 +32,7 @@ export async function POST(
         companyName: true,
         personalization: true,
         buildReadinessScore: true,
+        colorPrefs: true,
       },
     })
 
@@ -165,7 +166,10 @@ export async function POST(
     html = html.replace(/\bSERVICE_AREA_TEXT\b:?\s*/gi, '')
 
     // Inject multi-page hash router for static HTML — shows/hides [data-page] sections
-    html = html.replace(/<\/body>/i, `${STATIC_PAGE_ROUTER_SCRIPT}\n</body>`)
+    const colorPrefs = lead.colorPrefs as { primary?: string; accent?: string } | null
+    const accentHex = colorPrefs?.accent || colorPrefs?.primary || undefined
+    const accentTag = getAccentCssTag(accentHex)
+    html = html.replace(/<\/body>/i, `${accentTag}${STATIC_PAGE_ROUTER_SCRIPT}\n</body>`)
 
     // Store in database
     await prisma.lead.update({

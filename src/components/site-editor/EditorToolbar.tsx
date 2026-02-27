@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Save, RotateCcw, ArrowLeft, Eye, EyeOff, MessageSquare, Loader2, Check, AlertCircle, RefreshCw, Image as ImageIcon } from 'lucide-react'
+import { Save, RotateCcw, ArrowLeft, Eye, EyeOff, Loader2, Check, AlertCircle, RefreshCw, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 
 interface EditorToolbarProps {
@@ -15,10 +15,8 @@ interface EditorToolbarProps {
   onRegenerate: () => void
   isRegenerating?: boolean
   onTogglePreview: () => void
-  onToggleChat: () => void
   onToggleImages: () => void
   showPreview: boolean
-  showChat: boolean
   showImages: boolean
 }
 
@@ -92,17 +90,6 @@ export default function EditorToolbar(props: EditorToolbarProps) {
         >
           {props.showPreview ? <Eye size={14} /> : <EyeOff size={14} />}
           Preview
-        </button>
-        <button
-          onClick={props.onToggleChat}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition-colors ${
-            props.showChat && !props.showImages
-              ? 'bg-blue-600/20 text-blue-400'
-              : 'text-gray-400 hover:text-white hover:bg-gray-600'
-          }`}
-        >
-          <MessageSquare size={14} />
-          AI Chat
         </button>
         <button
           onClick={props.onToggleImages}

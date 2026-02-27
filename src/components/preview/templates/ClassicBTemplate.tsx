@@ -163,17 +163,17 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
       {/* NAV */}
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: '#1C1F26', borderBottom: `4px solid ${A}` }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 clamp(16px,4vw,32px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
-          <button onClick={() => nav('home')} style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(18px,3vw,24px)', color: '#fff', textTransform: 'uppercase', letterSpacing: 2, background: 'none', border: 'none', cursor: 'pointer' }}>
+          <button onClick={() => nav('home')} data-nav-page="home" style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(18px,3vw,24px)', color: '#fff', textTransform: 'uppercase', letterSpacing: 2, background: 'none', border: 'none', cursor: 'pointer' }}>
             {name}
           </button>
           <div className="hidden md:flex items-center gap-0">
             {navItems.map(n => (
-              <button key={n.key} onClick={() => nav(n.key)}
+              <button key={n.key} onClick={() => nav(n.key)} data-nav-page={n.key==='work'?'portfolio':n.key}
                 style={{ fontFamily: head, fontWeight: 500, fontSize: 13, color: page === n.key ? A : '#9CA3AF', textTransform: 'uppercase', letterSpacing: 2, background: 'none', border: 'none', cursor: 'pointer', padding: '8px 16px', borderBottom: page === n.key ? `3px solid ${A}` : '3px solid transparent', transition: 'all 0.2s' }}>
                 {n.label}
               </button>
             ))}
-            <button onClick={onCallClick} className="ic-press"
+            <button onClick={onCallClick} data-nav-page="contact" className="ic-press"
               style={{ fontFamily: mono, fontSize: 12, background: A, color: '#1C1F26', padding: '10px 20px', fontWeight: 500, letterSpacing: 1, border: 'none', cursor: 'pointer', marginLeft: 16, textTransform: 'uppercase' }}>
               <Phone size={14} style={{ display: 'inline', verticalAlign: -2, marginRight: 6 }} />CALL NOW
             </button>
@@ -184,13 +184,13 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
         </div>
         <div className={`ic-dropdown ${menuOpen ? 'open' : ''} md:hidden`} style={{ background: '#252830', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           {navItems.map(n => (
-            <button key={n.key} onClick={() => nav(n.key)}
+            <button key={n.key} onClick={() => nav(n.key)} data-nav-page={n.key==='work'?'portfolio':n.key}
               style={{ display: 'block', width: '100%', textAlign: 'left', fontFamily: head, fontWeight: 500, fontSize: 15, color: page === n.key ? A : '#9CA3AF', textTransform: 'uppercase', letterSpacing: 2, background: 'none', border: 'none', borderLeft: page === n.key ? `4px solid ${A}` : '4px solid transparent', cursor: 'pointer', padding: '16px 24px' }}>
               {n.label}
             </button>
           ))}
           <div style={{ padding: '12px 24px 20px' }}>
-            <button onClick={onCallClick} className="ic-press" style={{ width: '100%', fontFamily: mono, fontSize: 13, background: A, color: '#1C1F26', padding: '14px', fontWeight: 500, border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 1 }}>
+            <button onClick={onCallClick} data-nav-page="contact" className="ic-press" style={{ width: '100%', fontFamily: mono, fontSize: 13, background: A, color: '#1C1F26', padding: '14px', fontWeight: 500, border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 1 }}>
               <Phone size={14} style={{ display: 'inline', verticalAlign: -2, marginRight: 6 }} />CALL NOW
             </button>
           </div>

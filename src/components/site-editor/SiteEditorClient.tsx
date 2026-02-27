@@ -4,7 +4,6 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import EditorToolbar from './EditorToolbar'
 import PreviewPanel from './PreviewPanel'
-import AIChatPanel from './AIChatPanel'
 import ImageManager from './ImageManager'
 
 // Dynamic import Monaco — it cannot run server-side
@@ -30,20 +29,15 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [saveStatus, setSaveStatus] = useState<'saved' | 'unsaved' | 'saving' | 'error'>('saved')
   const [showPreview, setShowPreview] = useState(true)
-  const [showChat, setShowChat] = useState(true)
   const [showImages, setShowImages] = useState(false)
   const [snapshotError, setSnapshotError] = useState<string | null>(null)
   const [isRegenerating, setIsRegenerating] = useState(false)
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
   const [siteVersion, setSiteVersion] = useState(0)
 
-  const [siteContext, setSiteContext] = useState<{ serviceCount: number; photoCount: number; templateName: string | null }>()
-  const [pendingEditRequests, setPendingEditRequests] = useState<Array<{ id: string; requestText: string; status: string; createdAt: string }>>([])
-
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
   const htmlRef = useRef(html)
   const prevHtmlRef = useRef('')
-  const editHistoryRef = useRef<Array<{ instruction: string; summary: string }>>([])
 
   // Keep ref in sync with state for use in closures
   useEffect(() => { htmlRef.current = html }, [html])
@@ -92,18 +86,7 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
           setHtml(loadData.html)
           setOriginalHtml(loadData.html)
           if (typeof loadData.version === 'number') setSiteVersion(loadData.version)
-          // Extract site context from response
-          setSiteContext({
-            serviceCount: loadData.serviceCount ?? 0,
-            photoCount: loadData.photoCount ?? 0,
-            templateName: loadData.templateName ?? null,
-          })
           setIsLoading(false)
-          // Fetch pending edit requests (non-blocking)
-          fetch(`/api/edit-requests?leadId=${props.leadId}&status=new`)
-            .then(r => r.ok ? r.json() : null)
-            .then(data => { if (data?.editRequests) setPendingEditRequests(data.editRequests) })
-            .catch(() => {})
           return
         }
       }
@@ -198,38 +181,6 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
     saveHtml(htmlRef.current)
   }, [saveHtml])
 
-  const handleAIEdit = useCallback(async (instruction: string): Promise<{ success: boolean; message: string }> => {
-    try {
-      const res = await fetch(`/api/site-editor/${props.leadId}/ai-edit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          html: htmlRef.current,
-          instruction,
-          previousEdits: editHistoryRef.current,
-        }),
-      })
-      const data = await res.json()
-      if (res.ok && data.html) {
-        prevHtmlRef.current = htmlRef.current // Save for undo
-        setHtml(data.html)
-        setSaveStatus('unsaved')
-        // Track this edit in conversation history
-        editHistoryRef.current = [
-          ...editHistoryRef.current,
-          { instruction, summary: data.summary || 'Changes applied' },
-        ].slice(-10) // Keep last 10
-        // Auto-save after AI edit
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-        saveTimeoutRef.current = setTimeout(() => saveHtml(data.html), 1500)
-        return { success: true, message: data.summary || 'Changes applied' }
-      }
-      return { success: false, message: data.error || 'AI edit failed' }
-    } catch {
-      return { success: false, message: 'Network error — check your connection and try again' }
-    }
-  }, [props.leadId, saveHtml])
-
   // Image manager changes — treated like manual edits
   const handleImageChange = useCallback((newHtml: string) => {
     setHtml(newHtml)
@@ -283,20 +234,6 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
     prevHtmlRef.current = ''
   }, [saveHtml])
 
-  const handleEditRequestProcessed = useCallback(async (editRequestId: string) => {
-    await fetch(`/api/edit-requests/${editRequestId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        status: 'ready_for_review',
-        editFlowState: 'awaiting_approval',
-        postEditHtml: htmlRef.current,
-        preEditHtml: prevHtmlRef.current || undefined,
-      }),
-    }).catch(() => {})
-    setPendingEditRequests(prev => prev.filter(r => r.id !== editRequestId))
-  }, [])
-
   const handleReset = useCallback(() => {
     if (confirm('Reset to original HTML? Your changes will be lost.')) {
       setHtml(originalHtml)
@@ -317,10 +254,8 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
         onRegenerate={handleRegenerate}
         isRegenerating={isRegenerating}
         onTogglePreview={() => setShowPreview(p => !p)}
-        onToggleChat={() => setShowChat(c => !c)}
-        onToggleImages={() => { setShowImages(i => !i); if (showChat) setShowChat(false) }}
+        onToggleImages={() => setShowImages(i => !i)}
         showPreview={showPreview}
-        showChat={showChat}
         showImages={showImages}
       />
 
@@ -367,21 +302,6 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
           </div>
         )}
 
-        {/* AI Chat — toggleable */}
-        {showChat && !showImages && (
-          <div className="w-[320px] min-w-[280px] border-l border-gray-700">
-            <AIChatPanel
-              onSubmit={handleAIEdit}
-              companyName={props.companyName}
-              leadId={props.leadId}
-              siteContext={siteContext}
-              editRequests={pendingEditRequests}
-              onEditRequestProcessed={handleEditRequestProcessed}
-              onUndo={handleUndo}
-              canUndo={!!prevHtmlRef.current}
-            />
-          </div>
-        )}
       </div>
     </div>
   )

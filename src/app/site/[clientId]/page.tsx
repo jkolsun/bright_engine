@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import { STATIC_PAGE_ROUTER_SCRIPT } from '@/components/preview/shared/staticPageRouter'
+import { STATIC_PAGE_ROUTER_SCRIPT, getAccentCssTag } from '@/components/preview/shared/staticPageRouter'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,10 +52,14 @@ export default async function ClientSitePage(
 
   const lead = await prisma.lead.findUnique({
     where: { id: client.leadId },
-    select: { siteHtml: true },
+    select: { siteHtml: true, colorPrefs: true },
   })
 
   if (!lead?.siteHtml) return notFound()
+
+  const colorPrefs = lead.colorPrefs as { primary?: string; accent?: string } | null
+  const accentHex = colorPrefs?.accent || colorPrefs?.primary || undefined
+  const accentTag = getAccentCssTag(accentHex)
 
   // Clean the HTML — same pattern as preview renderer
   let cleanHtml = lead.siteHtml
@@ -76,7 +80,7 @@ export default async function ClientSitePage(
   // Ensure the static page router is present (handles navigation, CTAs, hamburger menu)
   // It may be missing if the site was saved before the router existed or if an AI edit stripped it
   if (bodyContent.indexOf('sp-mobile-overlay') === -1) {
-    bodyContent += STATIC_PAGE_ROUTER_SCRIPT
+    bodyContent += accentTag + STATIC_PAGE_ROUTER_SCRIPT
   }
 
   // Kill overlay CSS+script (no preview/disclaimer banners on live sites)

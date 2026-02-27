@@ -174,18 +174,18 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
       {/* NAV */}
       <nav style={{position:'fixed',top:0,left:0,right:0,zIndex:50,background:navSolid?'rgba(0,0,0,0.95)':'transparent',backdropFilter:navSolid?'blur(16px)':'none',borderBottom:navSolid?`1px solid ${A}15`:'none',transition:'all .3s',padding:'0 clamp(16px,4vw,48px)'}}>
         <div style={{maxWidth:1440,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'space-between',height:navSolid?60:76,transition:'height .3s'}}>
-          <button onClick={()=>go('home')} className="flex items-center gap-3" style={{background:'none',border:'none',cursor:'pointer'}}>
+          <button onClick={()=>go('home')} data-nav-page="home" className="flex items-center gap-3" style={{background:'none',border:'none',cursor:'pointer'}}>
             {lead.logo?<img src={lead.logo} alt="" className="h-8 w-8 object-cover"/>:<div style={{width:12,height:12,background:A,clipPath:'polygon(50% 0%,100% 50%,50% 100%,0% 50%)'}}/>}
             <span className="font-extrabold text-white" style={{fontFamily:head,fontSize:22,letterSpacing:'0.05em'}}>{lead.companyName}</span>
           </button>
           <div className="hidden lg:flex items-center gap-10">{PAGES.map(p=>(
-            <button key={p.k} onClick={()=>go(p.k)} className="relative py-1 text-[12px] font-bold bg-transparent border-none cursor-pointer transition-colors" style={{fontFamily:mono,color:page===p.k?A:'rgba(255,255,255,0.35)',letterSpacing:'0.15em'}}>
+            <button key={p.k} onClick={()=>go(p.k)} data-nav-page={p.k==='work'?'portfolio':p.k} className="relative py-1 text-[12px] font-bold bg-transparent border-none cursor-pointer transition-colors" style={{fontFamily:mono,color:page===p.k?A:'rgba(255,255,255,0.35)',letterSpacing:'0.15em'}}>
               {p.l}
             </button>
           ))}</div>
           <div className="flex items-center gap-4">
             {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-[12px] font-semibold" style={{fontFamily:mono,color:'rgba(255,255,255,0.35)',textDecoration:'none',letterSpacing:'0.05em'}}><Phone size={13}/>{fmt(lead.phone)}</a>}
-            <button onClick={()=>{onCTAClick();go('contact')}} className="carbon-btn hidden sm:inline-flex" style={{padding:'10px 22px',fontSize:11}}>Get Estimate</button>
+            <button onClick={()=>{onCTAClick();go('contact')}} data-nav-page="contact" className="carbon-btn hidden sm:inline-flex" style={{padding:'10px 22px',fontSize:11}}>Get Estimate</button>
             <button onClick={()=>setMobNav(!mobNav)} className="lg:hidden flex items-center justify-center" style={{background:'rgba(255,255,255,0.06)',border:`1px solid rgba(255,255,255,0.1)`,width:44,height:44,cursor:'pointer',color:'#fff'}} aria-label="Menu">{mobNav?<X size={22}/>:<Menu size={22}/>}</button>
           </div>
         </div>
@@ -195,7 +195,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
       {mobNav&&(<div className="fixed inset-0 z-[90] flex flex-col justify-center items-center gap-8" style={{background:'rgba(0,0,0,0.98)'}}>
         <div className="absolute inset-0 overflow-hidden pointer-events-none"><div style={{position:'absolute',top:'-20%',right:'-10%',width:'50%',height:'140%',background:A,opacity:0.04,transform:'rotate(-15deg)'}}/></div>
         <button onClick={()=>setMobNav(false)} className="absolute top-5 right-5 z-10 flex items-center justify-center" style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',width:44,height:44,cursor:'pointer',color:'#fff'}}><X size={22}/></button>
-        {PAGES.map((p,i)=>(<button key={p.k} onClick={()=>go(p.k)} className="relative z-10" style={{fontFamily:head,fontSize:48,background:'none',border:'none',color:page===p.k?A:'#fff',cursor:'pointer',letterSpacing:'0.08em',opacity:0,animation:`carbon-slideLeft .4s ease ${i*60}ms forwards`}}>{p.l}</button>))}
+        {PAGES.map((p,i)=>(<button key={p.k} onClick={()=>go(p.k)} data-nav-page={p.k==='work'?'portfolio':p.k} className="relative z-10" style={{fontFamily:head,fontSize:48,background:'none',border:'none',color:page===p.k?A:'#fff',cursor:'pointer',letterSpacing:'0.08em',opacity:0,animation:`carbon-slideLeft .4s ease ${i*60}ms forwards`}}>{p.l}</button>))}
         {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} className="carbon-btn relative z-10 mt-4"><Phone size={16}/>{fmt(lead.phone)}</a>}
       </div>)}
 
@@ -560,7 +560,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
           <div><div className="flex items-center gap-3 mb-4">{lead.logo?<img src={lead.logo} alt="" className="h-6 w-6 object-cover"/>:<div style={{width:10,height:10,background:A,clipPath:'polygon(50% 0%,100% 50%,50% 100%,0% 50%)'}}/>}<span className="font-bold text-lg" style={{fontFamily:head,letterSpacing:'0.05em'}}>{lead.companyName}</span></div>
           <p className="text-sm leading-relaxed" style={{color:'rgba(255,255,255,0.2)',maxWidth:300}}>Professional {indLabel}{loc?` in ${loc}`:''}.  Licensed, insured, 24/7.</p></div>
           <div><p style={{fontFamily:mono,fontSize:10,color:'rgba(255,255,255,0.2)',letterSpacing:'0.25em',marginBottom:14}}>NAVIGATION</p>
-          <div className="flex flex-col gap-2.5">{PAGES.map(p=><button key={p.k} onClick={()=>go(p.k)} className="text-sm font-medium text-left p-0" style={{background:'none',border:'none',color:'rgba(255,255,255,0.3)',cursor:'pointer',fontFamily:mono,fontSize:12,letterSpacing:'0.1em'}}>{p.l}</button>)}</div></div>
+          <div className="flex flex-col gap-2.5">{PAGES.map(p=><button key={p.k} onClick={()=>go(p.k)} data-nav-page={p.k==='work'?'portfolio':p.k} className="text-sm font-medium text-left p-0" style={{background:'none',border:'none',color:'rgba(255,255,255,0.3)',cursor:'pointer',fontFamily:mono,fontSize:12,letterSpacing:'0.1em'}}>{p.l}</button>)}</div></div>
           <div><p style={{fontFamily:mono,fontSize:10,color:'rgba(255,255,255,0.2)',letterSpacing:'0.25em',marginBottom:14}}>CONTACT</p>
           <div className="flex flex-col gap-3 text-sm" style={{color:'rgba(255,255,255,0.3)'}}>
             {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} style={{textDecoration:'none',color:'inherit'}}>{fmt(lead.phone)}</a>}

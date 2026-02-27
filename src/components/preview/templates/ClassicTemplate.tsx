@@ -182,19 +182,19 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
       {/* NAV */}
       <nav style={{position:'fixed',top:0,left:0,right:0,zIndex:50,background:navSolid?'rgba(250,248,244,0.95)':'transparent',backdropFilter:navSolid?'blur(16px)':'none',borderBottom:navSolid?'1px solid #e8e2d8':'none',transition:'all .4s',padding:'0 clamp(16px,4vw,48px)'}}>
         <div style={{maxWidth:1340,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'space-between',height:navSolid?60:76,transition:'height .4s'}}>
-          <button onClick={()=>go('home')} className="flex items-center gap-2" style={{background:'none',border:'none',cursor:'pointer'}}>
+          <button onClick={()=>go('home')} data-nav-page="home" className="flex items-center gap-2" style={{background:'none',border:'none',cursor:'pointer'}}>
             {lead.logo?<img src={lead.logo} alt="" className="h-7 w-7 object-cover"/>:<span style={{fontFamily:serif,fontWeight:700,fontSize:20,color:A}}>&#x25C6;</span>}
             <span style={{fontFamily:serif,fontWeight:700,fontSize:17}}>{lead.companyName}</span>
           </button>
           <div className="hidden lg:flex items-center gap-8">{PAGES.map(p=>(
-            <button key={p.k} onClick={()=>go(p.k)} className="text-[13px] font-medium py-1 transition-colors relative" style={{fontFamily:label,background:'none',border:'none',cursor:'pointer',color:page===p.k?A:'#8a8078',letterSpacing:'0.06em',textTransform:'uppercase'}}>
+            <button key={p.k} onClick={()=>go(p.k)} data-nav-page={p.k==='work'?'portfolio':p.k} className="text-[13px] font-medium py-1 transition-colors relative" style={{fontFamily:label,background:'none',border:'none',cursor:'pointer',color:page===p.k?A:'#8a8078',letterSpacing:'0.06em',textTransform:'uppercase'}}>
               {p.l}
               {page===p.k&&<div style={{position:'absolute',bottom:-2,left:0,right:0,height:1.5,background:A,transition:'all .3s'}}/>}
             </button>
           ))}</div>
           <div className="flex items-center gap-4">
             {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hidden lg:flex items-center gap-2 text-[13px]" style={{fontFamily:label,color:'#8a8078',textDecoration:'none'}}><Phone size={14}/>{fmt(lead.phone)}</a>}
-            <button onClick={()=>{onCTAClick();go('contact')}} className="cs-btn hidden sm:inline-flex" style={{padding:'10px 22px',fontSize:12}}>Get Estimate</button>
+            <button onClick={()=>{onCTAClick();go('contact')}} data-nav-page="contact" className="cs-btn hidden sm:inline-flex" style={{padding:'10px 22px',fontSize:12}}>Get Estimate</button>
             <button onClick={()=>setMobNav(!mobNav)} className="flex lg:hidden items-center justify-center" style={{background:'none',border:`1.5px solid #d5cfc5`,borderRadius:4,color:'#2C2520',cursor:'pointer',padding:'6px 8px'}}><Menu size={20}/></button>
           </div>
         </div>
@@ -207,7 +207,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
           <button onClick={()=>setMobNav(false)} className="absolute top-5 right-5" style={{background:'none',border:'none',color:'#2C2520',cursor:'pointer'}}><X size={24}/></button>
           <div style={{fontFamily:serif,fontSize:11,color:'#b5afa5',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:20}}>Navigation</div>
           {PAGES.map(p=>(
-            <button key={p.k} onClick={()=>go(p.k)} className="text-left py-3.5 text-lg font-medium" style={{fontFamily:serif,background:'none',border:'none',cursor:'pointer',color:page===p.k?A:'#2C2520',borderBottom:'1px solid #ece6dc'}}>{p.l}</button>
+            <button key={p.k} onClick={()=>go(p.k)} data-nav-page={p.k==='work'?'portfolio':p.k} className="text-left py-3.5 text-lg font-medium" style={{fontFamily:serif,background:'none',border:'none',cursor:'pointer',color:page===p.k?A:'#2C2520',borderBottom:'1px solid #ece6dc'}}>{p.l}</button>
           ))}
           <div style={{marginTop:'auto',borderTop:'1px solid #ece6dc',paddingTop:20}}>
             {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} className="cs-btn justify-center w-full"><Phone size={16}/>{fmt(lead.phone)}</a>}
@@ -564,7 +564,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
           <div><div className="flex items-center gap-2 mb-4">{lead.logo?<img src={lead.logo} alt="" className="h-6 w-6 object-cover"/>:<span style={{fontFamily:serif,fontWeight:700,fontSize:18,color:A}}>&#x25C6;</span>}<span className="font-bold" style={{fontFamily:serif}}>{lead.companyName}</span></div>
           <p className="text-sm leading-relaxed" style={{color:'#8a8078',maxWidth:300}}>Professional {indLabel}{loc?` in ${loc}`:''}.  Licensed, insured, trusted.</p></div>
           <div><p style={{fontFamily:label,fontSize:10,color:'#8a8078',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:14}}>Navigation</p>
-          <div className="flex flex-col gap-2.5">{PAGES.map(p=><button key={p.k} onClick={()=>go(p.k)} className="text-sm text-left p-0" style={{background:'none',border:'none',color:'#8a8078',cursor:'pointer'}}>{p.l}</button>)}</div></div>
+          <div className="flex flex-col gap-2.5">{PAGES.map(p=><button key={p.k} onClick={()=>go(p.k)} data-nav-page={p.k==='work'?'portfolio':p.k} className="text-sm text-left p-0" style={{background:'none',border:'none',color:'#8a8078',cursor:'pointer'}}>{p.l}</button>)}</div></div>
           <div><p style={{fontFamily:label,fontSize:10,color:'#8a8078',letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:14}}>Contact</p>
           <div className="flex flex-col gap-3 text-sm" style={{color:'#8a8078'}}>
             {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} style={{textDecoration:'none',color:'inherit'}}>{fmt(lead.phone)}</a>}
