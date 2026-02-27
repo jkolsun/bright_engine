@@ -53,7 +53,7 @@ export function InboundCallBanner() {
 
     // Build the inbound DialerCall object
     const inboundDialerCall: DialerCall = {
-      id: inboundCall.callId || '',
+      id: inboundCall.callId || `inbound-${Date.now()}`,
       leadId: inboundCall.leadId || '',
       repId: '',
       status: 'CONNECTED',
@@ -80,16 +80,14 @@ export function InboundCallBanner() {
         setCurrentCall({ ...inboundDialerCall, status: 'COMPLETED' } as DialerCall)
         timer.stop()
       })
-    }
 
-    // Set currentCall so DispositionTree renders and rep can disposition the inbound call
-    if (inboundCall.callId) {
+      // Always set currentCall so DispositionTree renders and rep sees on-call UI
       setCurrentCall(inboundDialerCall)
       timer.reset()
       timer.start()
     }
 
-    fetch('/api/dialer/inbound/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callId: inboundCall.callId }) }).catch(err => console.warn('[InboundCall] Accept API failed:', err))
+    fetch('/api/dialer/inbound/accept', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ callId: inboundCall.callId, callSid: inboundCall.callSid }) }).catch(err => console.warn('[InboundCall] Accept API failed:', err))
     setInboundCall(null)
   }
 

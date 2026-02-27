@@ -56,6 +56,18 @@ export function DispositionTree() {
     if (!currentCall) return
     setSubmitting(true)
     try {
+      // Inbound calls from unknown numbers have temp IDs — no DB record to disposition
+      if (currentCall.id.startsWith('inbound-')) {
+        const autoDialWillTakeOver = autoDialState === 'CONNECTED_PENDING_SWAP' || !!session.session?.autoDialEnabled
+        if (!autoDialWillTakeOver) {
+          setCurrentCall(null)
+        }
+        queue.selectNext()
+        handleAutoDialNext()
+        setSubmitting(false)
+        return
+      }
+
       const isRecommended = recommendations.some(r => r.outcome === result)
 
       // 1. Submit disposition to existing endpoint (uses logDisposition in dialer-service.ts)
