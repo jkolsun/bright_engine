@@ -109,8 +109,9 @@ export function MobileSiteCard({ lead, onApproved }: SiteCardProps) {
   }
 
   async function handleImageChange(newHtml: string) {
+    const previousHtml = siteHtml
     setSiteHtml(newHtml)
-    setImageSaveMsg(null)
+    setImageSaveMsg('Saving...')
     try {
       const loadRes = await fetch(`/api/site-editor/${lead.id}/save`)
       if (!loadRes.ok) throw new Error('Failed to get version')
@@ -120,10 +121,15 @@ export function MobileSiteCard({ lead, onApproved }: SiteCardProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ html: newHtml, expectedVersion: loadData.version }),
       })
-      if (!saveRes.ok) throw new Error('Save failed')
+      if (!saveRes.ok) {
+        const err = await saveRes.json().catch(() => ({}))
+        throw new Error(err.error || 'Save failed')
+      }
       setImageSaveMsg('Saved')
       setTimeout(() => setImageSaveMsg(null), 2000)
     } catch (err: any) {
+      // Revert to previous HTML so UI matches what's actually in the database
+      setSiteHtml(previousHtml)
       setImageSaveMsg(`Error: ${err.message}`)
     }
   }

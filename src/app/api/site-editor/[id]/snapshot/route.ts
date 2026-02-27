@@ -44,6 +44,17 @@ export async function POST(
     const body = await request.json().catch(() => ({}))
     const forceRegenerate = body?.force === true
 
+    // Safety: if siteHtml exists and force is requested, require explicit overwrite confirmation
+    // This prevents accidental loss of image swaps, AI edits, and manual changes
+    if (forceRegenerate && lead.siteHtml && !body?.forceOverwrite) {
+      return NextResponse.json({
+        warning: 'This site has been edited. Regenerating will discard all edits (image swaps, AI changes, manual HTML edits). Send forceOverwrite: true to confirm.',
+        hasEdits: true,
+        cached: true,
+        html: lead.siteHtml,
+      })
+    }
+
     if (lead.siteHtml && !forceRegenerate) {
       // Strip DisclaimerBanner if it got baked in — it's stuck without JS click handlers
       const disclaimerRe = /<div[^>]*z-\[9999\][^>]*>[\s\S]*?View My Preview[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/g

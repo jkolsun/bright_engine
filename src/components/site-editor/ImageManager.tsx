@@ -64,13 +64,16 @@ export default function ImageManager({ html, onHtmlChange }: ImageManagerProps) 
     const imgB = images[toIdx]
     if (!imgA || !imgB) return
 
-    // Swap the src attributes in the HTML
-    // Use a placeholder to avoid double-replacement
-    const placeholder = `__SWAP_PLACEHOLDER_${Date.now()}__`
-    let newHtml = html
-    newHtml = newHtml.replace(imgA.fullTag, imgA.fullTag.replace(imgA.src, placeholder))
-    newHtml = newHtml.replace(imgB.fullTag, imgB.fullTag.replace(imgB.src, imgA.src))
-    newHtml = newHtml.replace(placeholder, imgB.src)
+    // Swap src attributes using exact character positions to handle duplicate URLs
+    const newTagA = imgA.fullTag.replace(imgA.src, imgB.src)
+    const newTagB = imgB.fullTag.replace(imgB.src, imgA.src)
+
+    // Replace in reverse order of position so earlier replacements don't shift later indices
+    const [first, second] = imgA.index < imgB.index ? [imgA, imgB] : [imgB, imgA]
+    const [firstNew, secondNew] = imgA.index < imgB.index ? [newTagA, newTagB] : [newTagB, newTagA]
+
+    let newHtml = html.slice(0, second.index) + secondNew + html.slice(second.index + second.fullTag.length)
+    newHtml = newHtml.slice(0, first.index) + firstNew + newHtml.slice(first.index + first.fullTag.length)
 
     onHtmlChange(newHtml)
     setSwapMode(null)
@@ -92,7 +95,7 @@ export default function ImageManager({ html, onHtmlChange }: ImageManagerProps) 
     if (!img) return
 
     const newTag = img.fullTag.replace(img.src, url)
-    const newHtml = html.replace(img.fullTag, newTag)
+    const newHtml = html.slice(0, img.index) + newTag + html.slice(img.index + img.fullTag.length)
     onHtmlChange(newHtml)
     setReplaceMode(null)
     setReplaceUrl('')
