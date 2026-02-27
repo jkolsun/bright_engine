@@ -367,6 +367,7 @@ function LeadsPageInner() {
       if (res.ok) {
         alert('Lead deleted successfully')
         setSelectedLeads(new Set([...selectedLeads].filter(id => id !== leadId)))
+        setCurrentPage(0)
         fetchLeads()
       } else {
         alert('Failed to delete lead')
@@ -385,14 +386,6 @@ function LeadsPageInner() {
       newSelected.add(leadId)
     }
     setSelectedLeads(newSelected)
-  }
-
-  const handleSelectAll = () => {
-    if (selectedLeads.size === filteredLeads.length) {
-      setSelectedLeads(new Set())
-    } else {
-      setSelectedLeads(new Set(filteredLeads.map(l => l.id)))
-    }
   }
 
   const handleBulkAssign = async (repId: string | null) => {
@@ -417,6 +410,7 @@ function LeadsPageInner() {
         setSelectedLeads(new Set())
         setAssignDialogOpen(false)
         setAssignDestination(null)
+        setCurrentPage(0)
         fetchLeads()
         fetchReps()
       } else {
@@ -445,6 +439,7 @@ function LeadsPageInner() {
         alert(`${data.updated} lead${data.updated !== 1 ? 's' : ''} ${folderName ? `moved to "${folderName}"` : 'removed from folder'}`)
         setSelectedLeads(new Set())
         setFolderAssignDialogOpen(false)
+        setCurrentPage(0)
         fetchLeads()
         fetchFolders()
       } else {
@@ -477,6 +472,7 @@ function LeadsPageInner() {
         const data = await res.json()
         alert(`Cleared names for ${data.updated} leads`)
         setSelectedLeads(new Set())
+        setCurrentPage(0)
         fetchLeads()
       } else {
         alert('Failed to clear names')
@@ -511,6 +507,7 @@ function LeadsPageInner() {
         const data = await res.json()
         alert(`Deleted ${data.deletedCount || count} leads successfully`)
         setSelectedLeads(new Set())
+        setCurrentPage(0)
         fetchLeads()
       } else {
         alert('Failed to delete leads')
@@ -1206,6 +1203,7 @@ function LeadsPageInner() {
                   <th className="sticky left-0 z-20 bg-gray-50 text-center p-3 w-12 border-r border-gray-200">
                     <BulkSelectDropdown
                       pageItemIds={paginatedLeads.map(l => l.id)}
+                      allItemIds={filteredLeads.map(l => l.id)}
                       selectedIds={selectedLeads}
                       onSelectionChange={setSelectedLeads}
                     />

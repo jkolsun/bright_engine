@@ -334,6 +334,7 @@ export default function RepLeadBankPage() {
                 <th className="pl-4 pr-2 py-3 text-left">
                   <BulkSelectDropdown
                     pageItemIds={leads.map(l => l.id)}
+                    allItemIds={leads.map(l => l.id)}
                     selectedIds={selectedIds}
                     onSelectionChange={setSelectedIds}
                   />

@@ -201,6 +201,7 @@ export default function RepsPage() {
               <th className="px-4 py-3 w-10">
                 <BulkSelectDropdown
                   pageItemIds={filteredReps.map(r => r.id)}
+                  allItemIds={filteredReps.map(r => r.id)}
                   selectedIds={selectedReps}
                   onSelectionChange={setSelectedReps}
                 />

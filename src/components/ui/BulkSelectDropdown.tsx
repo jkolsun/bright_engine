@@ -5,11 +5,12 @@ import { ChevronDown } from 'lucide-react'
 
 interface BulkSelectDropdownProps {
   pageItemIds: string[]
+  allItemIds?: string[]
   selectedIds: Set<string>
   onSelectionChange: (newSelection: Set<string>) => void
 }
 
-export function BulkSelectDropdown({ pageItemIds, selectedIds, onSelectionChange }: BulkSelectDropdownProps) {
+export function BulkSelectDropdown({ pageItemIds, allItemIds, selectedIds, onSelectionChange }: BulkSelectDropdownProps) {
   const [open, setOpen] = useState(false)
   const [selectCount, setSelectCount] = useState('25')
   const checkboxRef = useRef<HTMLInputElement>(null)
@@ -91,6 +92,14 @@ export function BulkSelectDropdown({ pageItemIds, selectedIds, onSelectionChange
     setOpen(false)
   }
 
+  const handleSelectAll = () => {
+    if (!allItemIds) return
+    const next = new Set(selectedIds)
+    allItemIds.forEach(id => next.add(id))
+    onSelectionChange(next)
+    setOpen(false)
+  }
+
   const handleDeselectAll = () => {
     onSelectionChange(new Set())
     setOpen(false)
@@ -147,6 +156,15 @@ export function BulkSelectDropdown({ pageItemIds, selectedIds, onSelectionChange
           >
             Select this page [{pageItemIds.length}]
           </button>
+          {/* Select all in list */}
+          {allItemIds && allItemIds.length > pageItemIds.length && (
+            <button
+              onClick={handleSelectAll}
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Select all in list [{allItemIds.length}]
+            </button>
+          )}
           {/* Deselect all */}
           {selectedIds.size > 0 && (
             <button

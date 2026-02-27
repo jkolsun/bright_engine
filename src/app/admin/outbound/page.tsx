@@ -44,7 +44,7 @@ export default function SalesRepTrackerPage() {
 
     // Fetch leads
     try {
-      const leadsRes = await fetch('/api/leads?limit=100')
+      const leadsRes = await fetch('/api/leads?limit=10000')
       if (leadsRes.ok) {
         const data = await leadsRes.json()
         setLeads(data.leads || [])
@@ -88,14 +88,6 @@ export default function SalesRepTrackerPage() {
       newSelected.add(leadId)
     }
     setSelectedLeads(newSelected)
-  }
-
-  const handleSelectAll = () => {
-    if (selectedLeads.size === filteredLeads.length) {
-      setSelectedLeads(new Set())
-    } else {
-      setSelectedLeads(new Set(filteredLeads.map(l => l.id)))
-    }
   }
 
   const handleBulkAssign = async (repId: string | null) => {
@@ -412,6 +404,7 @@ export default function SalesRepTrackerPage() {
                   <th className="text-center p-4 w-12">
                     <BulkSelectDropdown
                       pageItemIds={filteredLeads.map(l => l.id)}
+                      allItemIds={filteredLeads.map(l => l.id)}
                       selectedIds={selectedLeads}
                       onSelectionChange={setSelectedLeads}
                     />

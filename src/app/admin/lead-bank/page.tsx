@@ -409,6 +409,7 @@ export default function AdminLeadBankPage() {
                 <th className="pl-4 pr-2 py-3 text-left">
                   <BulkSelectDropdown
                     pageItemIds={leads.map(l => l.id)}
+                    allItemIds={leads.map(l => l.id)}
                     selectedIds={selectedIds}
                     onSelectionChange={setSelectedIds}
                   />
