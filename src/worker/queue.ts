@@ -698,6 +698,30 @@ export async function scheduleUrgencyCheck() {
   }
 }
 
+// Schedule stale edit reminder — finds forgotten edit requests sitting in review
+export async function scheduleStaleEditReminder() {
+  const queue = await getMonitoringQueue()
+  if (!queue || !isRedisAvailable) {
+    console.warn('Monitoring queue unavailable, skipping stale edit reminder')
+    return null
+  }
+
+  try {
+    return await queue.add(
+      'stale-edit-reminder',
+      {},
+      {
+        repeat: {
+          every: 6 * 60 * 60 * 1000, // Every 6 hours
+        },
+      }
+    )
+  } catch (err) {
+    console.warn('Failed to schedule stale edit reminder:', err)
+    return null
+  }
+}
+
 export async function addImportProcessingJob(data: {
   jobId: string
   leadIds: string[]

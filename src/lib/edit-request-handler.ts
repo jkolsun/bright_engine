@@ -14,13 +14,67 @@ import { applyAiEdit } from './ai-site-editor'
 import { sendSMSViaProvider } from './sms-provider'
 import { notifyAdmin } from './notifications'
 
+/**
+ * Sanitize edit instructions before they reach the AI.
+ * Strips HTML/script tags, truncates, and flags dangerous patterns.
+ */
+function sanitizeInstruction(raw: string): { instruction: string; flagged: boolean; reason?: string } {
+  // Strip HTML tags that might be injection attempts
+  let cleaned = raw.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+  cleaned = cleaned.replace(/<[^>]+>/g, '')
+  // Strip potential prompt injection markers
+  cleaned = cleaned.replace(/```[\s\S]*?```/g, '')
+  // Normalize whitespace
+  cleaned = cleaned.replace(/\s+/g, ' ').trim()
+  // Truncate to 500 chars — anything longer is likely not a real edit request
+  if (cleaned.length > 500) {
+    cleaned = cleaned.substring(0, 500)
+  }
+
+  // Flag dangerous patterns
+  const dangerousPatterns = [
+    /delete\s*(everything|all|the\s*site|the\s*whole)/i,
+    /remove\s*(everything|all\s*content|the\s*entire)/i,
+    /add\s*a?\s*script/i,
+    /inject|injection|eval\s*\(/i,
+    /javascript:/i,
+    /on(click|load|error|mouseover)\s*=/i,
+    /iframe|embed|object\s+data/i,
+  ]
+
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(cleaned)) {
+      return { instruction: cleaned, flagged: true, reason: `Matched pattern: ${pattern.source}` }
+    }
+  }
+
+  return { instruction: cleaned, flagged: false }
+}
+
 export async function handleEditRequest(params: {
   clientId: string
   editRequestId: string
   instruction: string
   complexity: 'simple' | 'medium' | 'complex'
 }): Promise<void> {
-  const { clientId, editRequestId, instruction, complexity } = params
+  const { clientId, editRequestId, complexity } = params
+
+  // ── Sanitize instruction before any processing ──
+  const sanitized = sanitizeInstruction(params.instruction)
+  const instruction = sanitized.instruction
+
+  if (sanitized.flagged) {
+    console.warn(`[EditHandler] Flagged instruction from client ${clientId}: ${sanitized.reason}`)
+    // Still process but escalate to complex (admin review) regardless of Haiku classification
+    await prisma.notification.create({
+      data: {
+        type: 'CLIENT_TEXT',
+        title: 'Flagged Edit Instruction',
+        message: `Edit instruction flagged: "${instruction.substring(0, 120)}". Reason: ${sanitized.reason}`,
+        metadata: { clientId, editRequestId, reason: sanitized.reason },
+      },
+    })
+  }
 
   // Load client with lead (include siteEditVersion for optimistic locking — BUG B.1)
   const client = await prisma.client.findUnique({
@@ -34,7 +88,58 @@ export async function handleEditRequest(params: {
 
   const lead = client.lead
 
-  // ── High-maintenance check (runs for ALL edits) ──
+  // ── Rate limiting: prevent API cost spiral from rapid-fire edits ──
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+  const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
+
+  const [editsLastHour, editsLast10Min] = await Promise.all([
+    prisma.editRequest.count({ where: { clientId, createdAt: { gte: oneHourAgo } } }),
+    prisma.editRequest.count({ where: { clientId, createdAt: { gte: tenMinutesAgo } } }),
+  ])
+
+  // Rapid fire: 3+ edits in 10 minutes → hold, don't process
+  if (editsLast10Min >= 3) {
+    console.warn(`[EditHandler] Rate limited ${client.companyName}: ${editsLast10Min} edits in 10 min`)
+    await prisma.editRequest.update({
+      where: { id: editRequestId },
+      data: { status: 'pending', editFlowState: 'pending' },
+    })
+    // Only send the hold message once (on the 3rd edit, not 4th, 5th, etc.)
+    if (editsLast10Min === 3) {
+      await sendSMSViaProvider({
+        to: lead.phone,
+        message: `I've got all your requests! Let me work through them and I'll update you when they're done`,
+        clientId: client.id,
+        trigger: 'edit_rate_limited',
+        aiGenerated: true,
+        conversationType: 'post_client',
+        sender: 'clawdbot',
+      })
+    }
+    await notifyAdmin(
+      'edit_request',
+      'Edit Rate Limited',
+      `${client.companyName}: ${editsLast10Min} edits in 10 min. Held for batching.`,
+    )
+    return
+  }
+
+  // Hourly cap: 5+ edits/hour → hold, notify admin
+  if (editsLastHour >= 5) {
+    console.warn(`[EditHandler] Hourly cap for ${client.companyName}: ${editsLastHour} edits/hour`)
+    await prisma.editRequest.update({
+      where: { id: editRequestId },
+      data: { status: 'pending', editFlowState: 'pending' },
+    })
+    await notifyAdmin(
+      'edit_request',
+      'Edit Hourly Cap',
+      `${client.companyName}: ${editsLastHour} edits in 1 hour. Holding to prevent cost spiral.`,
+    )
+    return
+  }
+
+  // ── High-maintenance check (weekly, informational) ──
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
   const recentEditCount = await prisma.editRequest.count({
     where: {
@@ -59,10 +164,11 @@ export async function handleEditRequest(params: {
     })
   }
 
-  // ── Route based on complexity ──
-  if (complexity === 'simple') {
+  // ── Route based on complexity (flagged instructions always go to complex) ──
+  const effectiveComplexity = sanitized.flagged ? 'complex' : complexity
+  if (effectiveComplexity === 'simple') {
     await handleSimpleEdit(client, lead, editRequestId, instruction)
-  } else if (complexity === 'medium') {
+  } else if (effectiveComplexity === 'medium') {
     await handleMediumEdit(client, lead, editRequestId, instruction)
   } else {
     await handleComplexEdit(client, lead, editRequestId, instruction)

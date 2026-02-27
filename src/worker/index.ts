@@ -657,6 +657,10 @@ async function startWorkers() {
             await runUrgencyCheck()
             break
 
+          case 'stale-edit-reminder':
+            await staleEditReminder()
+            break
+
           default:
             console.log(`Unknown monitoring job: ${job.name}`)
         }
@@ -725,11 +729,12 @@ async function startWorkers() {
     })
 
     // Schedule recurring monitoring jobs
-    const { schedulePendingStateEscalation, scheduleNotificationCleanup, scheduleFailedWebhookRetry, scheduleUrgencyCheck } = await import('./queue')
+    const { schedulePendingStateEscalation, scheduleNotificationCleanup, scheduleFailedWebhookRetry, scheduleUrgencyCheck, scheduleStaleEditReminder } = await import('./queue')
     await schedulePendingStateEscalation()
     await scheduleNotificationCleanup()
     await scheduleFailedWebhookRetry()
     await scheduleUrgencyCheck()
+    await scheduleStaleEditReminder()
 
     // BUG 9.5: Worker health check endpoint
     const healthPort = parseInt(process.env.WORKER_HEALTH_PORT || '3001', 10)
@@ -2182,6 +2187,56 @@ async function retryFailedWebhooks() {
       })
     }
   }
+}
+
+// ── Stale Edit Reminder: remind admin about forgotten edit requests ──
+
+async function staleEditReminder() {
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+
+  // Find edit requests stuck in review for 24+ hours
+  const staleEdits = await prisma.editRequest.findMany({
+    where: {
+      status: 'ready_for_review',
+      createdAt: { lt: twentyFourHoursAgo },
+    },
+    include: {
+      client: { select: { companyName: true } },
+    },
+    take: 20,
+  })
+
+  if (staleEdits.length === 0) return
+
+  // Create a single summary notification
+  const names = staleEdits
+    .map(e => e.client?.companyName || 'Unknown')
+    .filter((v, i, a) => a.indexOf(v) === i) // dedupe
+    .slice(0, 5)
+    .join(', ')
+
+  await prisma.notification.create({
+    data: {
+      type: 'CLIENT_TEXT',
+      title: `${staleEdits.length} Stale Edit(s) — Need Review`,
+      message: `${staleEdits.length} edit request(s) have been waiting 24+ hours: ${names}${staleEdits.length > 5 ? '...' : ''}`,
+      metadata: { editRequestIds: staleEdits.map(e => e.id), count: staleEdits.length },
+    },
+  })
+
+  // SMS admin for urgent attention
+  try {
+    const { notifyAdmin } = await import('../lib/notifications')
+    await notifyAdmin(
+      'edit_request',
+      'Stale Edit Reminder',
+      `${staleEdits.length} edit(s) waiting 24h+: ${names}`,
+    )
+  } catch (err) {
+    console.error('[StaleEditReminder] Admin notification failed:', err)
+  }
+
+  console.log(`[StaleEditReminder] Found ${staleEdits.length} stale edit request(s), notified admin`)
 }
 
 async function cleanupOldNotifications() {

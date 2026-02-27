@@ -286,11 +286,19 @@ export async function applyAiEdit(params: {
   // Add current instruction with the HTML
   messages.push({ role: 'user', content: `Here is the current HTML:\n\n${html}\n\nINSTRUCTION: ${instruction}` })
 
+  // Log large site warning for monitoring — helps diagnose truncation issues at scale
+  const htmlSizeKB = Math.round(html.length / 1024)
+  if (htmlSizeKB > 100) {
+    console.warn(`[AI Edit] Large site: ${htmlSizeKB}KB HTML for ${companyName} (styling: ${stylingApproach})`)
+  }
+
   try {
     // Use streaming to avoid Anthropic timeout
+    // 32K tokens gives ~128KB of JSON output — plenty for diff-based edits,
+    // and enough for full-HTML fallback on most sites
     const stream = anthropic.messages.stream({
       model: AI_MODEL,
-      max_tokens: 16000,
+      max_tokens: 32000,
       system: systemPrompt,
       messages,
     })
