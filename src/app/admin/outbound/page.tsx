@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { BulkSelectDropdown } from '@/components/ui/BulkSelectDropdown'
 import {
   Dialog,
   DialogContent,
@@ -409,12 +410,10 @@ export default function SalesRepTrackerPage() {
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="text-center p-4 w-12">
-                    <input
-                      type="checkbox"
-                      checked={selectedLeads.size === filteredLeads.length && filteredLeads.length > 0}
-                      onChange={handleSelectAll}
-                      className="w-4 h-4 cursor-pointer"
-                      title="Select all"
+                    <BulkSelectDropdown
+                      pageItemIds={filteredLeads.map(l => l.id)}
+                      selectedIds={selectedLeads}
+                      onSelectionChange={setSelectedLeads}
                     />
                   </th>
                   <th className="text-left p-4 text-sm font-semibold text-gray-700">Lead</th>

@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { BulkSelectDropdown } from '@/components/ui/BulkSelectDropdown'
 import {
   Dialog,
   DialogContent,
@@ -1170,12 +1171,10 @@ function LeadsPageInner() {
                 <tr>
                   {/* Sticky left: checkbox */}
                   <th className="sticky left-0 z-20 bg-gray-50 text-center p-3 w-12 border-r border-gray-200">
-                    <input
-                      type="checkbox"
-                      checked={selectedLeads.size === filteredLeads.length && filteredLeads.length > 0}
-                      onChange={handleSelectAll}
-                      className="w-4 h-4 cursor-pointer"
-                      title="Select all"
+                    <BulkSelectDropdown
+                      pageItemIds={paginatedLeads.map(l => l.id)}
+                      selectedIds={selectedLeads}
+                      onSelectionChange={setSelectedLeads}
                     />
                   </th>
                   {/* Scrollable columns */}

@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   Loader2,
 } from 'lucide-react'
+import { BulkSelectDropdown } from '@/components/ui/BulkSelectDropdown'
 
 const DISPOSITION_BADGE: Record<string, { label: string; className: string }> = {
   WANTS_TO_MOVE_FORWARD: { label: 'Moving Forward', className: 'bg-green-100 text-green-700' },
@@ -331,11 +332,10 @@ export default function RepLeadBankPage() {
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
                 <th className="pl-4 pr-2 py-3 text-left">
-                  <input
-                    type="checkbox"
-                    checked={leads.length > 0 && selectedIds.size === leads.length}
-                    onChange={toggleSelectAll}
-                    className="rounded border-gray-300"
+                  <BulkSelectDropdown
+                    pageItemIds={leads.map(l => l.id)}
+                    selectedIds={selectedIds}
+                    onSelectionChange={setSelectedIds}
                   />
                 </th>
                 <th className="px-3 py-3 text-left font-medium text-gray-500">Lead Name</th>

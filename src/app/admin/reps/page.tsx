@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { BulkSelectDropdown } from '@/components/ui/BulkSelectDropdown'
 import { useState, useEffect } from 'react'
 import { Users, UserPlus, Edit, Trash2, ArrowLeft, AlertTriangle } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
@@ -19,6 +20,7 @@ export default function RepsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [selectedRep, setSelectedRep] = useState<any>(null)
   const [filter, setFilter] = useState<FilterType>('all')
+  const [selectedReps, setSelectedReps] = useState<Set<string>>(new Set())
   // Deactivation dialog
   const [deactivateRep, setDeactivateRep] = useState<any>(null)
   const [reassignTo, setReassignTo] = useState<string>('')
@@ -196,6 +198,13 @@ export default function RepsPage() {
         <table className="w-full">
           <thead>
             <tr className="border-b text-left text-xs text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 w-10">
+                <BulkSelectDropdown
+                  pageItemIds={filteredReps.map(r => r.id)}
+                  selectedIds={selectedReps}
+                  onSelectionChange={setSelectedReps}
+                />
+              </th>
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Type</th>
               <th className="px-4 py-3">Status</th>
@@ -211,6 +220,19 @@ export default function RepsPage() {
               const stats = getRepStats(rep)
               return (
                 <tr key={rep.id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => { setSelectedRep(rep); setViewMode('edit') }}>
+                  <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedReps.has(rep.id)}
+                      onChange={() => {
+                        const next = new Set(selectedReps)
+                        if (next.has(rep.id)) next.delete(rep.id)
+                        else next.add(rep.id)
+                        setSelectedReps(next)
+                      }}
+                      className="rounded border-gray-300"
+                    />
+                  </td>
                   <td className="px-4 py-3">
                     <div className="font-medium text-gray-900">{rep.name}</div>
                     <div className="text-xs text-gray-500">{rep.email}</div>
@@ -246,11 +268,45 @@ export default function RepsPage() {
               )
             })}
             {filteredReps.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-500">No reps found</td></tr>
+              <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-500">No reps found</td></tr>
             )}
           </tbody>
         </table>
       </Card>
+
+      {/* Bulk action bar */}
+      {selectedReps.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 px-6 py-3">
+          <div className="max-w-[1400px] mx-auto flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">{selectedReps.size} rep{selectedReps.size !== 1 ? 's' : ''} selected</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  if (!window.confirm(`Deactivate ${selectedReps.size} rep${selectedReps.size !== 1 ? 's' : ''}?`)) return
+                  for (const repId of selectedReps) {
+                    await fetch(`/api/users/${repId}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ status: 'INACTIVE' }),
+                    }).catch(() => {})
+                  }
+                  setSelectedReps(new Set())
+                  loadData()
+                }}
+                className="px-4 py-2 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+              >
+                Deactivate
+              </button>
+              <button
+                onClick={() => setSelectedReps(new Set())}
+                className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Deactivation Dialog */}
       {deactivateRep && (() => {

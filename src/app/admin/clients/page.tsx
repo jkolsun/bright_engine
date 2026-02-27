@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { BulkSelectDropdown } from '@/components/ui/BulkSelectDropdown'
 import {
   Dialog,
   DialogContent,
@@ -532,7 +533,11 @@ export default function ClientsPage() {
                   <thead className="bg-gray-50 border-b">
                     <tr>
                       <th className="text-left p-4 w-10">
-                        <input type="checkbox" className="rounded" checked={selectedClients.size === filteredClients.length && filteredClients.length > 0} onChange={toggleSelectAll} />
+                        <BulkSelectDropdown
+                          pageItemIds={filteredClients.map(c => c.id)}
+                          selectedIds={selectedClients}
+                          onSelectionChange={setSelectedClients}
+                        />
                       </th>
                       <th className="text-left p-4 text-sm font-semibold text-gray-700">Client</th>
                       <th className="text-left p-4 text-sm font-semibold text-gray-700">Status</th>
