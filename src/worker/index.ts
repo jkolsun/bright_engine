@@ -395,21 +395,16 @@ async function startWorkers() {
               }
             }
 
-            // Graduation check: if all selected steps succeeded, graduate from IMPORT_STAGING to NEW
-            const enrichmentOk = !options.enrichment || skipEnrichment || leadResult.enrichment === true
-            const previewOk = !options.preview || leadResult.preview === true
-            const personalizationOk = !options.personalization || leadResult.personalization === true
-
-            if (enrichmentOk && previewOk && personalizationOk) {
-              try {
-                await prisma.lead.update({
-                  where: { id: leadId, status: 'IMPORT_STAGING' },
-                  data: { status: 'NEW' },
-                })
-              } catch (gradErr) {
-                // Safety: if lead was already graduated or doesn't exist, this is a no-op
-                console.warn(`[IMPORT] Graduation update failed for ${leadId}:`, gradErr)
-              }
+            // Always graduate leads from IMPORT_STAGING to NEW, regardless of processing outcome.
+            // Processing failures are non-blocking — leads should be callable immediately.
+            // Uses updateMany to avoid errors when Process Now already graduated the lead.
+            try {
+              await prisma.lead.updateMany({
+                where: { id: leadId, status: 'IMPORT_STAGING' },
+                data: { status: 'NEW' },
+              })
+            } catch (gradErr) {
+              console.warn(`[IMPORT] Graduation update for ${leadId}:`, gradErr)
             }
 
             return { leadId, success: true as const, result: leadResult }

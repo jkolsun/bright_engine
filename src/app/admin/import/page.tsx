@@ -9,7 +9,7 @@ import {
   CheckCircle, XCircle, Clock,
   Plus, History,
   Info, Search, Eye, Brain, Download, ChevronRight, ChevronDown, ChevronUp, ArrowLeft,
-  UserPlus, Trash2, MoveUp, MoveDown, ListOrdered
+  UserPlus, Trash2, MoveUp, MoveDown, ListOrdered, Play
 } from 'lucide-react'
 
 type ProcessOptions = {
@@ -587,6 +587,80 @@ export default function ImportPage() {
     // Refresh queue and auto-start
     const batches = await fetchQueue()
     if (batches) autoStartNextBatch(batches)
+    fetchAbandonedLeads()
+  }
+
+  const handleProcessNow = async () => {
+    if (!batchName.trim()) {
+      alert('Please enter a batch name before proceeding.')
+      return
+    }
+
+    // Step 1: Graduate leads immediately (status → NEW)
+    const ok = await applyBatchSettings(true)
+    if (!ok) {
+      alert('Failed to save leads. Please try again.')
+      return
+    }
+
+    // Step 2: If ALL processing toggles are OFF, just go back to upload (same as Skip Processing)
+    if (!processOptions.enrichment && !processOptions.preview && !processOptions.personalization) {
+      setStep('upload')
+      setFeedLeads([])
+      setImportResult(null)
+      setBatchName('')
+      setSelectedFolderId('')
+      setAssignTo('')
+      fetchImportHistory()
+      fetchAbandonedLeads()
+      return
+    }
+
+    // Step 3: Kick off background processing — leads are already NEW so failures don't matter
+    try {
+      const queueRes = await fetch('/api/import-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          batchName: batchName.trim(),
+          leadIds: feedLeads.map(l => l.id),
+          folderId: selectedFolderId || undefined,
+          assignToId: assignTo || undefined,
+          options: processOptions,
+        }),
+      })
+
+      if (queueRes.ok) {
+        const queueData = await queueRes.json()
+        const batchId = queueData.batch?.id
+
+        if (batchId) {
+          const startRes = await fetch(`/api/import-queue/${batchId}/start`, { method: 'POST' })
+          if (startRes.ok) {
+            const startData = await startRes.json()
+            setImportJobId(startData.jobId)
+            setStep('feed')
+            pollImportProgress(startData.jobId, feedLeads)
+            setBatchName('')
+            setSelectedFolderId('')
+            setAssignTo('')
+            setProcessOptions({ enrichment: true, preview: true, personalization: true })
+            return
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Process now queue error:', err)
+    }
+
+    // If queue/start failed, leads are still graduated — just go back to upload
+    setStep('upload')
+    setFeedLeads([])
+    setImportResult(null)
+    setBatchName('')
+    setSelectedFolderId('')
+    setAssignTo('')
+    fetchImportHistory()
     fetchAbandonedLeads()
   }
 
@@ -1328,10 +1402,16 @@ export default function ImportPage() {
             <Button variant="outline" onClick={handleSkipProcessing}>
               Skip Processing
             </Button>
-            <Button onClick={addToQueue} className="px-8">
-              <ListOrdered size={18} className="mr-1" />
-              Add to Queue
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" onClick={addToQueue}>
+                <ListOrdered size={18} className="mr-1" />
+                Add to Queue
+              </Button>
+              <Button onClick={handleProcessNow} className="px-8 bg-teal-600 hover:bg-teal-700">
+                <Play size={18} className="mr-1" />
+                Process Now
+              </Button>
+            </div>
           </div>
         </div>
       )}
