@@ -143,24 +143,6 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
       } else {
         setSaveStatus('error')
         console.error('[Save] Failed:', data.error)
-        // Auto-retry once after 3 seconds
-        setTimeout(() => {
-          if (htmlRef.current === htmlToSave) {
-            console.log('[Save] Auto-retrying...')
-            setSaveStatus('saving')
-            fetch(`/api/site-editor/${props.leadId}/save`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ html: htmlToSave, expectedVersion: siteVersion }),
-            }).then(r => r.json()).then(d => {
-              if (d.success) {
-                setSaveStatus('saved')
-                setLastSavedAt(new Date().toLocaleTimeString())
-                if (typeof d.version === 'number') setSiteVersion(d.version)
-              }
-            }).catch(err => console.warn('[SiteEditor] Auto-save failed:', err))
-          }
-        }, 3000)
       }
     } catch {
       setSaveStatus('error')

@@ -124,18 +124,18 @@ async function handleSimpleEdit(
   const result = await applyEdit(client, lead, editRequestId, instruction)
   if (!result) return
 
-  // Optimistic locking: verify version hasn't changed since we read the HTML (BUG B.1 fix)
-  const currentLead = await prisma.lead.findUnique({
-    where: { id: lead.id },
-    select: { siteEditVersion: true },
+  // Atomic optimistic lock: only update if version hasn't changed during AI processing
+  const updated = await prisma.lead.updateMany({
+    where: { id: lead.id, siteEditVersion: result.baseVersion },
+    data: { siteHtml: result.html, buildStep: 'QA_REVIEW', siteEditVersion: result.baseVersion + 1 },
   })
-  if (currentLead && currentLead.siteEditVersion !== result.baseVersion) {
-    console.warn(`[EditHandler] Version conflict for ${client.companyName}: expected v${result.baseVersion}, found v${currentLead.siteEditVersion}. Re-queuing.`)
+  if (updated.count === 0) {
+    console.warn(`[EditHandler] Version conflict for ${client.companyName}: expected v${result.baseVersion}. Re-queuing.`)
     await escalateAsFailed(client, lead, editRequestId, 'Concurrent edit detected — please retry')
     return
   }
 
-  // Auto-push: update site HTML + mark as approved + push to build queue
+  // Mark as approved + auto-push
   await prisma.editRequest.update({
     where: { id: editRequestId },
     data: {
@@ -146,12 +146,6 @@ async function handleSimpleEdit(
       approvedBy: 'ai_auto',
       approvedAt: new Date(),
     },
-  })
-
-  // Update lead's siteHtml + increment version
-  await prisma.lead.update({
-    where: { id: lead.id },
-    data: { siteHtml: result.html, buildStep: 'QA_REVIEW', siteEditVersion: result.baseVersion + 1 },
   })
 
   // Notify client
@@ -189,13 +183,13 @@ async function handleMediumEdit(
   const result = await applyEdit(client, lead, editRequestId, instruction)
   if (!result) return
 
-  // Optimistic locking: verify version hasn't changed since we read the HTML (BUG B.1 fix)
-  const currentLead = await prisma.lead.findUnique({
-    where: { id: lead.id },
-    select: { siteEditVersion: true },
+  // Atomic optimistic lock: only update if version hasn't changed during AI processing
+  const updated = await prisma.lead.updateMany({
+    where: { id: lead.id, siteEditVersion: result.baseVersion },
+    data: { siteHtml: result.html, siteEditVersion: result.baseVersion + 1 },
   })
-  if (currentLead && currentLead.siteEditVersion !== result.baseVersion) {
-    console.warn(`[EditHandler] Version conflict for ${client.companyName}: expected v${result.baseVersion}, found v${currentLead.siteEditVersion}. Re-queuing.`)
+  if (updated.count === 0) {
+    console.warn(`[EditHandler] Version conflict for ${client.companyName}: expected v${result.baseVersion}. Re-queuing.`)
     await escalateAsFailed(client, lead, editRequestId, 'Concurrent edit detected — please retry')
     return
   }
@@ -209,12 +203,6 @@ async function handleMediumEdit(
       postEditHtml: result.html,
       editSummary: result.summary,
     },
-  })
-
-  // Update lead's siteHtml so staging preview shows the change + increment version
-  await prisma.lead.update({
-    where: { id: lead.id },
-    data: { siteHtml: result.html, siteEditVersion: result.baseVersion + 1 },
   })
 
   // Notify admin

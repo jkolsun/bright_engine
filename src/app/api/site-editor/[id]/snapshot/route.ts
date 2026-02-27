@@ -33,6 +33,7 @@ export async function POST(
         personalization: true,
         buildReadinessScore: true,
         colorPrefs: true,
+        selectedTemplate: true,
       },
     })
 
@@ -134,10 +135,24 @@ export async function POST(
 
     // Post-process: add Tailwind CDN + Google Fonts + font config, strip Next.js scripts
     const tailwindCdn = '<script src="https://cdn.tailwindcss.com"></script>'
-    const tailwindConfig = `<script>tailwind.config={theme:{extend:{fontFamily:{display:['"DM Serif Display"','Georgia','serif']}}}}</script>`
-    const googleFonts = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">'
-    const baseFontCss = `<style>body,.preview-template{font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif}h1,h2,h3,h4,.preview-template h1,.preview-template h2,.preview-template h3,.preview-template h4,.font-display{font-family:'DM Serif Display',Georgia,serif}</style>`
     const metaCharset = '<meta charset="UTF-8">'
+
+    // Template-aware font injection — each template uses different Google Fonts
+    const TEMPLATE_FONTS: Record<string, { query: string; head: string; body: string; display?: string }> = {
+      'modern':    { query: 'family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500', head: "'Space Grotesk',system-ui,sans-serif", body: "'DM Sans',system-ui,sans-serif" },
+      'modern-b':  { query: 'family=Outfit:wght@400;500;600;700;800&family=Source+Sans+3:wght@400;500;600;700&family=Quicksand:wght@500;600;700', head: "'Outfit',system-ui,sans-serif", body: "'Source Sans 3',system-ui,sans-serif" },
+      'classic':   { query: 'family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;500;600;700&family=Josefin+Sans:wght@400;500;600;700', head: "'Libre Baskerville',Georgia,serif", body: "'Josefin Sans',system-ui,sans-serif", display: "'Lora',Georgia,serif" },
+      'classic-b': { query: 'family=Oswald:wght@400;500;600;700&family=Work+Sans:wght@300;400;500;600&family=Roboto+Mono:wght@400;500', head: "'Oswald',system-ui,sans-serif", body: "'Work Sans',system-ui,sans-serif" },
+      'bold':      { query: 'family=Playfair+Display:wght@400;500;600;700;800;900&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500', head: "'Playfair Display',Georgia,serif", body: "'Syne',system-ui,sans-serif" },
+      'bold-b':    { query: 'family=Bebas+Neue&family=Barlow:wght@400;500;600;700;800&family=Share+Tech+Mono', head: "'Bebas Neue',system-ui,sans-serif", body: "'Barlow',system-ui,sans-serif" },
+    }
+    const defaultFonts = { query: 'family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800', head: "'DM Serif Display',Georgia,serif", body: "'Plus Jakarta Sans',system-ui,-apple-system,sans-serif" }
+    const templateKey = lead.selectedTemplate || ''
+    const fonts = TEMPLATE_FONTS[templateKey] || defaultFonts
+
+    const googleFonts = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?${fonts.query}&display=swap" rel="stylesheet">`
+    const tailwindConfig = `<script>tailwind.config={theme:{extend:{fontFamily:{display:[${fonts.head.split(',').map(f => `'${f.trim()}'`).join(',')}]}}}}</script>`
+    const baseFontCss = `<style>body,.preview-template{font-family:${fonts.body}}h1,h2,h3,h4,.preview-template h1,.preview-template h2,.preview-template h3,.preview-template h4,.font-display{font-family:${fonts.head}}</style>`
 
     // Inject into <head>
     html = html.replace(

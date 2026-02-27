@@ -34,7 +34,7 @@ export async function POST(
 
     const lead = await prisma.lead.findUnique({
       where: { id },
-      select: { id: true, companyName: true },
+      select: { id: true, companyName: true, siteEditVersion: true },
     })
 
     if (!lead) {
@@ -57,7 +57,7 @@ export async function POST(
       return NextResponse.json({ error: msg }, { status })
     }
 
-    return NextResponse.json({ html: result.html, summary: result.summary })
+    return NextResponse.json({ html: result.html, summary: result.summary, version: lead.siteEditVersion ?? 0 })
   } catch (error) {
     console.error('[AI Edit] Error:', error)
     const message = error instanceof Error ? error.message : 'Unknown error'

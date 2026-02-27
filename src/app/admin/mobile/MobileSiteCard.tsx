@@ -157,11 +157,12 @@ export function MobileSiteCard({ lead, onApproved }: SiteCardProps) {
       }
       const editData = await editRes.json()
 
-      // 3. Save the result
+      // 3. Save the result (use version from AI edit response if available, else original)
+      const saveVersion = typeof editData.version === 'number' ? editData.version : loadData.version
       const saveRes = await fetch(`/api/site-editor/${lead.id}/save`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html: editData.html, expectedVersion: loadData.version }),
+        body: JSON.stringify({ html: editData.html, expectedVersion: saveVersion }),
       })
       if (!saveRes.ok) {
         const err = await saveRes.json().catch(() => ({}))
