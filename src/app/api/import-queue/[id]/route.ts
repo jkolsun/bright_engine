@@ -97,8 +97,10 @@ export async function PATCH(
 
 /**
  * DELETE /api/import-queue/[id]
- * Cancel a pending batch. Deletes linked staging leads and the batch record.
- * Only works on PENDING batches.
+ * Remove a batch from the queue. Works on ANY status.
+ * - PENDING: deletes staging leads + batch record
+ * - PROCESSING: cancels BullMQ job, unlinks leads, deletes batch
+ * - COMPLETED/FAILED: unlinks leads from batch, deletes batch record
  */
 export async function DELETE(
   request: NextRequest,
@@ -117,19 +119,46 @@ export async function DELETE(
     if (!batch) {
       return NextResponse.json({ error: 'Batch not found' }, { status: 404 })
     }
-    if (batch.status !== 'PENDING') {
-      return NextResponse.json({ error: 'Can only cancel PENDING batches' }, { status: 400 })
+
+    let leadsDeleted = 0
+
+    if (batch.status === 'PENDING') {
+      // Delete staging leads that haven't been processed yet
+      const deleteResult = await prisma.lead.deleteMany({
+        where: { importBatchId: id, status: 'IMPORT_STAGING' },
+      })
+      leadsDeleted = deleteResult.count
     }
 
-    // Delete linked staging leads (only those still in IMPORT_STAGING)
-    const deleteResult = await prisma.lead.deleteMany({
-      where: { importBatchId: id, status: 'IMPORT_STAGING' },
+    if (batch.status === 'PROCESSING' && batch.jobId) {
+      // Try to remove the BullMQ job and clean up Redis progress
+      try {
+        const { removeImportProcessingJob } = await import('@/worker/queue')
+        await removeImportProcessingJob(batch.jobId)
+      } catch (err) {
+        console.warn('[ImportQueue Delete] Failed to remove BullMQ job:', err)
+      }
+      try {
+        const Redis = (await import('ioredis')).default
+        const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+          maxRetriesPerRequest: 1,
+          connectTimeout: 2000,
+        })
+        await redis.del(`import:${batch.jobId}`)
+        await redis.quit()
+      } catch { /* non-fatal */ }
+    }
+
+    // Unlink leads from this batch (don't delete processed leads)
+    await prisma.lead.updateMany({
+      where: { importBatchId: id },
+      data: { importBatchId: null },
     })
 
     // Delete the batch record
     await prisma.importBatch.delete({ where: { id } })
 
-    return NextResponse.json({ deleted: true, leadsDeleted: deleteResult.count })
+    return NextResponse.json({ deleted: true, leadsDeleted })
   } catch (error) {
     console.error('Import queue cancel error:', error)
     return NextResponse.json(

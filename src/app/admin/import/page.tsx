@@ -161,10 +161,9 @@ export default function ImportPage() {
       if (!res.ok) return
       const data = await res.json()
       const batches = (data.batches || []) as ImportBatchUI[]
-      // Show PENDING, PROCESSING, and COMPLETED-with-failures in the queue panel
+      // Show all non-FAILED batches in the queue panel
       const active = batches.filter(b =>
-        b.status === 'PENDING' || b.status === 'PROCESSING' ||
-        (b.status === 'COMPLETED' && b.failedLeads > 0)
+        b.status === 'PENDING' || b.status === 'PROCESSING' || b.status === 'COMPLETED'
       )
       setQueueBatches(active)
       return active
@@ -719,12 +718,20 @@ export default function ImportPage() {
   }
 
   const handleCancelBatch = async (batch: ImportBatchUI) => {
-    if (!window.confirm(`Cancel "${batch.batchName}"? This will delete ${batch.totalLeads} staging leads.`)) return
+    const msg = batch.status === 'PENDING'
+      ? `Cancel "${batch.batchName}"? This will delete ${batch.totalLeads} staging leads.`
+      : batch.status === 'PROCESSING'
+      ? `Stop and remove "${batch.batchName}"? The processing job will be cancelled.`
+      : `Remove "${batch.batchName}" from the queue?`
+    if (!window.confirm(msg)) return
     try {
       const res = await fetch(`/api/import-queue/${batch.id}`, { method: 'DELETE' })
       if (res.ok) {
         setQueueBatches(prev => prev.filter(b => b.id !== batch.id))
         fetchAbandonedLeads()
+      } else {
+        const err = await res.json().catch(() => ({}))
+        alert(err.error || 'Failed to remove batch')
       }
     } catch { /* ignore */ }
   }
@@ -886,6 +893,9 @@ export default function ImportPage() {
                           </button>
                         </div>
                       )}
+                      {batch.status === 'COMPLETED' && batch.failedLeads === 0 && (
+                        <span className="text-xs text-green-600 flex-shrink-0">Done</span>
+                      )}
                       {batch.status === 'PENDING' && (
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <span className="text-xs text-gray-500 mr-1">Pending</span>
@@ -903,15 +913,15 @@ export default function ImportPage() {
                           >
                             <MoveDown size={14} />
                           </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleCancelBatch(batch) }}
-                            className="p-1 text-gray-400 hover:text-red-500 rounded"
-                            title="Cancel"
-                          >
-                            <X size={14} />
-                          </button>
                         </div>
                       )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleCancelBatch(batch) }}
+                        className="p-1 text-gray-400 hover:text-red-500 rounded flex-shrink-0"
+                        title="Remove from queue"
+                      >
+                        <X size={14} />
+                      </button>
                     </div>
                   )
                 })}

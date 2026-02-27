@@ -702,6 +702,25 @@ export async function addImportProcessingJob(data: {
   }
 }
 
+export async function removeImportProcessingJob(jobId: string) {
+  const queue = await getImportQueue()
+  if (!queue) return
+
+  try {
+    // Try to find and remove the job by iterating active/waiting/delayed
+    const jobs = await queue.getJobs(['active', 'waiting', 'delayed'])
+    for (const job of jobs) {
+      if (job.data?.jobId === jobId) {
+        await job.remove()
+        console.log(`[QUEUE] Removed import job with jobId ${jobId}`)
+        return
+      }
+    }
+  } catch (err) {
+    console.warn('[QUEUE] Failed to remove import processing job:', err)
+  }
+}
+
 export async function addSessionAnalysisJob(data: { sessionId: string }) {
   const queue = await getSequenceQueue()
   if (!queue || !isRedisAvailable) {
