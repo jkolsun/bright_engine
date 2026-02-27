@@ -187,7 +187,7 @@ export default function SiteEditorPanel({
   }
 
   // ─── Save ─────────────────────────────────────────────
-  const saveHtml = useCallback(async (htmlToSave: string) => {
+  const saveHtml = useCallback(async (htmlToSave: string): Promise<boolean> => {
     setSaveStatus('saving')
     try {
       const res = await fetch(`/api/site-editor/${leadId}/save`, {
@@ -200,6 +200,7 @@ export default function SiteEditorPanel({
         if (typeof data.version === 'number') setSiteVersion(data.version)
         setSaveStatus('saved')
         onRefresh()
+        return true
       } else if (res.status === 409) {
         setSaveStatus('error')
         alert('Version conflict — someone else saved while you were editing. Please close and re-open the editor.')
@@ -209,6 +210,7 @@ export default function SiteEditorPanel({
     } catch {
       setSaveStatus('error')
     }
+    return false
   }, [leadId, onRefresh, siteVersion])
 
   // Monaco onChange — update state + debounced auto-save
@@ -238,7 +240,11 @@ export default function SiteEditorPanel({
     // Save first if needed
     if (saveStatus === 'unsaved') {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-      await saveHtml(htmlRef.current)
+      const saved = await saveHtml(htmlRef.current)
+      if (!saved) {
+        alert('Save failed — cannot approve until changes are saved.')
+        return
+      }
     }
     setApproving(true)
     try {

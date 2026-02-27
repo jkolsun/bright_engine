@@ -10,7 +10,7 @@ interface EditorToolbarProps {
   leadId: string
   saveStatus: 'saved' | 'unsaved' | 'saving' | 'error'
   lastSavedAt?: string | null
-  onSave: () => void
+  onSave: () => void | Promise<void>
   onReset: () => void
   onRegenerate: () => void
   isRegenerating?: boolean
@@ -34,7 +34,7 @@ export default function EditorToolbar(props: EditorToolbarProps) {
   const canApprove = ['QA_REVIEW', 'EDITING'].includes(props.buildStep) && !approved
 
   const handleApprove = async () => {
-    if (props.saveStatus === 'unsaved') props.onSave()
+    if (props.saveStatus === 'unsaved') await props.onSave()
     setApproving(true)
     try {
       const res = await fetch(`/api/build-queue/${props.leadId}/approve`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })

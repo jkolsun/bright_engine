@@ -342,7 +342,11 @@ server.tool(
           return {
             content: [{
               type: 'text' as const,
-              text: `Version conflict during save. Someone else edited the site while AI was processing. Use get_site to reload and try again.\n\nAI edit summary: ${result.summary}`,
+              text: JSON.stringify({
+                versionConflict: true,
+                message: 'Version conflict during save. Someone else edited the site while AI was processing. Use get_site to reload and try again.',
+                editSummary: result.summary,
+              }),
             }],
             isError: true,
           }

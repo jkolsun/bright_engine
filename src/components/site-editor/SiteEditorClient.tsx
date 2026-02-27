@@ -178,7 +178,7 @@ export default function SiteEditorClient(props: SiteEditorClientProps) {
   const handleManualSave = useCallback(() => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     // Use ref to always get the latest HTML — avoids stale closure after AI edit or image swap
-    saveHtml(htmlRef.current)
+    return saveHtml(htmlRef.current)
   }, [saveHtml])
 
   // Image manager changes — treated like manual edits

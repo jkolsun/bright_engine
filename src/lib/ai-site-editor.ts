@@ -50,6 +50,17 @@ CRITICAL RULES:
 6. Always preserve existing responsive prefixes (sm:, md:, lg:, xl:) — if a class has md:text-4xl and the user wants it bigger, change to md:text-5xl.
 7. If an instruction is ambiguous, make the most visually tasteful choice based on professional web design standards.
 
+PROTECTED INFRASTRUCTURE — You MUST NOT remove, modify, or replace ANY of the following. These are critical for the site to function:
+- Tailwind CDN script: <script src="https://cdn.tailwindcss.com"></script>
+- Tailwind config script (immediately after CDN)
+- Google Fonts links (fonts.googleapis.com, fonts.gstatic.com)
+- Base font style block (Plus Jakarta Sans, DM Serif Display)
+- Router script: Everything between <!-- SP_ROUTER_V2 --> and <!-- /SP_ROUTER_V2 -->
+- Accent CSS variable: <style>:root{--accent:...}</style>
+- Meta charset: <meta charset="UTF-8">
+- data-page and data-nav-page attributes on elements (used for page routing)
+If a user asks to change fonts, colors, or navigation — modify only the VISIBLE content, never the infrastructure tags above.
+
 TAILWIND SIZING REFERENCE:
 - Font size: text-xs (12px) → text-sm (14px) → text-base (16px) → text-lg (18px) → text-xl (20px) → text-2xl (24px) → text-3xl (30px) → text-4xl (36px) → text-5xl (48px) → text-6xl (60px) → text-7xl (72px) → text-8xl (96px) → text-9xl (128px)
 - Padding: p-0.5 (2px) → p-1 (4px) → p-1.5 (6px) → p-2 (8px) → p-2.5 (10px) → p-3 (12px) → p-4 (16px) → p-5 (20px) → p-6 (24px) → p-8 (32px) → p-10 (40px) → p-12 (48px) → p-16 (64px) → p-20 (80px) → p-24 (96px) (also px-, py-, pt-, pb-, pl-, pr-)
@@ -353,6 +364,17 @@ export async function applyAiEdit(params: {
         console.error('[AI Edit] Could not parse response:', rawText.slice(0, 500))
         return { error: 'AI returned an unexpected format. Try a simpler instruction.' }
       }
+    }
+
+    // Validate critical infrastructure was preserved
+    const missing: string[] = []
+    if (html.includes('cdn.tailwindcss.com') && !modifiedHtml.includes('cdn.tailwindcss.com')) missing.push('Tailwind CDN')
+    if (html.includes('fonts.googleapis.com') && !modifiedHtml.includes('fonts.googleapis.com')) missing.push('Google Fonts')
+    if (html.includes('SP_ROUTER_V2') && !modifiedHtml.includes('SP_ROUTER_V2')) missing.push('Page router script')
+    if (html.includes('data-nav-page') && !modifiedHtml.includes('data-nav-page')) missing.push('Navigation attributes')
+    if (missing.length > 0) {
+      console.error(`[AI Edit] Infrastructure stripped: ${missing.join(', ')}`)
+      return { error: `Edit would remove critical site infrastructure (${missing.join(', ')}). Try a more targeted instruction.` }
     }
 
     // Log API cost (Opus — uses sonnet rates as approximation, with usage-based when available)

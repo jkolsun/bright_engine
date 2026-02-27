@@ -384,7 +384,7 @@ export async function pushEditToBuildQueue(editRequestId: string): Promise<void>
   if (editRequest.postEditHtml) {
     await prisma.lead.update({
       where: { id: editRequest.leadId },
-      data: { siteHtml: editRequest.postEditHtml, buildStep: 'QA_REVIEW' },
+      data: { siteHtml: editRequest.postEditHtml, buildStep: 'QA_REVIEW', siteEditVersion: { increment: 1 } },
     })
   } else {
     await prisma.lead.update({
