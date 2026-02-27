@@ -753,18 +753,30 @@ export async function removeImportProcessingJob(jobId: string) {
   const queue = await getImportQueue()
   if (!queue) return
 
+  let removed = false
   try {
-    // Try to find and remove the job by iterating active/waiting/delayed
     const jobs = await queue.getJobs(['active', 'waiting', 'delayed'])
     for (const job of jobs) {
       if (job.data?.jobId === jobId) {
         await job.remove()
         console.log(`[QUEUE] Removed import job with jobId ${jobId}`)
-        return
+        removed = true
+        break
       }
     }
   } catch (err) {
     console.warn('[QUEUE] Failed to remove import processing job:', err)
+  }
+
+  // If remove failed (locked by worker), obliterate the entire import queue
+  // Safe because we're about to create a fresh job anyway
+  if (!removed) {
+    try {
+      await queue.obliterate({ force: true })
+      console.log(`[QUEUE] Obliterated import queue to clear stuck jobs`)
+    } catch (err) {
+      console.warn('[QUEUE] Failed to obliterate import queue:', err)
+    }
   }
 }
 
