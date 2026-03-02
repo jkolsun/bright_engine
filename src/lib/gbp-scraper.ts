@@ -168,8 +168,20 @@ export function extractLeads(
   }
 
   for (const r of results) {
+    // TEMP DIAGNOSTIC: Log first raw result to see actual SerpAPI field structure
+    // Remove this after confirming the website filter works
+    if (leads.length === 0 && stats.qualified === 0 && stats.skippedWebsite === 0) {
+      console.log('[SCRAPER] Raw SerpAPI result sample:', JSON.stringify(r, null, 2))
+    }
+
     // Filter 1: Must NOT have a website (core filter)
-    if (r.links?.website) {
+    // SerpAPI google_maps returns websites in multiple possible fields depending on result type
+    const hasWebsite = !!(
+      r.website ||
+      r.links?.website ||
+      r.place_results?.website
+    )
+    if (hasWebsite) {
       stats.skippedWebsite++
       continue
     }
