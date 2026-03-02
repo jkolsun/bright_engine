@@ -78,9 +78,10 @@ export function BulkSelectDropdown({ pageItemIds, allItemIds, selectedIds, onSel
   }
 
   const handleSelectNumber = () => {
-    const n = Math.max(1, Math.min(pageItemIds.length, parseInt(selectCount) || 0))
+    const sourceIds = allItemIds && allItemIds.length > 0 ? allItemIds : pageItemIds
+    const n = Math.max(1, Math.min(sourceIds.length, parseInt(selectCount) || 0))
     const next = new Set(selectedIds)
-    pageItemIds.slice(0, n).forEach(id => next.add(id))
+    sourceIds.slice(0, n).forEach(id => next.add(id))
     onSelectionChange(next)
     setOpen(false)
   }
@@ -138,7 +139,7 @@ export function BulkSelectDropdown({ pageItemIds, allItemIds, selectedIds, onSel
                 onChange={e => setSelectCount(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleSelectNumber() }}
                 min={1}
-                max={pageItemIds.length}
+                max={allItemIds?.length || pageItemIds.length}
                 className="w-16 border border-gray-300 rounded px-2 py-1 text-sm"
               />
               <button
