@@ -20,6 +20,7 @@ import {
   Wallet,
   Activity,
   Clock,
+  Search,
 } from 'lucide-react'
 import { BriefingModal } from '@/components/admin/BriefingModal'
 
@@ -131,6 +132,9 @@ export default function AdminLayout({
           </NavLink>
           <NavLink href="/admin/dialer-monitor" icon={<Radio size={20} />}>
             Live Dialer
+          </NavLink>
+          <NavLink href="/admin/scraper" icon={<Search size={20} />}>
+            Lead Scraper
           </NavLink>
           <NavLink href="/admin/import" icon={<Upload size={20} />}>
             Lead Import

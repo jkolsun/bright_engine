@@ -1466,3 +1466,54 @@ model ImportBatch {
   @@index([position])
   @@map("import_batches")
 }
+
+model ScraperConfig {
+  id              String       @id @default(cuid())
+  name            String
+  searchTerms     Json         @map("search_terms")
+  cities          Json
+  minReviews      Int          @default(5) @map("min_reviews")
+  minRating       Float        @default(3.5) @map("min_rating")
+  targetLeads     Int          @default(400) @map("target_leads")
+  advancedFilters Json?        @map("advanced_filters")
+  cityMode        String       @default("major") @map("city_mode")
+  schedule        Json?
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  lastRunAt       DateTime?    @map("last_run_at")
+  lastRunResults  Int?         @map("last_run_results")
+  runs            ScraperRun[]
+
+  @@map("scraper_configs")
+}
+
+model ScraperRun {
+  id             String         @id @default(cuid())
+  configId       String?        @map("config_id")
+  name           String
+  searchTerms    Json           @map("search_terms")
+  cities         Json
+  filters        Json
+  cityMode       String         @default("major") @map("city_mode")
+  status         String         @default("RUNNING")
+  totalLeads     Int            @default(0) @map("total_leads")
+  importedLeads  Int            @default(0) @map("imported_leads")
+  creditsUsed    Int            @default(0) @map("credits_used")
+  resultsKey     String?        @map("results_key")
+  startedAt      DateTime       @default(now()) @map("started_at")
+  completedAt    DateTime?      @map("completed_at")
+  config         ScraperConfig? @relation(fields: [configId], references: [id])
+
+  @@index([status])
+  @@index([startedAt])
+  @@map("scraper_runs")
+}
+
+model CityList {
+  id        String   @id @default(cuid())
+  name      String
+  cities    Json
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("city_lists")
+}

@@ -194,7 +194,18 @@ async function checkSerpApi(): Promise<ServiceStatus> {
     url.searchParams.set('api_key', key)
     const res = await fetch(url.toString(), { signal: AbortSignal.timeout(8000) })
     if (res.ok) {
-      return { key: 'serpapi', label: 'SerpAPI', configured: true, connected: true, detail: 'API key valid' }
+      const account = await res.json()
+      const searchesLeft = account.total_searches_left ?? 0
+      const searchesPerMonth = account.searches_per_month ?? 0
+      const planName = account.plan_name ?? 'Unknown'
+      const thisMonthUsage = searchesPerMonth - searchesLeft
+      return {
+        key: 'serpapi',
+        label: 'SerpAPI',
+        configured: true,
+        connected: true,
+        detail: `${searchesLeft.toLocaleString()} searches left — ${planName}`,
+      }
     }
     return { key: 'serpapi', label: 'SerpAPI', configured: true, connected: false, detail: `API returned ${res.status}` }
   } catch (e) {

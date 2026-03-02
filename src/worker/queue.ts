@@ -91,6 +91,7 @@ let scriptQueue: Queue | null = null
 let distributionQueue: Queue | null = null
 let sequenceQueue: Queue | null = null
 let importQueue: Queue | null = null
+let scraperQueue: Queue | null = null
 let monitoringQueue: Queue | null = null
 
 let enrichmentEvents: QueueEvents | null = null
@@ -156,6 +157,10 @@ async function getQueues() {
     // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
     importQueue = new Queue('import', { connection })
   }
+  if (!scraperQueue && connection) {
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    scraperQueue = new Queue('scraper', { connection })
+  }
   if (!monitoringQueue && connection) {
     // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
     monitoringQueue = new Queue('monitoring', { connection })
@@ -198,6 +203,11 @@ export async function getSequenceQueue() {
 export async function getImportQueue() {
   await getQueues()
   return importQueue
+}
+
+export async function getScraperQueue() {
+  await getQueues()
+  return scraperQueue
 }
 
 export async function getMonitoringQueue() {
@@ -767,6 +777,44 @@ export async function removeImportProcessingJob(jobId: string) {
     console.log(`[QUEUE] Import job ${jobId} not found in waiting/delayed (may be active — will finish naturally)`)
   } catch (err) {
     console.warn('[QUEUE] Failed to remove import processing job:', err)
+  }
+}
+
+export async function addScraperJob(data: {
+  runId: string
+  config: {
+    searchTerms: Array<{ term: string; industry: string }>
+    cities: string[]
+    filters: {
+      minReviews: number
+      minRating: number
+      targetLeads: number
+      hasPhotos?: string
+      hasHours?: string
+      minCategories?: number
+      maxDistance?: number
+    }
+  }
+}) {
+  const queue = await getScraperQueue()
+  if (!queue) {
+    console.warn('Scraper queue unavailable, cannot start scrape')
+    return null
+  }
+
+  try {
+    return await queue.add(
+      'process-scrape',
+      data,
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: true,
+      }
+    )
+  } catch (err) {
+    console.warn('Failed to add scraper job:', err)
+    return null
   }
 }
 

@@ -1,0 +1,501 @@
+{
+  "states": {
+    "AL": {
+      "name": "Alabama",
+      "abbr": "AL",
+      "region": "Southeast",
+      "cities": ["Birmingham", "Montgomery", "Huntsville", "Mobile", "Tuscaloosa", "Hoover", "Dothan", "Auburn", "Decatur", "Madison", "Florence", "Gadsden", "Vestavia Hills", "Prattville", "Phenix City"]
+    },
+    "AK": {
+      "name": "Alaska",
+      "abbr": "AK",
+      "region": "Pacific",
+      "cities": ["Anchorage", "Fairbanks", "Juneau", "Wasilla", "Sitka"]
+    },
+    "AZ": {
+      "name": "Arizona",
+      "abbr": "AZ",
+      "region": "Southwest",
+      "cities": ["Phoenix", "Tucson", "Mesa", "Chandler", "Scottsdale", "Glendale", "Gilbert", "Tempe", "Peoria", "Surprise", "Goodyear", "Avondale", "Flagstaff", "Yuma", "Lake Havasu City"]
+    },
+    "AR": {
+      "name": "Arkansas",
+      "abbr": "AR",
+      "region": "Southeast",
+      "cities": ["Little Rock", "Fort Smith", "Fayetteville", "Springdale", "Jonesboro", "North Little Rock", "Conway", "Rogers", "Pine Bluff", "Bentonville"]
+    },
+    "CA": {
+      "name": "California",
+      "abbr": "CA",
+      "region": "West Coast",
+      "cities": ["Los Angeles", "San Diego", "San Jose", "San Francisco", "Fresno", "Sacramento", "Long Beach", "Oakland", "Bakersfield", "Anaheim", "Santa Ana", "Riverside", "Stockton", "Irvine", "Chula Vista", "Fremont", "San Bernardino", "Modesto", "Moreno Valley", "Fontana", "Santa Clarita", "Oxnard", "Ontario", "Rancho Cucamonga", "Oceanside", "Garden Grove", "Elk Grove", "Corona", "Hayward", "Palmdale"]
+    },
+    "CO": {
+      "name": "Colorado",
+      "abbr": "CO",
+      "region": "Mountain",
+      "cities": ["Denver", "Colorado Springs", "Aurora", "Fort Collins", "Lakewood", "Thornton", "Arvada", "Westminster", "Pueblo", "Centennial", "Boulder", "Greeley", "Longmont", "Loveland", "Grand Junction"]
+    },
+    "CT": {
+      "name": "Connecticut",
+      "abbr": "CT",
+      "region": "Northeast",
+      "cities": ["Bridgeport", "New Haven", "Stamford", "Hartford", "Waterbury", "Norwalk", "Danbury", "New Britain", "Bristol", "Meriden"]
+    },
+    "DE": {
+      "name": "Delaware",
+      "abbr": "DE",
+      "region": "Northeast",
+      "cities": ["Wilmington", "Dover", "Newark", "Middletown", "Smyrna"]
+    },
+    "FL": {
+      "name": "Florida",
+      "abbr": "FL",
+      "region": "Southeast",
+      "cities": ["Jacksonville", "Miami", "Tampa", "Orlando", "St. Petersburg", "Hialeah", "Port St. Lucie", "Cape Coral", "Tallahassee", "Fort Lauderdale", "Pembroke Pines", "Hollywood", "Gainesville", "Miramar", "Coral Springs", "Palm Bay", "Clearwater", "Lakeland", "Pompano Beach", "West Palm Beach", "Davie", "Boca Raton", "Sunrise", "Deltona", "Plantation", "Kissimmee", "Ocala", "Fort Myers", "Pensacola", "Sarasota"]
+    },
+    "GA": {
+      "name": "Georgia",
+      "abbr": "GA",
+      "region": "Southeast",
+      "cities": ["Atlanta", "Augusta", "Columbus", "Macon", "Savannah", "Athens", "Sandy Springs", "Roswell", "Johns Creek", "Albany", "Warner Robins", "Alpharetta", "Marietta", "Valdosta", "Smyrna", "Dunwoody"]
+    },
+    "HI": {
+      "name": "Hawaii",
+      "abbr": "HI",
+      "region": "Pacific",
+      "cities": ["Honolulu", "Pearl City", "Hilo", "Kailua", "Waipahu"]
+    },
+    "ID": {
+      "name": "Idaho",
+      "abbr": "ID",
+      "region": "Mountain",
+      "cities": ["Boise", "Meridian", "Nampa", "Idaho Falls", "Caldwell", "Pocatello", "Coeur d'Alene", "Twin Falls", "Post Falls", "Lewiston"]
+    },
+    "IL": {
+      "name": "Illinois",
+      "abbr": "IL",
+      "region": "Midwest",
+      "cities": ["Chicago", "Aurora", "Joliet", "Naperville", "Rockford", "Springfield", "Elgin", "Peoria", "Champaign", "Waukegan", "Cicero", "Bloomington", "Arlington Heights", "Evanston", "Decatur"]
+    },
+    "IN": {
+      "name": "Indiana",
+      "abbr": "IN",
+      "region": "Midwest",
+      "cities": ["Indianapolis", "Fort Wayne", "Evansville", "South Bend", "Carmel", "Fishers", "Bloomington", "Hammond", "Gary", "Lafayette", "Muncie", "Terre Haute", "Kokomo", "Noblesville", "Anderson"]
+    },
+    "IA": {
+      "name": "Iowa",
+      "abbr": "IA",
+      "region": "Midwest",
+      "cities": ["Des Moines", "Cedar Rapids", "Davenport", "Sioux City", "Iowa City", "Waterloo", "Council Bluffs", "Ames", "Dubuque", "West Des Moines"]
+    },
+    "KS": {
+      "name": "Kansas",
+      "abbr": "KS",
+      "region": "Midwest",
+      "cities": ["Wichita", "Overland Park", "Kansas City", "Olathe", "Topeka", "Lawrence", "Shawnee", "Manhattan", "Lenexa", "Salina"]
+    },
+    "KY": {
+      "name": "Kentucky",
+      "abbr": "KY",
+      "region": "Southeast",
+      "cities": ["Louisville", "Lexington", "Bowling Green", "Owensboro", "Covington", "Richmond", "Georgetown", "Florence", "Hopkinsville", "Nicholasville"]
+    },
+    "LA": {
+      "name": "Louisiana",
+      "abbr": "LA",
+      "region": "Southeast",
+      "cities": ["New Orleans", "Baton Rouge", "Shreveport", "Lafayette", "Lake Charles", "Kenner", "Bossier City", "Monroe", "Alexandria", "Houma"]
+    },
+    "ME": {
+      "name": "Maine",
+      "abbr": "ME",
+      "region": "Northeast",
+      "cities": ["Portland", "Lewiston", "Bangor", "South Portland", "Auburn"]
+    },
+    "MD": {
+      "name": "Maryland",
+      "abbr": "MD",
+      "region": "Northeast",
+      "cities": ["Baltimore", "Frederick", "Rockville", "Gaithersburg", "Bowie", "Hagerstown", "Annapolis", "College Park", "Salisbury", "Laurel"]
+    },
+    "MA": {
+      "name": "Massachusetts",
+      "abbr": "MA",
+      "region": "Northeast",
+      "cities": ["Boston", "Worcester", "Springfield", "Cambridge", "Lowell", "Brockton", "New Bedford", "Quincy", "Lynn", "Fall River", "Newton", "Lawrence", "Somerville", "Framingham", "Haverhill"]
+    },
+    "MI": {
+      "name": "Michigan",
+      "abbr": "MI",
+      "region": "Midwest",
+      "cities": ["Detroit", "Grand Rapids", "Warren", "Sterling Heights", "Ann Arbor", "Lansing", "Flint", "Dearborn", "Livonia", "Clinton Township", "Canton", "Westland", "Troy", "Farmington Hills", "Kalamazoo"]
+    },
+    "MN": {
+      "name": "Minnesota",
+      "abbr": "MN",
+      "region": "Midwest",
+      "cities": ["Minneapolis", "St. Paul", "Rochester", "Duluth", "Bloomington", "Brooklyn Park", "Plymouth", "Maple Grove", "Woodbury", "St. Cloud", "Eagan", "Eden Prairie", "Lakeville", "Minnetonka", "Burnsville"]
+    },
+    "MS": {
+      "name": "Mississippi",
+      "abbr": "MS",
+      "region": "Southeast",
+      "cities": ["Jackson", "Gulfport", "Southaven", "Hattiesburg", "Biloxi", "Meridian", "Tupelo", "Olive Branch", "Greenville", "Horn Lake"]
+    },
+    "MO": {
+      "name": "Missouri",
+      "abbr": "MO",
+      "region": "Midwest",
+      "cities": ["Kansas City", "St. Louis", "Springfield", "Columbia", "Independence", "Lee's Summit", "O'Fallon", "St. Joseph", "St. Charles", "St. Peters", "Blue Springs", "Florissant", "Joplin", "Chesterfield", "Jefferson City"]
+    },
+    "MT": {
+      "name": "Montana",
+      "abbr": "MT",
+      "region": "Mountain",
+      "cities": ["Billings", "Missoula", "Great Falls", "Bozeman", "Helena", "Butte", "Kalispell"]
+    },
+    "NE": {
+      "name": "Nebraska",
+      "abbr": "NE",
+      "region": "Midwest",
+      "cities": ["Omaha", "Lincoln", "Bellevue", "Grand Island", "Kearney", "Fremont", "Hastings", "Norfolk", "Columbus", "North Platte"]
+    },
+    "NV": {
+      "name": "Nevada",
+      "abbr": "NV",
+      "region": "Mountain",
+      "cities": ["Las Vegas", "Henderson", "Reno", "North Las Vegas", "Sparks", "Carson City", "Fernley", "Elko", "Mesquite", "Boulder City"]
+    },
+    "NH": {
+      "name": "New Hampshire",
+      "abbr": "NH",
+      "region": "Northeast",
+      "cities": ["Manchester", "Nashua", "Concord", "Dover", "Rochester"]
+    },
+    "NJ": {
+      "name": "New Jersey",
+      "abbr": "NJ",
+      "region": "Northeast",
+      "cities": ["Newark", "Jersey City", "Paterson", "Elizabeth", "Lakewood", "Edison", "Woodbridge", "Toms River", "Hamilton", "Trenton", "Clifton", "Camden", "Brick", "Cherry Hill", "Passaic"]
+    },
+    "NM": {
+      "name": "New Mexico",
+      "abbr": "NM",
+      "region": "Southwest",
+      "cities": ["Albuquerque", "Las Cruces", "Rio Rancho", "Santa Fe", "Roswell", "Farmington", "Clovis", "Hobbs", "Alamogordo", "Carlsbad"]
+    },
+    "NY": {
+      "name": "New York",
+      "abbr": "NY",
+      "region": "Northeast",
+      "cities": ["New York", "Buffalo", "Rochester", "Yonkers", "Syracuse", "Albany", "New Rochelle", "Mount Vernon", "Schenectady", "Utica", "White Plains", "Hempstead", "Troy", "Niagara Falls", "Binghamton"]
+    },
+    "NC": {
+      "name": "North Carolina",
+      "abbr": "NC",
+      "region": "Southeast",
+      "cities": ["Charlotte", "Raleigh", "Greensboro", "Durham", "Winston-Salem", "Fayetteville", "Cary", "Wilmington", "High Point", "Concord", "Greenville", "Asheville", "Gastonia", "Jacksonville", "Chapel Hill", "Huntersville"]
+    },
+    "ND": {
+      "name": "North Dakota",
+      "abbr": "ND",
+      "region": "Midwest",
+      "cities": ["Fargo", "Bismarck", "Grand Forks", "Minot", "West Fargo"]
+    },
+    "OH": {
+      "name": "Ohio",
+      "abbr": "OH",
+      "region": "Midwest",
+      "cities": ["Columbus", "Cleveland", "Cincinnati", "Toledo", "Akron", "Dayton", "Parma", "Canton", "Youngstown", "Lorain", "Hamilton", "Springfield", "Kettering", "Elyria", "Lakewood"]
+    },
+    "OK": {
+      "name": "Oklahoma",
+      "abbr": "OK",
+      "region": "Southwest",
+      "cities": ["Oklahoma City", "Tulsa", "Norman", "Broken Arrow", "Edmond", "Lawton", "Moore", "Midwest City", "Enid", "Stillwater"]
+    },
+    "OR": {
+      "name": "Oregon",
+      "abbr": "OR",
+      "region": "West Coast",
+      "cities": ["Portland", "Salem", "Eugene", "Gresham", "Hillsboro", "Beaverton", "Bend", "Medford", "Springfield", "Corvallis", "Albany", "Tigard", "Lake Oswego", "Keizer", "Grants Pass"]
+    },
+    "PA": {
+      "name": "Pennsylvania",
+      "abbr": "PA",
+      "region": "Northeast",
+      "cities": ["Philadelphia", "Pittsburgh", "Allentown", "Reading", "Scranton", "Bethlehem", "Lancaster", "Harrisburg", "York", "Erie", "Wilkes-Barre", "Chester", "Easton", "Lebanon", "State College"]
+    },
+    "RI": {
+      "name": "Rhode Island",
+      "abbr": "RI",
+      "region": "Northeast",
+      "cities": ["Providence", "Warwick", "Cranston", "Pawtucket", "East Providence"]
+    },
+    "SC": {
+      "name": "South Carolina",
+      "abbr": "SC",
+      "region": "Southeast",
+      "cities": ["Charleston", "Columbia", "North Charleston", "Mount Pleasant", "Rock Hill", "Greenville", "Summerville", "Goose Creek", "Hilton Head Island", "Florence", "Spartanburg", "Myrtle Beach"]
+    },
+    "SD": {
+      "name": "South Dakota",
+      "abbr": "SD",
+      "region": "Midwest",
+      "cities": ["Sioux Falls", "Rapid City", "Aberdeen", "Brookings", "Watertown"]
+    },
+    "TN": {
+      "name": "Tennessee",
+      "abbr": "TN",
+      "region": "Southeast",
+      "cities": ["Nashville", "Memphis", "Knoxville", "Chattanooga", "Clarksville", "Murfreesboro", "Franklin", "Jackson", "Johnson City", "Bartlett", "Hendersonville", "Kingsport", "Collierville", "Smyrna", "Cleveland"]
+    },
+    "TX": {
+      "name": "Texas",
+      "abbr": "TX",
+      "region": "Southwest",
+      "cities": ["Houston", "San Antonio", "Dallas", "Austin", "Fort Worth", "El Paso", "Arlington", "Corpus Christi", "Plano", "Lubbock", "Laredo", "Irving", "Garland", "Frisco", "McKinney", "Amarillo", "Grand Prairie", "Brownsville", "Killeen", "Pasadena", "McAllen", "Mesquite", "Midland", "Beaumont", "Denton", "Waco", "Round Rock", "Odessa", "Abilene", "Tyler"]
+    },
+    "UT": {
+      "name": "Utah",
+      "abbr": "UT",
+      "region": "Mountain",
+      "cities": ["Salt Lake City", "West Valley City", "Provo", "West Jordan", "Orem", "Sandy", "Ogden", "St. George", "Layton", "South Jordan", "Lehi", "Millcreek", "Taylorsville", "Logan", "Murray"]
+    },
+    "VT": {
+      "name": "Vermont",
+      "abbr": "VT",
+      "region": "Northeast",
+      "cities": ["Burlington", "South Burlington", "Rutland", "Barre", "Montpelier"]
+    },
+    "VA": {
+      "name": "Virginia",
+      "abbr": "VA",
+      "region": "Southeast",
+      "cities": ["Virginia Beach", "Norfolk", "Chesapeake", "Richmond", "Newport News", "Alexandria", "Hampton", "Roanoke", "Portsmouth", "Suffolk", "Lynchburg", "Harrisonburg", "Charlottesville", "Manassas", "Fredericksburg"]
+    },
+    "WA": {
+      "name": "Washington",
+      "abbr": "WA",
+      "region": "West Coast",
+      "cities": ["Seattle", "Spokane", "Tacoma", "Vancouver", "Bellevue", "Kent", "Everett", "Renton", "Federal Way", "Spokane Valley", "Kirkland", "Auburn", "Redmond", "Bellingham", "Kennewick", "Olympia"]
+    },
+    "WV": {
+      "name": "West Virginia",
+      "abbr": "WV",
+      "region": "Southeast",
+      "cities": ["Charleston", "Huntington", "Morgantown", "Parkersburg", "Wheeling"]
+    },
+    "WI": {
+      "name": "Wisconsin",
+      "abbr": "WI",
+      "region": "Midwest",
+      "cities": ["Milwaukee", "Madison", "Green Bay", "Kenosha", "Racine", "Appleton", "Waukesha", "Eau Claire", "Oshkosh", "Janesville", "West Allis", "La Crosse", "Sheboygan", "Wauwatosa", "Fond du Lac"]
+    },
+    "WY": {
+      "name": "Wyoming",
+      "abbr": "WY",
+      "region": "Mountain",
+      "cities": ["Cheyenne", "Casper", "Laramie", "Gillette", "Rock Springs"]
+    }
+  },
+  "regions": {
+    "Southeast": ["FL", "GA", "NC", "SC", "VA", "TN", "AL", "MS", "LA", "AR", "KY", "WV"],
+    "Midwest": ["OH", "MI", "IN", "IL", "WI", "MN", "IA", "MO", "KS", "NE", "ND", "SD"],
+    "Southwest": ["TX", "AZ", "NM", "OK"],
+    "Mountain": ["CO", "UT", "MT", "WY", "ID", "NV"],
+    "West Coast": ["CA", "OR", "WA"],
+    "Northeast": ["NY", "NJ", "PA", "CT", "MA", "RI", "VT", "NH", "ME", "DE", "MD"],
+    "Pacific": ["HI", "AK"]
+  },
+  "populationTiers": {
+    "top50": [
+      "New York NY", "Los Angeles CA", "Chicago IL", "Houston TX", "Phoenix AZ",
+      "Philadelphia PA", "San Antonio TX", "San Diego CA", "Dallas TX", "San Jose CA",
+      "Austin TX", "Jacksonville FL", "Fort Worth TX", "Columbus OH", "Indianapolis IN",
+      "Charlotte NC", "San Francisco CA", "Seattle WA", "Denver CO", "Nashville TN",
+      "Oklahoma City OK", "El Paso TX", "Washington DC", "Boston MA", "Las Vegas NV",
+      "Portland OR", "Memphis TN", "Louisville KY", "Baltimore MD", "Milwaukee WI",
+      "Albuquerque NM", "Tucson AZ", "Fresno CA", "Sacramento CA", "Mesa AZ",
+      "Kansas City MO", "Atlanta GA", "Omaha NE", "Colorado Springs CO", "Raleigh NC",
+      "Long Beach CA", "Virginia Beach VA", "Miami FL", "Oakland CA", "Minneapolis MN",
+      "Tampa FL", "Tulsa OK", "Arlington TX", "New Orleans LA", "Wichita KS"
+    ],
+    "top100": [
+      "New York NY", "Los Angeles CA", "Chicago IL", "Houston TX", "Phoenix AZ",
+      "Philadelphia PA", "San Antonio TX", "San Diego CA", "Dallas TX", "San Jose CA",
+      "Austin TX", "Jacksonville FL", "Fort Worth TX", "Columbus OH", "Indianapolis IN",
+      "Charlotte NC", "San Francisco CA", "Seattle WA", "Denver CO", "Nashville TN",
+      "Oklahoma City OK", "El Paso TX", "Washington DC", "Boston MA", "Las Vegas NV",
+      "Portland OR", "Memphis TN", "Louisville KY", "Baltimore MD", "Milwaukee WI",
+      "Albuquerque NM", "Tucson AZ", "Fresno CA", "Sacramento CA", "Mesa AZ",
+      "Kansas City MO", "Atlanta GA", "Omaha NE", "Colorado Springs CO", "Raleigh NC",
+      "Long Beach CA", "Virginia Beach VA", "Miami FL", "Oakland CA", "Minneapolis MN",
+      "Tampa FL", "Tulsa OK", "Arlington TX", "New Orleans LA", "Wichita KS",
+      "Cleveland OH", "Bakersfield CA", "Aurora CO", "Anaheim CA", "Honolulu HI",
+      "Santa Ana CA", "Riverside CA", "Corpus Christi TX", "Lexington KY", "Stockton CA",
+      "St. Louis MO", "Pittsburgh PA", "Cincinnati OH", "Anchorage AK", "Henderson NV",
+      "Greensboro NC", "Plano TX", "Newark NJ", "Lincoln NE", "Orlando FL",
+      "Irvine CA", "Toledo OH", "Jersey City NJ", "Chula Vista CA", "Durham NC",
+      "Fort Wayne IN", "St. Petersburg FL", "Laredo TX", "Norfolk VA", "Madison WI",
+      "Chandler AZ", "Lubbock TX", "Scottsdale AZ", "Reno NV", "Glendale AZ",
+      "Gilbert AZ", "Winston-Salem NC", "North Las Vegas NV", "Irving TX", "Chesapeake VA",
+      "Baton Rouge LA", "Fremont CA", "Richmond VA", "Boise ID", "San Bernardino CA",
+      "Spokane WA", "Birmingham AL", "Tacoma WA", "Fayetteville NC", "Modesto CA"
+    ],
+    "top200": [
+      "New York NY", "Los Angeles CA", "Chicago IL", "Houston TX", "Phoenix AZ",
+      "Philadelphia PA", "San Antonio TX", "San Diego CA", "Dallas TX", "San Jose CA",
+      "Austin TX", "Jacksonville FL", "Fort Worth TX", "Columbus OH", "Indianapolis IN",
+      "Charlotte NC", "San Francisco CA", "Seattle WA", "Denver CO", "Nashville TN",
+      "Oklahoma City OK", "El Paso TX", "Boston MA", "Las Vegas NV",
+      "Portland OR", "Memphis TN", "Louisville KY", "Baltimore MD", "Milwaukee WI",
+      "Albuquerque NM", "Tucson AZ", "Fresno CA", "Sacramento CA", "Mesa AZ",
+      "Kansas City MO", "Atlanta GA", "Omaha NE", "Colorado Springs CO", "Raleigh NC",
+      "Miami FL", "Minneapolis MN", "Tampa FL", "Tulsa OK", "Arlington TX",
+      "New Orleans LA", "Wichita KS", "Cleveland OH", "Bakersfield CA", "Aurora CO",
+      "Anaheim CA", "Riverside CA", "Corpus Christi TX", "Lexington KY", "Stockton CA",
+      "St. Louis MO", "Pittsburgh PA", "Cincinnati OH", "Henderson NV",
+      "Greensboro NC", "Plano TX", "Lincoln NE", "Orlando FL",
+      "Toledo OH", "Durham NC", "Fort Wayne IN", "St. Petersburg FL",
+      "Norfolk VA", "Madison WI", "Chandler AZ", "Lubbock TX", "Scottsdale AZ",
+      "Reno NV", "Glendale AZ", "Gilbert AZ", "Winston-Salem NC", "Irving TX",
+      "Chesapeake VA", "Baton Rouge LA", "Richmond VA", "Boise ID",
+      "Spokane WA", "Birmingham AL", "Tacoma WA", "Fayetteville NC", "Modesto CA",
+      "Des Moines IA", "Moreno Valley CA", "Fontana CA", "Rochester NY", "Frisco TX",
+      "Yonkers NY", "McKinney TX", "Salt Lake City UT", "Amarillo TX", "Augusta GA",
+      "Huntsville AL", "Montgomery AL", "Little Rock AR", "Grand Rapids MI",
+      "Akron OH", "Tallahassee FL", "Grand Prairie TX", "Overland Park KS",
+      "Brownsville TX", "Knoxville TN", "Port St. Lucie FL", "Worcester MA",
+      "Newport News VA", "Providence RI", "Chattanooga TN", "Tempe AZ",
+      "Oceanside CA", "Cape Coral FL", "Springfield MO", "Fort Collins CO",
+      "Pembroke Pines FL", "Salem OR", "Peoria AZ", "Elk Grove CA", "Corona CA",
+      "Eugene OR", "Clarksville TN", "Garden Grove CA", "Lakewood CO",
+      "Sioux Falls SD", "Cary NC", "Dayton OH", "Springfield MA",
+      "Jackson MS", "Hollywood FL", "Hayward CA", "Surprise AZ",
+      "Macon GA", "Savannah GA", "Killeen TX", "Murfreesboro TN",
+      "Bellevue WA", "McAllen TX", "Joliet IL", "Naperville IL",
+      "Pasadena TX", "Paterson NJ", "Mesquite TX", "Bridgeport CT",
+      "Miramar FL", "Denton TX", "Roseville CA", "Thornton CO",
+      "Waco TX", "Midland TX", "Olathe KS", "Pompano Beach FL",
+      "West Valley City UT", "Columbia SC", "Alexandria VA", "Hampton VA",
+      "Wilmington NC", "Sterling Heights MI", "Carmel IN", "New Haven CT",
+      "Topeka KS", "Concord CA", "Visalia CA", "Evansville IN",
+      "Centennial CO", "Gainesville FL", "Coral Springs FL",
+      "Cedar Rapids IA", "Clearwater FL", "Beaumont TX",
+      "Round Rock TX", "Columbia MO", "Charleston SC",
+      "Arvada CO", "Berkeley CA", "Provo UT", "Palm Bay FL",
+      "West Palm Beach FL", "Odessa TX", "Westminster CO",
+      "Hillsboro OR", "Manchester NH", "Lakeland FL", "Abilene TX",
+      "Tyler TX", "Davie FL", "Boulder CO", "North Charleston SC",
+      "Green Bay WI", "Pueblo CO"
+    ],
+    "top500": [
+      "New York NY", "Los Angeles CA", "Chicago IL", "Houston TX", "Phoenix AZ",
+      "Philadelphia PA", "San Antonio TX", "San Diego CA", "Dallas TX", "San Jose CA",
+      "Austin TX", "Jacksonville FL", "Fort Worth TX", "Columbus OH", "Indianapolis IN",
+      "Charlotte NC", "San Francisco CA", "Seattle WA", "Denver CO", "Nashville TN",
+      "Oklahoma City OK", "El Paso TX", "Boston MA", "Las Vegas NV",
+      "Portland OR", "Memphis TN", "Louisville KY", "Baltimore MD", "Milwaukee WI",
+      "Albuquerque NM", "Tucson AZ", "Fresno CA", "Sacramento CA", "Mesa AZ",
+      "Kansas City MO", "Atlanta GA", "Omaha NE", "Colorado Springs CO", "Raleigh NC",
+      "Miami FL", "Minneapolis MN", "Tampa FL", "Tulsa OK", "Arlington TX",
+      "New Orleans LA", "Wichita KS", "Cleveland OH", "Bakersfield CA", "Aurora CO",
+      "Anaheim CA", "Riverside CA", "Corpus Christi TX", "Lexington KY", "Stockton CA",
+      "St. Louis MO", "Pittsburgh PA", "Cincinnati OH", "Henderson NV",
+      "Greensboro NC", "Plano TX", "Lincoln NE", "Orlando FL",
+      "Toledo OH", "Durham NC", "Fort Wayne IN", "St. Petersburg FL",
+      "Norfolk VA", "Madison WI", "Chandler AZ", "Lubbock TX", "Scottsdale AZ",
+      "Reno NV", "Glendale AZ", "Gilbert AZ", "Winston-Salem NC", "Irving TX",
+      "Chesapeake VA", "Baton Rouge LA", "Richmond VA", "Boise ID",
+      "Spokane WA", "Birmingham AL", "Tacoma WA", "Fayetteville NC", "Modesto CA",
+      "Des Moines IA", "Moreno Valley CA", "Fontana CA", "Rochester NY", "Frisco TX",
+      "McKinney TX", "Salt Lake City UT", "Amarillo TX", "Augusta GA",
+      "Huntsville AL", "Montgomery AL", "Little Rock AR", "Grand Rapids MI",
+      "Akron OH", "Tallahassee FL", "Grand Prairie TX", "Overland Park KS",
+      "Brownsville TX", "Knoxville TN", "Port St. Lucie FL", "Worcester MA",
+      "Newport News VA", "Providence RI", "Chattanooga TN", "Tempe AZ",
+      "Oceanside CA", "Cape Coral FL", "Springfield MO", "Fort Collins CO",
+      "Pembroke Pines FL", "Salem OR", "Elk Grove CA", "Corona CA",
+      "Eugene OR", "Clarksville TN", "Lakewood CO",
+      "Sioux Falls SD", "Cary NC", "Dayton OH", "Springfield MA",
+      "Jackson MS", "Hayward CA", "Surprise AZ",
+      "Macon GA", "Savannah GA", "Killeen TX", "Murfreesboro TN",
+      "Bellevue WA", "McAllen TX", "Joliet IL", "Naperville IL",
+      "Pasadena TX", "Mesquite TX",
+      "Miramar FL", "Denton TX", "Thornton CO",
+      "Waco TX", "Midland TX", "Olathe KS", "Pompano Beach FL",
+      "West Valley City UT", "Columbia SC", "Alexandria VA", "Hampton VA",
+      "Wilmington NC", "Sterling Heights MI", "Carmel IN",
+      "Topeka KS", "Evansville IN",
+      "Centennial CO", "Gainesville FL", "Coral Springs FL",
+      "Cedar Rapids IA", "Clearwater FL", "Beaumont TX",
+      "Round Rock TX", "Columbia MO", "Charleston SC",
+      "Arvada CO", "Provo UT", "Palm Bay FL",
+      "West Palm Beach FL", "Odessa TX", "Westminster CO",
+      "Hillsboro OR", "Manchester NH", "Lakeland FL", "Abilene TX",
+      "Tyler TX", "Boulder CO", "North Charleston SC",
+      "Green Bay WI", "Pueblo CO",
+      "Fargo ND", "Ann Arbor MI", "Rochester MN", "Gresham OR",
+      "Lansing MI", "Peoria IL", "Layton UT", "Sandy UT", "South Bend IN",
+      "Davenport IA", "Lehi UT", "West Jordan UT", "Orem UT",
+      "Meridian ID", "Nampa ID", "Broken Arrow OK", "Norman OK",
+      "High Point NC", "Concord NC", "Greenville NC", "Asheville NC",
+      "Gastonia NC", "Jacksonville NC", "Rock Hill SC", "Mount Pleasant SC",
+      "Greenville SC", "Summerville SC", "Florence SC", "Spartanburg SC",
+      "Myrtle Beach SC", "Roanoke VA", "Lynchburg VA", "Suffolk VA",
+      "Harrisonburg VA", "Charlottesville VA", "Fredericksburg VA",
+      "Shreveport LA", "Lafayette LA", "Lake Charles LA", "Bossier City LA", "Monroe LA",
+      "Pensacola FL", "Ocala FL", "Fort Myers FL", "Sarasota FL", "Kissimmee FL", "Deltona FL",
+      "Bowling Green KY", "Owensboro KY", "Covington KY",
+      "Tuscaloosa AL", "Mobile AL", "Dothan AL", "Auburn AL", "Decatur AL",
+      "Hattiesburg MS", "Gulfport MS", "Biloxi MS", "Southaven MS", "Tupelo MS",
+      "Fayetteville AR", "Springdale AR", "Jonesboro AR", "Conway AR", "Rogers AR", "Bentonville AR",
+      "Clarksville TN", "Franklin TN", "Johnson City TN", "Kingsport TN",
+      "Billings MT", "Missoula MT", "Great Falls MT", "Bozeman MT",
+      "Cheyenne WY", "Casper WY",
+      "Idaho Falls ID", "Coeur d'Alene ID", "Twin Falls ID", "Pocatello ID",
+      "Ogden UT", "St. George UT", "Logan UT",
+      "Flagstaff AZ", "Yuma AZ", "Lake Havasu City AZ", "Goodyear AZ", "Avondale AZ",
+      "Las Cruces NM", "Rio Rancho NM", "Santa Fe NM",
+      "Edmond OK", "Moore OK", "Lawton OK", "Stillwater OK",
+      "Sparks NV", "Carson City NV",
+      "Bend OR", "Medford OR", "Corvallis OR", "Albany OR", "Grants Pass OR",
+      "Vancouver WA", "Kent WA", "Everett WA", "Renton WA", "Federal Way WA",
+      "Spokane Valley WA", "Bellingham WA", "Kennewick WA", "Olympia WA",
+      "Kenosha WI", "Racine WI", "Appleton WI", "Waukesha WI", "Eau Claire WI",
+      "Oshkosh WI", "Janesville WI", "La Crosse WI",
+      "Flint MI", "Kalamazoo MI", "Dearborn MI", "Canton MI", "Troy MI",
+      "Duluth MN", "St. Cloud MN", "Brooklyn Park MN", "Plymouth MN",
+      "Bloomington IN", "Hammond IN", "Lafayette IN", "Kokomo IN",
+      "Champaign IL", "Bloomington IL", "Rockford IL", "Springfield IL", "Elgin IL",
+      "Sioux City IA", "Iowa City IA", "Waterloo IA", "Council Bluffs IA",
+      "Lawrence KS", "Manhattan KS", "Salina KS",
+      "St. Joseph MO", "Independence MO", "Lee's Summit MO", "O'Fallon MO", "Joplin MO",
+      "Grand Island NE", "Kearney NE", "Bellevue NE",
+      "Rapid City SD", "Aberdeen SD",
+      "Grand Forks ND", "Bismarck ND", "Minot ND",
+      "Canton OH", "Youngstown OH", "Lorain OH", "Hamilton OH", "Springfield OH",
+      "Erie PA", "Allentown PA", "Reading PA", "Scranton PA", "Lancaster PA",
+      "Harrisburg PA", "York PA", "Bethlehem PA", "State College PA",
+      "Stamford CT", "Waterbury CT", "Norwalk CT", "Danbury CT",
+      "Albany NY", "Syracuse NY", "Buffalo NY", "Yonkers NY", "Utica NY", "Schenectady NY",
+      "Lowell MA", "Cambridge MA", "Brockton MA", "New Bedford MA", "Quincy MA",
+      "Fall River MA", "Newton MA", "Lawrence MA",
+      "Warwick RI", "Cranston RI", "Pawtucket RI",
+      "Lewiston ME", "Bangor ME",
+      "Nashua NH", "Concord NH", "Dover NH",
+      "Burlington VT",
+      "Wilmington DE", "Dover DE",
+      "Frederick MD", "Hagerstown MD", "Annapolis MD", "Salisbury MD",
+      "Morgantown WV", "Huntington WV", "Parkersburg WV",
+      "Hoover AL", "Madison AL", "Florence AL",
+      "Kenner LA", "Houma LA", "Alexandria LA",
+      "Hilton Head Island SC",
+      "Warner Robins GA", "Athens GA", "Albany GA", "Valdosta GA",
+      "Boca Raton FL", "Sunrise FL", "Plantation FL"
+    ]
+  }
+}

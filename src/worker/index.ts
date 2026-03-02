@@ -493,6 +493,248 @@ async function startWorkers() {
       console.error(`[IMPORT] Job ${job?.id} failed:`, err)
     })
 
+    // Scraper worker (GBP lead scraping via SerpAPI)
+    const scraperWorker = new Worker(
+      'scraper',
+      async (job) => {
+        const { runId, config } = job.data as {
+          runId: string
+          config: {
+            searchTerms: Array<{ term: string; industry: string }>
+            cities: string[]
+            filters: {
+              minReviews: number
+              minRating: number
+              targetLeads: number
+              hasPhotos?: string
+              hasHours?: string
+              minCategories?: number
+              maxDistance?: number
+            }
+          }
+        }
+        console.log(`[SCRAPER] Starting run ${runId}: ${config.searchTerms.length} terms × ${config.cities.length} cities`)
+
+        const { searchGoogleMaps, extractLeads, deduplicateLeads, buildQueryList, checkDailyLimit, logApiCost, parseCityState } = await import('@/lib/gbp-scraper')
+        const { syncApiKeysToEnv } = await import('@/lib/api-keys')
+
+        // Ensure DB key overrides are loaded into process.env
+        try { await syncApiKeysToEnv() } catch { /* non-fatal */ }
+        const apiKey = process.env.SERPAPI_KEY
+        if (!apiKey) {
+          throw new Error('SERPAPI_KEY not configured')
+        }
+
+        const redisConn = getSharedConnection()
+        if (!redisConn) throw new Error('Redis connection not available')
+
+        const queries = buildQueryList({
+          searchTerms: config.searchTerms,
+          cities: config.cities,
+          filters: config.filters as any,
+        })
+
+        const allLeads: Array<{ companyName: string; phone: string; city: string; state: string; industry: string; rating: number; reviews: number; hasPhotos: boolean; hasHours: boolean; address: string; categories: string[]; gpsCoordinates: { latitude: number; longitude: number } | null; type: string; qualityScore: number; searchQuery: string }> = []
+        const seenPhones = new Set<string>()
+        let queriesUsed = 0
+        let resultsScanned = 0
+        const skipped = { website: 0, noPhone: 0, lowReviews: 0, lowRating: 0, noPhotos: 0, noHours: 0, lowCategories: 0 }
+
+        for (const q of queries) {
+          // Check stop flag
+          try {
+            const stopFlag = await redisConn.get(`scraper:${runId}:stop`)
+            if (stopFlag) {
+              console.log(`[SCRAPER] Run ${runId} stopped by user`)
+              await redisConn.set(`scraper:${runId}`, JSON.stringify({
+                status: 'stopped',
+                stopReason: 'USER_STOPPED',
+                queriesUsed,
+                totalQueries: queries.length,
+                leadsFound: allLeads.length,
+                resultsScanned,
+                skipped,
+                qualifiedLeads: allLeads.slice(-10),
+              }), 'EX', 14400)
+              break
+            }
+          } catch { /* non-fatal */ }
+
+          // Check target
+          if (allLeads.length >= config.filters.targetLeads) {
+            console.log(`[SCRAPER] Target reached: ${allLeads.length} >= ${config.filters.targetLeads}`)
+            break
+          }
+
+          // Check daily limit before each API call
+          try {
+            const { allowed, todayUsage, dailyLimit } = await checkDailyLimit()
+            if (!allowed) {
+              console.log(`[SCRAPER] Daily limit reached (${todayUsage}/${dailyLimit}). Stopping.`)
+              await redisConn.set(`scraper:${runId}`, JSON.stringify({
+                status: 'stopped',
+                stopReason: 'DAILY_LIMIT_REACHED',
+                queriesUsed,
+                totalQueries: queries.length,
+                leadsFound: allLeads.length,
+                resultsScanned,
+                skipped,
+                qualifiedLeads: allLeads.slice(-10),
+              }), 'EX', 14400)
+              break
+            }
+          } catch (e) {
+            console.warn('[SCRAPER] Daily limit check failed, continuing:', e)
+          }
+
+          // Make SerpAPI call with retry on 429
+          let data: any = null
+          let apiCallSucceeded = false
+          for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+              data = await searchGoogleMaps(q.search, apiKey)
+              apiCallSucceeded = true
+              break
+            } catch (err: any) {
+              if (err?.message?.includes('429') && attempt < 2) {
+                console.log(`[SCRAPER] Rate limited, waiting 5s (attempt ${attempt + 1}/3)`)
+                await new Promise(r => setTimeout(r, 5000))
+              } else {
+                console.warn(`[SCRAPER] Query failed: ${q.search}`, err?.message)
+                break
+              }
+            }
+          }
+
+          // Only log API cost if the call actually reached SerpAPI
+          if (apiCallSucceeded) {
+            try { await logApiCost() } catch { /* non-fatal */ }
+          }
+          queriesUsed++
+
+          // Keep BullMQ lock alive for long scrapes
+          try { await job.updateProgress(queriesUsed) } catch { /* non-fatal */ }
+
+          if (data) {
+            const localResults = data.local_results || []
+            resultsScanned += localResults.length
+
+            const { leads, stats } = extractLeads(
+              data,
+              q.search,
+              q.industry,
+              config.filters as any,
+              { city: q.city, state: q.state }
+            )
+
+            // Dedup within scrape by phone (running dedup using persistent set)
+            for (const lead of leads) {
+              const norm = lead.phone.replace(/\D/g, '').slice(-10)
+              if (norm && !seenPhones.has(norm)) {
+                seenPhones.add(norm)
+                allLeads.push(lead)
+              }
+            }
+
+            skipped.website += stats.skippedWebsite
+            skipped.noPhone += stats.skippedNoPhone
+            skipped.lowReviews += stats.skippedLowReviews
+            skipped.lowRating += stats.skippedLowRating
+            skipped.noPhotos += stats.skippedNoPhotos
+            skipped.noHours += stats.skippedNoHours
+          }
+
+          // Update Redis progress (send last 10 qualified leads for live feed)
+          try {
+            const recentLeads = allLeads.slice(-10)
+            await redisConn.set(`scraper:${runId}`, JSON.stringify({
+              status: 'running',
+              queriesUsed,
+              totalQueries: queries.length,
+              leadsFound: allLeads.length,
+              resultsScanned,
+              skipped,
+              qualifiedLeads: recentLeads,
+            }), 'EX', 14400)
+          } catch { /* non-fatal */ }
+
+          // Rate limit: 250ms between queries
+          await new Promise(r => setTimeout(r, 250))
+        }
+
+        // Final dedup (should be minimal since we dedup per-query above)
+        const uniqueLeads = deduplicateLeads(allLeads)
+
+        // Store results in Redis
+        try {
+          await redisConn.set(`scraper:${runId}:results`, JSON.stringify(uniqueLeads), 'EX', 14400)
+        } catch (err) {
+          console.error('[SCRAPER] Failed to store results in Redis:', err)
+        }
+
+        // Check if we stopped (already wrote status above)
+        const currentProgress = await redisConn.get(`scraper:${runId}`).catch(() => null)
+        const parsed = currentProgress ? JSON.parse(currentProgress) : null
+        if (parsed?.status !== 'stopped') {
+          // Update progress to completed
+          await redisConn.set(`scraper:${runId}`, JSON.stringify({
+            status: 'completed',
+            queriesUsed,
+            totalQueries: queries.length,
+            leadsFound: uniqueLeads.length,
+            resultsScanned,
+            skipped,
+            qualifiedLeads: uniqueLeads.slice(-10),
+          }), 'EX', 14400).catch(() => {})
+        }
+
+        // Update ScraperRun in DB
+        const finalStatus = parsed?.status === 'stopped' ? 'CANCELLED' : 'COMPLETED'
+        try {
+          const run = await prisma.scraperRun.update({
+            where: { id: runId },
+            data: {
+              status: finalStatus,
+              totalLeads: uniqueLeads.length,
+              creditsUsed: queriesUsed,
+              completedAt: new Date(),
+              resultsKey: `scraper:${runId}:results`,
+            },
+          })
+
+          // Update ScraperConfig lastRunAt if this was from a saved config
+          if (run.configId) {
+            await prisma.scraperConfig.update({
+              where: { id: run.configId },
+              data: {
+                lastRunAt: new Date(),
+                lastRunResults: uniqueLeads.length,
+              },
+            }).catch(() => {})
+          }
+        } catch (err) {
+          console.error('[SCRAPER] Failed to update ScraperRun:', err)
+        }
+
+        console.log(`[SCRAPER] Run ${runId} complete: ${queriesUsed} queries, ${uniqueLeads.length} leads`)
+        return { success: true, leadsFound: uniqueLeads.length, creditsUsed: queriesUsed }
+      },
+      // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+      { connection, concurrency: 1, lockDuration: 1_800_000 }
+    )
+
+    scraperWorker.on('failed', (job, err) => {
+      console.error(`[SCRAPER] Job ${job?.id} failed:`, err)
+      // Update ScraperRun to FAILED
+      const runId = job?.data?.runId
+      if (runId) {
+        prisma.scraperRun.update({
+          where: { id: runId },
+          data: { status: 'FAILED', completedAt: new Date() },
+        }).catch(() => {})
+      }
+    })
+
     // Sequence worker (handles all automated messages)
     const sequenceWorker = new Worker(
       'sequence',
