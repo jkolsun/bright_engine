@@ -60,39 +60,22 @@ export async function enrichLead(leadId: string): Promise<EnrichmentResult> {
   }
 
   try {
-    // Build fallback queries — most specific to least specific
+    // Build fallback queries — most specific to least specific (max 2 to conserve credits)
     const queries: string[] = []
 
-    // Query 1: Full match (company + city + state)
+    // Query 1: Full match (company + city + state) — highest hit rate
     if (lead.city && lead.state) {
       queries.push(`${lead.companyName} ${lead.city} ${lead.state}`)
     }
 
-    // Query 2: Company + state only (wider geographic search)
+    // Query 2: Company + state only (catches city name mismatches like "Ft Worth" vs "Fort Worth")
     if (lead.state) {
       queries.push(`${lead.companyName} ${lead.state}`)
     }
 
-    // Query 3: Company name only
-    queries.push(lead.companyName)
-
-    // Query 4: Phone number lookup (most reliable if we have it)
-    if (lead.phone) {
-      const digits = lead.phone.replace(/\D/g, '')
-      if (digits.length >= 10) {
-        queries.push(digits)
-      }
-    }
-
-    // Query 5: Strip common legal suffixes (LLC, PC, Inc, PLLC, LLP, PA, etc.)
-    const cleanName = lead.companyName
-      .replace(/,?\s*(LLC|L\.L\.C\.|PC|P\.C\.|Inc\.?|PLLC|LLP|PA|P\.A\.)$/i, '')
-      .trim()
-    if (cleanName !== lead.companyName) {
-      if (lead.city && lead.state) {
-        queries.push(`${cleanName} ${lead.city} ${lead.state}`)
-      }
-      queries.push(cleanName)
+    // Fallback: company name only if no location data at all
+    if (queries.length === 0) {
+      queries.push(lead.companyName)
     }
 
     // Deduplicate queries

@@ -226,6 +226,9 @@ export default function ScraperPage() {
     fetchCredits()
     fetchCityLists()
     fetchSavedConfigs()
+    // Refresh credits every 30s so the display stays live
+    const interval = setInterval(fetchCredits, 30_000)
+    return () => clearInterval(interval)
   }, [fetchCredits, fetchCityLists, fetchSavedConfigs])
 
   // ============================================================
