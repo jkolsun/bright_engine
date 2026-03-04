@@ -333,14 +333,14 @@ async function startWorkers() {
         if (options.enrichment && process.env.FULLENRICH_API_KEY) {
           try {
             const needsEmail = await prisma.lead.findMany({
-              where: { id: { in: leadIds }, email: null },
+              where: { id: { in: leadIds }, OR: [{ email: null }, { email: '' }] },
               select: { id: true, companyName: true },
             })
             if (needsEmail.length > 0) {
               const { callFullEnrich } = await import('../lib/fullenrich')
               await callFullEnrich({ leads: needsEmail, batchName: jobId })
               await prisma.lead.updateMany({
-                where: { id: { in: needsEmail.map(l => l.id) }, email: null },
+                where: { id: { in: needsEmail.map(l => l.id) }, OR: [{ email: null }, { email: '' }] },
                 data: { emailEnrichmentSource: 'PENDING' },
               }).catch(err => console.warn('[IMPORT] Failed to set PENDING:', err))
               if (redisConn) {

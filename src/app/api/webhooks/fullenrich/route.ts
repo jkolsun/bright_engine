@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
           select: { id: true, email: true, importBatchId: true },
         })
         if (!lead) continue
-        if (lead.email) continue // never overwrite existing email
+        if (lead.email && lead.email.length > 0) continue // never overwrite existing email
 
         await prisma.lead.update({
           where: { id: lead.id },
