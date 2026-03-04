@@ -12,8 +12,6 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "worker": "NODE_OPTIONS='--max-old-space-size=384' tsx src/worker/index.ts",
-    "test:workflow": "npx tsx tests/workflow-test.ts",
-    "test:contact-edit": "npx tsx tests/test-lead-contact-edit.ts",
     "mcp": "tsx src/mcp-server.ts"
   },
   "dependencies": {

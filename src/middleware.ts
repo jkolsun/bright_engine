@@ -58,11 +58,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.rewrite(url)
   }
 
-  // ── BUG 14.5 + NEW-L11: Block test routes in production ──
-  if (pathname.startsWith('/api/test') && process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Test routes disabled in production' }, { status: 404 })
-  }
-
   // ── BUG 14.3: Webhook rate limiting ──
   if (pathname.startsWith('/api/webhooks/')) {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown'
@@ -85,7 +80,6 @@ export async function middleware(request: NextRequest) {
     pathname === '/success' ||
     pathname === '/terms' ||
     pathname.startsWith('/preview/') ||
-    pathname.startsWith('/test-template') ||
     pathname.startsWith('/site/') ||
     pathname.startsWith('/onboard/') ||
     pathname.startsWith('/api/onboard/') ||
@@ -96,7 +90,6 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/auth/') ||
     pathname.startsWith('/api/start') ||
     pathname.startsWith('/api/webhooks/') ||
-    pathname.startsWith('/api/test/') ||
     pathname.startsWith('/api/worker-init') ||
     pathname.startsWith('/api/admin/diagnostics') ||
     pathname.startsWith('/api/instantly/sync-campaigns') ||

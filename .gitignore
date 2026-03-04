@@ -35,3 +35,7 @@ next-env.d.ts
 
 # prisma
 prisma/migrations
+
+# data files
+*.csv
+*.bak
