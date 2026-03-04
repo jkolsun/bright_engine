@@ -1318,7 +1318,18 @@ function LeadsPageInner() {
                         </td>
                         <td className="p-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{lead.companyName || '—'}</td>
                         <td className="p-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{lead.phone ? formatPhone(lead.phone) : '—'}</td>
-                        <td className="p-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{lead.email || '���'}</td>
+                        <td className="p-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                          <div>{lead.email || '—'}</div>
+                          {lead.emailEnrichmentSource === 'PENDING' && (
+                            <Badge className="text-xs bg-yellow-100 text-yellow-800 border-yellow-200">Enriching</Badge>
+                          )}
+                          {lead.emailEnrichmentSource === 'FULLENRICH' && (
+                            <Badge className="text-xs bg-green-100 text-green-800 border-green-200">Email Found</Badge>
+                          )}
+                          {lead.emailEnrichmentSource === 'NOT_FOUND' && (
+                            <Badge className="text-xs bg-gray-100 text-gray-500 border-gray-200">No Email</Badge>
+                          )}
+                        </td>
                         <td className="p-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                           {lead.city || lead.state ? `${lead.city || ''}${lead.city && lead.state ? ', ' : ''}${lead.state || ''}` : '—'}
                         </td>

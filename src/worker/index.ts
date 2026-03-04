@@ -301,6 +301,8 @@ async function startWorkers() {
           results: Record<string, { enrichment?: boolean; preview?: boolean; personalization?: boolean }>
           rateLimitHit?: boolean
           rateLimitMessage?: string
+          emailEnriched?: number
+          emailNotFound?: number
         } = {
           status: 'processing',
           processed: existingProgress?.processed || 0,
@@ -308,6 +310,8 @@ async function startWorkers() {
           failed: existingProgress?.failed || 0,
           errors: (existingProgress?.errors || []) as string[],
           results: (existingProgress?.results || {}) as Record<string, { enrichment?: boolean; preview?: boolean; personalization?: boolean }>,
+          emailEnriched: existingProgress?.emailEnriched || 0,
+          emailNotFound: existingProgress?.emailNotFound || 0,
         }
 
         // Rate limit flag — when SerpAPI daily limit is hit, skip enrichment for all remaining leads
@@ -322,6 +326,32 @@ async function startWorkers() {
         const updateProgress = async () => {
           if (redisConn) {
             await redisConn.set(`import:${jobId}`, JSON.stringify(progress), 'EX', 7200).catch(err => console.error('[Worker] Redis progress write failed:', err))
+          }
+        }
+
+        // FullEnrich bulk fire — request emails for all no-email leads before per-lead loop
+        if (options.enrichment && process.env.FULLENRICH_API_KEY) {
+          try {
+            const needsEmail = await prisma.lead.findMany({
+              where: { id: { in: leadIds }, email: null },
+              select: { id: true, companyName: true },
+            })
+            if (needsEmail.length > 0) {
+              const { callFullEnrich } = await import('../lib/fullenrich')
+              await callFullEnrich({ leads: needsEmail, batchName: jobId })
+              await prisma.lead.updateMany({
+                where: { id: { in: needsEmail.map(l => l.id) }, email: null },
+                data: { emailEnrichmentSource: 'PENDING' },
+              }).catch(err => console.warn('[IMPORT] Failed to set PENDING:', err))
+              if (redisConn) {
+                for (const lead of needsEmail) {
+                  redisConn.set('enrichment:' + lead.id, 'pending', 'EX', 600).catch(() => {})
+                }
+              }
+              console.log('[IMPORT] FullEnrich fired for ' + needsEmail.length + ' leads')
+            }
+          } catch (err) {
+            console.warn('[IMPORT] FullEnrich bulk fire failed:', err)
           }
         }
 

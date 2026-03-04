@@ -32,7 +32,28 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({ runs })
+    // Aggregate email found + pushed counts per run
+    const runIds = runs.map(r => r.id)
+    const [emailCounts, pushedCounts] = await Promise.all([
+      prisma.lead.groupBy({
+        by: ['scraperRunId'],
+        where: { scraperRunId: { in: runIds }, emailEnrichmentSource: 'FULLENRICH' },
+        _count: { id: true },
+      }),
+      prisma.lead.groupBy({
+        by: ['scraperRunId'],
+        where: { scraperRunId: { in: runIds }, instantlyStatus: 'IN_SEQUENCE' },
+        _count: { id: true },
+      }),
+    ])
+    const emailFoundMap: Record<string, number> = {}
+    for (const e of emailCounts) { if (e.scraperRunId) emailFoundMap[e.scraperRunId] = e._count.id }
+    const pushedMap: Record<string, number> = {}
+    for (const p of pushedCounts) { if (p.scraperRunId) pushedMap[p.scraperRunId] = p._count.id }
+
+    return NextResponse.json({
+      runs: runs.map(r => ({ ...r, emailsFound: emailFoundMap[r.id] ?? 0, pushedToInstantly: pushedMap[r.id] ?? 0 })),
+    })
   } catch (error) {
     console.error('List runs error:', error)
     return NextResponse.json({ error: 'Failed to list runs' }, { status: 500 })

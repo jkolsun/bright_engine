@@ -208,6 +208,7 @@ model Lead {
   @@index([scraperRunId])
   @@index([phoneType])
   @@index([firstConvertingTouch])
+  @@index([emailEnrichmentSource])
   @@map("leads")
 }
 

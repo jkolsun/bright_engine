@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
           results: {} as Record<string, any>,
         }),
         'EX',
-        3600 // 1 hour TTL
+        7200 // 2 hour TTL — FullEnrich webhooks arrive after import completes
       )
       await redis.quit()
     } catch (err) {

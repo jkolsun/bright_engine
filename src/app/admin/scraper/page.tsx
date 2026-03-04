@@ -1033,6 +1033,8 @@ export default function ScraperPage() {
                         <th className="text-left py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Status</th>
                         <th className="text-right py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Found</th>
                         <th className="text-right py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Imported</th>
+                        <th className="text-right py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Emails</th>
+                        <th className="text-right py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Pushed</th>
                         <th className="text-right py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Credits</th>
                       </tr>
                     </thead>
@@ -1056,6 +1058,8 @@ export default function ScraperPage() {
                           </td>
                           <td className="py-2 px-3 text-right text-slate-600 dark:text-gray-300">{run.totalLeads}</td>
                           <td className="py-2 px-3 text-right text-slate-600 dark:text-gray-300">{run.importedLeads}</td>
+                          <td className="py-2 px-3 text-right text-teal-600 dark:text-teal-400">{run.emailsFound ?? 0}</td>
+                          <td className="py-2 px-3 text-right text-slate-600 dark:text-gray-300">{run.pushedToInstantly ?? 0}</td>
                           <td className="py-2 px-3 text-right text-slate-600 dark:text-gray-300">{run.creditsUsed}</td>
                         </tr>
                       ))}
@@ -2228,11 +2232,13 @@ export default function ScraperPage() {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-4 gap-3 mb-4">
+                <div className="grid grid-cols-6 gap-3 mb-4">
                   {[
                     { label: 'Enriched', count: Object.values(importProgress.results || {}).filter((r: any) => r?.enrichment).length, color: 'text-blue-600' },
                     { label: 'Previews', count: Object.values(importProgress.results || {}).filter((r: any) => r?.preview).length, color: 'text-purple-600' },
                     { label: 'Personalized', count: Object.values(importProgress.results || {}).filter((r: any) => r?.personalization).length, color: 'text-green-600' },
+                    { label: 'Emails Found', count: importProgress.emailEnriched ?? 0, color: 'text-teal-600' },
+                    { label: 'No Email', count: importProgress.emailNotFound ?? 0, color: 'text-slate-500' },
                     { label: 'Errors', count: importProgress.failed || 0, color: 'text-red-600' },
                   ].map(s => (
                     <div key={s.label} className="text-center p-2 bg-slate-50 dark:bg-slate-800/50 rounded">

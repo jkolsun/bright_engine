@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
             results: {},
           }),
           'EX',
-          3600
+          7200
         )
         await redis.quit()
       } catch (err) {

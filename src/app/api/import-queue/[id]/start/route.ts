@@ -93,7 +93,7 @@ export async function POST(
           results: {} as Record<string, any>,
         }),
         'EX',
-        3600
+        7200
       )
       await redis.quit()
     } catch (err) {
