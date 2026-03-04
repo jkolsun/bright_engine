@@ -27,6 +27,8 @@ export async function GET(request: NextRequest) {
         startedAt: true,
         completedAt: true,
         cityMode: true,
+        icpId: true,
+        icp: { select: { name: true } },
       },
     })
 

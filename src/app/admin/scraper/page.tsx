@@ -171,7 +171,7 @@ export default function ScraperPage() {
   const [importOptions, setImportOptions] = useState({ enrichment: true, preview: true, personalization: true })
   const [importing, setImporting] = useState(false)
   const [folders, setFolders] = useState<Array<{ id: string; name: string }>>([])
-  const [reps, setReps] = useState<Array<{ id: string; firstName: string; lastName: string }>>([])
+  const [reps, setReps] = useState<Array<{ id: string; name: string }>>([])
 
   // Import processing feed
   const [importJobId, setImportJobId] = useState<string | null>(null)
@@ -189,6 +189,23 @@ export default function ScraperPage() {
   // Dedup modal
   const [showDedupModal, setShowDedupModal] = useState(false)
   const [dedupOverlaps, setDedupOverlaps] = useState<Array<{ city: string; count: number }>>([])
+
+  // ICP state
+  const [icps, setIcps] = useState<any[]>([])
+  const [selectedIcpId, setSelectedIcpId] = useState('')
+  const [showIcpManager, setShowIcpManager] = useState(false)
+  const [icpEditingId, setIcpEditingId] = useState<string | null>(null)
+  const [icpFormName, setIcpFormName] = useState('')
+  const [icpFormIndustries, setIcpFormIndustries] = useState<string[]>([])
+  const [icpFormStates, setIcpFormStates] = useState<string[]>([])
+  const [icpFormMinReviews, setIcpFormMinReviews] = useState(3)
+  const [icpFormMinRating, setIcpFormMinRating] = useState(3.5)
+  const [icpFormSaving, setIcpFormSaving] = useState(false)
+
+  // History tab
+  const [pageTab, setPageTab] = useState<'configure' | 'history'>('configure')
+  const [icpRuns, setIcpRuns] = useState<any[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
 
   // ============================================================
   // Data Fetching
@@ -222,14 +239,139 @@ export default function ScraperPage() {
     } catch { /* non-fatal */ }
   }, [])
 
+  const fetchIcps = useCallback(async () => {
+    try {
+      const res = await fetch('/api/icps')
+      if (res.ok) {
+        const data = await res.json()
+        setIcps(data.icps || [])
+      }
+    } catch { /* non-fatal */ }
+  }, [])
+
+  const fetchHistory = useCallback(async () => {
+    setLoadingHistory(true)
+    try {
+      const res = await fetch('/api/scraper/runs?limit=50')
+      if (res.ok) {
+        const data = await res.json()
+        setIcpRuns(data.runs || [])
+      }
+    } catch { /* non-fatal */ }
+    setLoadingHistory(false)
+  }, [])
+
   useEffect(() => {
     fetchCredits()
     fetchCityLists()
     fetchSavedConfigs()
+    fetchIcps()
     // Refresh credits every 30s so the display stays live
     const interval = setInterval(fetchCredits, 30_000)
     return () => clearInterval(interval)
-  }, [fetchCredits, fetchCityLists, fetchSavedConfigs])
+  }, [fetchCredits, fetchCityLists, fetchSavedConfigs, fetchIcps])
+
+  // Fetch history when switching to history tab
+  useEffect(() => {
+    if (pageTab === 'history') fetchHistory()
+  }, [pageTab, fetchHistory])
+
+  // ============================================================
+  // ICP Functions
+  // ============================================================
+
+  const handleIcpSelect = (icpId: string) => {
+    setSelectedIcpId(icpId)
+    if (!icpId) return
+
+    const icp = icps.find((i: any) => i.id === icpId)
+    if (!icp) return
+
+    // Map industries to search terms
+    const industries = (icp.targetIndustries || []) as string[]
+    const newTerms: SearchTerm[] = []
+    const seen = new Set<string>()
+    for (const industry of industries) {
+      for (const ct of COMMON_TERMS) {
+        if (ct.industry === industry && !seen.has(ct.term)) {
+          seen.add(ct.term)
+          newTerms.push(ct)
+        }
+      }
+    }
+    setSearchTerms(newTerms)
+
+    // Map states to cities
+    const states = (icp.targetStates || []) as string[]
+    const allCityStrings: string[] = []
+    for (const abbr of states) {
+      const stateCities = (usCitiesData.states as any)[abbr]?.cities || []
+      for (const city of stateCities) {
+        allCityStrings.push(`${city} ${abbr}`)
+      }
+    }
+    setSelectedCities(new Set(allCityStrings))
+
+    setMinReviews(icp.minReviews ?? 3)
+    setMinRating(icp.minRating ?? 3.5)
+  }
+
+  const handleIcpSave = async () => {
+    setIcpFormSaving(true)
+    try {
+      const body = {
+        name: icpFormName.trim(),
+        targetIndustries: icpFormIndustries,
+        targetStates: icpFormStates,
+        minReviews: icpFormMinReviews,
+        minRating: icpFormMinRating,
+      }
+      const url = icpEditingId ? `/api/icps/${icpEditingId}` : '/api/icps'
+      const method = icpEditingId ? 'PUT' : 'POST'
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (res.ok) {
+        await fetchIcps()
+        setIcpFormName('')
+        setIcpFormIndustries([])
+        setIcpFormStates([])
+        setIcpFormMinReviews(3)
+        setIcpFormMinRating(3.5)
+        setIcpEditingId(null)
+      }
+    } catch { /* non-fatal */ }
+    setIcpFormSaving(false)
+  }
+
+  const handleIcpDeactivate = async (id: string) => {
+    try {
+      const res = await fetch(`/api/icps/${id}`, { method: 'DELETE' })
+      if (res.ok) await fetchIcps()
+    } catch { /* non-fatal */ }
+  }
+
+  const handleIcpReactivate = async (id: string) => {
+    try {
+      const res = await fetch(`/api/icps/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: true }),
+      })
+      if (res.ok) await fetchIcps()
+    } catch { /* non-fatal */ }
+  }
+
+  const handleIcpEditClick = (icp: any) => {
+    setIcpFormName(icp.name)
+    setIcpFormIndustries(icp.targetIndustries as string[] || [])
+    setIcpFormStates(icp.targetStates as string[] || [])
+    setIcpFormMinReviews(icp.minReviews ?? 3)
+    setIcpFormMinRating(icp.minRating ?? 3.5)
+    setIcpEditingId(icp.id)
+  }
 
   // ============================================================
   // Scraper Control
@@ -279,6 +421,7 @@ export default function ScraperPage() {
             maxDistance: maxDistance > 0 ? maxDistance : undefined,
           },
           cityMode: 'major',
+          icpId: selectedIcpId || undefined,
         }),
       })
 
@@ -291,6 +434,7 @@ export default function ScraperPage() {
       const data = await res.json()
       setRunId(data.runId)
       setView('running')
+      setPageTab('configure')
       startPolling(data.runId)
     } catch (err) {
       alert('Failed to start scraper')
@@ -426,19 +570,39 @@ export default function ScraperPage() {
   const openImportModal = async () => {
     setImportBatchName(scrapeName || `GBP Scrape ${new Date().toLocaleDateString()}`)
 
-    // Fetch folders and reps
+    // Fetch folders, reps, and run details in parallel
     try {
-      const [foldersRes, repsRes] = await Promise.all([
+      const fetches: Promise<Response>[] = [
         fetch('/api/folders'),
         fetch('/api/reps'),
-      ])
+      ]
+      if (runId) fetches.push(fetch(`/api/scraper/run/${runId}`))
+
+      const responses = await Promise.all(fetches)
+      const [foldersRes, repsRes, runRes] = responses
+
       if (foldersRes.ok) {
         const data = await foldersRes.json()
         setFolders(data.folders || data || [])
       }
+
+      let fetchedReps: Array<{ id: string; name: string }> = []
       if (repsRes.ok) {
         const data = await repsRes.json()
-        setReps(data.reps || [])
+        fetchedReps = data.reps || []
+        setReps(fetchedReps)
+      }
+
+      // Auto-fill rep from ICP allocation
+      if (runRes?.ok) {
+        const runData = await runRes.json()
+        const repAlloc = runData.run?.icp?.repAllocation as Record<string, number> | null
+        if (repAlloc && typeof repAlloc === 'object' && Object.keys(repAlloc).length > 0) {
+          const topRepId = Object.entries(repAlloc).sort((a, b) => b[1] - a[1])[0]?.[0]
+          if (topRepId && fetchedReps.some(r => r.id === topRepId)) {
+            setImportAssignToId(topRepId)
+          }
+        }
       }
     } catch { /* non-fatal */ }
 
@@ -815,10 +979,254 @@ export default function ScraperPage() {
       )}
 
       {/* ============================================================ */}
-      {/* CONFIGURE VIEW */}
+      {/* CONFIGURE / HISTORY VIEW */}
       {/* ============================================================ */}
       {view === 'configure' && (
         <>
+          {/* Tab Bar */}
+          <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700">
+            <button
+              onClick={() => setPageTab('configure')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                pageTab === 'configure'
+                  ? 'border-teal-600 text-teal-600'
+                  : 'border-transparent text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Configure
+            </button>
+            <button
+              onClick={() => setPageTab('history')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                pageTab === 'history'
+                  ? 'border-teal-600 text-teal-600'
+                  : 'border-transparent text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-300'
+              }`}
+            >
+              History
+            </button>
+          </div>
+
+          {/* History View */}
+          {pageTab === 'history' && (
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-gray-100">Scraper History</h2>
+                <Button variant="outline" size="sm" onClick={fetchHistory}>
+                  <RefreshCw size={14} className={loadingHistory ? 'animate-spin mr-1' : 'mr-1'} /> Refresh
+                </Button>
+              </div>
+              {loadingHistory ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 size={24} className="animate-spin text-slate-400" />
+                </div>
+              ) : icpRuns.length === 0 ? (
+                <p className="text-center text-slate-400 dark:text-gray-500 py-12">No scraper runs yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-slate-700">
+                        <th className="text-left py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Date</th>
+                        <th className="text-left py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Run Name</th>
+                        <th className="text-left py-2 px-3 font-medium text-slate-500 dark:text-gray-400">ICP</th>
+                        <th className="text-left py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Status</th>
+                        <th className="text-right py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Found</th>
+                        <th className="text-right py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Imported</th>
+                        <th className="text-right py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Credits</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {icpRuns.map((run: any) => (
+                        <tr key={run.id} className="border-b border-slate-100 dark:border-slate-800">
+                          <td className="py-2 px-3 text-slate-600 dark:text-gray-300">
+                            {new Date(run.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </td>
+                          <td className="py-2 px-3 font-medium text-slate-900 dark:text-gray-100">{run.name}</td>
+                          <td className="py-2 px-3 text-slate-500 dark:text-gray-400">{run.icp?.name || '—'}</td>
+                          <td className="py-2 px-3">
+                            <Badge className={
+                              run.status === 'RUNNING' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400'
+                              : run.status === 'COMPLETED' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
+                              : run.status === 'FAILED' ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-gray-400'
+                            }>
+                              {run.status}
+                            </Badge>
+                          </td>
+                          <td className="py-2 px-3 text-right text-slate-600 dark:text-gray-300">{run.totalLeads}</td>
+                          <td className="py-2 px-3 text-right text-slate-600 dark:text-gray-300">{run.importedLeads}</td>
+                          <td className="py-2 px-3 text-right text-slate-600 dark:text-gray-300">{run.creditsUsed}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          )}
+
+          {/* Configure Content */}
+          {pageTab === 'configure' && (<>
+
+          {/* ICP Selector */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-slate-700 dark:text-gray-300 block mb-1">ICP (optional)</label>
+              <select
+                value={selectedIcpId}
+                onChange={e => handleIcpSelect(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
+              >
+                <option value="">No ICP</option>
+                {icps.filter((i: any) => i.active).map((i: any) => (
+                  <option key={i.id} value={i.id}>{i.name}</option>
+                ))}
+              </select>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-5"
+              onClick={() => setShowIcpManager(!showIcpManager)}
+            >
+              Manage ICPs
+            </Button>
+          </div>
+
+          {/* ICP Manager Panel */}
+          {showIcpManager && (
+            <Card className="p-4 space-y-4">
+              <h3 className="font-semibold text-slate-900 dark:text-gray-100">
+                {icpEditingId ? 'Edit ICP' : 'New ICP'}
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 dark:text-gray-300 block mb-1">Name</label>
+                  <input
+                    type="text"
+                    value={icpFormName}
+                    onChange={e => setIcpFormName(e.target.value)}
+                    placeholder="e.g. Roofing FL"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 dark:text-gray-300 block mb-1">Industries</label>
+                  <div className="flex flex-wrap gap-2">
+                    {INDUSTRY_OPTIONS.map(ind => (
+                      <label key={ind} className="flex items-center gap-1 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={icpFormIndustries.includes(ind)}
+                          onChange={() => {
+                            setIcpFormIndustries(prev =>
+                              prev.includes(ind) ? prev.filter(i => i !== ind) : [...prev, ind]
+                            )
+                          }}
+                          className="w-3 h-3"
+                        />
+                        <span className="text-slate-600 dark:text-gray-300">{ind.replace(/_/g, ' ')}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 dark:text-gray-300 block mb-1">States</label>
+                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                    {Object.keys((usCitiesData as any).states).sort().map((abbr: string) => (
+                      <label key={abbr} className="flex items-center gap-1 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={icpFormStates.includes(abbr)}
+                          onChange={() => {
+                            setIcpFormStates(prev =>
+                              prev.includes(abbr) ? prev.filter(s => s !== abbr) : [...prev, abbr]
+                            )
+                          }}
+                          className="w-3 h-3"
+                        />
+                        <span className="text-slate-600 dark:text-gray-300">{abbr}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 dark:text-gray-300 block mb-1">Min Reviews</label>
+                    <input
+                      type="number"
+                      value={icpFormMinReviews}
+                      onChange={e => setIcpFormMinReviews(parseInt(e.target.value) || 0)}
+                      className="w-24 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 dark:text-gray-300 block mb-1">Min Rating</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={icpFormMinRating}
+                      onChange={e => setIcpFormMinRating(parseFloat(e.target.value) || 0)}
+                      className="w-24 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleIcpSave}
+                    disabled={icpFormSaving || !icpFormName.trim() || icpFormIndustries.length === 0 || icpFormStates.length === 0}
+                  >
+                    {icpFormSaving ? <Loader2 size={14} className="animate-spin mr-1" /> : null}
+                    Save ICP
+                  </Button>
+                  {icpEditingId && (
+                    <Button variant="outline" size="sm" onClick={() => {
+                      setIcpFormName('')
+                      setIcpFormIndustries([])
+                      setIcpFormStates([])
+                      setIcpFormMinReviews(3)
+                      setIcpFormMinRating(3.5)
+                      setIcpEditingId(null)
+                    }}>
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* ICP List */}
+              {icps.length > 0 && (
+                <div className="border-t border-slate-200 dark:border-slate-700 pt-3 space-y-2">
+                  {icps.map((icp: any) => (
+                    <div key={icp.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 dark:bg-slate-800/50 rounded">
+                      <div>
+                        <span className="font-medium text-sm text-slate-900 dark:text-gray-100">{icp.name}</span>
+                        <Badge className={`ml-2 text-xs ${icp.active ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-gray-400'}`}>
+                          {icp.active ? 'Active' : 'Inactive'}
+                        </Badge>
+                        <span className="text-xs text-slate-400 dark:text-gray-500 ml-2">
+                          {icp._count?.scraperRuns || 0} runs · {icp._count?.leads || 0} leads
+                        </span>
+                      </div>
+                      <div className="flex gap-1">
+                        {icp.active ? (
+                          <>
+                            <Button variant="outline" size="sm" onClick={() => handleIcpEditClick(icp)}>Edit</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleIcpDeactivate(icp.id)}>Deactivate</Button>
+                          </>
+                        ) : (
+                          <Button variant="outline" size="sm" onClick={() => handleIcpReactivate(icp.id)}>Reactivate</Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          )}
+
           {/* Saved Configs + Scrape Name */}
           <div className="flex items-center gap-3">
             <input
@@ -1344,6 +1752,8 @@ export default function ScraperPage() {
               </Card>
             </div>
           )}
+
+          </>)}
         </>
       )}
 
@@ -1735,7 +2145,7 @@ export default function ScraperPage() {
                     >
                       <option value="">No assignment</option>
                       {reps.map(r => (
-                        <option key={r.id} value={r.id}>{r.firstName} {r.lastName}</option>
+                        <option key={r.id} value={r.id}>{r.name}</option>
                       ))}
                     </select>
                   </div>

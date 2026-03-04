@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, searchTerms, cities, filters, cityMode, configId } = body as {
+    const { name, searchTerms, cities, filters, cityMode, configId, icpId } = body as {
       name?: string
       searchTerms: Array<{ term: string; industry: string }>
       cities: string[]
@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
       }
       cityMode?: string
       configId?: string
+      icpId?: string
     }
 
     if (!searchTerms || searchTerms.length === 0) {
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
     const run = await prisma.scraperRun.create({
       data: {
         configId: configId || null,
+        icpId: icpId || null,
         name: scrapeName,
         searchTerms: searchTerms as any,
         cities: cities as any,

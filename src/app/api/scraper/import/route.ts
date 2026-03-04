@@ -57,6 +57,12 @@ export async function POST(request: NextRequest) {
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || 'https://preview.brightautomations.org'
 
+    // Resolve ICP from ScraperRun
+    const scraperRun = runId
+      ? await prisma.scraperRun.findUnique({ where: { id: runId }, select: { icpId: true } }).catch(() => null)
+      : null
+    const resolvedIcpId = scraperRun?.icpId ?? null
+
     // Phone dedup against existing leads
     const allPhones = selectedLeads.map(l => l.phone).filter(Boolean)
     const phoneVariants: string[] = []
@@ -126,8 +132,10 @@ export async function POST(request: NextRequest) {
               state: lead.state || null,
               website: null,
               status: 'IMPORT_STAGING',
-              source: 'CSV_IMPORT',
+              source: 'GBP_SCRAPE' as any,
               sourceDetail: 'GBP Scraper',
+              icpId: resolvedIcpId as any,
+              scraperRunId: (runId || null) as any,
               campaign: batchName.trim(),
               priority: 'COLD',
               timezone: getTimezoneFromState(lead.state || '') || 'America/New_York',
@@ -194,10 +202,9 @@ export async function POST(request: NextRequest) {
       const jobId = uuidv4()
 
       // Write initial progress to Redis
-      let redis: any = null
       try {
         const Redis = (await import('ioredis')).default
-        redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+        const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
           maxRetriesPerRequest: 3,
           connectTimeout: 5000,
         })
@@ -214,10 +221,9 @@ export async function POST(request: NextRequest) {
           'EX',
           3600
         )
+        await redis.quit()
       } catch (err) {
         console.error('[Scraper Import] Failed to write Redis progress:', err)
-      } finally {
-        if (redis) try { await redis.quit() } catch { /* ignore */ }
       }
 
       const job = await addImportProcessingJob({
