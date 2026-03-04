@@ -14,16 +14,16 @@ import {
 import { BulkSelectDropdown } from '@/components/ui/BulkSelectDropdown'
 
 const DISPOSITION_BADGE: Record<string, { label: string; className: string }> = {
-  WANTS_TO_MOVE_FORWARD: { label: 'Moving Forward', className: 'bg-green-100 text-green-700' },
-  INTERESTED_VERBAL: { label: 'Interested', className: 'bg-green-100 text-green-700' },
-  CALLBACK: { label: 'Callback', className: 'bg-teal-100 text-teal-700' },
-  WANTS_CHANGES: { label: 'Wants Changes', className: 'bg-teal-100 text-teal-700' },
-  WILL_LOOK_LATER: { label: 'Will Look Later', className: 'bg-blue-100 text-blue-700' },
-  NOT_INTERESTED: { label: 'Not Interested', className: 'bg-gray-100 text-gray-600' },
-  DNC: { label: 'DNC', className: 'bg-red-100 text-red-700' },
-  WRONG_NUMBER: { label: 'Wrong Number', className: 'bg-red-100 text-red-600' },
-  DISCONNECTED: { label: 'Disconnected', className: 'bg-red-100 text-red-600' },
-  NO_ANSWER: { label: 'No Answer', className: 'bg-amber-100 text-amber-700' },
+  WANTS_TO_MOVE_FORWARD: { label: 'Moving Forward', className: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' },
+  INTERESTED_VERBAL: { label: 'Interested', className: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' },
+  CALLBACK: { label: 'Callback', className: 'bg-teal-100 text-teal-700 dark:text-teal-400' },
+  WANTS_CHANGES: { label: 'Wants Changes', className: 'bg-teal-100 text-teal-700 dark:text-teal-400' },
+  WILL_LOOK_LATER: { label: 'Will Look Later', className: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400' },
+  NOT_INTERESTED: { label: 'Not Interested', className: 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400' },
+  DNC: { label: 'DNC', className: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400' },
+  WRONG_NUMBER: { label: 'Wrong Number', className: 'bg-red-100 dark:bg-red-900/40 text-red-600' },
+  DISCONNECTED: { label: 'Disconnected', className: 'bg-red-100 dark:bg-red-900/40 text-red-600' },
+  NO_ANSWER: { label: 'No Answer', className: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' },
   VOICEMAIL: { label: 'Voicemail', className: 'bg-purple-100 text-purple-700' },
 }
 
@@ -236,37 +236,37 @@ export default function RepLeadBankPage() {
     <div className="p-6 max-w-[1200px] mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Lead Bank</h1>
-        <p className="text-sm text-gray-500 mt-1">Your call history — filter and re-add leads to your queue</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Lead Bank</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Your call history — filter and re-add leads to your queue</p>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 p-4 mb-4">
         <div className="flex flex-wrap gap-3 items-end">
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">From</label>
             <input
               type="date"
               value={startDate}
               onChange={e => setStartDate(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="px-3 py-2 border border-gray-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-slate-800 dark:text-gray-100"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">To</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">To</label>
             <input
               type="date"
               value={endDate}
               onChange={e => setEndDate(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="px-3 py-2 border border-gray-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-slate-800 dark:text-gray-100"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Disposition</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Disposition</label>
             <select
               value={dispositionFilter}
               onChange={e => setDispositionFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[160px]"
+              className="px-3 py-2 border border-gray-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[160px] dark:bg-slate-800 dark:text-gray-100"
             >
               {DISPOSITION_OPTIONS.map(o => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -274,11 +274,11 @@ export default function RepLeadBankPage() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Temperature</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Temperature</label>
             <select
               value={tempFilter}
               onChange={e => setTempFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[140px]"
+              className="px-3 py-2 border border-gray-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 min-w-[140px] dark:bg-slate-800 dark:text-gray-100"
             >
               {TEMP_OPTIONS.map(o => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -286,21 +286,21 @@ export default function RepLeadBankPage() {
             </select>
           </div>
           <div className="flex-1 min-w-[180px]">
-            <label className="block text-xs font-medium text-gray-500 mb-1">Search</label>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Search</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
               <input
                 type="text"
                 value={searchInput}
                 onChange={e => setSearchInput(e.target.value)}
                 placeholder="Name, company, phone..."
-                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full pl-9 pr-3 py-2 border border-gray-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 dark:bg-slate-800 dark:text-gray-100"
               />
             </div>
           </div>
           <button
             onClick={clearFilters}
-            className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
           >
             Clear
           </button>
@@ -309,28 +309,28 @@ export default function RepLeadBankPage() {
 
       {/* Stats Bar */}
       <div className="flex items-center gap-3 mb-4 text-sm">
-        <span className="text-gray-600 font-medium">Showing {total} leads</span>
-        <span className="text-gray-300">|</span>
+        <span className="text-gray-600 dark:text-gray-400 font-medium">Showing {total} leads</span>
+        <span className="text-gray-300 dark:text-gray-600">|</span>
         <span className="inline-flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-red-500" />
-          <span className="text-gray-600">{hotCount} Hot</span>
+          <span className="text-gray-600 dark:text-gray-400">{hotCount} Hot</span>
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-amber-500" />
-          <span className="text-gray-600">{warmCount} Warm</span>
+          <span className="text-gray-600 dark:text-gray-400">{warmCount} Warm</span>
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-blue-500" />
-          <span className="text-gray-600">{coldCount} Cold</span>
+          <span className="text-gray-600 dark:text-gray-400">{coldCount} Cold</span>
         </span>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50">
+              <tr className="border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50">
                 <th className="pl-4 pr-2 py-3 text-left">
                   <BulkSelectDropdown
                     pageItemIds={leads.map(l => l.id)}
@@ -339,31 +339,31 @@ export default function RepLeadBankPage() {
                     onSelectionChange={setSelectedIds}
                   />
                 </th>
-                <th className="px-3 py-3 text-left font-medium text-gray-500">Lead Name</th>
-                <th className="px-3 py-3 text-left font-medium text-gray-500">Company</th>
-                <th className="px-3 py-3 text-left font-medium text-gray-500">Phone</th>
-                <th className="px-3 py-3 text-left font-medium text-gray-500">Location</th>
-                <th className="px-3 py-3 text-left font-medium text-gray-500">Last Disposition</th>
-                <th className="px-3 py-3 text-left font-medium text-gray-500">Temp</th>
-                <th className="px-3 py-3 text-left font-medium text-gray-500">Score</th>
-                <th className="px-3 py-3 text-left font-medium text-gray-500">Last Called</th>
-                <th className="px-3 py-3 text-left font-medium text-gray-500">Actions</th>
+                <th className="px-3 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Lead Name</th>
+                <th className="px-3 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Company</th>
+                <th className="px-3 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Phone</th>
+                <th className="px-3 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Location</th>
+                <th className="px-3 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Last Disposition</th>
+                <th className="px-3 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Temp</th>
+                <th className="px-3 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Score</th>
+                <th className="px-3 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Last Called</th>
+                <th className="px-3 py-3 text-left font-medium text-gray-500 dark:text-gray-400">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 Array.from({ length: 8 }).map((_, i) => (
-                  <tr key={i} className="border-b border-gray-50">
+                  <tr key={i} className="border-b border-gray-50 dark:border-slate-800">
                     {Array.from({ length: 10 }).map((_, j) => (
                       <td key={j} className="px-3 py-3">
-                        <div className="h-4 bg-gray-100 rounded animate-pulse" />
+                        <div className="h-4 bg-gray-100 dark:bg-slate-800 rounded animate-pulse" />
                       </td>
                     ))}
                   </tr>
                 ))
               ) : leads.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-6 py-16 text-center text-gray-500">
+                  <td colSpan={10} className="px-6 py-16 text-center text-gray-500 dark:text-gray-400">
                     No leads match your filters. Try adjusting the date range or clearing filters.
                   </td>
                 </tr>
@@ -372,28 +372,28 @@ export default function RepLeadBankPage() {
                   const disp = lead.lastCall.dispositionResult ? DISPOSITION_BADGE[lead.lastCall.dispositionResult] : null
                   const priority = lead.priority || 'NORMAL'
                   const tempBadge = priority === 'HOT'
-                    ? 'bg-red-100 text-red-700'
+                    ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'
                     : priority === 'WARM'
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'bg-blue-100 text-blue-700'
+                    ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400'
+                    : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400'
                   const tempLabel = priority === 'HOT' ? 'Hot' : priority === 'WARM' ? 'Warm' : 'Cold'
 
                   return (
-                    <tr key={lead.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                    <tr key={lead.id} className="border-b border-gray-50 dark:border-slate-800 hover:bg-gray-50/50 dark:hover:bg-slate-800/50">
                       <td className="pl-4 pr-2 py-3">
                         <input
                           type="checkbox"
                           checked={selectedIds.has(lead.id)}
                           onChange={() => toggleSelect(lead.id)}
-                          className="rounded border-gray-300"
+                          className="rounded border-gray-300 dark:border-slate-600"
                         />
                       </td>
-                      <td className="px-3 py-3 font-medium text-gray-900">
+                      <td className="px-3 py-3 font-medium text-gray-900 dark:text-gray-100">
                         {[lead.firstName, lead.lastName].filter(Boolean).join(' ') || 'Unknown'}
                       </td>
-                      <td className="px-3 py-3 text-gray-700">{lead.companyName}</td>
-                      <td className="px-3 py-3 text-gray-600">{lead.phone}</td>
-                      <td className="px-3 py-3 text-gray-600">
+                      <td className="px-3 py-3 text-gray-700 dark:text-gray-300">{lead.companyName}</td>
+                      <td className="px-3 py-3 text-gray-600 dark:text-gray-400">{lead.phone}</td>
+                      <td className="px-3 py-3 text-gray-600 dark:text-gray-400">
                         {[lead.city, lead.state].filter(Boolean).join(', ') || '-'}
                       </td>
                       <td className="px-3 py-3">
@@ -402,9 +402,9 @@ export default function RepLeadBankPage() {
                             {disp.label}
                           </span>
                         ) : lead.lastCall.dispositionResult ? (
-                          <span className="text-gray-400 text-xs">{lead.lastCall.dispositionResult}</span>
+                          <span className="text-gray-400 dark:text-gray-500 text-xs">{lead.lastCall.dispositionResult}</span>
                         ) : (
-                          <span className="text-gray-400 text-xs">&mdash;</span>
+                          <span className="text-gray-400 dark:text-gray-500 text-xs">&mdash;</span>
                         )}
                       </td>
                       <td className="px-3 py-3">
@@ -412,10 +412,10 @@ export default function RepLeadBankPage() {
                           {tempLabel}
                         </span>
                       </td>
-                      <td className="px-3 py-3 text-gray-600">
+                      <td className="px-3 py-3 text-gray-600 dark:text-gray-400">
                         {lead.engagementScore != null ? lead.engagementScore : '-'}
                       </td>
-                      <td className="px-3 py-3 text-gray-500 whitespace-nowrap">
+                      <td className="px-3 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">
                         {formatRelativeTime(lead.lastCall.startedAt)}
                       </td>
                       <td className="px-3 py-3">
@@ -425,7 +425,7 @@ export default function RepLeadBankPage() {
                             addToQueue([lead.id])
                           }}
                           disabled={addingId === lead.id}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-teal-700 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors disabled:opacity-50"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/30 rounded-lg hover:bg-teal-100 transition-colors disabled:opacity-50"
                         >
                           {addingId === lead.id ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -447,19 +447,19 @@ export default function RepLeadBankPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
-          <span className="text-sm text-gray-500">Page {page} of {totalPages}</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">Page {page} of {totalPages}</span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="p-2 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
-              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="p-2 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -469,9 +469,9 @@ export default function RepLeadBankPage() {
 
       {/* Bulk Action Bar */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 px-6 py-3 md:bottom-0 bottom-16">
+        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 shadow-lg z-50 px-6 py-3 md:bottom-0 bottom-16">
           <div className="max-w-[1200px] mx-auto flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">{selectedIds.size} leads selected</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{selectedIds.size} leads selected</span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => addToQueue(Array.from(selectedIds))}
@@ -483,7 +483,7 @@ export default function RepLeadBankPage() {
               </button>
               <button
                 onClick={() => setSelectedIds(new Set())}
-                className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700"
+                className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
               >
                 Cancel
               </button>
@@ -496,14 +496,14 @@ export default function RepLeadBankPage() {
       {actionMessage && (
         <div className="fixed top-6 right-6 z-[70] animate-fade-in">
           <div className={`rounded-xl shadow-lg p-4 flex items-center gap-3 ${
-            actionMessage.type === 'success' ? 'bg-white border border-green-200' : 'bg-white border border-red-200'
+            actionMessage.type === 'success' ? 'bg-white dark:bg-slate-900 border border-green-200 dark:border-green-800' : 'bg-white dark:bg-slate-900 border border-red-200 dark:border-red-800'
           }`}>
             {actionMessage.type === 'success' ? (
               <CheckCircle className="w-5 h-5 text-green-600" />
             ) : (
               <AlertTriangle className="w-5 h-5 text-red-600" />
             )}
-            <span className="text-sm font-medium text-gray-900">{actionMessage.text}</span>
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{actionMessage.text}</span>
           </div>
         </div>
       )}

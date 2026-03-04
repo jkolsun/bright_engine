@@ -12,29 +12,29 @@ import {
 } from 'lucide-react'
 
 const GATE_CONFIG: Record<string, { label: string; icon: any; color: string; badgeColor: string }> = {
-  PAYMENT_LINK: { label: 'Payment Link', icon: DollarSign, color: 'bg-green-100 text-green-700', badgeColor: 'bg-green-500 text-white' },
-  SITE_PUBLISH: { label: 'Site Publish', icon: Globe, color: 'bg-blue-100 text-blue-700', badgeColor: 'bg-blue-500 text-white' },
-  REFUND: { label: 'Refund', icon: CreditCard, color: 'bg-red-100 text-red-700', badgeColor: 'bg-red-500 text-white' },
-  SEND_MESSAGE: { label: 'Send Message', icon: MessageSquare, color: 'bg-purple-100 text-purple-700', badgeColor: 'bg-purple-500 text-white' },
-  SEND_PREVIEW: { label: 'Site Approval', icon: Eye, color: 'bg-blue-100 text-blue-700', badgeColor: 'bg-blue-500 text-white' },
-  STATUS_CHANGE: { label: 'Status Change', icon: RefreshCw, color: 'bg-teal-100 text-teal-700', badgeColor: 'bg-teal-500 text-white' },
-  DELETE_LEAD: { label: 'Delete Lead', icon: Trash2, color: 'bg-red-100 text-red-700', badgeColor: 'bg-red-500 text-white' },
-  BULK_ACTION: { label: 'Bulk Action', icon: Users, color: 'bg-orange-100 text-orange-700', badgeColor: 'bg-orange-500 text-white' },
-  AI_RESPONSE: { label: 'AI Response', icon: Bot, color: 'bg-indigo-100 text-indigo-700', badgeColor: 'bg-indigo-500 text-white' },
-  SUBSCRIPTION_CANCEL: { label: 'Cancel Sub', icon: XCircle, color: 'bg-red-100 text-red-700', badgeColor: 'bg-red-500 text-white' },
-  HIGH_VALUE_SEND: { label: 'High Value', icon: AlertTriangle, color: 'bg-yellow-100 text-yellow-700', badgeColor: 'bg-yellow-500 text-white' },
+  PAYMENT_LINK: { label: 'Payment Link', icon: DollarSign, color: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400', badgeColor: 'bg-green-500 text-white' },
+  SITE_PUBLISH: { label: 'Site Publish', icon: Globe, color: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400', badgeColor: 'bg-blue-500 text-white' },
+  REFUND: { label: 'Refund', icon: CreditCard, color: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400', badgeColor: 'bg-red-500 text-white' },
+  SEND_MESSAGE: { label: 'Send Message', icon: MessageSquare, color: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400', badgeColor: 'bg-purple-500 text-white' },
+  SEND_PREVIEW: { label: 'Site Approval', icon: Eye, color: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400', badgeColor: 'bg-blue-500 text-white' },
+  STATUS_CHANGE: { label: 'Status Change', icon: RefreshCw, color: 'bg-teal-100 text-teal-700 dark:text-teal-400', badgeColor: 'bg-teal-500 text-white' },
+  DELETE_LEAD: { label: 'Delete Lead', icon: Trash2, color: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400', badgeColor: 'bg-red-500 text-white' },
+  BULK_ACTION: { label: 'Bulk Action', icon: Users, color: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400', badgeColor: 'bg-orange-500 text-white' },
+  AI_RESPONSE: { label: 'AI Response', icon: Bot, color: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400', badgeColor: 'bg-indigo-500 text-white' },
+  SUBSCRIPTION_CANCEL: { label: 'Cancel Sub', icon: XCircle, color: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400', badgeColor: 'bg-red-500 text-white' },
+  HIGH_VALUE_SEND: { label: 'High Value', icon: AlertTriangle, color: 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400', badgeColor: 'bg-yellow-500 text-white' },
   UPSELL_SEND: { label: 'Upsell', icon: Package, color: 'bg-violet-100 text-violet-700', badgeColor: 'bg-violet-500 text-white' },
   DOMAIN_SETUP: { label: 'Domain Setup', icon: Globe, color: 'bg-cyan-100 text-cyan-700', badgeColor: 'bg-cyan-500 text-white' },
   DOMAIN_REGISTRATION: { label: 'Domain Register', icon: Globe, color: 'bg-cyan-100 text-cyan-700', badgeColor: 'bg-cyan-600 text-white' },
-  SITE_EDIT: { label: 'Site Edit', icon: Eye, color: 'bg-amber-100 text-amber-700', badgeColor: 'bg-amber-500 text-white' },
-  SITE_PUBLICATION: { label: 'Site Publish', icon: Globe, color: 'bg-emerald-100 text-emerald-700', badgeColor: 'bg-emerald-500 text-white' },
+  SITE_EDIT: { label: 'Site Edit', icon: Eye, color: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400', badgeColor: 'bg-amber-500 text-white' },
+  SITE_PUBLICATION: { label: 'Site Publish', icon: Globe, color: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400', badgeColor: 'bg-emerald-500 text-white' },
 }
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string }> = {
   URGENT: { label: 'Urgent', color: 'bg-red-500 text-white' },
   HIGH: { label: 'High', color: 'bg-orange-500 text-white' },
-  NORMAL: { label: 'Normal', color: 'bg-gray-200 text-gray-700' },
-  LOW: { label: 'Low', color: 'bg-gray-100 text-gray-500' },
+  NORMAL: { label: 'Normal', color: 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300' },
+  LOW: { label: 'Low', color: 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400' },
 }
 
 type FilterStatus = 'PENDING' | 'APPROVED' | 'DENIED' | 'all'
@@ -142,16 +142,16 @@ export default function ApprovalsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-800/50">
+      <div className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
         <div className="p-6">
-          <Link href="/admin/dashboard" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4">
+          <Link href="/admin/dashboard" className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-4">
             <ArrowLeft size={16} />
             Dashboard
           </Link>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
                 <ShieldCheck size={28} className="text-blue-600" />
                 Approvals
                 {pendingCount > 0 && (
@@ -160,7 +160,7 @@ export default function ApprovalsPage() {
                   </span>
                 )}
               </h1>
-              <p className="text-gray-600 mt-1">Review and approve high-risk actions before they execute</p>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">Review and approve high-risk actions before they execute</p>
             </div>
           </div>
 
@@ -174,7 +174,7 @@ export default function ApprovalsPage() {
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     filter === s
                       ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'
                   }`}
                 >
                   {s === 'all' ? 'All' : s.charAt(0) + s.slice(1).toLowerCase()}
@@ -186,12 +186,12 @@ export default function ApprovalsPage() {
             </div>
 
             {/* Type filter */}
-            <div className="flex items-center gap-2 ml-4 border-l border-gray-200 pl-4">
-              <Filter size={14} className="text-gray-400" />
+            <div className="flex items-center gap-2 ml-4 border-l border-gray-200 dark:border-slate-700 pl-4">
+              <Filter size={14} className="text-gray-400 dark:text-gray-500" />
               <select
                 value={gateFilter}
                 onChange={e => setGateFilter(e.target.value)}
-                className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700"
+                className="text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-900 text-gray-700 dark:text-gray-300"
               >
                 <option value="all">All Types</option>
                 <option value="SEND_PREVIEW">Site Approvals</option>
@@ -208,14 +208,14 @@ export default function ApprovalsPage() {
 
       <div className="p-6 space-y-4">
         {loading && (
-          <Card className="p-8 text-center text-gray-500">Loading approvals...</Card>
+          <Card className="p-8 text-center text-gray-500 dark:text-gray-400">Loading approvals...</Card>
         )}
 
         {!loading && approvals.length === 0 && (
           <Card className="p-12 text-center">
             <CheckCircle size={48} className="text-green-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900">All clear</h3>
-            <p className="text-gray-500 mt-1">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">All clear</h3>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">
               {filter === 'PENDING' ? 'No pending approvals' : `No ${filter.toLowerCase()} approvals`}
             </p>
           </Card>
@@ -224,14 +224,14 @@ export default function ApprovalsPage() {
         {/* Denial reason modal */}
         {denyingId && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Deny Approval</h3>
-              <p className="text-sm text-gray-600 mb-4">Provide a reason for denial so the team knows what to fix.</p>
+            <div className="bg-white dark:bg-slate-900 rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Deny Approval</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Provide a reason for denial so the team knows what to fix.</p>
               <textarea
                 value={denialReason}
                 onChange={e => setDenialReason(e.target.value)}
                 placeholder="Reason for denial (optional but recommended)..."
-                className="w-full border border-gray-300 rounded-lg p-3 text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full border border-gray-300 dark:border-slate-600 rounded-lg p-3 text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent dark:bg-slate-800 dark:text-gray-100"
                 autoFocus
               />
               <div className="flex justify-end gap-3 mt-4">
@@ -257,7 +257,7 @@ export default function ApprovalsPage() {
         )}
 
         {approvals.map(approval => {
-          const gateConf = GATE_CONFIG[approval.gate] || { label: approval.gate, icon: ShieldCheck, color: 'bg-gray-100 text-gray-700', badgeColor: 'bg-gray-500 text-white' }
+          const gateConf = GATE_CONFIG[approval.gate] || { label: approval.gate, icon: ShieldCheck, color: 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300', badgeColor: 'bg-gray-500 text-white' }
           const prioConf = PRIORITY_CONFIG[approval.priority] || PRIORITY_CONFIG.NORMAL
           const GateIcon = gateConf.icon
           const isPending = approval.status === 'PENDING'
@@ -285,20 +285,20 @@ export default function ApprovalsPage() {
                         {prioConf.label}
                       </span>
                     )}
-                    <h3 className="font-semibold text-gray-900">{approval.title}</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{approval.title}</h3>
                   </div>
 
                   {/* Lead/company info */}
                   {approval.lead && (
-                    <div className="mt-1 text-sm text-gray-700">
+                    <div className="mt-1 text-sm text-gray-700 dark:text-gray-300">
                       <span className="font-medium">{approval.lead.firstName} {approval.lead.lastName || ''}</span>
                       {approval.lead.companyName && (
-                        <span className="text-gray-500"> — {approval.lead.companyName}</span>
+                        <span className="text-gray-500 dark:text-gray-400"> — {approval.lead.companyName}</span>
                       )}
                     </div>
                   )}
 
-                  <p className="text-sm text-gray-600 mt-1">{approval.description}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{approval.description}</p>
 
                   {/* Preview button for site approvals */}
                   {(approval.gate === 'SEND_PREVIEW' || approval.gate === 'SITE_PUBLISH') && previewUrl && (
@@ -306,7 +306,7 @@ export default function ApprovalsPage() {
                       href={previewUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
+                      className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
                     >
                       <Eye size={14} />
                       Preview Site
@@ -337,8 +337,8 @@ export default function ApprovalsPage() {
 
                   {/* Stripe link visible + editable for payment approvals */}
                   {approval.gate === 'PAYMENT_LINK' && (
-                    <div className="mt-2 p-3 bg-green-50 rounded-lg border border-green-200">
-                      <p className="text-xs font-medium text-green-700 mb-1.5">Stripe Payment Link:</p>
+                    <div className="mt-2 p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200">
+                      <p className="text-xs font-medium text-green-700 dark:text-green-400 mb-1.5">Stripe Payment Link:</p>
                       {isPending ? (
                         <div className="flex items-center gap-2">
                           <input
@@ -346,7 +346,7 @@ export default function ApprovalsPage() {
                             value={editedPaymentUrls[approval.id] ?? paymentUrl ?? ''}
                             onChange={e => setEditedPaymentUrls(prev => ({ ...prev, [approval.id]: e.target.value }))}
                             placeholder="https://buy.stripe.com/..."
-                            className="flex-1 text-sm font-mono px-2 py-1.5 border border-green-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            className="flex-1 text-sm font-mono px-2 py-1.5 border border-green-300 rounded-md bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent dark:text-gray-100"
                           />
                           {(editedPaymentUrls[approval.id] ?? paymentUrl) && (
                             <a
@@ -365,37 +365,37 @@ export default function ApprovalsPage() {
                           href={paymentUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-green-800 underline break-all hover:text-green-900"
+                          className="text-sm text-green-800 dark:text-green-400 underline break-all hover:text-green-900"
                         >
                           {paymentUrl}
                         </a>
                       ) : (
-                        <span className="text-sm text-gray-500 italic">No link configured</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400 italic">No link configured</span>
                       )}
                     </div>
                   )}
 
                   {/* Draft content preview */}
                   {approval.draftContent && (
-                    <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <p className="text-xs font-medium text-gray-500 mb-1">Message to send:</p>
-                      <p className="text-sm text-gray-800 whitespace-pre-wrap">{approval.draftContent}</p>
+                    <div className="mt-3 p-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700">
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Message to send:</p>
+                      <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{approval.draftContent}</p>
                     </div>
                   )}
 
                   {/* Conversation context — last 3-5 messages */}
                   {approval.recentMessages && approval.recentMessages.length > 0 && (
-                    <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                      <p className="text-xs font-medium text-slate-500 mb-2">Recent conversation:</p>
+                    <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <p className="text-xs font-medium text-slate-500 dark:text-gray-400 mb-2">Recent conversation:</p>
                       <div className="space-y-1.5">
                         {approval.recentMessages.map((msg: any) => (
                           <div key={msg.id} className="flex gap-2 text-sm">
                             <span className={`font-medium flex-shrink-0 ${
-                              msg.direction === 'INBOUND' ? 'text-blue-600' : 'text-gray-600'
+                              msg.direction === 'INBOUND' ? 'text-blue-600' : 'text-gray-600 dark:text-gray-400'
                             }`}>
                               {msg.direction === 'INBOUND' ? 'Client:' : 'Team:'}
                             </span>
-                            <span className="text-gray-700 truncate">{msg.content}</span>
+                            <span className="text-gray-700 dark:text-gray-300 truncate">{msg.content}</span>
                           </div>
                         ))}
                       </div>
@@ -404,14 +404,14 @@ export default function ApprovalsPage() {
 
                   {/* Denial reason (if denied) */}
                   {approval.status === 'DENIED' && meta?.denialReason && (
-                    <div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                    <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200">
                       <p className="text-xs font-medium text-red-600 mb-1">Denial reason:</p>
-                      <p className="text-sm text-red-800">{meta.denialReason as string}</p>
+                      <p className="text-sm text-red-800 dark:text-red-400">{meta.denialReason as string}</p>
                     </div>
                   )}
 
                   {/* Metadata */}
-                  <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                  <div className="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
                     <span className="flex items-center gap-1">
                       <Clock size={12} />
                       {timeSince(approval.createdAt)}
@@ -452,9 +452,9 @@ export default function ApprovalsPage() {
                 {!isPending && (
                   <div className="flex-shrink-0">
                     {approval.status === 'APPROVED' ? (
-                      <Badge className="bg-green-100 text-green-700">Approved</Badge>
+                      <Badge className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">Approved</Badge>
                     ) : (
-                      <Badge className="bg-red-100 text-red-700">Denied</Badge>
+                      <Badge className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400">Denied</Badge>
                     )}
                   </div>
                 )}

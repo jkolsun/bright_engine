@@ -45,17 +45,17 @@ function DialerContent() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Left: Queue Panel — collapsible */}
         {queueCollapsed ? (
-          <div className="w-11 flex-shrink-0 border-r border-gray-200 bg-gray-50 flex flex-col items-center pt-3">
+          <div className="w-11 flex-shrink-0 border-r border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 flex flex-col items-center pt-3">
             <button
               onClick={toggleQueue}
-              className="p-2 rounded-lg text-gray-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
+              className="p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-colors"
               title="Open queue"
             >
               <PanelLeftOpen className="w-5 h-5" />
             </button>
           </div>
         ) : (
-          <div className="w-[20%] min-w-[260px] flex-shrink-0 border-r border-gray-200 overflow-y-auto bg-gray-50">
+          <div className="w-[20%] min-w-[260px] flex-shrink-0 border-r border-gray-200 dark:border-slate-700 overflow-y-auto bg-gray-50 dark:bg-slate-800/50">
             <QueuePanel onCollapse={toggleQueue} />
           </div>
         )}
@@ -64,7 +64,7 @@ function DialerContent() {
           <LeadCard />
         </div>
         {/* Right: Call Guide (28%) */}
-        <div className="w-[28%] min-w-[280px] flex-shrink-0 border-l border-gray-200 overflow-y-auto bg-gray-50">
+        <div className="w-[28%] min-w-[280px] flex-shrink-0 border-l border-gray-200 dark:border-slate-700 overflow-y-auto bg-gray-50 dark:bg-slate-800/50">
           <CallGuidePanel />
         </div>
       </div>
@@ -79,11 +79,11 @@ function SessionStart() {
   return (
     <div className="flex-1 flex items-center justify-center">
       <div className="text-center max-w-md">
-        <div className="w-20 h-20 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="w-20 h-20 bg-teal-50 dark:bg-teal-950/30 rounded-full flex items-center justify-center mx-auto mb-6">
           <svg className="w-10 h-10 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Power Dialer</h2>
-        <p className="text-gray-500 mb-8">Start a dialing session to begin making calls.</p>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Power Dialer</h2>
+        <p className="text-gray-500 dark:text-gray-400 mb-8">Start a dialing session to begin making calls.</p>
         <button
           onClick={() => session.startSession(false)}
           disabled={session.loading}
@@ -104,8 +104,8 @@ export default function DialerLayout() {
   return (
     <div className="flex flex-col h-screen">
       {/* Back bar */}
-      <div className="flex items-center px-4 py-2 border-b border-gray-100 bg-white flex-shrink-0">
-        <Link href={backHref} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+      <div className="flex items-center px-4 py-2 border-b border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex-shrink-0">
+        <Link href={backHref} className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
           <ArrowLeft className="w-4 h-4" />
           <span>Back</span>
         </Link>

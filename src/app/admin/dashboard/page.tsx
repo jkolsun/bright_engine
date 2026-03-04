@@ -68,8 +68,8 @@ export default function DashboardPage() {
     return (
       <div className="p-8 flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <Loader2 size={48} className="text-gray-400 mx-auto mb-4 animate-spin" />
-          <p className="text-gray-600">Loading dashboard...</p>
+          <Loader2 size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4 animate-spin" />
+          <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
         </div>
       </div>
     )
@@ -92,8 +92,8 @@ export default function DashboardPage() {
     <div className="p-8 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 mt-1">Overview of your automation platform</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Overview of your automation platform</p>
       </div>
 
       {/* Key Metrics */}
@@ -133,25 +133,25 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Preview Engagement</h3>
-            <Eye size={20} className="text-gray-400" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Preview Engagement</h3>
+            <Eye size={20} className="text-gray-400 dark:text-gray-500" />
           </div>
           <div className="space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">Views</span>
+                <span className="text-gray-600 dark:text-gray-400">Views</span>
                 <span className="font-semibold">{data.previewViews}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                 <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${data.totalLeads > 0 ? Math.min(100, Math.round((data.previewViews || 0) / data.totalLeads * 100)) : 0}%` }} />
               </div>
             </div>
             <div>
               <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">CTA Clicks</span>
+                <span className="text-gray-600 dark:text-gray-400">CTA Clicks</span>
                 <span className="font-semibold">{data.previewClicks}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                 <div className="bg-green-600 h-2 rounded-full" style={{ width: `${(data.previewViews || 0) > 0 ? Math.min(100, Math.round((data.previewClicks || 0) / data.previewViews * 100)) : 0}%` }} />
               </div>
             </div>
@@ -160,7 +160,7 @@ export default function DashboardPage() {
 
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Quick Actions</h3>
           </div>
           <div className="space-y-2">
             <Link href="/admin/leads">
@@ -188,22 +188,22 @@ export default function DashboardPage() {
       {/* Hot Leads */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">🔥 Hot Leads</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">🔥 Hot Leads</h3>
           <Link href="/admin/leads?status=HOT_LEAD">
             <Button variant="ghost" size="sm">View All</Button>
           </Link>
         </div>
         {hotLeads.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No hot leads right now</p>
+          <p className="text-gray-500 dark:text-gray-400 text-center py-8">No hot leads right now</p>
         ) : (
           <div className="space-y-3">
             {hotLeads.map((lead) => (
-              <div key={lead.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+              <div key={lead.id} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/30 rounded-lg">
                 <div>
-                  <div className="font-medium text-gray-900">
+                  <div className="font-medium text-gray-900 dark:text-gray-100">
                     {lead.firstName} {lead.lastName} - {lead.companyName}
                   </div>
-                  <div className="text-sm text-gray-600">{lead.phone}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">{lead.phone}</div>
                 </div>
                 <Link href={`/admin/leads/${lead.id}`}>
                   <Button size="sm">View</Button>
@@ -211,7 +211,7 @@ export default function DashboardPage() {
               </div>
             ))}
             {hotLeads.length >= 5 && (
-              <div className="text-center pt-3 border-t border-red-100 mt-3">
+              <div className="text-center pt-3 border-t border-red-100 dark:border-red-900/40 mt-3">
                 <Link href="/admin/leads?status=HOT_LEAD" className="text-sm text-red-600 hover:text-red-700 font-medium">
                   View all hot leads &rarr;
                 </Link>
@@ -224,8 +224,8 @@ export default function DashboardPage() {
       {/* Notifications */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Bell size={20} className="text-gray-400" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <Bell size={20} className="text-gray-400 dark:text-gray-500" />
             Recent Activity
           </h3>
           <Link href="/admin/notifications">
@@ -233,16 +233,16 @@ export default function DashboardPage() {
           </Link>
         </div>
         {notifications.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No recent notifications</p>
+          <p className="text-gray-500 dark:text-gray-400 text-center py-8">No recent notifications</p>
         ) : (
           <div className="space-y-3">
             {notifications.map((notif) => (
-              <div key={notif.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg">
+              <div key={notif.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg">
                 <div className="w-2 h-2 bg-blue-600 rounded-full mt-2" />
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900">{notif.title}</div>
-                  <div className="text-sm text-gray-600">{notif.message}</div>
-                  <div className="text-xs text-gray-400 mt-1">
+                  <div className="font-medium text-gray-900 dark:text-gray-100">{notif.title}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">{notif.message}</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                     {new Date(notif.createdAt).toLocaleString()}
                   </div>
                 </div>
@@ -271,14 +271,14 @@ function MetricCard({
   alert?: boolean
 }) {
   const content = (
-    <Card className={`p-6 ${alert ? 'border-red-300 bg-red-50' : ''}`}>
+    <Card className={`p-6 ${alert ? 'border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/30' : ''}`}>
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm text-gray-600">{label}</span>
+        <span className="text-sm text-gray-600 dark:text-gray-400">{label}</span>
         {icon}
       </div>
-      <div className="text-3xl font-bold text-gray-900">{value}</div>
+      <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
       {change && (
-        <div className={`text-sm mt-2 ${alert ? 'text-red-600 font-medium' : 'text-gray-500'}`}>
+        <div className={`text-sm mt-2 ${alert ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
           {change}
         </div>
       )}

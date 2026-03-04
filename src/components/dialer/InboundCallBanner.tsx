@@ -124,8 +124,8 @@ export function InboundCallBanner() {
             <PhoneIncoming className="w-5 h-5 text-white" />
           </div>
           <div>
-            <div className="text-sm font-semibold text-gray-900">Incoming Call</div>
-            <div className="text-xs text-gray-600">
+            <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Incoming Call</div>
+            <div className="text-xs text-gray-600 dark:text-gray-400">
               {inboundCall.companyName || inboundCall.contactName || inboundCall.from || 'Unknown'}
               {inboundCall.isDNC && <span className="ml-2 text-red-600 font-medium">DNC</span>}
             </div>
@@ -147,7 +147,7 @@ export function InboundCallBanner() {
             disabled={isConnected}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
               isConnected
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                ? 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                 : 'bg-green-500 text-white hover:bg-green-600 shadow-sm'
             }`}
           >

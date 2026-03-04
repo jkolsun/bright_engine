@@ -77,73 +77,73 @@ export function SessionRecap() {
       <div className="w-full max-w-lg">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">Session Complete</h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Session Complete</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {formatDuration(recap.startedAt, recap.endedAt)} session
           </p>
         </div>
 
         {/* Stat Cards */}
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
-            <div className="flex items-center justify-center gap-1.5 text-gray-400 mb-1">
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-gray-400 dark:text-gray-500 mb-1">
               <Phone className="w-3.5 h-3.5" />
               <span className="text-[11px] font-medium uppercase tracking-wide">Total Dials</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">{recap.totalCalls}</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{recap.totalCalls}</div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
-            <div className="flex items-center justify-center gap-1.5 text-gray-400 mb-1">
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-gray-400 dark:text-gray-500 mb-1">
               <PhoneCall className="w-3.5 h-3.5" />
               <span className="text-[11px] font-medium uppercase tracking-wide">Connected</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               {recap.connectedCalls}
-              <span className="text-sm font-normal text-gray-400 ml-1">({connectRate}%)</span>
+              <span className="text-sm font-normal text-gray-400 dark:text-gray-500 ml-1">({connectRate}%)</span>
             </div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
-            <div className="flex items-center justify-center gap-1.5 text-gray-400 mb-1">
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-gray-400 dark:text-gray-500 mb-1">
               <Timer className="w-3.5 h-3.5" />
               <span className="text-[11px] font-medium uppercase tracking-wide">Avg Duration</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">{formatAvgDuration(recap.avgCallDuration)}</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatAvgDuration(recap.avgCallDuration)}</div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-xl p-4 text-center">
-            <div className="flex items-center justify-center gap-1.5 text-gray-400 mb-1">
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-gray-400 dark:text-gray-500 mb-1">
               <Clock className="w-3.5 h-3.5" />
               <span className="text-[11px] font-medium uppercase tracking-wide">Duration</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">{formatDuration(recap.startedAt, recap.endedAt)}</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatDuration(recap.startedAt, recap.endedAt)}</div>
           </div>
         </div>
 
         {/* Previews sent */}
         {recap.previewsSent > 0 && (
-          <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 mb-3 flex items-center justify-between">
-            <span className="text-sm text-gray-600">Previews Sent</span>
-            <span className="text-sm font-semibold text-gray-900">{recap.previewsSent}</span>
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-3 flex items-center justify-between">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Previews Sent</span>
+            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{recap.previewsSent}</span>
           </div>
         )}
 
         {/* Disposition Breakdown */}
         {dispositions.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Disposition Breakdown</h3>
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl p-4 mb-6">
+            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Disposition Breakdown</h3>
             <div className="space-y-2">
               {dispositions.map(d => (
                 <div key={d.key} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className={`w-2.5 h-2.5 rounded-full ${DISPOSITION_COLORS[d.key] || 'bg-gray-300'}`} />
-                    <span className="text-sm text-gray-700">{DISPOSITION_LABELS[d.key] || d.key}</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{DISPOSITION_LABELS[d.key] || d.key}</span>
                   </div>
-                  <span className="text-sm font-semibold text-gray-900">{d.count}</span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{d.count}</span>
                 </div>
               ))}
             </div>

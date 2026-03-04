@@ -48,9 +48,9 @@ function getHealthScore(client: any) {
 }
 
 function getHealthBadge(score: number) {
-  if (score >= 80) return { label: 'Healthy', color: 'bg-green-100 text-green-700', icon: '🟢' }
-  if (score >= 50) return { label: 'Monitor', color: 'bg-yellow-100 text-yellow-700', icon: '🟡' }
-  return { label: 'At Risk', color: 'bg-red-100 text-red-700', icon: '🔴' }
+  if (score >= 80) return { label: 'Healthy', color: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400', icon: '🟢' }
+  if (score >= 50) return { label: 'Monitor', color: 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400', icon: '🟡' }
+  return { label: 'At Risk', color: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400', icon: '🔴' }
 }
 
 const ONBOARDING_STEP_LABELS: Record<number, string> = {
@@ -59,21 +59,21 @@ const ONBOARDING_STEP_LABELS: Record<number, string> = {
 }
 
 function getClientStage(client: any) {
-  if (client.hostingStatus === 'DEACTIVATED') return { label: 'Deactivated', color: 'bg-orange-100 text-orange-700', icon: Clock }
-  if (client.hostingStatus === 'CANCELLED') return { label: 'Cancelled', color: 'bg-gray-100 text-gray-700', icon: XCircle }
-  if (client.hostingStatus === 'FAILED_PAYMENT') return { label: 'Payment Failed', color: 'bg-red-100 text-red-700', icon: AlertTriangle }
-  if (client.hostingStatus === 'GRACE_PERIOD') return { label: 'Grace Period', color: 'bg-amber-100 text-amber-700', icon: Clock }
+  if (client.hostingStatus === 'DEACTIVATED') return { label: 'Deactivated', color: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400', icon: Clock }
+  if (client.hostingStatus === 'CANCELLED') return { label: 'Cancelled', color: 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300', icon: XCircle }
+  if (client.hostingStatus === 'FAILED_PAYMENT') return { label: 'Payment Failed', color: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400', icon: AlertTriangle }
+  if (client.hostingStatus === 'GRACE_PERIOD') return { label: 'Grace Period', color: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400', icon: Clock }
   if (client.onboardingStep > 0 && client.onboardingStep < 7) {
     const stepLabel = ONBOARDING_STEP_LABELS[client.onboardingStep] || 'Onboarding'
-    return { label: `Onboarding (${stepLabel}/${7})`, color: 'bg-blue-100 text-blue-700', icon: Clock }
+    return { label: `Onboarding (${stepLabel}/${7})`, color: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400', icon: Clock }
   }
-  if (!client.siteUrl && !client.siteLiveDate) return { label: 'Onboarding', color: 'bg-blue-100 text-blue-700', icon: Clock }
-  if (client.churnRiskScore >= 70) return { label: 'At Risk', color: 'bg-red-100 text-red-700', icon: AlertTriangle }
+  if (!client.siteUrl && !client.siteLiveDate) return { label: 'Onboarding', color: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400', icon: Clock }
+  if (client.churnRiskScore >= 70) return { label: 'At Risk', color: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400', icon: AlertTriangle }
   if (client.siteLiveDate) {
     const daysSinceLive = Math.floor((Date.now() - new Date(client.siteLiveDate).getTime()) / (1000 * 60 * 60 * 24))
-    if (daysSinceLive <= 30) return { label: 'New Client', color: 'bg-green-100 text-green-700', icon: CheckCircle2 }
+    if (daysSinceLive <= 30) return { label: 'New Client', color: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400', icon: CheckCircle2 }
   }
-  return { label: 'Active', color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle2 }
+  return { label: 'Active', color: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400', icon: CheckCircle2 }
 }
 
 function getDaysSince(date: string | null) {
@@ -324,8 +324,8 @@ export default function ClientsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Clients</h1>
-          <p className="text-gray-500 mt-1">Post-Sale Command Center</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Clients</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Post-Sale Command Center</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" onClick={handleExportCSV}>
@@ -375,7 +375,7 @@ export default function ClientsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Industry</label>
-                      <select value={formData.industry} onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                      <select value={formData.industry} onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-800 dark:text-gray-100">
                         <option value="GENERAL_CONTRACTING">General Contracting</option>
                         <option value="ROOFING">Roofing</option>
                         <option value="PLUMBING">Plumbing</option>
@@ -393,14 +393,14 @@ export default function ClientsPage() {
                         <label className="text-sm font-medium">Build Fee</label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                          <input type="number" value={formData.siteBuildFee} onChange={(e) => setFormData(prev => ({ ...prev, siteBuildFee: parseInt(e.target.value) || 0 }))} placeholder="149" className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md text-sm" />
+                          <input type="number" value={formData.siteBuildFee} onChange={(e) => setFormData(prev => ({ ...prev, siteBuildFee: parseInt(e.target.value) || 0 }))} placeholder="149" className="w-full pl-7 pr-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-800 dark:text-gray-100" />
                         </div>
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Monthly Hosting</label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                          <input type="number" value={formData.monthlyRevenue} onChange={(e) => setFormData(prev => ({ ...prev, monthlyRevenue: parseInt(e.target.value) || 0 }))} placeholder="39" className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md text-sm" />
+                          <input type="number" value={formData.monthlyRevenue} onChange={(e) => setFormData(prev => ({ ...prev, monthlyRevenue: parseInt(e.target.value) || 0 }))} placeholder="39" className="w-full pl-7 pr-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-800 dark:text-gray-100" />
                         </div>
                         <p className="text-xs text-gray-400">/mo after first month</p>
                       </div>
@@ -412,7 +412,7 @@ export default function ClientsPage() {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Notes</label>
-                    <textarea value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="Any notes about this client..." className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm min-h-[60px]" />
+                    <textarea value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="Any notes about this client..." className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-800 dark:text-gray-100 min-h-[60px]" />
                   </div>
                 </div>
                 <DialogFooter>
@@ -438,29 +438,29 @@ export default function ClientsPage() {
 
       {/* Needs Attention Alerts */}
       {(overviewStats.alerts?.pastDuePayments > 0 || overviewStats.alerts?.pendingEdits > 0 || overviewStats.alerts?.upsellFollowups > 0 || overviewStats.alerts?.escalatedMessages > 0) && (
-        <Card className="p-4 border-amber-200 bg-amber-50/50">
-          <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+        <Card className="p-4 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
             <AlertTriangle size={16} className="text-amber-500" />
             Needs Attention
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             {overviewStats.alerts?.pastDuePayments > 0 && (
-              <button className="flex items-center gap-2 text-red-700 text-left" onClick={() => setStatusFilter('FAILED_PAYMENT')}>
+              <button className="flex items-center gap-2 text-red-700 dark:text-red-400 text-left" onClick={() => setStatusFilter('FAILED_PAYMENT')}>
                 🔴 {overviewStats.alerts.pastDuePayments} past-due payments
               </button>
             )}
             {overviewStats.alerts?.pendingEdits > 0 && (
-              <a href="/admin/build-queue" className="flex items-center gap-2 text-yellow-700 text-left hover:underline">
+              <a href="/admin/build-queue" className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 text-left hover:underline">
                 🟡 {overviewStats.alerts.pendingEdits} pending edits ({overviewStats.alerts.readyForReview || 0} ready for review)
               </a>
             )}
             {overviewStats.alerts?.upsellFollowups > 0 && (
-              <button className="flex items-center gap-2 text-green-700 text-left">
+              <button className="flex items-center gap-2 text-green-700 dark:text-green-400 text-left">
                 🟢 {overviewStats.alerts.upsellFollowups} upsell replies to follow up
               </button>
             )}
             {overviewStats.alerts?.escalatedMessages > 0 && (
-              <div className="flex items-center gap-2 text-orange-700">
+              <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
                 🟠 {overviewStats.alerts.escalatedMessages} escalated conversations
               </div>
             )}
@@ -490,7 +490,7 @@ export default function ClientsPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <Input className="pl-10" placeholder="Search clients by name, phone, email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-md text-sm">
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-800 dark:text-gray-100">
                 <option value="all">All Status</option>
                 <option value="ACTIVE">Active</option>
                 <option value="ONBOARDING">Onboarding</option>
@@ -500,7 +500,7 @@ export default function ClientsPage() {
                 <option value="CANCELLED">Cancelled</option>
               </select>
               {allTags.length > 0 && (
-                <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-md text-sm">
+                <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-800 dark:text-gray-100">
                   <option value="">All Tags</option>
                   {allTags.map((tag: string) => <option key={tag} value={tag}>{tag}</option>)}
                 </select>
@@ -508,7 +508,7 @@ export default function ClientsPage() {
             </div>
             {selectedClients.size > 0 && (
               <div className="mt-3 pt-3 border-t flex items-center gap-3">
-                <span className="text-sm text-gray-600">{selectedClients.size} selected</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">{selectedClients.size} selected</span>
                 <Button variant="outline" size="sm">Send Upsell</Button>
                 <Button variant="outline" size="sm">Send Stat Report</Button>
                 <Button variant="outline" size="sm">Change Tags</Button>
@@ -519,18 +519,18 @@ export default function ClientsPage() {
           {/* Client Table */}
           <Card>
             {loading ? (
-              <div className="p-12 text-center text-gray-500">Loading clients...</div>
+              <div className="p-12 text-center text-gray-500 dark:text-gray-400">Loading clients...</div>
             ) : filteredClients.length === 0 ? (
               <div className="p-12 text-center">
-                <Users size={48} className="mx-auto mb-2 text-gray-400" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No clients found</h3>
-                <p className="text-gray-600 mb-4">Add your first client to get started</p>
+                <Users size={48} className="mx-auto mb-2 text-gray-400 dark:text-gray-500" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No clients found</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">Add your first client to get started</p>
                 <Button onClick={() => setDialogOpen(true)}><Plus size={18} className="mr-2" />Add Client</Button>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
+                  <thead className="bg-gray-50 dark:bg-slate-800/50 border-b dark:border-slate-700">
                     <tr>
                       <th className="text-left p-4 w-10">
                         <BulkSelectDropdown
@@ -539,25 +539,25 @@ export default function ClientsPage() {
                           onSelectionChange={setSelectedClients}
                         />
                       </th>
-                      <th className="text-left p-4 text-sm font-semibold text-gray-700">Client</th>
-                      <th className="text-left p-4 text-sm font-semibold text-gray-700">Status</th>
-                      <th className="text-left p-4 text-sm font-semibold text-gray-700">Health</th>
-                      <th className="text-right p-4 text-sm font-semibold text-gray-700">MRR</th>
+                      <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Client</th>
+                      <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                      <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Health</th>
+                      <th className="text-right p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">MRR</th>
                       {viewMode === 'billing' ? (
                         <>
-                          <th className="text-right p-4 text-sm font-semibold text-gray-700">LTV</th>
-                          <th className="text-right p-4 text-sm font-semibold text-gray-700">Stripe</th>
+                          <th className="text-right p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">LTV</th>
+                          <th className="text-right p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Stripe</th>
                         </>
                       ) : (
                         <>
-                          <th className="text-left p-4 text-sm font-semibold text-gray-700">Tags</th>
-                          <th className="text-right p-4 text-sm font-semibold text-gray-700">Activity</th>
+                          <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Tags</th>
+                          <th className="text-right p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Activity</th>
                         </>
                       )}
                       <th className="text-right p-4 text-sm font-semibold text-gray-700 w-10"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
                     {filteredClients.map((client) => {
                       const stage = getClientStage(client)
                       const StageIcon = stage.icon
@@ -572,22 +572,22 @@ export default function ClientsPage() {
 
                       return (
                         <React.Fragment key={client.id}>
-                        <tr className="group hover:bg-gray-50">
+                        <tr className="group hover:bg-gray-50 dark:hover:bg-slate-800">
                           <td className="p-4" onClick={(e) => e.stopPropagation()}>
                             <input type="checkbox" className="rounded" checked={selectedClients.has(client.id)} onChange={() => toggleSelectClient(client.id)} />
                           </td>
                           <td className="p-4 cursor-pointer" onClick={() => { setSelectedClient(client); setViewMode('profile'); setProfileTab('overview') }}>
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-900">{client.companyName}</span>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">{client.companyName}</span>
                               {pendingEdits > 0 && (
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 rounded-full text-xs font-medium">
                                   <Edit3 size={10} />{pendingEdits}
                                 </span>
                               )}
                             </div>
-                            <div className="text-sm text-gray-500">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
                               {contact && <span>{contact}</span>}
-                              {location && <span className="ml-2 text-gray-400">- {location}</span>}
+                              {location && <span className="ml-2 text-gray-400 dark:text-gray-500">- {location}</span>}
                             </div>
                           </td>
                           <td className="p-4">
@@ -600,16 +600,16 @@ export default function ClientsPage() {
                               {health.icon} {healthScore}
                             </span>
                           </td>
-                          <td className="p-4 text-right font-semibold text-gray-900">
-                            {formatCurrency(client.monthlyRevenue)}<span className="text-xs text-gray-400">/mo</span>
+                          <td className="p-4 text-right font-semibold text-gray-900 dark:text-gray-100">
+                            {formatCurrency(client.monthlyRevenue)}<span className="text-xs text-gray-400 dark:text-gray-500">/mo</span>
                           </td>
                           {viewMode === 'billing' ? (
                             <>
-                              <td className="p-4 text-right text-sm text-gray-600">
+                              <td className="p-4 text-right text-sm text-gray-600 dark:text-gray-400">
                                 {daysActive !== null ? formatCurrency(Math.round((client.monthlyRevenue || 0) * (daysActive / 30))) : '—'}
                               </td>
                               <td className="p-4 text-right">
-                                <span className={`text-xs font-medium ${client.stripeCustomerId ? 'text-green-600' : 'text-gray-400'}`}>
+                                <span className={`text-xs font-medium ${client.stripeCustomerId ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
                                   {client.stripeCustomerId ? 'Connected' : 'Not linked'}
                                 </span>
                               </td>
@@ -619,14 +619,14 @@ export default function ClientsPage() {
                               <td className="p-4">
                                 <div className="flex flex-wrap gap-1">
                                   {(client.tags || []).slice(0, 3).map((tag: string) => (
-                                    <span key={tag} className="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">{tag}</span>
+                                    <span key={tag} className="inline-block px-2 py-0.5 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 rounded text-xs">{tag}</span>
                                   ))}
-                                  {(client.tags || []).length > 3 && <span className="text-xs text-gray-400">+{client.tags.length - 3}</span>}
+                                  {(client.tags || []).length > 3 && <span className="text-xs text-gray-400 dark:text-gray-500">+{client.tags.length - 3}</span>}
                                 </div>
                               </td>
-                              <td className="p-4 text-right text-sm text-gray-600">
+                              <td className="p-4 text-right text-sm text-gray-600 dark:text-gray-400">
                                 <div>{daysSinceInteraction !== null ? `${daysSinceInteraction}d ago` : 'Never'}</div>
-                                {pendingEdits > 0 && <div className="text-xs text-amber-600">{pendingEdits} pending edits</div>}
+                                {pendingEdits > 0 && <div className="text-xs text-amber-600 dark:text-amber-400">{pendingEdits} pending edits</div>}
                               </td>
                             </>
                           )}
@@ -635,46 +635,46 @@ export default function ClientsPage() {
                               <button
                                 onClick={(e) => { e.stopPropagation(); router.push(`/admin/messages?clientId=${client.id}`) }}
                                 title="Open Chat"
-                                className="p-1.5 rounded-md text-teal-600 hover:bg-teal-50 transition-colors"
+                                className="p-1.5 rounded-md text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-colors"
                               >
                                 <MessageSquare size={15} />
                               </button>
-                              <button onClick={(e) => { e.stopPropagation(); setExpandedClient(isExpanded ? null : client.id) }} className="p-1 hover:bg-gray-100 rounded">
+                              <button onClick={(e) => { e.stopPropagation(); setExpandedClient(isExpanded ? null : client.id) }} className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded">
                                 {isExpanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
                               </button>
                             </div>
                           </td>
                         </tr>
                         {isExpanded && (
-                          <tr className="bg-gray-50">
+                          <tr className="bg-gray-50 dark:bg-slate-800/50">
                             <td colSpan={viewMode === 'billing' ? 8 : 8} className="p-4">
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                 <div>
-                                  <p className="text-gray-500 text-xs mb-1">Contact</p>
+                                  <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Contact</p>
                                   <p className="font-medium">{contact || '—'}</p>
                                   {(client.phone || client.lead?.phone) && (
-                                    <p className="text-gray-600 flex items-center gap-1 mt-1"><Phone size={12} /> {client.phone || client.lead?.phone}</p>
+                                    <p className="text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-1"><Phone size={12} /> {client.phone || client.lead?.phone}</p>
                                   )}
                                   {(client.email || client.lead?.email) && (
-                                    <p className="text-gray-600 flex items-center gap-1 mt-1"><Mail size={12} /> {client.email || client.lead?.email}</p>
+                                    <p className="text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-1"><Mail size={12} /> {client.email || client.lead?.email}</p>
                                   )}
                                 </div>
                                 <div>
-                                  <p className="text-gray-500 text-xs mb-1">Site</p>
+                                  <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Site</p>
                                   {client.siteUrl ? (
                                     <a href={`https://${client.siteUrl}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
                                       {client.siteUrl} <ExternalLink size={12} />
                                     </a>
-                                  ) : <p className="text-gray-400">Not set</p>}
+                                  ) : <p className="text-gray-400 dark:text-gray-500">Not set</p>}
                                 </div>
                                 <div>
-                                  <p className="text-gray-500 text-xs mb-1">Billing</p>
+                                  <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Billing</p>
                                   <p className="font-medium">{formatCurrency(client.monthlyRevenue)}/mo</p>
-                                  <p className="text-gray-600 mt-1">{daysActive !== null ? `${daysActive} days active` : 'Not live yet'}</p>
-                                  <p className="text-gray-600 mt-1">Automation: {client.autonomyLevel || 'FULL_AUTO'}</p>
+                                  <p className="text-gray-600 dark:text-gray-400 mt-1">{daysActive !== null ? `${daysActive} days active` : 'Not live yet'}</p>
+                                  <p className="text-gray-600 dark:text-gray-400 mt-1">Automation: {client.autonomyLevel || 'FULL_AUTO'}</p>
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                  <p className="text-gray-500 text-xs mb-1">Actions</p>
+                                  <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Actions</p>
                                   <Button size="sm" variant="outline" onClick={() => { setSelectedClient(client); setViewMode('profile'); setProfileTab('overview') }}>
                                     <Eye size={14} className="mr-1" /> View Profile
                                   </Button>
@@ -724,14 +724,14 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
 
   return (
     <div className="p-8 space-y-6">
-      <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800">
+      <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
         <ArrowLeft size={16} /> Back to Clients
       </button>
 
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{client.companyName}</h1>
-          <div className="flex items-center gap-3 mt-1 text-gray-500 text-sm flex-wrap">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{client.companyName}</h1>
+          <div className="flex items-center gap-3 mt-1 text-gray-500 dark:text-gray-400 text-sm flex-wrap">
             {contact && <span>{contact}</span>}
             {location && <span>- {location}</span>}
             {client.industry && <span>- {client.industry.replace(/_/g, ' ')}</span>}
@@ -743,7 +743,7 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
           </div>
           {client.siteUrl && (
             <div className="flex items-center gap-3 mt-2">
-              <span className="text-sm text-gray-600">Site:</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Site:</span>
               <a href={`https://${client.siteUrl}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm flex items-center gap-1">
                 {client.siteUrl} <ExternalLink size={12} />
               </a>
@@ -759,26 +759,26 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="p-4">
-          <div className="text-xs text-gray-500 mb-1">Billing</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Billing</div>
           <div className="text-xl font-bold">{formatCurrency(client.monthlyRevenue)}/mo</div>
-          <div className="text-xs mt-1"><span className={client.hostingStatus === 'ACTIVE' ? 'text-green-600' : 'text-red-600'}>{client.hostingStatus === 'ACTIVE' ? '🟢 Current' : '🔴 ' + client.hostingStatus}</span></div>
-          <div className="text-xs text-gray-400 mt-1">Since {client.closedDate ? new Date(client.closedDate).toLocaleDateString() : new Date(client.createdAt).toLocaleDateString()}</div>
+          <div className="text-xs mt-1"><span className={client.hostingStatus === 'ACTIVE' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{client.hostingStatus === 'ACTIVE' ? '🟢 Current' : '🔴 ' + client.hostingStatus}</span></div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">Since {client.closedDate ? new Date(client.closedDate).toLocaleDateString() : new Date(client.createdAt).toLocaleDateString()}</div>
         </Card>
         <Card className="p-4">
-          <div className="text-xs text-gray-500 mb-1">Health</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Health</div>
           <div className="text-xl font-bold">Score: {healthScore}</div>
           <div className={`text-xs mt-1 ${health.color} inline-block px-2 py-0.5 rounded-full`}>{health.icon} {health.label}</div>
         </Card>
         <Card className="p-4">
-          <div className="text-xs text-gray-500 mb-1">Engagement</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Engagement</div>
           <div className="text-xl font-bold">{daysSinceInteraction !== null ? `${daysSinceInteraction}d` : 'N/A'}</div>
-          <div className="text-xs text-gray-400 mt-1">Edits: {client._count?.editRequests || 0}</div>
-          <div className="text-xs text-gray-400">Messages: {client._count?.messages || 0}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">Edits: {client._count?.editRequests || 0}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500">Messages: {client._count?.messages || 0}</div>
         </Card>
         <Card className="p-4">
-          <div className="text-xs text-gray-500 mb-1">Revenue</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Revenue</div>
           <div className="text-xl font-bold">{daysActive !== null ? formatCurrency(Math.round((client.monthlyRevenue || 0) * (daysActive / 30))) : '—'}</div>
-          <div className="text-xs text-gray-400 mt-1">Plan: {client.plan || 'base'}</div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">Plan: {client.plan || 'base'}</div>
         </Card>
       </div>
 
@@ -794,15 +794,15 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
       {profileTab === 'overview' && (
         <div className="space-y-6">
           <Card className="p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Details</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Details</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-              <div><span className="text-gray-500">Closed by:</span><span className="ml-2 font-medium">{client.rep?.name || '—'}</span></div>
-              <div><span className="text-gray-500">Stripe:</span><span className={`ml-2 font-medium ${client.stripeCustomerId ? 'text-green-600' : 'text-gray-400'}`}>{client.stripeCustomerId ? 'Connected' : 'Not linked'}</span></div>
-              <div><span className="text-gray-500">Referral:</span><span className="ml-2 font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">{client.referralCode || '—'}</span></div>
+              <div><span className="text-gray-500 dark:text-gray-400">Closed by:</span><span className="ml-2 font-medium">{client.rep?.name || '—'}</span></div>
+              <div><span className="text-gray-500 dark:text-gray-400">Stripe:</span><span className={`ml-2 font-medium ${client.stripeCustomerId ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>{client.stripeCustomerId ? 'Connected' : 'Not linked'}</span></div>
+              <div><span className="text-gray-500 dark:text-gray-400">Referral:</span><span className="ml-2 font-mono text-xs bg-gray-100 dark:bg-slate-800 px-2 py-0.5 rounded">{client.referralCode || '—'}</span></div>
             </div>
             {client.analytics && (
               <div className="mt-6">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Site Stats</h4>
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Site Stats</h4>
                 <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
                   {[
                     { v: client.analytics.totalVisits || 0, l: 'Visitors' },
@@ -811,9 +811,9 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
                     { v: client.analytics.totalForms || 0, l: 'Forms' },
                     { v: client.analytics.bounceRate ? `${Math.round(client.analytics.bounceRate * 100)}%` : '—', l: 'Bounce' },
                   ].map(s => (
-                    <div key={s.l} className="bg-gray-50 rounded p-3 text-center">
+                    <div key={s.l} className="bg-gray-50 dark:bg-slate-800/50 rounded p-3 text-center">
                       <div className="text-lg font-bold">{s.v}</div>
-                      <div className="text-xs text-gray-500">{s.l}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{s.l}</div>
                     </div>
                   ))}
                 </div>
@@ -828,10 +828,10 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
 
           {/* Tags */}
           <Card className="p-6">
-            <h3 className="font-semibold text-gray-900 mb-3">Tags</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Tags</h3>
             <div className="flex flex-wrap gap-2 mb-3">
               {(client.tags || []).map((tag: string) => (
-                <span key={tag} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm">
+                <span key={tag} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 rounded-full text-sm">
                   {tag}
                   <button onClick={() => onUpdate({ tags: (client.tags || []).filter((t: string) => t !== tag) })} className="hover:text-red-500"><X size={12} /></button>
                 </span>
@@ -847,21 +847,21 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
 
           {/* Notes */}
           <Card className="p-6">
-            <h3 className="font-semibold text-gray-900 mb-3">Notes</h3>
-            <textarea value={noteInput} onChange={(e) => setNoteInput(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm min-h-[80px]" placeholder="Add notes about this client..." />
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Notes</h3>
+            <textarea value={noteInput} onChange={(e) => setNoteInput(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-800 dark:text-gray-100 min-h-[80px]" placeholder="Add notes about this client..." />
             <Button variant="outline" size="sm" className="mt-2" onClick={() => onUpdate({ notes: noteInput })}>Save Notes</Button>
           </Card>
 
           {/* Per-Client Settings */}
           <Card className="p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Settings</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Settings</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-medium text-sm">AI auto-respond</div>
-                  <div className="text-xs text-gray-500">Let AI handle this client&apos;s messages</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Let AI handle this client&apos;s messages</div>
                 </div>
-                <select value={aiToggle ? 'on' : 'off'} onChange={(e) => { const val = e.target.value === 'on'; setAiToggle(val); onUpdate({ aiAutoRespond: val }) }} className="px-3 py-1.5 border border-gray-300 rounded-md text-sm">
+                <select value={aiToggle ? 'on' : 'off'} onChange={(e) => { const val = e.target.value === 'on'; setAiToggle(val); onUpdate({ aiAutoRespond: val }) }} className="px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-800 dark:text-gray-100">
                   <option value="on">ON</option>
                   <option value="off">OFF</option>
                 </select>
@@ -869,9 +869,9 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-medium text-sm">Stat report frequency</div>
-                  <div className="text-xs text-gray-500">How often to send stats</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">How often to send stats</div>
                 </div>
-                <select value={reportFreq} onChange={(e) => { setReportFreq(e.target.value); onUpdate({ statReportFrequency: e.target.value }) }} className="px-3 py-1.5 border border-gray-300 rounded-md text-sm">
+                <select value={reportFreq} onChange={(e) => { setReportFreq(e.target.value); onUpdate({ statReportFrequency: e.target.value }) }} className="px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-800 dark:text-gray-100">
                   <option value="weekly">Weekly</option>
                   <option value="biweekly">Bi-weekly</option>
                   <option value="monthly">Monthly</option>
@@ -883,8 +883,8 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
 
           {/* Automation Mode */}
           <Card className="p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Automation Mode</h3>
-            <p className="text-sm text-gray-500 mb-3">Controls how much autonomy the AI has for this client.</p>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Automation Mode</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Controls how much autonomy the AI has for this client.</p>
             <div className="flex gap-2">
               {[
                 { value: 'FULL_AUTO', label: 'Full Auto', desc: 'AI handles everything' },
@@ -896,12 +896,12 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
                   onClick={() => onUpdate({ autonomyLevel: mode.value })}
                   className={`flex-1 p-3 rounded-lg border-2 text-center transition-all ${
                     (client.autonomyLevel || 'FULL_AUTO') === mode.value
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
+                      : 'border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600'
                   }`}
                 >
                   <div className="text-sm font-semibold">{mode.label}</div>
-                  <div className="text-xs text-gray-500 mt-1">{mode.desc}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{mode.desc}</div>
                 </button>
               ))}
             </div>
@@ -909,8 +909,8 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
 
           {/* What AI Sees */}
           <Card className="p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">What AI Sees</h3>
-            <p className="text-sm text-gray-500 mb-3">Context passed to the AI when handling this client&apos;s conversations.</p>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">What AI Sees</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Context passed to the AI when handling this client&apos;s conversations.</p>
             <pre className="bg-gray-900 text-green-400 p-4 rounded-lg text-xs overflow-auto max-h-[300px]">
               {JSON.stringify({
                 companyName: client.companyName,
@@ -930,14 +930,14 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
           </Card>
 
           {/* Danger Zone */}
-          <Card className="p-6 border-red-200">
-            <h3 className="font-semibold text-red-600 mb-2">Danger Zone</h3>
+          <Card className="p-6 border-red-200 dark:border-red-800">
+            <h3 className="font-semibold text-red-600 dark:text-red-400 mb-2">Danger Zone</h3>
             <div className="space-y-4">
               {/* Deactivate / Reactivate */}
               <div>
                 {client.hostingStatus === 'DEACTIVATED' ? (
                   <>
-                    <p className="text-sm text-gray-500 mb-2">Reactivate this client. They will be set back to ACTIVE.</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Reactivate this client. They will be set back to ACTIVE.</p>
                     <Button
                       className="bg-green-600 hover:bg-green-700 text-white"
                       onClick={() => {
@@ -952,7 +952,7 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
                   </>
                 ) : (
                   <>
-                    <p className="text-sm text-gray-500 mb-2">Deactivate this client. They stay in the system but are paused and hidden from AI.</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Deactivate this client. They stay in the system but are paused and hidden from AI.</p>
                     <Button
                       className="bg-orange-500 hover:bg-orange-600 text-white"
                       onClick={() => {
@@ -968,8 +968,8 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
                 )}
               </div>
               {/* Cancel */}
-              <div className="pt-4 border-t border-red-100">
-                <p className="text-sm text-gray-500 mb-2">Cancel this client. Their site will be taken offline.</p>
+              <div className="pt-4 border-t border-red-100 dark:border-red-900">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Cancel this client. Their site will be taken offline.</p>
                 <Button
                   variant="destructive"
                   onClick={() => {
@@ -983,8 +983,8 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
                 </Button>
               </div>
               {/* Delete Messages */}
-              <div className="pt-4 border-t border-red-100">
-                <p className="text-sm text-gray-500 mb-2">Delete all message history for this client. The client record stays intact.</p>
+              <div className="pt-4 border-t border-red-100 dark:border-red-900">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Delete all message history for this client. The client record stays intact.</p>
                 <Button
                   variant="destructive"
                   className="bg-orange-600 hover:bg-orange-700"
@@ -999,8 +999,8 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
                 </Button>
               </div>
               {/* Hard Delete */}
-              <div className="pt-4 border-t border-red-100">
-                <p className="text-sm text-red-500 mb-2">Permanently delete this client and all their data (messages, revenue, commissions). This cannot be undone.</p>
+              <div className="pt-4 border-t border-red-100 dark:border-red-900">
+                <p className="text-sm text-red-500 dark:text-red-400 mb-2">Permanently delete this client and all their data (messages, revenue, commissions). This cannot be undone.</p>
                 <Button
                   variant="destructive"
                   className="bg-red-700 hover:bg-red-800"
@@ -1021,24 +1021,24 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
 
       {profileTab === 'billing' && (
         <Card className="p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Billing</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Billing</h3>
           <div className="space-y-3 text-sm">
             {[
               { l: 'Plan', v: `${client.plan || 'base'} - ${formatCurrency(client.monthlyRevenue)}/mo` },
-              { l: 'Stripe Customer', v: client.stripeCustomerId || 'Not linked', c: client.stripeCustomerId ? 'text-green-600' : 'text-gray-400' },
-              { l: 'Subscription', v: client.stripeSubscriptionId || 'Not linked', c: client.stripeSubscriptionId ? 'text-green-600' : 'text-gray-400' },
+              { l: 'Stripe Customer', v: client.stripeCustomerId || 'Not linked', c: client.stripeCustomerId ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500' },
+              { l: 'Subscription', v: client.stripeSubscriptionId || 'Not linked', c: client.stripeSubscriptionId ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500' },
             ].map(row => (
-              <div key={row.l} className="flex justify-between py-2 border-b">
-                <span className="text-gray-500">{row.l}</span>
+              <div key={row.l} className="flex justify-between py-2 border-b dark:border-slate-700">
+                <span className="text-gray-500 dark:text-gray-400">{row.l}</span>
                 <span className={`font-medium ${row.c || ''}`}>{row.v}</span>
               </div>
             ))}
-            <div className="flex justify-between py-2 border-b">
-              <span className="text-gray-500">Status</span>
+            <div className="flex justify-between py-2 border-b dark:border-slate-700">
+              <span className="text-gray-500 dark:text-gray-400">Status</span>
               <Badge variant={client.hostingStatus === 'ACTIVE' ? 'default' : 'destructive'}>{client.hostingStatus}</Badge>
             </div>
             <div className="flex justify-between py-2">
-              <span className="text-gray-500">Est. LTV</span>
+              <span className="text-gray-500 dark:text-gray-400">Est. LTV</span>
               <span className="font-medium">{daysActive !== null ? formatCurrency(Math.round((client.monthlyRevenue || 0) * (daysActive / 30))) : '—'}</span>
             </div>
           </div>
@@ -1047,7 +1047,7 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
 
       {profileTab === 'timeline' && (
         <Card className="p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Timeline</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Timeline</h3>
           <div className="space-y-3 text-sm">
             {[
               { date: client.createdAt, label: 'Client created', color: 'bg-green-500' },
@@ -1057,7 +1057,7 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
             ].filter(Boolean).map((event: any, i) => (
               <div key={i} className="flex items-center gap-3 py-2">
                 <div className={`w-2 h-2 ${event.color} rounded-full`} />
-                <span className="text-gray-500 w-24">{new Date(event.date).toLocaleDateString()}</span>
+                <span className="text-gray-500 dark:text-gray-400 w-24">{new Date(event.date).toLocaleDateString()}</span>
                 <span>{event.label}</span>
               </div>
             ))}
@@ -1067,8 +1067,8 @@ function ClientProfile({ client, onBack, onUpdate, onDelete, onDeleteMessages, o
 
       {['messages', 'edit-requests', 'stat-reports'].includes(profileTab) && (
         <Card className="p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">{profileTab.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}</h3>
-          <p className="text-sm text-gray-500">View full {profileTab.replace(/-/g, ' ')} in the dedicated tab above.</p>
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">{profileTab.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">View full {profileTab.replace(/-/g, ' ')} in the dedicated tab above.</p>
         </Card>
       )}
     </div>
@@ -1082,16 +1082,16 @@ function StatCard({ label, value, variant = 'default', onClick, active }: {
   label: string; value: string | number; variant?: 'default' | 'primary' | 'success' | 'danger' | 'warning'; onClick?: () => void; active?: boolean
 }) {
   const colors = {
-    default: 'bg-white border-gray-200',
-    primary: 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200',
-    success: 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200',
-    danger: 'bg-gradient-to-br from-red-50 to-pink-50 border-red-200',
-    warning: 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200',
+    default: 'bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700',
+    primary: 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-200 dark:border-blue-800',
+    success: 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-800',
+    danger: 'bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-950/30 dark:to-pink-950/30 border-red-200 dark:border-red-800',
+    warning: 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-amber-200 dark:border-amber-800',
   }
   return (
     <Card className={`p-4 cursor-pointer transition-all ${colors[variant]} ${active ? 'ring-2 ring-blue-500' : ''}`} onClick={onClick}>
-      <div className="text-xs text-gray-600 mb-1">{label}</div>
-      <div className="text-xl font-bold text-gray-900">{value}</div>
+      <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">{label}</div>
+      <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
     </Card>
   )
 }
@@ -1154,8 +1154,8 @@ function OnboardingCard({ client, onRefresh }: { client: any; onRefresh: () => v
   }
 
   return (
-    <Card className="p-6 border-blue-200 bg-blue-50/30">
-      <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+    <Card className="p-6 border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/20">
+      <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
         <Clock size={16} className="text-blue-500" />
         Onboarding Progress
       </h3>
@@ -1167,32 +1167,32 @@ function OnboardingCard({ client, onRefresh }: { client: any; onRefresh: () => v
             <div className={`w-full h-2 rounded-full ${
               s.num < step ? 'bg-green-500' :
               s.num === step ? 'bg-blue-500' :
-              'bg-gray-200'
+              'bg-gray-200 dark:bg-slate-700'
             }`} />
             <span className={`text-[10px] mt-1 ${
-              s.num === step ? 'text-blue-700 font-semibold' : 'text-gray-400'
+              s.num === step ? 'text-blue-700 dark:text-blue-400 font-semibold' : 'text-gray-400 dark:text-gray-500'
             }`}>{s.label}</span>
           </div>
         ))}
       </div>
 
       {/* Current step info */}
-      <div className="text-sm text-gray-600 mb-3">
+      <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
         Step {step}/7 — <span className="font-medium">{ONBOARDING_STEP_LABELS[step] || 'Unknown'}</span>
       </div>
 
       {/* Domain info */}
       {domain && (
         <div className="flex items-center gap-2 mb-3 text-sm">
-          <span className="text-gray-500">Domain:</span>
-          <span className="font-mono bg-white px-2 py-0.5 rounded border text-gray-800">{domain}</span>
+          <span className="text-gray-500 dark:text-gray-400">Domain:</span>
+          <span className="font-mono bg-white dark:bg-slate-900 px-2 py-0.5 rounded border dark:border-slate-700 text-gray-800 dark:text-gray-200">{domain}</span>
           {client.domainStatus && (
             <Badge variant="outline" className="text-xs">
               {client.domainStatus}
             </Badge>
           )}
           {data.domainOwnership && (
-            <span className="text-xs text-gray-400">({data.domainOwnership === 'owns_domain' ? 'Client owns' : 'We register'})</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">({data.domainOwnership === 'owns_domain' ? 'Client owns' : 'We register'})</span>
           )}
         </div>
       )}

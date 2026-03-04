@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react'
 import { X, Users, Flame, MessageSquare, Bot, DollarSign, AlertTriangle } from 'lucide-react'
 
 const colorMap: Record<string, { text: string; bg: string; border: string }> = {
-  blue: { text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
-  red: { text: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' },
-  amber: { text: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' },
-  purple: { text: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200' },
-  green: { text: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
+  blue: { text: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-950/30', border: 'border-blue-200' },
+  red: { text: 'text-red-600', bg: 'bg-red-50 dark:bg-red-950/30', border: 'border-red-200' },
+  amber: { text: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/30', border: 'border-amber-200' },
+  purple: { text: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-950/30', border: 'border-purple-200' },
+  green: { text: 'text-green-600', bg: 'bg-green-50 dark:bg-green-950/30', border: 'border-green-200' },
 }
 
 export function BriefingModal() {
@@ -48,7 +48,7 @@ export function BriefingModal() {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-hidden animate-in fade-in zoom-in duration-300">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-hidden animate-in fade-in zoom-in duration-300">
 
         {/* Header */}
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-6 py-5 text-white">
@@ -127,7 +127,7 @@ export function BriefingModal() {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t bg-gray-50 flex justify-end">
+        <div className="px-6 py-4 border-t dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 flex justify-end">
           <button
             onClick={dismiss}
             className="px-6 py-2.5 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 transition-colors"
@@ -149,19 +149,19 @@ function BriefingSection({ icon, color, title, items, extra, urgent }: {
   urgent?: boolean
 }) {
   const colors = colorMap[color] || colorMap.blue
-  const bgClass = urgent ? `${colors.bg} ${colors.border}` : 'bg-gray-50 border-gray-100'
+  const bgClass = urgent ? `${colors.bg} ${colors.border}` : 'bg-gray-50 dark:bg-slate-800/50 border-gray-100 dark:border-slate-800'
 
   return (
     <div className={`p-3.5 rounded-xl border ${bgClass}`}>
       <div className="flex items-center gap-2 mb-1.5">
         <span className={colors.text}>{icon}</span>
-        <span className="text-sm font-semibold text-gray-900">{title}</span>
+        <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</span>
       </div>
       <div className="space-y-0.5 ml-7">
         {items.map((item, i) => (
-          <div key={i} className="text-xs text-gray-600">{item}</div>
+          <div key={i} className="text-xs text-gray-600 dark:text-gray-400">{item}</div>
         ))}
-        {extra && <div className="text-xs text-gray-400 mt-1">{extra}</div>}
+        {extra && <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">{extra}</div>}
       </div>
     </div>
   )

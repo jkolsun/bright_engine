@@ -22,11 +22,11 @@ class DialerErrorBoundary extends Component<{ children: ReactNode }, { hasError:
       return (
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center max-w-md">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/40 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-2xl">!</span>
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Dialer Error</h2>
-            <p className="text-gray-500 text-sm mb-6">Something went wrong loading the dialer.</p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Dialer Error</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Something went wrong loading the dialer.</p>
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => this.setState({ hasError: false })}
@@ -34,7 +34,7 @@ class DialerErrorBoundary extends Component<{ children: ReactNode }, { hasError:
               >
                 Try Again
               </button>
-              <a href="/reps" className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-50">
+              <a href="/reps" className="px-6 py-2.5 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold text-sm hover:bg-gray-50 dark:hover:bg-slate-800">
                 Back to Dashboard
               </a>
             </div>
@@ -49,7 +49,7 @@ class DialerErrorBoundary extends Component<{ children: ReactNode }, { hasError:
 export default function DialerPageWrapper() {
   return (
     <DialerErrorBoundary>
-      <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading dialer...</div>}>
+      <Suspense fallback={<div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading dialer...</div>}>
         <DialerLayout />
       </Suspense>
     </DialerErrorBoundary>

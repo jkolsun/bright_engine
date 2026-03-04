@@ -49,7 +49,7 @@ export default function LeaderboardPage() {
           ...item,
           rank: idx + 1,
           icon: idx === 0 ? Trophy : idx === 1 ? Medal : idx === 2 ? Award : undefined,
-          color: idx === 0 ? 'text-yellow-500' : idx === 1 ? 'text-gray-400' : idx === 2 ? 'text-amber-600' : 'text-gray-400',
+          color: idx === 0 ? 'text-yellow-500' : idx === 1 ? 'text-gray-400 dark:text-gray-500' : idx === 2 ? 'text-amber-600' : 'text-gray-400 dark:text-gray-500',
         }))
 
       setLeaderboard(rankings)
@@ -68,7 +68,7 @@ export default function LeaderboardPage() {
           <div className="w-12 h-12 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
             <Trophy size={22} className="text-white" />
           </div>
-          <p className="text-gray-500 font-medium">Loading rankings...</p>
+          <p className="text-gray-500 dark:text-gray-400 font-medium">Loading rankings...</p>
         </div>
       </div>
     )
@@ -78,15 +78,15 @@ export default function LeaderboardPage() {
     return (
       <div className="p-6 lg:p-8 space-y-6 max-w-3xl mx-auto">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Leaderboard</h1>
-          <p className="text-gray-500 mt-1 text-sm">Current rankings based on closed deals</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Leaderboard</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">Current rankings based on closed deals</p>
         </div>
-        <Card className="p-16 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
+        <Card className="p-16 rounded-2xl border-0 shadow-medium bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
           <div className="text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-              <Trophy size={28} className="text-gray-400" />
+            <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+              <Trophy size={28} className="text-gray-400 dark:text-gray-500" />
             </div>
-            <p className="text-gray-600 font-medium">
+            <p className="text-gray-600 dark:text-gray-400 font-medium">
               {error || 'No reps available yet. Once reps are created, rankings will appear here.'}
             </p>
           </div>
@@ -95,14 +95,14 @@ export default function LeaderboardPage() {
     )
   }
 
-  const rankBg = ['from-yellow-50 via-amber-50 to-orange-50', 'from-gray-50 via-slate-50 to-gray-100', 'from-amber-50 via-orange-50 to-yellow-50']
-  const rankBorder = ['border-yellow-200', 'border-gray-200', 'border-amber-200']
+  const rankBg = ['from-yellow-50 via-amber-50 to-orange-50 dark:from-yellow-950/30 dark:via-amber-950/30 dark:to-orange-950/30', 'from-gray-50 via-slate-50 to-gray-100 dark:from-slate-800/50 dark:via-slate-800/50 dark:to-slate-800', 'from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-950/30 dark:via-orange-950/30 dark:to-yellow-950/30']
+  const rankBorder = ['border-yellow-200', 'border-gray-200 dark:border-slate-700', 'border-amber-200']
 
   return (
     <div className="p-6 lg:p-8 space-y-6 max-w-3xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Leaderboard</h1>
-        <p className="text-gray-500 mt-1 text-sm">Current rankings based on closed deals</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Leaderboard</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">Current rankings based on closed deals</p>
       </div>
 
       <div className="space-y-3">
@@ -116,34 +116,34 @@ export default function LeaderboardPage() {
               className={`p-6 rounded-2xl border shadow-medium transition-all duration-300 hover:shadow-lg ${
                 isTopThree
                   ? `bg-gradient-to-r ${rankBg[item.rank - 1]} ${rankBorder[item.rank - 1]}`
-                  : 'bg-white/80 backdrop-blur-sm border-0 hover:bg-gray-50'
+                  : 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-0 hover:bg-gray-50 dark:hover:bg-slate-800'
               }`}
             >
               <div className="flex items-center gap-5">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
-                    item.rank === 1 ? 'bg-yellow-100' :
-                    item.rank === 2 ? 'bg-gray-200' :
-                    item.rank === 3 ? 'bg-amber-100' :
-                    'bg-gray-100'
+                    item.rank === 1 ? 'bg-yellow-100 dark:bg-yellow-900/40' :
+                    item.rank === 2 ? 'bg-gray-200 dark:bg-slate-700' :
+                    item.rank === 3 ? 'bg-amber-100 dark:bg-amber-900/40' :
+                    'bg-gray-100 dark:bg-slate-800'
                   }`}>
                     {isTopThree ? (
                       <Icon size={22} className={item.color} />
                     ) : (
-                      <span className="text-sm font-bold text-gray-500">#{item.rank}</span>
+                      <span className="text-sm font-bold text-gray-500 dark:text-gray-400">#{item.rank}</span>
                     )}
                   </div>
                 </div>
 
                 <div className="flex-1">
-                  <h3 className="font-bold text-gray-900">{item.rep.name}</h3>
+                  <h3 className="font-bold text-gray-900 dark:text-gray-100">{item.rep.name}</h3>
                   <div className="flex items-center gap-4 mt-1">
-                    <span className="text-sm text-gray-600">
-                      <span className="font-bold text-gray-900">{item.closedLeads}</span> closed
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      <span className="font-bold text-gray-900 dark:text-gray-100">{item.closedLeads}</span> closed
                     </span>
                     {!isTopThree && (
-                      <span className="text-sm text-gray-600">
-                        <span className="font-bold text-gray-900">{formatCurrency(item.totalRevenue)}</span> revenue
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        <span className="font-bold text-gray-900 dark:text-gray-100">{formatCurrency(item.totalRevenue)}</span> revenue
                       </span>
                     )}
                   </div>
@@ -152,7 +152,7 @@ export default function LeaderboardPage() {
                 {isTopThree && (
                   <div className="text-right">
                     <div className="text-2xl font-bold text-gradient">{formatCurrency(item.totalRevenue)}</div>
-                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">Total Revenue</div>
+                    <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mt-0.5">Total Revenue</div>
                   </div>
                 )}
               </div>
@@ -166,8 +166,8 @@ export default function LeaderboardPage() {
           <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4 shadow-teal">
             <Crown size={28} className="text-white" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900">Top Rep Bonus</h3>
-          <p className="text-gray-600 mt-2">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Top Rep Bonus</h3>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
             The #1 rep each month wins a <span className="font-bold text-teal-600">$500 bonus</span>!
           </p>
         </div>

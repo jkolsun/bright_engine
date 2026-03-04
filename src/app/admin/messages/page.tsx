@@ -24,24 +24,24 @@ type InboxTab = 'pre_client' | 'post_client' | 'all'
 // ─── Badge helpers ───
 
 const ENTRY_POINT_BADGES: Record<string, { label: string; color: string }> = {
-  INSTANTLY_REPLY: { label: 'Email', color: 'bg-blue-100 text-blue-700' },
-  SMS_REPLY: { label: 'SMS', color: 'bg-green-100 text-green-700' },
-  REP_CLOSE: { label: 'Rep', color: 'bg-purple-100 text-purple-700' },
-  PREVIEW_CTA: { label: 'CTA', color: 'bg-orange-100 text-orange-700' },
+  INSTANTLY_REPLY: { label: 'Email', color: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400' },
+  SMS_REPLY: { label: 'SMS', color: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' },
+  REP_CLOSE: { label: 'Rep', color: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400' },
+  PREVIEW_CTA: { label: 'CTA', color: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400' },
 }
 
 const STAGE_BADGES: Record<string, { label: string; color: string; pulse?: boolean }> = {
-  INITIATED: { label: 'Initiated', color: 'bg-gray-100 text-gray-700' },
-  QUALIFYING: { label: 'Qualifying', color: 'bg-teal-100 text-teal-700' },
-  COLLECTING_INFO: { label: 'Collecting Info', color: 'bg-teal-100 text-teal-700' },
-  BUILDING: { label: 'Building', color: 'bg-blue-100 text-blue-700' },
-  PREVIEW_SENT: { label: 'Preview Sent', color: 'bg-amber-100 text-amber-700' },
-  EDIT_LOOP: { label: 'Edit Loop', color: 'bg-amber-100 text-amber-700' },
-  PAYMENT_SENT: { label: 'Payment Sent', color: 'bg-green-100 text-green-700' },
-  STALLED: { label: 'Stalled', color: 'bg-red-100 text-red-700' },
-  PENDING_APPROVAL: { label: 'Needs Approval', color: 'bg-orange-100 text-orange-700', pulse: true },
-  COMPLETED: { label: 'Completed', color: 'bg-green-100 text-green-700' },
-  CLOSED_LOST: { label: 'Closed', color: 'bg-gray-100 text-gray-500' },
+  INITIATED: { label: 'Initiated', color: 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300' },
+  QUALIFYING: { label: 'Qualifying', color: 'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400' },
+  COLLECTING_INFO: { label: 'Collecting Info', color: 'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400' },
+  BUILDING: { label: 'Building', color: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400' },
+  PREVIEW_SENT: { label: 'Preview Sent', color: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' },
+  EDIT_LOOP: { label: 'Edit Loop', color: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' },
+  PAYMENT_SENT: { label: 'Payment Sent', color: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' },
+  STALLED: { label: 'Stalled', color: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400' },
+  PENDING_APPROVAL: { label: 'Needs Approval', color: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400', pulse: true },
+  COMPLETED: { label: 'Completed', color: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' },
+  CLOSED_LOST: { label: 'Closed', color: 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400' },
 }
 
 function EntryPointBadge({ entryPoint }: { entryPoint: string }) {
@@ -51,7 +51,7 @@ function EntryPointBadge({ entryPoint }: { entryPoint: string }) {
 }
 
 function StageBadge({ stage }: { stage: string }) {
-  const badge = STAGE_BADGES[stage] || { label: stage, color: 'bg-gray-100 text-gray-700' }
+  const badge = STAGE_BADGES[stage] || { label: stage, color: 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300' }
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.color} ${badge.pulse ? 'animate-pulse' : ''}`}>
       {badge.label}
@@ -88,7 +88,7 @@ function linkifyText(text: string): React.ReactNode {
 
 export default function MessagesPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-gray-500">Loading messages...</div>}>
+    <Suspense fallback={<div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading messages...</div>}>
       <MessagesPageInner />
     </Suspense>
   )
@@ -602,15 +602,15 @@ function MessagesPageInner() {
 
     return (
       <div className="p-8 space-y-6">
-        <button onClick={() => { setViewMode('inbox'); setSelectedCloseConv(null); setConversationDetail(null); setPendingActions([]) }} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800">
+        <button onClick={() => { setViewMode('inbox'); setSelectedCloseConv(null); setConversationDetail(null); setPendingActions([]) }} className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
           <ArrowLeft size={16} /> Back to Messages
         </button>
 
         {/* Conversation Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{selectedCloseConv.lead?.companyName || 'Unknown'}</h2>
-            <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{selectedCloseConv.lead?.companyName || 'Unknown'}</h2>
+            <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 mt-1">
               <span>{selectedCloseConv.lead?.firstName} {selectedCloseConv.lead?.lastName || ''}</span>
               {selectedCloseConv.lead?.phone && <span className="flex items-center gap-1"><Phone size={12} /> {selectedCloseConv.lead.phone}</span>}
               {selectedCloseConv.lead?.email && <span className="flex items-center gap-1"><Mail size={12} /> {selectedCloseConv.lead.email}</span>}
@@ -620,9 +620,9 @@ function MessagesPageInner() {
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-500">Autonomy:</span>
+              <span className="text-gray-500 dark:text-gray-400">Autonomy:</span>
               <select
-                className="px-2 py-1 border rounded text-sm"
+                className="px-2 py-1 border dark:border-slate-600 rounded text-sm dark:bg-slate-800 dark:text-gray-100"
                 value={detail?.autonomyLevel || selectedCloseConv.autonomyLevel}
                 onChange={(e) => handleAutonomyChange(selectedCloseConv.id, e.target.value)}
               >
@@ -636,13 +636,13 @@ function MessagesPageInner() {
 
         {/* Pending Action Banner */}
         {pendingActions.length > 0 && pendingActions.map(action => (
-          <Card key={action.id} className="p-4 border-amber-300 bg-amber-50">
+          <Card key={action.id} className="p-4 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-amber-800">
+                <div className="text-sm font-medium text-amber-800 dark:text-amber-300">
                   Draft {action.type === 'SEND_PAYMENT_LINK' ? 'payment link' : 'message'} ready
                 </div>
-                <div className="text-sm text-amber-700 mt-1 truncate">{action.draftMessage}</div>
+                <div className="text-sm text-amber-700 dark:text-amber-400 mt-1 truncate">{action.draftMessage}</div>
               </div>
               <div className="flex gap-2 shrink-0">
                 <Button
@@ -671,7 +671,7 @@ function MessagesPageInner() {
         <Card className="p-6 flex-1 min-w-0">
           <div className="space-y-4 max-h-[60vh] overflow-y-auto">
             {detailMessages.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">No messages in this conversation yet.</div>
+              <div className="text-center py-12 text-gray-500 dark:text-gray-400">No messages in this conversation yet.</div>
             ) : (
               detailMessages.map((msg: any) => {
                 const isOutbound = msg.direction === 'OUTBOUND'
@@ -682,7 +682,7 @@ function MessagesPageInner() {
                 if (isSystem) {
                   return (
                     <div key={msg.id} className="text-center">
-                      <span className="inline-block px-3 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
+                      <span className="inline-block px-3 py-1 bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 rounded-full text-xs">
                         {msg.content}
                       </span>
                     </div>
@@ -693,10 +693,10 @@ function MessagesPageInner() {
                 if (isReaction) {
                   return (
                     <div key={msg.id} className="flex justify-start">
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs text-gray-600">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-full text-xs text-gray-600 dark:text-gray-400">
                         <span className="text-base">{msg.reactionEmoji || msg.reactionType}</span>
                         <span>{selectedCloseConv.lead?.firstName || 'Lead'} reacted</span>
-                        <span className="text-gray-400">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="text-gray-400 dark:text-gray-500">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
                     </div>
                   )
@@ -704,23 +704,23 @@ function MessagesPageInner() {
 
                 return (
                   <div key={msg.id} className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] ${isOutbound ? 'bg-gray-50 border-gray-200' : 'bg-blue-100 border-blue-300'} border rounded-lg p-3 relative`}>
+                    <div className={`max-w-[70%] ${isOutbound ? 'bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-slate-700' : 'bg-blue-100 dark:bg-blue-900/40 border-blue-300 dark:border-blue-700'} border rounded-lg p-3 relative`}>
                       {/* Reaction badge overlay — shows if another message reacted to this one */}
                       {detailMessages.some((r: any) => r.reactionToId === msg.id && r.reactionEmoji) && (
                         <div className="absolute -bottom-2 -right-1 flex gap-0.5">
                           {detailMessages.filter((r: any) => r.reactionToId === msg.id).map((r: any) => (
-                            <span key={r.id} className="bg-white border border-gray-200 rounded-full px-1 text-sm shadow-sm">{r.reactionEmoji}</span>
+                            <span key={r.id} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-full px-1 text-sm shadow-sm">{r.reactionEmoji}</span>
                           ))}
                         </div>
                       )}
                       <div className="flex items-center gap-2 mb-1">
                         {/* Channel badge */}
                         {msg.channel === 'EMAIL' ? (
-                          <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">📧</span>
+                          <span className="text-[10px] font-medium text-blue-600 bg-blue-50 dark:bg-blue-950/30 px-1.5 py-0.5 rounded">📧</span>
                         ) : (
-                          <span className="text-[10px] font-medium text-green-600 bg-green-50 px-1.5 py-0.5 rounded">💬</span>
+                          <span className="text-[10px] font-medium text-green-600 bg-green-50 dark:bg-green-950/30 px-1.5 py-0.5 rounded">💬</span>
                         )}
-                        <span className="text-xs font-medium text-gray-700">
+                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                           {isOutbound ? (
                           isAi ? '🤖 AI' :
                           msg.senderType === 'REP' ? `Rep ${msg.senderName || ''}` :
@@ -729,7 +729,7 @@ function MessagesPageInner() {
                           'Team'
                         ) : selectedCloseConv.lead?.firstName || 'Lead'}
                         </span>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
                           {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         {isAi && msg.aiDelaySeconds && (
@@ -738,10 +738,10 @@ function MessagesPageInner() {
                       </div>
                       {/* Email subject */}
                       {msg.channel === 'EMAIL' && msg.emailSubject && (
-                        <div className="text-xs font-semibold text-gray-500 mb-1">Re: {msg.emailSubject}</div>
+                        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Re: {msg.emailSubject}</div>
                       )}
                       {/* Message body — strip HTML for emails, linkify URLs in SMS */}
-                      <div className="text-sm text-gray-800 whitespace-pre-wrap">
+                      <div className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
                         {msg.channel === 'EMAIL' ? msg.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ') : linkifyText(msg.content)}
                       </div>
                       {/* MMS Images */}
@@ -749,11 +749,11 @@ function MessagesPageInner() {
                         <div className="mt-2 flex flex-wrap gap-2">
                           {msg.mediaUrls.map((url: string, idx: number) => (
                             <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
-                              <img src={url} alt={`MMS ${idx + 1}`} className="max-w-[200px] max-h-[200px] rounded-lg border border-gray-200 object-cover" />
+                              <img src={url} alt={`MMS ${idx + 1}`} className="max-w-[200px] max-h-[200px] rounded-lg border border-gray-200 dark:border-slate-700 object-cover" />
                             </a>
                           ))}
                           {msg.mediaType && (
-                            <span className="text-[10px] text-gray-400 self-end">{msg.mediaType}</span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 self-end">{msg.mediaType}</span>
                           )}
                         </div>
                       )}
@@ -764,7 +764,7 @@ function MessagesPageInner() {
                           (msg.twilioStatus === 'sent' || msg.resendStatus === 'sent') ? 'text-blue-400' :
                           (msg.twilioStatus === 'failed' || msg.resendStatus === 'failed' || msg.twilioStatus === 'undelivered') ? 'text-red-500' :
                           (msg.resendStatus === 'bounced') ? 'text-red-500' :
-                          'text-gray-400'
+                          'text-gray-400 dark:text-gray-500'
                         }`}>
                           {(msg.twilioStatus === 'delivered' || msg.resendStatus === 'delivered') && `✓ Delivered via ${msg.channel === 'EMAIL' ? 'email' : 'SMS'}`}
                           {msg.twilioStatus === 'sent' && msg.channel !== 'EMAIL' && '⏳ Sent via SMS'}
@@ -789,7 +789,7 @@ function MessagesPageInner() {
                         </button>
                       )}
                       {expandedDecisionLog === msg.id && msg.aiDecisionLog && (
-                        <div className="mt-2 p-2 bg-gray-50 rounded text-xs font-mono text-gray-600 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                        <div className="mt-2 p-2 bg-gray-50 dark:bg-slate-800/50 rounded text-xs font-mono text-gray-600 dark:text-gray-400 whitespace-pre-wrap max-h-48 overflow-y-auto">
                           {JSON.stringify(msg.aiDecisionLog, null, 2)}
                         </div>
                       )}
@@ -802,17 +802,17 @@ function MessagesPageInner() {
           </div>
 
           {/* Message Input with Channel Selector */}
-          <div className="mt-4 pt-4 border-t">
+          <div className="mt-4 pt-4 border-t dark:border-slate-700">
             <div className="flex gap-2 mb-2">
               <button
                 onClick={() => setSendChannel('SMS')}
-                className={`px-3 py-1 rounded text-xs font-medium ${sendChannel === 'SMS' ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}
+                className={`px-3 py-1 rounded text-xs font-medium ${sendChannel === 'SMS' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700' : 'bg-gray-50 dark:bg-slate-800/50 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-slate-700'}`}
               >
                 💬 SMS
               </button>
               <button
                 onClick={() => setSendChannel('EMAIL')}
-                className={`px-3 py-1 rounded text-xs font-medium ${sendChannel === 'EMAIL' ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}
+                className={`px-3 py-1 rounded text-xs font-medium ${sendChannel === 'EMAIL' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-700' : 'bg-gray-50 dark:bg-slate-800/50 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-slate-700'}`}
                 disabled={!selectedCloseConv?.lead?.email}
                 title={!selectedCloseConv?.lead?.email ? 'No email address available' : ''}
               >
@@ -837,7 +837,7 @@ function MessagesPageInner() {
 
         {/* Build Status Sidebar */}
         <Card className="p-4 w-72 flex-shrink-0 self-start">
-          <h3 className="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm mb-3 flex items-center gap-2">
             <Hammer size={16} className="text-blue-600" />
             Build Status
           </h3>
@@ -854,7 +854,7 @@ function MessagesPageInner() {
                   {buildStatus.status.replace('_', ' ').toUpperCase()}
                 </Badge>
                 {buildStatus.lastPushedAt && (
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
                     Pushed {new Date(buildStatus.lastPushedAt).toLocaleDateString()}
                   </span>
                 )}
@@ -874,13 +874,13 @@ function MessagesPageInner() {
                     {item.done ? (
                       <CheckCircle size={14} className="text-green-500 flex-shrink-0" />
                     ) : (
-                      <div className="w-3.5 h-3.5 rounded-full border-2 border-gray-300 flex-shrink-0" />
+                      <div className="w-3.5 h-3.5 rounded-full border-2 border-gray-300 dark:border-slate-600 flex-shrink-0" />
                     )}
-                    <span className={`text-xs ${item.done ? 'text-gray-800' : 'text-gray-400'}`}>
+                    <span className={`text-xs ${item.done ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400 dark:text-gray-500'}`}>
                       {item.label}
                     </span>
                     {item.data && (
-                      <span className="text-xs text-gray-500 ml-auto truncate max-w-[100px]" title={String(item.data)}>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto truncate max-w-[100px]" title={String(item.data)}>
                         {typeof item.data === 'string' ? item.data.slice(0, 20) : Array.isArray(item.data) ? `${item.data.length} items` : 'Set'}
                       </span>
                     )}
@@ -889,11 +889,11 @@ function MessagesPageInner() {
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-3 border-t space-y-2">
+              <div className="pt-3 border-t dark:border-slate-700 space-y-2">
                 {globalAutoPush ? (
-                  <div className="flex items-center justify-center gap-2 py-1.5 px-3 rounded-md bg-green-50 border border-green-200">
+                  <div className="flex items-center justify-center gap-2 py-1.5 px-3 rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-xs font-medium text-green-700">
+                    <span className="text-xs font-medium text-green-700 dark:text-green-400">
                       {buildStatus.status === 'building' ? 'Auto-Pushed to Build' : 'Auto-Push Enabled'}
                     </span>
                   </div>
@@ -910,7 +910,7 @@ function MessagesPageInner() {
               </div>
             </div>
           ) : (
-            <p className="text-xs text-gray-400 italic">No build data collected yet</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 italic">No build data collected yet</p>
           )}
         </Card>
         </div>
@@ -930,15 +930,15 @@ function MessagesPageInner() {
 
     return (
       <div className="p-8 space-y-6">
-        <button onClick={() => { setViewMode('inbox'); setSelectedConversation(null) }} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800">
+        <button onClick={() => { setViewMode('inbox'); setSelectedConversation(null) }} className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
           <ArrowLeft size={16} /> Back to Messages
         </button>
 
         {/* Conversation Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{selectedConversation.name}</h2>
-            <div className="flex items-center gap-3 text-sm text-gray-500 mt-1">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{selectedConversation.name}</h2>
+            <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400 mt-1">
               {selectedConversation.isClient ? (
                 <Badge variant="default">Client (Active)</Badge>
               ) : (
@@ -951,9 +951,9 @@ function MessagesPageInner() {
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-500">AI:</span>
+            <span className="text-gray-500 dark:text-gray-400">AI:</span>
             <select
-              className="px-2 py-1 border rounded text-sm"
+              className="px-2 py-1 border dark:border-slate-600 rounded text-sm dark:bg-slate-800 dark:text-gray-100"
               value={selectedConversation.autonomyLevel || 'FULL_AUTO'}
               onChange={async (e) => {
                 const newLevel = e.target.value
@@ -982,7 +982,7 @@ function MessagesPageInner() {
         <Card className="p-6">
           <div className="space-y-4 max-h-[60vh] overflow-y-auto">
             {convMessages.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">No messages in this conversation yet.</div>
+              <div className="text-center py-12 text-gray-500 dark:text-gray-400">No messages in this conversation yet.</div>
             ) : (
               convMessages.map((msg) => {
                 const isOutbound = msg.direction === 'OUTBOUND'
@@ -993,7 +993,7 @@ function MessagesPageInner() {
                 if (isSystem) {
                   return (
                     <div key={msg.id} className="text-center">
-                      <span className="inline-block px-3 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
+                      <span className="inline-block px-3 py-1 bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400 rounded-full text-xs">
                         {msg.content}
                       </span>
                     </div>
@@ -1004,10 +1004,10 @@ function MessagesPageInner() {
                 if (isReaction) {
                   return (
                     <div key={msg.id} className="flex justify-start">
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs text-gray-600">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-full text-xs text-gray-600 dark:text-gray-400">
                         <span className="text-base">{msg.reactionEmoji || msg.reactionType}</span>
                         <span>{selectedConversation.name.split(' ')[0]} reacted</span>
-                        <span className="text-gray-400">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="text-gray-400 dark:text-gray-500">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
                     </div>
                   )
@@ -1015,23 +1015,23 @@ function MessagesPageInner() {
 
                 return (
                   <div key={msg.id} className={`flex ${isOutbound ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] ${isOutbound ? 'bg-gray-50 border-gray-200' : 'bg-blue-100 border-blue-300'} border rounded-lg p-3 relative`}>
+                    <div className={`max-w-[70%] ${isOutbound ? 'bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-slate-700' : 'bg-blue-100 dark:bg-blue-900/40 border-blue-300 dark:border-blue-700'} border rounded-lg p-3 relative`}>
                       {/* Reaction badge overlay */}
                       {convMessages.some((r: any) => r.reactionToId === msg.id && r.reactionEmoji) && (
                         <div className="absolute -bottom-2 -right-1 flex gap-0.5">
                           {convMessages.filter((r: any) => r.reactionToId === msg.id).map((r: any) => (
-                            <span key={r.id} className="bg-white border border-gray-200 rounded-full px-1 text-sm shadow-sm">{r.reactionEmoji}</span>
+                            <span key={r.id} className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-full px-1 text-sm shadow-sm">{r.reactionEmoji}</span>
                           ))}
                         </div>
                       )}
                       <div className="flex items-center gap-2 mb-1">
                         {/* Channel badge */}
                         {msg.channel === 'EMAIL' ? (
-                          <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">📧</span>
+                          <span className="text-[10px] font-medium text-blue-600 bg-blue-50 dark:bg-blue-950/30 px-1.5 py-0.5 rounded">📧</span>
                         ) : (
-                          <span className="text-[10px] font-medium text-green-600 bg-green-50 px-1.5 py-0.5 rounded">💬</span>
+                          <span className="text-[10px] font-medium text-green-600 bg-green-50 dark:bg-green-950/30 px-1.5 py-0.5 rounded">💬</span>
                         )}
-                        <span className="text-xs font-medium text-gray-700">
+                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                           {isOutbound ? (
                           isAi ? '🤖 AI' :
                           msg.senderType === 'REP' ? `Rep ${msg.senderName || ''}` :
@@ -1040,7 +1040,7 @@ function MessagesPageInner() {
                           'Team'
                         ) : selectedConversation.name.split(' ')[0]}
                         </span>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
                           {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         {isAi && msg.aiDelaySeconds && (
@@ -1049,10 +1049,10 @@ function MessagesPageInner() {
                       </div>
                       {/* Email subject */}
                       {msg.channel === 'EMAIL' && msg.emailSubject && (
-                        <div className="text-xs font-semibold text-gray-500 mb-1">Re: {msg.emailSubject}</div>
+                        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Re: {msg.emailSubject}</div>
                       )}
                       {/* Message body — strip HTML for emails, linkify URLs in SMS */}
-                      <div className="text-sm text-gray-800 whitespace-pre-wrap">
+                      <div className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
                         {msg.channel === 'EMAIL' ? msg.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ') : linkifyText(msg.content)}
                       </div>
                       {/* MMS Images */}
@@ -1060,11 +1060,11 @@ function MessagesPageInner() {
                         <div className="mt-2 flex flex-wrap gap-2">
                           {msg.mediaUrls.map((url: string, idx: number) => (
                             <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
-                              <img src={url} alt={`MMS ${idx + 1}`} className="max-w-[200px] max-h-[200px] rounded-lg border border-gray-200 object-cover" />
+                              <img src={url} alt={`MMS ${idx + 1}`} className="max-w-[200px] max-h-[200px] rounded-lg border border-gray-200 dark:border-slate-700 object-cover" />
                             </a>
                           ))}
                           {msg.mediaType && (
-                            <span className="text-[10px] text-gray-400 self-end">{msg.mediaType}</span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 self-end">{msg.mediaType}</span>
                           )}
                         </div>
                       )}
@@ -1075,7 +1075,7 @@ function MessagesPageInner() {
                           (msg.twilioStatus === 'sent' || msg.resendStatus === 'sent') ? 'text-blue-400' :
                           (msg.twilioStatus === 'failed' || msg.resendStatus === 'failed' || msg.twilioStatus === 'undelivered') ? 'text-red-500' :
                           (msg.resendStatus === 'bounced') ? 'text-red-500' :
-                          'text-gray-400'
+                          'text-gray-400 dark:text-gray-500'
                         }`}>
                           {(msg.twilioStatus === 'delivered' || msg.resendStatus === 'delivered') && `✓ Delivered via ${msg.channel === 'EMAIL' ? 'email' : 'SMS'}`}
                           {msg.twilioStatus === 'sent' && msg.channel !== 'EMAIL' && '⏳ Sent via SMS'}
@@ -1100,7 +1100,7 @@ function MessagesPageInner() {
                         </button>
                       )}
                       {expandedDecisionLog === msg.id && msg.aiDecisionLog && (
-                        <div className="mt-2 p-2 bg-gray-50 rounded text-xs font-mono text-gray-600 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                        <div className="mt-2 p-2 bg-gray-50 dark:bg-slate-800/50 rounded text-xs font-mono text-gray-600 dark:text-gray-400 whitespace-pre-wrap max-h-48 overflow-y-auto">
                           {JSON.stringify(msg.aiDecisionLog, null, 2)}
                         </div>
                       )}
@@ -1113,17 +1113,17 @@ function MessagesPageInner() {
           </div>
 
           {/* Message Input with Channel Selector */}
-          <div className="mt-4 pt-4 border-t">
+          <div className="mt-4 pt-4 border-t dark:border-slate-700">
             <div className="flex gap-2 mb-2">
               <button
                 onClick={() => setSendChannel('SMS')}
-                className={`px-3 py-1 rounded text-xs font-medium ${sendChannel === 'SMS' ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}
+                className={`px-3 py-1 rounded text-xs font-medium ${sendChannel === 'SMS' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700' : 'bg-gray-50 dark:bg-slate-800/50 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-slate-700'}`}
               >
                 💬 SMS
               </button>
               <button
                 onClick={() => setSendChannel('EMAIL')}
-                className={`px-3 py-1 rounded text-xs font-medium ${sendChannel === 'EMAIL' ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-gray-50 text-gray-500 border border-gray-200'}`}
+                className={`px-3 py-1 rounded text-xs font-medium ${sendChannel === 'EMAIL' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-700' : 'bg-gray-50 dark:bg-slate-800/50 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-slate-700'}`}
                 disabled={!selectedConversation?.email}
                 title={!selectedConversation?.email ? 'No email address available' : ''}
               >
@@ -1154,8 +1154,8 @@ function MessagesPageInner() {
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
-          <p className="text-gray-500 mt-1">Unified inbox — AI handler + manual override</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Messages</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Unified inbox — AI handler + manual override</p>
         </div>
         <div className="flex gap-3">
           <Button size="sm" onClick={() => setNewChatOpen(true)}>
@@ -1168,7 +1168,7 @@ function MessagesPageInner() {
       </div>
 
       {/* Inbox Tabs — Teal active indicator */}
-      <div className="flex border-b border-gray-200">
+      <div className="flex border-b border-gray-200 dark:border-slate-700">
         {[
           { key: 'pre_client' as const, label: 'Pre-Client', count: closeConversations.length },
           { key: 'post_client' as const, label: 'Post-Client', count: postClientConvs.length },
@@ -1179,13 +1179,13 @@ function MessagesPageInner() {
             onClick={() => setInboxTab(tab.key)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               inboxTab === tab.key
-                ? 'border-teal-500 text-teal-700'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-teal-500 text-teal-700 dark:text-teal-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
             {tab.label}
             <span className={`ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs ${
-              inboxTab === tab.key ? 'bg-teal-100 text-teal-700' : 'bg-gray-100 text-gray-600'
+              inboxTab === tab.key ? 'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'
             }`}>
               {tab.count}
             </span>
@@ -1201,13 +1201,13 @@ function MessagesPageInner() {
       {/* Search + Source Filter + Global Auto-Push */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={18} />
           <Input className="pl-10" placeholder="Search conversations..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
         <select
           value={sourceFilter}
           onChange={(e) => setSourceFilter(e.target.value as any)}
-          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 flex-shrink-0"
+          className="text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-100 flex-shrink-0"
         >
           <option value="all">All Sources</option>
           <option value="rep">Rep</option>
@@ -1215,7 +1215,7 @@ function MessagesPageInner() {
           <option value="admin">Admin</option>
         </select>
         {inboxTab === 'pre_client' && globalAutoPushLoaded && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg flex-shrink-0">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-lg flex-shrink-0">
             <Hammer size={13} className="text-teal-600" />
             <ToggleSwitch
               label="Auto-push builds"
@@ -1231,12 +1231,12 @@ function MessagesPageInner() {
       {inboxTab === 'pre_client' && (
         <>
           {loading ? (
-            <Card className="p-12 text-center text-gray-500">Loading conversations...</Card>
+            <Card className="p-12 text-center text-gray-500 dark:text-gray-400">Loading conversations...</Card>
           ) : filteredConvs.length === 0 ? (
             <Card className="p-12 text-center">
-              <MessageSquare size={48} className="text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No active conversations</h3>
-              <p className="text-gray-600 text-sm">Close Engine conversations will appear when leads engage.</p>
+              <MessageSquare size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No active conversations</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Close Engine conversations will appear when leads engage.</p>
             </Card>
           ) : (
             <div className="space-y-2">
@@ -1244,9 +1244,9 @@ function MessagesPageInner() {
                 <Card
                   key={conv.id}
                   className={`p-4 cursor-pointer hover:shadow-md transition-all ${
-                    conv.pendingActionCount > 0 ? 'border-orange-200 bg-orange-50/50' :
-                    conv.stage === 'STALLED' ? 'border-red-200 bg-red-50/30' :
-                    'border-gray-200'
+                    conv.pendingActionCount > 0 ? 'border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/30' :
+                    conv.stage === 'STALLED' ? 'border-red-200 dark:border-red-800 bg-red-50/30 dark:bg-red-950/20' :
+                    'border-gray-200 dark:border-slate-700'
                   }`}
                   onClick={() => {
                     setSelectedCloseConv(conv)
@@ -1257,7 +1257,7 @@ function MessagesPageInner() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900 truncate">{conv.lead?.companyName || 'Unknown'}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{conv.lead?.companyName || 'Unknown'}</span>
                         <EntryPointBadge entryPoint={conv.entryPoint} />
                         <StageBadge stage={conv.stage} />
                         {conv.pendingActionCount > 0 && (
@@ -1266,14 +1266,14 @@ function MessagesPageInner() {
                           </span>
                         )}
                       </div>
-                      <div className="text-sm text-gray-500 mt-0.5">
+                      <div className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                         {conv.lead?.firstName} {conv.lead?.lastName || ''}
                         {conv.lead?.phone && <span className="ml-2">{conv.lead.phone}</span>}
                       </div>
                       {conv.lastMessage && (
-                        <div className="text-sm text-gray-600 mt-1 truncate">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 truncate">
                           {conv.lastMessage.direction === 'OUTBOUND' && (
-                            <span className="text-gray-400">
+                            <span className="text-gray-400 dark:text-gray-500">
                               {(conv.lastMessage.aiGenerated || conv.lastMessage.senderType === 'AI') ? '🤖 ' : 'You: '}
                             </span>
                           )}
@@ -1283,9 +1283,9 @@ function MessagesPageInner() {
                     </div>
                     <div className="flex flex-col items-end gap-1 ml-3">
                       {conv.lastMessage?.createdAt && (
-                        <span className="text-xs text-gray-400">{timeSince(conv.lastMessage.createdAt)}</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">{timeSince(conv.lastMessage.createdAt)}</span>
                       )}
-                      <span className="text-xs text-gray-400">{conv.autonomyLevel.replace('_', ' ')}</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">{conv.autonomyLevel.replace('_', ' ')}</span>
                     </div>
                   </div>
                 </Card>
@@ -1299,12 +1299,12 @@ function MessagesPageInner() {
       {inboxTab === 'post_client' && (
         <>
           {loading ? (
-            <Card className="p-12 text-center text-gray-500">Loading messages...</Card>
+            <Card className="p-12 text-center text-gray-500 dark:text-gray-400">Loading messages...</Card>
           ) : filteredConvs.length === 0 ? (
             <Card className="p-12 text-center">
-              <MessageSquare size={48} className="text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No client conversations</h3>
-              <p className="text-gray-600 text-sm">Support conversations will appear when clients text or email.</p>
+              <MessageSquare size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No client conversations</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Support conversations will appear when clients text or email.</p>
             </Card>
           ) : (
             <div className="space-y-2">
@@ -1312,16 +1312,16 @@ function MessagesPageInner() {
                 <Card
                   key={conv.key}
                   className={`p-4 cursor-pointer hover:shadow-md transition-all ${
-                    conv.escalated ? 'border-orange-200 bg-orange-50/50' :
-                    conv.aiHandling ? 'border-blue-200 bg-blue-50/30' :
-                    'border-gray-200'
+                    conv.escalated ? 'border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/30' :
+                    conv.aiHandling ? 'border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/20' :
+                    'border-gray-200 dark:border-slate-700'
                   }`}
                   onClick={() => { setSelectedConversation(conv); setViewMode('conversation') }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900 truncate">{conv.name}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{conv.name}</span>
                         <Badge variant="default" className="text-xs">Client</Badge>
                         {isNewClient(conv) && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-500 text-white">
@@ -1329,7 +1329,7 @@ function MessagesPageInner() {
                           </span>
                         )}
                         {conv.escalated && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400">
                             Escalated
                           </span>
                         )}
@@ -1337,9 +1337,9 @@ function MessagesPageInner() {
                       <div className="flex items-center gap-1 mt-1">
                         {conv.channels?.has('SMS') && <span className="text-[10px]">💬</span>}
                         {conv.channels?.has('EMAIL') && <span className="text-[10px]">📧</span>}
-                        <span className="text-sm text-gray-600 truncate">
+                        <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
                           {conv.lastMessage?.direction === 'OUTBOUND' && (
-                            <span className="text-gray-400">{(conv.lastMessage.aiGenerated || conv.lastMessage.senderType === 'AI') ? '🤖 ' : 'You: '}</span>
+                            <span className="text-gray-400 dark:text-gray-500">{(conv.lastMessage.aiGenerated || conv.lastMessage.senderType === 'AI') ? '🤖 ' : 'You: '}</span>
                           )}
                           {conv.lastMessage?.content?.replace(/<[^>]*>/g, '').substring(0, 80)}{(conv.lastMessage?.content?.length || 0) > 80 && '...'}
                         </span>
@@ -1347,7 +1347,7 @@ function MessagesPageInner() {
                     </div>
                     <div className="flex flex-col items-end gap-1 ml-3">
                       {conv.lastMessage?.createdAt && (
-                        <span className="text-xs text-gray-400">{timeSince(conv.lastMessage.createdAt)}</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">{timeSince(conv.lastMessage.createdAt)}</span>
                       )}
                       <div className="flex gap-1">
                         <Button variant="outline" size="sm" className="text-xs h-7 px-2">OPEN</Button>
@@ -1365,19 +1365,19 @@ function MessagesPageInner() {
       {inboxTab === 'all' && (
         <>
           {loading ? (
-            <Card className="p-12 text-center text-gray-500">Loading messages...</Card>
+            <Card className="p-12 text-center text-gray-500 dark:text-gray-400">Loading messages...</Card>
           ) : filteredConvs.length === 0 ? (
             <Card className="p-12 text-center">
-              <MessageSquare size={48} className="text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No conversations</h3>
-              <p className="text-gray-600 text-sm">Messages will appear here as they come in.</p>
+              <MessageSquare size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No conversations</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Messages will appear here as they come in.</p>
             </Card>
           ) : (
             <div className="space-y-2">
               {/* Escalated */}
               {(filteredConvs as any[]).filter((c: any) => c.escalated).length > 0 && (
                 <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-orange-700 flex items-center gap-2">ESCALATED</h3>
+                  <h3 className="text-sm font-semibold text-orange-700 dark:text-orange-400 flex items-center gap-2">ESCALATED</h3>
                   {(filteredConvs as any[]).filter((c: any) => c.escalated).map((conv: any) => (
                     <ConversationCard key={conv.key} conversation={conv} onClick={() => { setSelectedConversation(conv); setViewMode('conversation') }} variant="escalated" />
                   ))}
@@ -1387,7 +1387,7 @@ function MessagesPageInner() {
               {/* AI Handling */}
               {(filteredConvs as any[]).filter((c: any) => c.aiHandling && !c.escalated).length > 0 && (
                 <div className="space-y-2 mt-4">
-                  <h3 className="text-sm font-semibold text-blue-700 flex items-center gap-2">🤖 AI HANDLING</h3>
+                  <h3 className="text-sm font-semibold text-blue-700 dark:text-blue-400 flex items-center gap-2">🤖 AI HANDLING</h3>
                   {(filteredConvs as any[]).filter((c: any) => c.aiHandling && !c.escalated).map((conv: any) => (
                     <ConversationCard key={conv.key} conversation={conv} onClick={() => { setSelectedConversation(conv); setViewMode('conversation') }} variant="ai" />
                   ))}
@@ -1397,7 +1397,7 @@ function MessagesPageInner() {
               {/* Other */}
               {(filteredConvs as any[]).filter((c: any) => !c.aiHandling && !c.escalated).length > 0 && (
                 <div className="space-y-2 mt-4">
-                  <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">CONVERSATIONS</h3>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">CONVERSATIONS</h3>
                   {(filteredConvs as any[]).filter((c: any) => !c.aiHandling && !c.escalated).map((conv: any) => (
                     <ConversationCard key={conv.key} conversation={conv} onClick={() => { setSelectedConversation(conv); setViewMode('conversation') }} variant="default" />
                   ))}
@@ -1424,12 +1424,12 @@ function MessagesPageInner() {
           <Input placeholder="Search by name, company, or phone..." value={chatSearch} onChange={(e) => setChatSearch(e.target.value)} autoFocus />
           <div className="max-h-60 overflow-y-auto mt-2 space-y-1">
             {chatSearchResults.length === 0 && chatSearch.length >= 2 && (
-              <p className="text-sm text-gray-400 text-center py-4">No results</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">No results</p>
             )}
             {chatSearchResults.map((r: any) => (
               <button
                 key={`${r.type}-${r.id}`}
-                className="w-full text-left p-3 hover:bg-gray-50 rounded-md flex items-center justify-between"
+                className="w-full text-left p-3 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-md flex items-center justify-between"
                 onClick={() => {
                   const existing = groupedConversations.find((c: any) =>
                     (r.type === 'lead' && c.leadId === r.id) || (r.type === 'client' && c.clientId === r.id)
@@ -1453,7 +1453,7 @@ function MessagesPageInner() {
               >
                 <div>
                   <div className="font-medium text-sm">{String(r.name || '')}</div>
-                  <div className="text-xs text-gray-500">{String(r.company || '')}{r.phone ? ` • ${String(r.phone)}` : ''}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{String(r.company || '')}{r.phone ? ` • ${String(r.phone)}` : ''}</div>
                 </div>
                 <Badge variant={r.type === 'client' ? 'default' : 'secondary'} className="text-xs">{r.type}</Badge>
               </button>
@@ -1466,7 +1466,7 @@ function MessagesPageInner() {
 }
 
 function ConversationCard({ conversation, onClick, variant }: { conversation: any; onClick: () => void; variant: 'escalated' | 'ai' | 'default' }) {
-  const borderColor = variant === 'escalated' ? 'border-orange-200 bg-orange-50/50' : variant === 'ai' ? 'border-blue-200 bg-blue-50/30' : 'border-gray-200'
+  const borderColor = variant === 'escalated' ? 'border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/30' : variant === 'ai' ? 'border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/20' : 'border-gray-200 dark:border-slate-700'
   const lastMsg = conversation.lastMessage
   const ts = lastMsg?.createdAt ? timeSince(lastMsg.createdAt) : ''
 
@@ -1475,23 +1475,23 @@ function ConversationCard({ conversation, onClick, variant }: { conversation: an
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-900 truncate">{conversation.name}</span>
+            <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{conversation.name}</span>
             {conversation.isClient ? <Badge variant="default" className="text-xs">Client</Badge> : <Badge variant="secondary" className="text-xs">Lead</Badge>}
             {conversation.channels?.has('SMS') && <span className="text-[10px]">💬</span>}
             {conversation.channels?.has('EMAIL') && <span className="text-[10px]">📧</span>}
           </div>
-          <div className="text-sm text-gray-600 mt-1 truncate">
+          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 truncate">
             {lastMsg?.direction === 'OUTBOUND' && (
-              <span className="text-gray-400">{(lastMsg.aiGenerated || lastMsg.senderType === 'AI') ? '🤖 ' : 'You: '}</span>
+              <span className="text-gray-400 dark:text-gray-500">{(lastMsg.aiGenerated || lastMsg.senderType === 'AI') ? '🤖 ' : 'You: '}</span>
             )}
             {lastMsg?.content?.replace(/<[^>]*>/g, '').substring(0, 100)}{(lastMsg?.content?.length || 0) > 100 && '...'}
           </div>
           {conversation.escalated && lastMsg?.escalationReason && (
-            <div className="text-xs text-orange-600 mt-1">AI paused — {lastMsg.escalationReason}</div>
+            <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">AI paused — {lastMsg.escalationReason}</div>
           )}
         </div>
         <div className="flex flex-col items-end gap-1 ml-3">
-          <span className="text-xs text-gray-400">{ts}</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500">{ts}</span>
           <div className="flex gap-1">
             <Button variant="outline" size="sm" className="text-xs h-7 px-2">OPEN</Button>
           </div>

@@ -20,12 +20,12 @@ export function QuickStats({ lead }: { lead: QueueLead }) {
   return (
     <div className="grid grid-cols-4 gap-3">
       {stats.map(stat => (
-        <div key={stat.label} className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-3.5 text-center">
-          <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center mx-auto mb-2">
+        <div key={stat.label} className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200/80 dark:border-slate-700 shadow-sm p-3.5 text-center">
+          <div className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-slate-800/50 flex items-center justify-center mx-auto mb-2">
             <stat.icon className={`w-4.5 h-4.5 ${stat.color}`} />
           </div>
           <div className={`text-sm font-semibold ${stat.color}`}>{stat.value}</div>
-          <div className="text-[11px] text-gray-400 mt-0.5 font-medium">{stat.label}</div>
+          <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5 font-medium">{stat.label}</div>
         </div>
       ))}
     </div>

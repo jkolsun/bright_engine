@@ -108,17 +108,17 @@ const COMMON_TERMS: SearchTerm[] = [
 ]
 
 const INDUSTRY_COLORS: Record<string, string> = {
-  ROOFING: 'bg-red-100 text-red-700',
-  LANDSCAPING: 'bg-green-100 text-green-700',
-  PAINTING: 'bg-blue-100 text-blue-700',
-  HVAC: 'bg-orange-100 text-orange-700',
-  PLUMBING: 'bg-cyan-100 text-cyan-700',
-  CLEANING: 'bg-purple-100 text-purple-700',
-  ELECTRICAL: 'bg-yellow-100 text-yellow-700',
-  PEST_CONTROL: 'bg-lime-100 text-lime-700',
-  GENERAL_CONTRACTING: 'bg-slate-100 text-slate-700',
-  RESTORATION: 'bg-amber-100 text-amber-700',
-  OTHER: 'bg-gray-100 text-gray-700',
+  ROOFING: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400',
+  LANDSCAPING: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400',
+  PAINTING: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400',
+  HVAC: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400',
+  PLUMBING: 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-400',
+  CLEANING: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400',
+  ELECTRICAL: 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400',
+  PEST_CONTROL: 'bg-lime-100 dark:bg-lime-900/40 text-lime-700 dark:text-lime-400',
+  GENERAL_CONTRACTING: 'bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-gray-300',
+  RESTORATION: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400',
+  OTHER: 'bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-300',
 }
 
 // ============================================================
@@ -698,11 +698,11 @@ export default function ScraperPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-gray-100 flex items-center gap-2">
             <Globe className="text-teal-600" size={28} />
             GBP Lead Scraper
           </h1>
-          <p className="text-slate-500 mt-1">
+          <p className="text-slate-500 dark:text-gray-400 mt-1">
             Find businesses without websites on Google Maps
           </p>
         </div>
@@ -735,24 +735,24 @@ export default function ScraperPage() {
           {/* Account Balance Card */}
           <Card className="p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-slate-600">SerpAPI Account</span>
+              <span className="text-sm font-medium text-slate-600 dark:text-gray-400">SerpAPI Account</span>
               {loadingCredits ? (
-                <Loader2 size={14} className="animate-spin text-slate-400" />
+                <Loader2 size={14} className="animate-spin text-slate-400 dark:text-gray-500" />
               ) : credits?.configured ? (
-                <Badge className={credits.connected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}>
+                <Badge className={credits.connected ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'}>
                   {credits.connected ? 'Connected' : 'Error'}
                 </Badge>
               ) : (
-                <Badge className="bg-yellow-100 text-yellow-700">Not Configured</Badge>
+                <Badge className="bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400">Not Configured</Badge>
               )}
             </div>
             {credits?.account ? (
               <>
-                <div className="text-lg font-bold text-slate-900">
+                <div className="text-lg font-bold text-slate-900 dark:text-gray-100">
                   {credits.account.totalSearchesLeft.toLocaleString()} / {credits.account.searchesPerMonth.toLocaleString()}
-                  <span className="text-sm font-normal text-slate-500 ml-1">remaining</span>
+                  <span className="text-sm font-normal text-slate-500 dark:text-gray-400 ml-1">remaining</span>
                 </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full mt-2">
+                <div className="w-full h-2 bg-slate-100 dark:bg-slate-800/50 rounded-full mt-2">
                   <div
                     className={`h-2 rounded-full transition-all ${
                       credits.account.totalSearchesLeft / credits.account.searchesPerMonth > 0.3
@@ -764,33 +764,33 @@ export default function ScraperPage() {
                     style={{ width: `${Math.min(100, (credits.account.totalSearchesLeft / credits.account.searchesPerMonth) * 100)}%` }}
                   />
                 </div>
-                <p className="text-xs text-slate-400 mt-1">{credits.account.planName} — {credits.account.thisMonthUsage.toLocaleString()} used this month</p>
+                <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">{credits.account.planName} — {credits.account.thisMonthUsage.toLocaleString()} used this month</p>
               </>
             ) : !loadingCredits && !credits?.configured ? (
-              <p className="text-sm text-slate-500">Configure SerpAPI in <a href="/admin/settings" className="text-teal-600 hover:underline">Settings</a></p>
+              <p className="text-sm text-slate-500 dark:text-gray-400">Configure SerpAPI in <a href="/admin/settings" className="text-teal-600 hover:underline">Settings</a></p>
             ) : null}
           </Card>
 
           {/* Daily Limit Card */}
           <Card className="p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-slate-600">Daily Limit</span>
+              <span className="text-sm font-medium text-slate-600 dark:text-gray-400">Daily Limit</span>
               {credits?.daily?.limitReached && (
-                <Badge className="bg-red-100 text-red-700">Limit Reached</Badge>
+                <Badge className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400">Limit Reached</Badge>
               )}
             </div>
             {credits?.daily ? (
               <>
-                <div className="text-lg font-bold text-slate-900">
+                <div className="text-lg font-bold text-slate-900 dark:text-gray-100">
                   Today: {credits.daily.todayUsage.toLocaleString()}
                   {credits.daily.dailyLimit > 0 ? (
                     <span> / {credits.daily.dailyLimit.toLocaleString()} used</span>
                   ) : (
-                    <span className="text-sm font-normal text-slate-500 ml-1">used (no daily limit)</span>
+                    <span className="text-sm font-normal text-slate-500 dark:text-gray-400 ml-1">used (no daily limit)</span>
                   )}
                 </div>
                 {credits.daily.dailyLimit > 0 && (
-                  <div className="w-full h-2 bg-slate-100 rounded-full mt-2">
+                  <div className="w-full h-2 bg-slate-100 dark:bg-slate-800/50 rounded-full mt-2">
                     <div
                       className={`h-2 rounded-full transition-all ${
                         credits.daily.limitReached
@@ -804,7 +804,7 @@ export default function ScraperPage() {
                   </div>
                 )}
                 {credits.daily.dailyLimit === 0 && (
-                  <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
+                  <p className="text-xs text-slate-400 dark:text-gray-500 mt-2 flex items-center gap-1">
                     <Info size={12} /> Set SERPAPI_DAILY_LIMIT in Railway env vars to cap daily usage
                   </p>
                 )}
@@ -826,7 +826,7 @@ export default function ScraperPage() {
               placeholder={`Scrape ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
               value={scrapeName}
               onChange={e => setScrapeName(e.target.value)}
-              className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm"
+              className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
             />
             <Button variant="outline" size="sm" onClick={() => setShowSavedConfigs(!showSavedConfigs)}>
               <Save size={14} className="mr-1" /> Saved
@@ -841,14 +841,14 @@ export default function ScraperPage() {
             <Card className="p-3">
               <div className="space-y-2">
                 {savedConfigs.map((config: any) => (
-                  <div key={config.id} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded">
+                  <div key={config.id} className="flex items-center justify-between p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded">
                     <div>
                       <span className="font-medium text-sm">{config.name}</span>
-                      <span className="text-xs text-slate-400 ml-2">
+                      <span className="text-xs text-slate-400 dark:text-gray-500 ml-2">
                         {(config.searchTerms as any[])?.length || 0} terms, {(config.cities as any[])?.length || 0} cities
                       </span>
                       {config.lastRunAt && (
-                        <span className="text-xs text-slate-400 ml-2">
+                        <span className="text-xs text-slate-400 dark:text-gray-500 ml-2">
                           Last run: {new Date(config.lastRunAt).toLocaleDateString()}
                         </span>
                       )}
@@ -867,39 +867,39 @@ export default function ScraperPage() {
 
           {/* Quality Filters */}
           <Card className="p-4">
-            <h3 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+            <h3 className="font-semibold text-slate-800 dark:text-gray-200 mb-3 flex items-center gap-2">
               <Filter size={18} /> Quality Filters
             </h3>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="text-xs text-slate-500 block mb-1">Min Reviews</label>
+                <label className="text-xs text-slate-500 dark:text-gray-400 block mb-1">Min Reviews</label>
                 <input
                   type="number"
                   value={minReviews}
                   onChange={e => setMinReviews(parseInt(e.target.value) || 0)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                   min={0}
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-500 block mb-1">Min Rating</label>
+                <label className="text-xs text-slate-500 dark:text-gray-400 block mb-1">Min Rating</label>
                 <input
                   type="number"
                   value={minRating}
                   onChange={e => setMinRating(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                   min={0}
                   max={5}
                   step={0.5}
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-500 block mb-1">Target Leads</label>
+                <label className="text-xs text-slate-500 dark:text-gray-400 block mb-1">Target Leads</label>
                 <input
                   type="number"
                   value={targetLeads}
                   onChange={e => setTargetLeads(parseInt(e.target.value) || 100)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                   min={10}
                 />
               </div>
@@ -908,20 +908,20 @@ export default function ScraperPage() {
             {/* Advanced Filters Toggle */}
             <button
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className="mt-3 text-sm text-teal-600 hover:text-teal-700 flex items-center gap-1"
+              className="mt-3 text-sm text-teal-600 hover:text-teal-700 dark:hover:text-teal-400 flex items-center gap-1"
             >
               {showAdvancedFilters ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
               {showAdvancedFilters ? 'Hide' : 'More'} Filters
             </button>
 
             {showAdvancedFilters && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 pt-3 border-t border-slate-100">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
                 <div>
-                  <label className="text-xs text-slate-500 block mb-1">Has Photos</label>
+                  <label className="text-xs text-slate-500 dark:text-gray-400 block mb-1">Has Photos</label>
                   <select
                     value={hasPhotos}
                     onChange={e => setHasPhotos(e.target.value as 'any' | 'yes' | 'no')}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                   >
                     <option value="any">Any</option>
                     <option value="yes">Yes</option>
@@ -929,11 +929,11 @@ export default function ScraperPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-slate-500 block mb-1">Has Hours</label>
+                  <label className="text-xs text-slate-500 dark:text-gray-400 block mb-1">Has Hours</label>
                   <select
                     value={hasHours}
                     onChange={e => setHasHours(e.target.value as 'any' | 'yes' | 'no')}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                   >
                     <option value="any">Any</option>
                     <option value="yes">Yes</option>
@@ -941,22 +941,22 @@ export default function ScraperPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-slate-500 block mb-1">Min Categories</label>
+                  <label className="text-xs text-slate-500 dark:text-gray-400 block mb-1">Min Categories</label>
                   <input
                     type="number"
                     value={minCategories}
                     onChange={e => setMinCategories(parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                     min={0}
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-500 block mb-1">Max Distance (mi)</label>
+                  <label className="text-xs text-slate-500 dark:text-gray-400 block mb-1">Max Distance (mi)</label>
                   <input
                     type="number"
                     value={maxDistance}
                     onChange={e => setMaxDistance(parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                     min={0}
                     placeholder="0 = no limit"
                   />
@@ -967,7 +967,7 @@ export default function ScraperPage() {
 
           {/* Search Terms */}
           <Card className="p-4">
-            <h3 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+            <h3 className="font-semibold text-slate-800 dark:text-gray-200 mb-3 flex items-center gap-2">
               <Search size={18} /> Search Terms
             </h3>
 
@@ -994,23 +994,23 @@ export default function ScraperPage() {
                 }}
                 onFocus={() => termInput.length > 0 && setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
               />
 
               {/* Suggestions dropdown */}
               {showSuggestions && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-auto">
+                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-48 overflow-auto">
                   {COMMON_TERMS
                     .filter(ct => ct.term.includes(termInput.toLowerCase()) && !searchTerms.some(t => t.term === ct.term))
                     .slice(0, 8)
                     .map(ct => (
                       <button
                         key={ct.term}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 flex items-center justify-between"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-between"
                         onMouseDown={() => addTerm(ct.term, ct.industry)}
                       >
                         <span>{ct.term}</span>
-                        <Badge className={`${INDUSTRY_COLORS[ct.industry] || 'bg-gray-100 text-gray-700'} text-xs`}>
+                        <Badge className={`${INDUSTRY_COLORS[ct.industry] || 'bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-300'} text-xs`}>
                           {ct.industry}
                         </Badge>
                       </button>
@@ -1023,18 +1023,18 @@ export default function ScraperPage() {
             {searchTerms.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-3">
                 {searchTerms.map((term, i) => (
-                  <div key={i} className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
+                  <div key={i} className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1">
                     <span className="text-sm">{term.term}</span>
                     <select
                       value={term.industry}
                       onChange={e => updateTermIndustry(i, e.target.value)}
-                      className="text-xs border-none bg-transparent text-slate-500 cursor-pointer"
+                      className="text-xs border-none bg-transparent text-slate-500 dark:text-gray-400 cursor-pointer"
                     >
                       {INDUSTRY_OPTIONS.map(ind => (
                         <option key={ind} value={ind}>{ind}</option>
                       ))}
                     </select>
-                    <button onClick={() => removeTerm(i)} className="text-slate-400 hover:text-red-500">
+                    <button onClick={() => removeTerm(i)} className="text-slate-400 dark:text-gray-500 hover:text-red-500">
                       <X size={14} />
                     </button>
                   </div>
@@ -1045,19 +1045,19 @@ export default function ScraperPage() {
 
           {/* City Builder */}
           <Card className="p-4">
-            <h3 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
+            <h3 className="font-semibold text-slate-800 dark:text-gray-200 mb-3 flex items-center gap-2">
               <MapPin size={18} /> Cities
-              <Badge className="bg-teal-100 text-teal-700 ml-auto">{selectedCities.size} selected</Badge>
+              <Badge className="bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400 ml-auto">{selectedCities.size} selected</Badge>
             </h3>
 
             {/* Tabs */}
-            <div className="flex border-b border-slate-200 mb-4 overflow-x-auto">
+            <div className="flex border-b border-slate-200 dark:border-slate-700 mb-4 overflow-x-auto">
               {(['states', 'regions', 'population', 'lists', 'manual'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setCityTab(tab)}
                   className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap ${
-                    cityTab === tab ? 'border-teal-600 text-teal-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+                    cityTab === tab ? 'border-teal-600 text-teal-600' : 'border-transparent text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-300'
                   }`}
                 >
                   {tab === 'states' ? 'States' : tab === 'regions' ? 'Regions' : tab === 'population' ? 'Population' : tab === 'lists' ? 'My Lists' : 'Manual'}
@@ -1075,8 +1075,8 @@ export default function ScraperPage() {
                     const isExpanded = expandedStates.has(abbr)
 
                     return (
-                      <div key={abbr} className="border border-slate-100 rounded">
-                        <div className="flex items-center justify-between px-3 py-2 hover:bg-slate-50">
+                      <div key={abbr} className="border border-slate-100 dark:border-slate-700 rounded">
+                        <div className="flex items-center justify-between px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800">
                           <button
                             onClick={() => setExpandedStates(prev => {
                               const next = new Set(prev)
@@ -1084,13 +1084,13 @@ export default function ScraperPage() {
                               else next.add(abbr)
                               return next
                             })}
-                            className="flex items-center gap-2 text-sm font-medium text-slate-700"
+                            className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-gray-300"
                           >
                             {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                             {stateData.name}
                           </button>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-slate-400">{selected}/{total}</span>
+                            <span className="text-xs text-slate-400 dark:text-gray-500">{selected}/{total}</span>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -1112,8 +1112,8 @@ export default function ScraperPage() {
                                   onClick={() => toggleCity(cityStr)}
                                   className={`px-2 py-0.5 rounded text-xs transition-colors ${
                                     isSelected
-                                      ? 'bg-teal-100 text-teal-700 border border-teal-300'
-                                      : 'bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100'
+                                      ? 'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400 border border-teal-300'
+                                      : 'bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-gray-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                                   }`}
                                 >
                                   {city}
@@ -1132,14 +1132,14 @@ export default function ScraperPage() {
             {cityTab === 'regions' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {Object.entries(usCitiesData.regions).map(([region, states]) => (
-                  <div key={region} className="border border-slate-200 rounded-lg p-3">
+                  <div key={region} className="border border-slate-200 dark:border-slate-700 rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium text-sm">{region}</span>
                       <Button size="sm" variant="outline" className="text-xs h-6" onClick={() => addRegionCities(region)}>
                         Add All
                       </Button>
                     </div>
-                    <p className="text-xs text-slate-400">{(states as string[]).join(', ')}</p>
+                    <p className="text-xs text-slate-400 dark:text-gray-500">{(states as string[]).join(', ')}</p>
                   </div>
                 ))}
               </div>
@@ -1156,7 +1156,7 @@ export default function ScraperPage() {
                     className="h-auto py-3 flex-col"
                   >
                     <span className="font-bold text-lg">{tier.replace('top', 'Top ')}</span>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-slate-400 dark:text-gray-500">
                       {((usCitiesData.populationTiers as any)[tier] || []).length} cities
                     </span>
                   </Button>
@@ -1168,10 +1168,10 @@ export default function ScraperPage() {
             {cityTab === 'lists' && (
               <div className="space-y-3">
                 {cityLists.map(list => (
-                  <div key={list.id} className="flex items-center justify-between p-2 border border-slate-200 rounded">
+                  <div key={list.id} className="flex items-center justify-between p-2 border border-slate-200 dark:border-slate-700 rounded">
                     <div>
                       <span className="font-medium text-sm">{list.name}</span>
-                      <span className="text-xs text-slate-400 ml-2">{(list.cities as string[]).length} cities</span>
+                      <span className="text-xs text-slate-400 dark:text-gray-500 ml-2">{(list.cities as string[]).length} cities</span>
                     </div>
                     <div className="flex gap-1">
                       <Button size="sm" variant="outline" onClick={() => {
@@ -1196,7 +1196,7 @@ export default function ScraperPage() {
                     placeholder="List name"
                     value={newListName}
                     onChange={e => setNewListName(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                   />
                   <Button
                     size="sm"
@@ -1233,7 +1233,7 @@ export default function ScraperPage() {
                         setManualCityInput('')
                       }
                     }}
-                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                    className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                   />
                 </div>
               </div>
@@ -1241,16 +1241,16 @@ export default function ScraperPage() {
 
             {/* Selected cities tags */}
             {selectedCities.size > 0 && (
-              <div className="mt-4 pt-3 border-t border-slate-100">
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-slate-500">{selectedCities.size} cities selected</span>
+                  <span className="text-xs text-slate-500 dark:text-gray-400">{selectedCities.size} cities selected</span>
                   <button onClick={() => setSelectedCities(new Set())} className="text-xs text-red-500 hover:underline">
                     Clear All
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-1 max-h-24 overflow-auto">
                   {Array.from(selectedCities).slice(0, 25).map(city => (
-                    <span key={city} className="inline-flex items-center gap-1 px-2 py-0.5 bg-teal-50 text-teal-700 rounded text-xs">
+                    <span key={city} className="inline-flex items-center gap-1 px-2 py-0.5 bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-400 rounded text-xs">
                       {city}
                       <button onClick={() => toggleCity(city)}>
                         <X size={10} />
@@ -1258,7 +1258,7 @@ export default function ScraperPage() {
                     </span>
                   ))}
                   {selectedCities.size > 25 && (
-                    <span className="text-xs text-slate-400 px-2 py-0.5">+{selectedCities.size - 25} more</span>
+                    <span className="text-xs text-slate-400 dark:text-gray-500 px-2 py-0.5">+{selectedCities.size - 25} more</span>
                   )}
                 </div>
               </div>
@@ -1266,14 +1266,14 @@ export default function ScraperPage() {
           </Card>
 
           {/* Sticky Bottom Bar */}
-          <div className="sticky bottom-0 bg-white border-t border-slate-200 p-4 -mx-4 md:-mx-8 px-4 md:px-8 flex items-center justify-between shadow-lg z-10">
-            <div className="text-sm text-slate-600">
+          <div className="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 p-4 -mx-4 md:-mx-8 px-4 md:px-8 flex items-center justify-between shadow-lg z-10">
+            <div className="text-sm text-slate-600 dark:text-gray-400">
               <span className="font-medium">{searchTerms.length} terms</span>
-              <span className="text-slate-400 mx-1">×</span>
+              <span className="text-slate-400 dark:text-gray-500 mx-1">×</span>
               <span className="font-medium">{selectedCities.size} cities</span>
-              <span className="text-slate-400 mx-1">=</span>
+              <span className="text-slate-400 dark:text-gray-500 mx-1">=</span>
               <span className="font-bold text-teal-600">~{totalQueries.toLocaleString()} credits</span>
-              <span className="text-slate-400 ml-1">(${estimatedCost})</span>
+              <span className="text-slate-400 dark:text-gray-500 ml-1">(${estimatedCost})</span>
               {credits?.daily?.dailyLimit && credits.daily.dailyLimit > 0 && totalQueries > (credits.daily.dailyRemaining || 0) && (
                 <span className="text-red-500 ml-2 font-medium">Exceeds daily limit!</span>
               )}
@@ -1294,16 +1294,16 @@ export default function ScraperPage() {
           {showDedupModal && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
               <Card className="w-full max-w-lg p-6">
-                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-gray-100 flex items-center gap-2 mb-4">
                   <AlertTriangle className="text-yellow-500" size={20} />
                   Overlap Detected
                 </h3>
-                <p className="text-sm text-slate-600 mb-4">
+                <p className="text-sm text-slate-600 dark:text-gray-400 mb-4">
                   You already have leads in some of these cities:
                 </p>
-                <div className="max-h-48 overflow-auto border border-slate-200 rounded mb-4">
+                <div className="max-h-48 overflow-auto border border-slate-200 dark:border-slate-700 rounded mb-4">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50">
+                    <thead className="bg-slate-50 dark:bg-slate-800/50">
                       <tr>
                         <th className="text-left px-3 py-2">City</th>
                         <th className="text-right px-3 py-2">Existing Leads</th>
@@ -1311,7 +1311,7 @@ export default function ScraperPage() {
                     </thead>
                     <tbody>
                       {dedupOverlaps.map(o => (
-                        <tr key={o.city} className="border-t border-slate-100">
+                        <tr key={o.city} className="border-t border-slate-100 dark:border-slate-700">
                           <td className="px-3 py-2">{o.city}</td>
                           <td className="px-3 py-2 text-right font-medium">{o.count}</td>
                         </tr>
@@ -1354,7 +1354,7 @@ export default function ScraperPage() {
         <div className="space-y-4">
           <Card className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-slate-800">Scraping in Progress</h3>
+              <h3 className="font-semibold text-slate-800 dark:text-gray-200">Scraping in Progress</h3>
               <Button variant="outline" size="sm" onClick={stopScraping}>
                 <Square size={14} className="mr-1" /> Stop
               </Button>
@@ -1362,11 +1362,11 @@ export default function ScraperPage() {
 
             {/* Progress Bar */}
             <div className="mb-4">
-              <div className="flex justify-between text-sm text-slate-500 mb-1">
+              <div className="flex justify-between text-sm text-slate-500 dark:text-gray-400 mb-1">
                 <span>Queries: {progress.queriesUsed} / {progress.totalQueries}</span>
                 <span>{progress.totalQueries > 0 ? Math.round((progress.queriesUsed / progress.totalQueries) * 100) : 0}%</span>
               </div>
-              <div className="w-full h-3 bg-slate-100 rounded-full">
+              <div className="w-full h-3 bg-slate-100 dark:bg-slate-800/50 rounded-full">
                 <div
                   className="h-3 bg-teal-500 rounded-full transition-all"
                   style={{ width: `${progress.totalQueries > 0 ? Math.min(100, (progress.queriesUsed / progress.totalQueries) * 100) : 0}%` }}
@@ -1376,16 +1376,16 @@ export default function ScraperPage() {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-3 gap-4">
-              <div className="text-center p-3 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-700">{progress.leadsFound}</div>
+              <div className="text-center p-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                <div className="text-2xl font-bold text-green-700 dark:text-green-400">{progress.leadsFound}</div>
                 <div className="text-xs text-green-600">Leads Found</div>
               </div>
-              <div className="text-center p-3 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-700">{progress.resultsScanned}</div>
+              <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{progress.resultsScanned}</div>
                 <div className="text-xs text-blue-600">Results Scanned</div>
               </div>
-              <div className="text-center p-3 bg-teal-50 rounded-lg">
-                <div className="text-2xl font-bold text-teal-700">{progress.queriesUsed}</div>
+              <div className="text-center p-3 bg-teal-50 dark:bg-teal-950/30 rounded-lg">
+                <div className="text-2xl font-bold text-teal-700 dark:text-teal-400">{progress.queriesUsed}</div>
                 <div className="text-xs text-teal-600">Credits Used</div>
               </div>
             </div>
@@ -1393,30 +1393,30 @@ export default function ScraperPage() {
 
           {/* Skip Breakdown */}
           <Card className="p-4">
-            <h4 className="text-sm font-medium text-slate-600 mb-3">Filter Breakdown</h4>
+            <h4 className="text-sm font-medium text-slate-600 dark:text-gray-400 mb-3">Filter Breakdown</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-              <div className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                <span className="text-slate-500">Has Website</span>
+              <div className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+                <span className="text-slate-500 dark:text-gray-400">Has Website</span>
                 <span className="font-medium text-red-600">{progress.skipped.website}</span>
               </div>
-              <div className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                <span className="text-slate-500">No Phone</span>
+              <div className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+                <span className="text-slate-500 dark:text-gray-400">No Phone</span>
                 <span className="font-medium text-red-600">{progress.skipped.noPhone}</span>
               </div>
-              <div className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                <span className="text-slate-500">Low Reviews</span>
+              <div className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+                <span className="text-slate-500 dark:text-gray-400">Low Reviews</span>
                 <span className="font-medium text-orange-600">{progress.skipped.lowReviews}</span>
               </div>
-              <div className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                <span className="text-slate-500">Low Rating</span>
+              <div className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+                <span className="text-slate-500 dark:text-gray-400">Low Rating</span>
                 <span className="font-medium text-orange-600">{progress.skipped.lowRating}</span>
               </div>
-              <div className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                <span className="text-slate-500">No Photos</span>
+              <div className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+                <span className="text-slate-500 dark:text-gray-400">No Photos</span>
                 <span className="font-medium text-orange-600">{progress.skipped.noPhotos}</span>
               </div>
-              <div className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                <span className="text-slate-500">No Hours</span>
+              <div className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
+                <span className="text-slate-500 dark:text-gray-400">No Hours</span>
                 <span className="font-medium text-orange-600">{progress.skipped.noHours}</span>
               </div>
             </div>
@@ -1425,23 +1425,23 @@ export default function ScraperPage() {
           {/* Live Feed */}
           {progress.qualifiedLeads.length > 0 && (
             <Card className="p-4">
-              <h4 className="text-sm font-medium text-slate-600 mb-3">Recent Qualified Leads</h4>
+              <h4 className="text-sm font-medium text-slate-600 dark:text-gray-400 mb-3">Recent Qualified Leads</h4>
               <div className="space-y-2">
                 {progress.qualifiedLeads.slice(-10).reverse().map((lead, i) => (
-                  <div key={i} className="flex items-center justify-between p-2 bg-slate-50 rounded text-sm">
+                  <div key={i} className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded text-sm">
                     <div className="flex items-center gap-2">
-                      <Building2 size={14} className="text-slate-400" />
+                      <Building2 size={14} className="text-slate-400 dark:text-gray-500" />
                       <span className="font-medium">{lead.companyName}</span>
-                      <span className="text-slate-400">{lead.city}, {lead.state}</span>
+                      <span className="text-slate-400 dark:text-gray-500">{lead.city}, {lead.state}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge className={`${INDUSTRY_COLORS[lead.industry] || 'bg-gray-100 text-gray-700'} text-xs`}>
+                      <Badge className={`${INDUSTRY_COLORS[lead.industry] || 'bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-300'} text-xs`}>
                         {lead.industry}
                       </Badge>
                       <span className="text-yellow-600 flex items-center gap-0.5">
                         <Star size={12} fill="currentColor" /> {lead.rating}
                       </span>
-                      <Badge className="bg-teal-100 text-teal-700 text-xs">{lead.qualityScore}</Badge>
+                      <Badge className="bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400 text-xs">{lead.qualityScore}</Badge>
                     </div>
                   </div>
                 ))}
@@ -1451,8 +1451,8 @@ export default function ScraperPage() {
 
           {/* Stop reason warning */}
           {progress.stopReason && (
-            <Card className="p-4 border-yellow-300 bg-yellow-50">
-              <div className="flex items-center gap-2 text-yellow-700">
+            <Card className="p-4 border-yellow-300 bg-yellow-50 dark:bg-yellow-950/30">
+              <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400">
                 <AlertTriangle size={18} />
                 <span className="font-medium">
                   {progress.stopReason === 'DAILY_LIMIT_REACHED'
@@ -1473,24 +1473,24 @@ export default function ScraperPage() {
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <Card className="p-3 text-center">
-              <div className="text-xl font-bold text-slate-700">{results.length}</div>
-              <div className="text-xs text-slate-500">Total</div>
+              <div className="text-xl font-bold text-slate-700 dark:text-gray-300">{results.length}</div>
+              <div className="text-xs text-slate-500 dark:text-gray-400">Total</div>
             </Card>
             <Card className="p-3 text-center">
               <div className="text-xl font-bold text-green-600">{newCount}</div>
-              <div className="text-xs text-slate-500">New</div>
+              <div className="text-xs text-slate-500 dark:text-gray-400">New</div>
             </Card>
             <Card className="p-3 text-center">
               <div className="text-xl font-bold text-red-600">{dupesCount}</div>
-              <div className="text-xs text-slate-500">Dupes</div>
+              <div className="text-xs text-slate-500 dark:text-gray-400">Dupes</div>
             </Card>
             <Card className="p-3 text-center">
               <div className="text-xl font-bold text-teal-600">{totalSelected}</div>
-              <div className="text-xs text-slate-500">Selected</div>
+              <div className="text-xs text-slate-500 dark:text-gray-400">Selected</div>
             </Card>
             <Card className="p-3 text-center">
               <div className="text-xl font-bold text-yellow-600">{avgQuality}</div>
-              <div className="text-xs text-slate-500">Avg Quality</div>
+              <div className="text-xs text-slate-500 dark:text-gray-400">Avg Quality</div>
             </Card>
           </div>
 
@@ -1502,7 +1502,7 @@ export default function ScraperPage() {
                   key={f}
                   onClick={() => setResultFilter(f)}
                   className={`px-3 py-1 rounded text-sm ${
-                    resultFilter === f ? 'bg-teal-100 text-teal-700 font-medium' : 'text-slate-500 hover:bg-slate-100'
+                    resultFilter === f ? 'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400 font-medium' : 'text-slate-500 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-slate-700'
                   }`}
                 >
                   {f === 'all' ? 'All' : f === 'new' ? 'New Only' : 'Dupes'}
@@ -1511,7 +1511,7 @@ export default function ScraperPage() {
               <select
                 value={industryFilter}
                 onChange={e => setIndustryFilter(e.target.value)}
-                className="text-sm border border-slate-200 rounded px-2 py-1"
+                className="text-sm border border-slate-200 dark:border-slate-700 rounded px-2 py-1 dark:bg-slate-800 dark:text-gray-100"
               >
                 <option value="all">All Industries</option>
                 {[...new Set(results.map(r => r.industry))].map(ind => (
@@ -1562,7 +1562,7 @@ export default function ScraperPage() {
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200">
+                <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
                   <tr>
                     <th className="w-8 px-3 py-2">
                       <input
@@ -1601,10 +1601,10 @@ export default function ScraperPage() {
                     return (
                       <tr
                         key={origIndex}
-                        className={`border-t border-slate-100 ${
-                          dedup === 'bright' ? 'bg-red-50' :
-                          dedup === 'scrape' ? 'bg-yellow-50' :
-                          isSelected ? 'bg-white' : 'bg-slate-50 opacity-60'
+                        className={`border-t border-slate-100 dark:border-slate-700 ${
+                          dedup === 'bright' ? 'bg-red-50 dark:bg-red-950/30' :
+                          dedup === 'scrape' ? 'bg-yellow-50 dark:bg-yellow-950/30' :
+                          isSelected ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800/50 opacity-60'
                         }`}
                       >
                         <td className="px-3 py-2">
@@ -1623,7 +1623,7 @@ export default function ScraperPage() {
                         </td>
                         <td className="px-3 py-2">
                           <div className="font-medium">{lead.companyName}</div>
-                          <div className="text-xs text-slate-400 flex items-center gap-1">
+                          <div className="text-xs text-slate-400 dark:text-gray-500 flex items-center gap-1">
                             <Phone size={10} /> {lead.phone}
                           </div>
                           {dedup === 'bright' && (
@@ -1633,9 +1633,9 @@ export default function ScraperPage() {
                             <div className="text-xs text-yellow-600 mt-0.5">Duplicate in this scrape</div>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-slate-600">{lead.city}, {lead.state}</td>
+                        <td className="px-3 py-2 text-slate-600 dark:text-gray-400">{lead.city}, {lead.state}</td>
                         <td className="px-3 py-2">
-                          <Badge className={`${INDUSTRY_COLORS[lead.industry] || 'bg-gray-100 text-gray-700'} text-xs`}>
+                          <Badge className={`${INDUSTRY_COLORS[lead.industry] || 'bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-300'} text-xs`}>
                             {lead.industry}
                           </Badge>
                         </td>
@@ -1644,12 +1644,12 @@ export default function ScraperPage() {
                             <Star size={12} fill="currentColor" /> {lead.rating}
                           </span>
                         </td>
-                        <td className="px-3 py-2 text-center text-slate-600">{lead.reviews}</td>
+                        <td className="px-3 py-2 text-center text-slate-600 dark:text-gray-400">{lead.reviews}</td>
                         <td className="px-3 py-2 text-center">
                           <Badge className={`text-xs ${
-                            lead.qualityScore >= 70 ? 'bg-green-100 text-green-700' :
-                            lead.qualityScore >= 40 ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-red-100 text-red-700'
+                            lead.qualityScore >= 70 ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' :
+                            lead.qualityScore >= 40 ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400' :
+                            'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'
                           }`}>
                             {lead.qualityScore}
                           </Badge>
@@ -1668,7 +1668,7 @@ export default function ScraperPage() {
                                 return next
                               })
                             }}
-                            className="text-slate-400 hover:text-red-500"
+                            className="text-slate-400 dark:text-gray-500 hover:text-red-500"
                           >
                             <X size={14} />
                           </button>
@@ -1696,27 +1696,27 @@ export default function ScraperPage() {
           {showImportModal && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
               <Card className="w-full max-w-lg p-6">
-                <h3 className="text-lg font-bold text-slate-900 mb-4">Import to Bright</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-gray-100 mb-4">Import to Bright</h3>
 
                 <div className="space-y-4">
                   {/* Batch Name */}
                   <div>
-                    <label className="text-sm font-medium text-slate-700 block mb-1">Batch Name *</label>
+                    <label className="text-sm font-medium text-slate-700 dark:text-gray-300 block mb-1">Batch Name *</label>
                     <input
                       type="text"
                       value={importBatchName}
                       onChange={e => setImportBatchName(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                     />
                   </div>
 
                   {/* Folder */}
                   <div>
-                    <label className="text-sm font-medium text-slate-700 block mb-1">Folder</label>
+                    <label className="text-sm font-medium text-slate-700 dark:text-gray-300 block mb-1">Folder</label>
                     <select
                       value={importFolderId}
                       onChange={e => setImportFolderId(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                     >
                       <option value="">No folder</option>
                       {folders.map(f => (
@@ -1727,11 +1727,11 @@ export default function ScraperPage() {
 
                   {/* Assign to Rep */}
                   <div>
-                    <label className="text-sm font-medium text-slate-700 block mb-1">Assign to Rep</label>
+                    <label className="text-sm font-medium text-slate-700 dark:text-gray-300 block mb-1">Assign to Rep</label>
                     <select
                       value={importAssignToId}
                       onChange={e => setImportAssignToId(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                      className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                     >
                       <option value="">No assignment</option>
                       {reps.map(r => (
@@ -1742,21 +1742,21 @@ export default function ScraperPage() {
 
                   {/* Processing Toggles */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 block">Processing Steps</label>
+                    <label className="text-sm font-medium text-slate-700 dark:text-gray-300 block">Processing Steps</label>
                     {[
                       { key: 'enrichment' as const, icon: <Search size={16} />, title: 'Enrichment', desc: 'Looks up each lead on Google Maps via SerpAPI for rating, reviews, photos, services.' },
                       { key: 'preview' as const, icon: <Eye size={16} />, title: 'Preview Generation', desc: 'Generates a custom website preview for each lead.' },
                       { key: 'personalization' as const, icon: <Brain size={16} />, title: 'AI Personalization', desc: 'Uses Claude AI to write custom call scripts.' },
                     ].map(opt => (
-                      <div key={opt.key} className="flex items-center justify-between p-2 bg-slate-50 rounded">
+                      <div key={opt.key} className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
                         <div className="flex items-center gap-2">
-                          <span className="text-slate-500">{opt.icon}</span>
+                          <span className="text-slate-500 dark:text-gray-400">{opt.icon}</span>
                           <span className="text-sm font-medium">{opt.title}</span>
                         </div>
                         <button
                           onClick={() => setImportOptions(prev => ({ ...prev, [opt.key]: !prev[opt.key] }))}
                           className={`w-10 h-5 rounded-full transition-colors ${
-                            importOptions[opt.key] ? 'bg-teal-500' : 'bg-slate-300'
+                            importOptions[opt.key] ? 'bg-teal-500' : 'bg-slate-300 dark:bg-slate-600'
                           } relative`}
                         >
                           <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${
@@ -1799,17 +1799,17 @@ export default function ScraperPage() {
       {view === 'importing' && (
         <div className="space-y-4">
           <Card className="p-4">
-            <h3 className="font-semibold text-slate-800 mb-3">Import Processing</h3>
+            <h3 className="font-semibold text-slate-800 dark:text-gray-200 mb-3">Import Processing</h3>
 
             {importProgress ? (
               <>
                 {/* Progress */}
                 <div className="mb-4">
-                  <div className="flex justify-between text-sm text-slate-500 mb-1">
+                  <div className="flex justify-between text-sm text-slate-500 dark:text-gray-400 mb-1">
                     <span>{importProgress.processed || 0} / {importProgress.total || 0} leads</span>
                     <span>{importProgress.status}</span>
                   </div>
-                  <div className="w-full h-3 bg-slate-100 rounded-full">
+                  <div className="w-full h-3 bg-slate-100 dark:bg-slate-800/50 rounded-full">
                     <div
                       className="h-3 bg-teal-500 rounded-full transition-all"
                       style={{ width: `${importProgress.total > 0 ? (importProgress.processed / importProgress.total) * 100 : 0}%` }}
@@ -1825,9 +1825,9 @@ export default function ScraperPage() {
                     { label: 'Personalized', count: Object.values(importProgress.results || {}).filter((r: any) => r?.personalization).length, color: 'text-green-600' },
                     { label: 'Errors', count: importProgress.failed || 0, color: 'text-red-600' },
                   ].map(s => (
-                    <div key={s.label} className="text-center p-2 bg-slate-50 rounded">
+                    <div key={s.label} className="text-center p-2 bg-slate-50 dark:bg-slate-800/50 rounded">
                       <div className={`text-lg font-bold ${s.color}`}>{s.count}</div>
-                      <div className="text-xs text-slate-500">{s.label}</div>
+                      <div className="text-xs text-slate-500 dark:text-gray-400">{s.label}</div>
                     </div>
                   ))}
                 </div>
@@ -1853,7 +1853,7 @@ export default function ScraperPage() {
                 )}
               </>
             ) : (
-              <div className="flex items-center gap-2 text-slate-500">
+              <div className="flex items-center gap-2 text-slate-500 dark:text-gray-400">
                 <Loader2 size={16} className="animate-spin" /> Waiting for processing to start...
               </div>
             )}

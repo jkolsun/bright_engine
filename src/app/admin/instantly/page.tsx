@@ -113,10 +113,10 @@ function StatusBadge({ value, target, redFlag }: { value: number; target: number
     <span
       className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
         isGood
-          ? 'bg-emerald-100 text-emerald-700'
+          ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400'
           : isBad
-          ? 'bg-red-100 text-red-700'
-          : 'bg-amber-100 text-amber-700'
+          ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'
+          : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400'
       }`}
     >
       {isGood ? <CheckCircle2 size={12} /> : isBad ? <AlertTriangle size={12} /> : <TrendingUp size={12} />}
@@ -130,9 +130,9 @@ export default function InstantlyDashboardPage() {
     <Suspense fallback={
       <div className="p-8">
         <div className="animate-pulse space-y-6">
-          <div className="h-8 w-64 bg-slate-200 rounded" />
+          <div className="h-8 w-64 bg-slate-200 dark:bg-slate-700 rounded" />
           <div className="grid grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => <div key={i} className="h-32 bg-slate-200 rounded-xl" />)}
+            {[...Array(4)].map((_, i) => <div key={i} className="h-32 bg-slate-200 dark:bg-slate-700 rounded-xl" />)}
           </div>
         </div>
       </div>
@@ -332,13 +332,13 @@ function InstantlyDashboard() {
     return (
       <div className="p-8">
         <div className="animate-pulse space-y-6">
-          <div className="h-8 w-64 bg-slate-200 rounded" />
+          <div className="h-8 w-64 bg-slate-200 dark:bg-slate-700 rounded" />
           <div className="grid grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-32 bg-slate-200 rounded-xl" />
+              <div key={i} className="h-32 bg-slate-200 dark:bg-slate-700 rounded-xl" />
             ))}
           </div>
-          <div className="h-64 bg-slate-200 rounded-xl" />
+          <div className="h-64 bg-slate-200 dark:bg-slate-700 rounded-xl" />
         </div>
       </div>
     )
@@ -347,14 +347,14 @@ function InstantlyDashboard() {
   if (error) {
     return (
       <div className="p-8">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center max-w-lg mx-auto">
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 rounded-xl p-6 text-center max-w-lg mx-auto">
           <AlertTriangle className="mx-auto text-red-500 mb-2" size={32} />
-          <p className="text-red-700 font-medium mb-1">Failed to load campaign stats</p>
+          <p className="text-red-700 dark:text-red-400 font-medium mb-1">Failed to load campaign stats</p>
           <p className="text-red-600 text-sm mb-4">{error}</p>
           <button
             onClick={() => fetchStats(1)}
             disabled={loading}
-            className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 rounded-lg text-sm hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Retrying...' : 'Retry'}
           </button>
@@ -372,11 +372,11 @@ function InstantlyDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-gray-100 flex items-center gap-2">
             <Mail size={28} className="text-blue-600" />
             Instantly Campaigns
           </h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <p className="text-slate-500 dark:text-gray-400 text-sm mt-1">
             Email campaigns with preview link engagement tracking
             {stats.last_sync && (
               <span className="ml-2 text-slate-400">
@@ -388,7 +388,7 @@ function InstantlyDashboard() {
         <div className="flex gap-2">
           <button
             onClick={() => fetchStats()}
-            className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2"
+            className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-600 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
           >
             <RefreshCw size={14} />
             Refresh
@@ -406,7 +406,7 @@ function InstantlyDashboard() {
 
       {/* Lead Assignment Banner */}
       {showAssignBanner && assignLeadIds.length > 0 && (
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+        <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <UserPlus size={20} className="text-purple-600" />
@@ -451,18 +451,18 @@ function InstantlyDashboard() {
 
       {/* Assignment Success */}
       {assignSuccess && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-2">
+        <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 rounded-xl p-4 flex items-center gap-2">
           <CheckCircle2 size={20} className="text-green-600" />
-          <span className="font-medium text-green-900">{assignSuccess}</span>
+          <span className="font-medium text-green-900 dark:text-green-400">{assignSuccess}</span>
         </div>
       )}
 
       {/* Assignment Error */}
       {assignError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertTriangle size={20} className="text-red-600" />
-            <span className="font-medium text-red-900">{assignError}</span>
+            <span className="font-medium text-red-900 dark:text-red-400">{assignError}</span>
           </div>
           <button
             onClick={() => setAssignError(null)}
@@ -475,10 +475,10 @@ function InstantlyDashboard() {
 
       {/* Sync Error */}
       {syncError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertTriangle size={20} className="text-red-600" />
-            <span className="font-medium text-red-900">{syncError}</span>
+            <span className="font-medium text-red-900 dark:text-red-400">{syncError}</span>
           </div>
           <button
             onClick={() => setSyncError(null)}
@@ -491,10 +491,10 @@ function InstantlyDashboard() {
 
       {/* Push Result */}
       {pushResult && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Upload size={20} className="text-green-600" />
-            <span className="font-medium text-green-900">{pushResult}</span>
+            <span className="font-medium text-green-900 dark:text-green-400">{pushResult}</span>
           </div>
           <button onClick={() => setPushResult(null)} className="text-green-400 hover:text-green-600">
             <X size={18} />
@@ -504,10 +504,10 @@ function InstantlyDashboard() {
 
       {/* Push Error */}
       {pushError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between">
+        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 rounded-xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertTriangle size={20} className="text-red-600" />
-            <span className="font-medium text-red-900">Push failed: {pushError}</span>
+            <span className="font-medium text-red-900 dark:text-red-400">Push failed: {pushError}</span>
           </div>
           <button onClick={() => setPushError(null)} className="text-red-400 hover:text-red-600">
             <X size={18} />
@@ -544,8 +544,8 @@ function InstantlyDashboard() {
       </div>
 
       {/* Email → Preview → Reply Funnel */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-gray-100 mb-4 flex items-center gap-2">
           <BarChart3 size={20} className="text-blue-600" />
           Campaign Funnel
         </h2>
@@ -575,10 +575,10 @@ function InstantlyDashboard() {
       {/* Campaign A vs B Comparison */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {stats.campaigns.map((campaign) => (
-          <div key={campaign.campaign_id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+          <div key={campaign.campaign_id} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-slate-900">{campaign.campaign_name}</h3>
-              <span className="text-xs text-slate-400 font-mono">{campaign.campaign_id.slice(0, 8)}...</span>
+              <h3 className="font-semibold text-slate-900 dark:text-gray-100">{campaign.campaign_name}</h3>
+              <span className="text-xs text-slate-400 dark:text-gray-500 font-mono">{campaign.campaign_id.slice(0, 8)}...</span>
             </div>
 
             {/* Metrics grid */}
@@ -590,7 +590,7 @@ function InstantlyDashboard() {
             </div>
 
             {/* Rate metrics with targets */}
-            <div className="space-y-3 border-t border-slate-100 pt-4">
+            <div className="space-y-3 border-t border-slate-100 dark:border-slate-800 pt-4">
               <RateRow
                 label="Open Rate"
                 value={campaign.open_rate}
@@ -618,24 +618,24 @@ function InstantlyDashboard() {
             </div>
 
             {/* Reply breakdown */}
-            <div className="flex gap-2 mt-4 pt-3 border-t border-slate-100">
-              <span className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 rounded-full">
+            <div className="flex gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <span className="text-xs px-2 py-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 rounded-full">
                 +{campaign.replied_positive} positive
               </span>
-              <span className="text-xs px-2 py-1 bg-red-50 text-red-700 rounded-full">
+              <span className="text-xs px-2 py-1 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 rounded-full">
                 -{campaign.replied_negative} negative
               </span>
-              <span className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded-full">
+              <span className="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 rounded-full">
                 ?{campaign.replied_question} questions
               </span>
-              <span className="text-xs px-2 py-1 bg-slate-50 text-slate-600 rounded-full">
+              <span className="text-xs px-2 py-1 bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-gray-400 rounded-full">
                 {campaign.bounced} bounced
               </span>
             </div>
 
             {/* Push Now button — visible when queued leads exist */}
             {campaign.queued > 0 && (
-              <div className="mt-4 pt-3 border-t border-slate-100">
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   onClick={() => handlePushToInstantly(campaign.campaign_id, campaign.campaign_name)}
                   disabled={pushingCampaign === campaign.campaign_id}
@@ -653,10 +653,10 @@ function InstantlyDashboard() {
         ))}
 
         {stats.campaigns.length === 0 && (
-          <div className="col-span-2 bg-slate-50 rounded-xl border border-dashed border-slate-300 p-12 text-center">
-            <Mail className="mx-auto text-slate-400 mb-3" size={40} />
-            <p className="text-slate-500 font-medium">No campaigns found</p>
-            <p className="text-slate-400 text-sm mt-1">
+          <div className="col-span-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 p-12 text-center">
+            <Mail className="mx-auto text-slate-400 dark:text-gray-500 mb-3" size={40} />
+            <p className="text-slate-500 dark:text-gray-400 font-medium">No campaigns found</p>
+            <p className="text-slate-400 dark:text-gray-500 text-sm mt-1">
               Campaigns will appear after the first Instantly sync runs. Click "Sync Now" above.
             </p>
           </div>
@@ -664,8 +664,8 @@ function InstantlyDashboard() {
       </div>
 
       {/* Preview Engine Stats */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-gray-100 mb-4 flex items-center gap-2">
           <Globe size={20} className="text-purple-600" />
           Preview Engine Performance
         </h2>
@@ -676,25 +676,25 @@ function InstantlyDashboard() {
           <MiniStat label="Call Clicks" value={stats.preview_engagement.total_call_clicks} />
           <MiniStat label="Return Visits" value={stats.preview_engagement.total_return_visits} />
         </div>
-        <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100">
+        <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
           <div className="text-center">
             <p className="text-2xl font-bold text-purple-600">{pct(stats.preview_engagement.view_rate)}</p>
-            <p className="text-xs text-slate-500">View Rate</p>
+            <p className="text-xs text-slate-500 dark:text-gray-400">View Rate</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-indigo-600">{pct(stats.preview_engagement.cta_click_rate)}</p>
-            <p className="text-xs text-slate-500">CTA Click Rate</p>
+            <p className="text-xs text-slate-500 dark:text-gray-400">CTA Click Rate</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-amber-600">{stats.preview_engagement.hot_leads_from_previews}</p>
-            <p className="text-xs text-slate-500">Hot Leads from Previews</p>
+            <p className="text-xs text-slate-500 dark:text-gray-400">Hot Leads from Previews</p>
           </div>
         </div>
       </div>
 
       {/* Personalization Coverage */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-gray-100 mb-4 flex items-center gap-2">
           <Target size={20} className="text-amber-600" />
           Personalization & Preview Coverage
         </h2>
@@ -712,7 +712,7 @@ function InstantlyDashboard() {
             missing={stats.personalization.total_missing_preview}
           />
           <div className="col-span-2">
-            <p className="text-sm font-medium text-slate-700 mb-2">Campaign Readiness</p>
+            <p className="text-sm font-medium text-slate-700 dark:text-gray-300 mb-2">Campaign Readiness</p>
             <div className="space-y-2">
               <ReadinessItem
                 label="Leads with personalization + preview"
@@ -737,39 +737,39 @@ function InstantlyDashboard() {
 
       {/* Capacity History */}
       {stats.capacity_history.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Send Capacity (Last 14 Days)</h2>
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-gray-100 mb-4">Send Capacity (Last 14 Days)</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left py-2 px-3 text-slate-500 font-medium">Date</th>
-                  <th className="text-left py-2 px-3 text-slate-500 font-medium">Campaign</th>
-                  <th className="text-right py-2 px-3 text-slate-500 font-medium">Capacity</th>
-                  <th className="text-right py-2 px-3 text-slate-500 font-medium">Usable</th>
-                  <th className="text-right py-2 px-3 text-slate-500 font-medium">Follow-ups</th>
-                  <th className="text-right py-2 px-3 text-slate-500 font-medium">Available</th>
-                  <th className="text-right py-2 px-3 text-slate-500 font-medium">Pushed</th>
-                  <th className="text-right py-2 px-3 text-slate-500 font-medium">Remaining</th>
+                <tr className="border-b border-slate-100 dark:border-slate-800">
+                  <th className="text-left py-2 px-3 text-slate-500 dark:text-gray-400 font-medium">Date</th>
+                  <th className="text-left py-2 px-3 text-slate-500 dark:text-gray-400 font-medium">Campaign</th>
+                  <th className="text-right py-2 px-3 text-slate-500 dark:text-gray-400 font-medium">Capacity</th>
+                  <th className="text-right py-2 px-3 text-slate-500 dark:text-gray-400 font-medium">Usable</th>
+                  <th className="text-right py-2 px-3 text-slate-500 dark:text-gray-400 font-medium">Follow-ups</th>
+                  <th className="text-right py-2 px-3 text-slate-500 dark:text-gray-400 font-medium">Available</th>
+                  <th className="text-right py-2 px-3 text-slate-500 dark:text-gray-400 font-medium">Pushed</th>
+                  <th className="text-right py-2 px-3 text-slate-500 dark:text-gray-400 font-medium">Remaining</th>
                 </tr>
               </thead>
               <tbody>
                 {stats.capacity_history.map((row, i) => (
-                  <tr key={i} className="border-b border-slate-50 hover:bg-slate-50">
-                    <td className="py-2 px-3 text-slate-700">{new Date(row.date).toLocaleDateString()}</td>
+                  <tr key={i} className="border-b border-slate-50 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
+                    <td className="py-2 px-3 text-slate-700 dark:text-gray-300">{new Date(row.date).toLocaleDateString()}</td>
                     <td className="py-2 px-3">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                        row.campaign === 'A' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                        row.campaign === 'A' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400' : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400'
                       }`}>
                         {row.campaign === 'A' ? 'Bad Website' : 'No Website'}
                       </span>
                     </td>
-                    <td className="py-2 px-3 text-right text-slate-600">{row.capacity}</td>
-                    <td className="py-2 px-3 text-right text-slate-600">{row.usable}</td>
-                    <td className="py-2 px-3 text-right text-slate-600">{row.followups}</td>
-                    <td className="py-2 px-3 text-right text-slate-600">{row.available}</td>
+                    <td className="py-2 px-3 text-right text-slate-600 dark:text-gray-400">{row.capacity}</td>
+                    <td className="py-2 px-3 text-right text-slate-600 dark:text-gray-400">{row.usable}</td>
+                    <td className="py-2 px-3 text-right text-slate-600 dark:text-gray-400">{row.followups}</td>
+                    <td className="py-2 px-3 text-right text-slate-600 dark:text-gray-400">{row.available}</td>
                     <td className="py-2 px-3 text-right font-medium text-emerald-600">{row.pushed}</td>
-                    <td className="py-2 px-3 text-right text-slate-500">{row.remaining}</td>
+                    <td className="py-2 px-3 text-right text-slate-500 dark:text-gray-400">{row.remaining}</td>
                   </tr>
                 ))}
               </tbody>
@@ -787,13 +787,13 @@ function InstantlyDashboard() {
 
 function StatCard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: number; sub: string }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-5">
       <div className="flex items-center gap-2 mb-2">
         {icon}
-        <span className="text-sm text-slate-500">{label}</span>
+        <span className="text-sm text-slate-500 dark:text-gray-400">{label}</span>
       </div>
-      <p className="text-3xl font-bold text-slate-900">{value.toLocaleString()}</p>
-      <p className="text-xs text-slate-400 mt-1">{sub}</p>
+      <p className="text-3xl font-bold text-slate-900 dark:text-gray-100">{value.toLocaleString()}</p>
+      <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">{sub}</p>
     </div>
   )
 }
@@ -804,7 +804,7 @@ function FunnelStep({ label, value, color }: { label: string; value: number; col
       <div className={`${color} text-white rounded-lg py-3 px-2 mb-1`}>
         <p className="text-xl font-bold">{value.toLocaleString()}</p>
       </div>
-      <p className="text-xs text-slate-500">{label}</p>
+      <p className="text-xs text-slate-500 dark:text-gray-400">{label}</p>
     </div>
   )
 }
@@ -812,8 +812,8 @@ function FunnelStep({ label, value, color }: { label: string; value: number; col
 function MetricRow({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex justify-between items-center">
-      <span className="text-sm text-slate-500">{label}</span>
-      <span className="text-sm font-semibold text-slate-900">{value.toLocaleString()}</span>
+      <span className="text-sm text-slate-500 dark:text-gray-400">{label}</span>
+      <span className="text-sm font-semibold text-slate-900 dark:text-gray-100">{value.toLocaleString()}</span>
     </div>
   )
 }
@@ -821,10 +821,10 @@ function MetricRow({ label, value }: { label: string; value: number }) {
 function RateRow({ label, value, target, redFlag }: { label: string; value: number; target: number; redFlag: number }) {
   return (
     <div className="flex justify-between items-center">
-      <span className="text-sm text-slate-600">{label}</span>
+      <span className="text-sm text-slate-600 dark:text-gray-400">{label}</span>
       <div className="flex items-center gap-2">
         <StatusBadge value={value} target={target} redFlag={redFlag} />
-        <span className="text-xs text-slate-400">target: {pct(target)}</span>
+        <span className="text-xs text-slate-400 dark:text-gray-500">target: {pct(target)}</span>
       </div>
     </div>
   )
@@ -832,9 +832,9 @@ function RateRow({ label, value, target, redFlag }: { label: string; value: numb
 
 function MiniStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="text-center py-3 px-2 bg-slate-50 rounded-lg">
-      <p className="text-2xl font-bold text-slate-900">{value.toLocaleString()}</p>
-      <p className="text-xs text-slate-500 mt-1">{label}</p>
+    <div className="text-center py-3 px-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+      <p className="text-2xl font-bold text-slate-900 dark:text-gray-100">{value.toLocaleString()}</p>
+      <p className="text-xs text-slate-500 dark:text-gray-400 mt-1">{label}</p>
     </div>
   )
 }
@@ -844,10 +844,10 @@ function CoverageBar({ label, value, count, missing }: { label: string; value: n
   return (
     <div>
       <div className="flex justify-between items-center mb-1">
-        <span className="text-sm font-medium text-slate-700">{label}</span>
-        <span className="text-sm font-bold text-slate-900">{pct(value)}</span>
+        <span className="text-sm font-medium text-slate-700 dark:text-gray-300">{label}</span>
+        <span className="text-sm font-bold text-slate-900 dark:text-gray-100">{pct(value)}</span>
       </div>
-      <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+      <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all ${
             value > 0.9 ? 'bg-emerald-500' : value > 0.7 ? 'bg-amber-500' : 'bg-red-500'
@@ -855,7 +855,7 @@ function CoverageBar({ label, value, count, missing }: { label: string; value: n
           style={{ width: `${widthPct}%` }}
         />
       </div>
-      <p className="text-xs text-slate-400 mt-1">{count} ready, {missing} missing</p>
+      <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">{count} ready, {missing} missing</p>
     </div>
   )
 }
@@ -868,7 +868,7 @@ function ReadinessItem({ label, ready }: { label: string; ready: boolean }) {
       ) : (
         <AlertTriangle size={16} className="text-amber-500" />
       )}
-      <span className={`text-sm ${ready ? 'text-slate-700' : 'text-amber-700'}`}>{label}</span>
+      <span className={`text-sm ${ready ? 'text-slate-700 dark:text-gray-300' : 'text-amber-700 dark:text-amber-400'}`}>{label}</span>
     </div>
   )
 }

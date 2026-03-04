@@ -107,20 +107,20 @@ export default function RepOnboardingWizard({ userId: initialUserId, onComplete 
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-[9999] bg-white flex items-center justify-center">
+      <div className="fixed inset-0 z-[9999] bg-white dark:bg-slate-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-teal-600 mx-auto mb-3" />
-          <p className="text-gray-500">Loading setup...</p>
+          <p className="text-gray-500 dark:text-gray-400">Loading setup...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-white overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] bg-white dark:bg-slate-900 overflow-y-auto">
       <div className="min-h-screen flex flex-col">
         {/* Progress bar */}
-        <div className="bg-gray-100 h-1.5">
+        <div className="bg-gray-100 dark:bg-slate-800 h-1.5">
           <div
             className="h-full bg-teal-500 transition-all duration-500"
             style={{ width: `${((step + 1) / 6) * 100}%` }}
@@ -128,13 +128,13 @@ export default function RepOnboardingWizard({ userId: initialUserId, onComplete 
         </div>
 
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-800">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-teal-100 rounded-xl flex items-center justify-center">
                 <span className="text-sm font-bold text-teal-700">B</span>
               </div>
-              <p className="text-sm text-gray-500">Step {step + 1} of 6</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Step {step + 1} of 6</p>
             </div>
             <div className="flex gap-1.5">
               {[0, 1, 2, 3, 4, 5].map(i => (
@@ -148,7 +148,7 @@ export default function RepOnboardingWizard({ userId: initialUserId, onComplete 
         <div className="flex-1 flex items-start justify-center p-6 pt-8">
           <div className="w-full max-w-2xl">
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 rounded-lg text-sm text-red-700 dark:text-red-400">
                 {error}
               </div>
             )}
@@ -235,30 +235,30 @@ function StepEquipment({ onNext, onSkip }: { onNext: () => void; onSkip: () => v
       <div className="w-16 h-16 bg-teal-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
         <span className="text-2xl font-bold text-teal-700">B</span>
       </div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-3">Welcome to Bright Automations</h1>
-      <p className="text-gray-500 mb-8 text-lg">
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-3">Welcome to Bright Automations</h1>
+      <p className="text-gray-500 dark:text-gray-400 mb-8 text-lg">
         Before you start dialing, we need to set up a few things.<br />
         This takes about 5 minutes.
       </p>
 
       <div className="max-w-md mx-auto text-left mb-8">
-        <p className="text-sm font-semibold text-gray-700 mb-3">You&apos;ll need:</p>
+        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">You&apos;ll need:</p>
         <div className="space-y-3">
           {[
             { icon: Headphones, text: 'A headset or earbuds with a microphone' },
             { icon: Wifi, text: 'A stable internet connection (ethernet preferred)' },
             { icon: Chrome, text: 'Google Chrome browser' },
           ].map((item, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+            <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-800/50 rounded-xl">
               <item.icon size={20} className="text-teal-600 flex-shrink-0" />
-              <span className="text-sm text-gray-700">{item.text}</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">{item.text}</span>
             </div>
           ))}
         </div>
       </div>
 
       {browserWarning && (
-        <div className="max-w-md mx-auto mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+        <div className="max-w-md mx-auto mb-6 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 rounded-xl flex items-start gap-3">
           <AlertTriangle size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-amber-800">
             We recommend Chrome for the best call quality. You&apos;re currently using <strong>{browserWarning}</strong>. You can continue, but audio quality may vary.
@@ -274,7 +274,7 @@ function StepEquipment({ onNext, onSkip }: { onNext: () => void; onSkip: () => v
       </button>
 
       <div className="mt-4">
-        <button onClick={onSkip} className="text-sm text-gray-400 hover:text-gray-600 transition-colors inline-flex items-center gap-1">
+        <button onClick={onSkip} className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 transition-colors inline-flex items-center gap-1">
           <SkipForward size={14} /> Skip
         </button>
       </div>
@@ -338,10 +338,10 @@ function StepMicrophone({ onNext, onSkip, onBack }: { onNext: () => void; onSkip
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Microphone Access</h1>
-      <p className="text-gray-500 mb-6">Calls happen through your browser. We need microphone access to connect you.</p>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">Microphone Access</h1>
+      <p className="text-gray-500 dark:text-gray-400 mb-6">Calls happen through your browser. We need microphone access to connect you.</p>
 
-      <div className="bg-gray-50 rounded-xl p-8 text-center mb-6">
+      <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-8 text-center mb-6">
         {micState === 'idle' && (
           <>
             <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -353,20 +353,20 @@ function StepMicrophone({ onNext, onSkip, onBack }: { onNext: () => void; onSkip
             >
               <Mic size={18} /> Allow Microphone Access
             </button>
-            <p className="text-xs text-gray-400 mt-3">Chrome will show a popup asking for permission</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">Chrome will show a popup asking for permission</p>
           </>
         )}
 
         {micState === 'granted' && (
           <>
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle size={28} className="text-green-600" />
             </div>
-            <p className="text-green-700 font-semibold mb-4">Microphone connected</p>
+            <p className="text-green-700 dark:text-green-400 font-semibold mb-4">Microphone connected</p>
 
             {toneState !== 'heard' && (
               <div className="mt-4">
-                <p className="text-sm text-gray-600 mb-3">Let&apos;s test your audio output:</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Let&apos;s test your audio output:</p>
                 <button
                   onClick={playTestTone}
                   disabled={toneState === 'playing'}
@@ -376,17 +376,17 @@ function StepMicrophone({ onNext, onSkip, onBack }: { onNext: () => void; onSkip
                 </button>
                 {toneState === 'idle' && (
                   <div className="flex items-center justify-center gap-3 mt-4">
-                    <p className="text-sm text-gray-500">Did you hear a beep?</p>
-                    <button onClick={() => setToneState('heard')} className="px-4 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Did you hear a beep?</p>
+                    <button onClick={() => setToneState('heard')} className="px-4 py-1.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors">
                       Yes
                     </button>
-                    <button onClick={() => setToneState('not_heard')} className="px-4 py-1.5 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors">
+                    <button onClick={() => setToneState('not_heard')} className="px-4 py-1.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors">
                       No
                     </button>
                   </div>
                 )}
                 {toneState === 'not_heard' && (
-                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 text-left">
+                  <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 rounded-lg text-sm text-amber-800 text-left">
                     <p className="font-medium mb-1">Troubleshooting:</p>
                     <ul className="list-disc ml-4 space-y-1">
                       <li>Check that your headset is plugged in</li>
@@ -408,11 +408,11 @@ function StepMicrophone({ onNext, onSkip, onBack }: { onNext: () => void; onSkip
 
         {micState === 'denied' && (
           <>
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/40 rounded-full flex items-center justify-center mx-auto mb-4">
               <MicOff size={28} className="text-red-600" />
             </div>
-            <p className="text-red-700 font-semibold mb-3">Microphone access was denied</p>
-            <div className="text-sm text-gray-600 text-left bg-white rounded-lg p-4 border border-gray-200 max-w-sm mx-auto">
+            <p className="text-red-700 dark:text-red-400 font-semibold mb-3">Microphone access was denied</p>
+            <div className="text-sm text-gray-600 dark:text-gray-400 text-left bg-white dark:bg-slate-900 rounded-lg p-4 border border-gray-200 dark:border-slate-700 max-w-sm mx-auto">
               <p className="mb-2">To enable it:</p>
               <ol className="list-decimal ml-4 space-y-1">
                 <li>Click the <strong>lock icon</strong> in the address bar</li>
@@ -429,11 +429,11 @@ function StepMicrophone({ onNext, onSkip, onBack }: { onNext: () => void; onSkip
 
         {micState === 'error' && (
           <>
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/40 rounded-full flex items-center justify-center mx-auto mb-4">
               <AlertTriangle size={28} className="text-red-600" />
             </div>
-            <p className="text-red-700 font-semibold mb-2">Could not access microphone</p>
-            <p className="text-sm text-gray-500 mb-4">Make sure no other app is using your microphone and try again.</p>
+            <p className="text-red-700 dark:text-red-400 font-semibold mb-2">Could not access microphone</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Make sure no other app is using your microphone and try again.</p>
             <button onClick={requestMic} className="px-5 py-2.5 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-700 transition-colors">
               Try Again
             </button>
@@ -442,11 +442,11 @@ function StepMicrophone({ onNext, onSkip, onBack }: { onNext: () => void; onSkip
       </div>
 
       <div className="flex justify-between items-center">
-        <button onClick={onBack} className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium inline-flex items-center gap-1">
+        <button onClick={onBack} className="px-6 py-2.5 text-gray-600 dark:text-gray-400 hover:text-gray-800 font-medium inline-flex items-center gap-1">
           <ChevronLeft size={18} /> Back
         </button>
         <div className="flex items-center gap-3">
-          <button onClick={onSkip} className="text-sm text-gray-400 hover:text-gray-600 transition-colors inline-flex items-center gap-1">
+          <button onClick={onSkip} className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 transition-colors inline-flex items-center gap-1">
             <SkipForward size={14} /> Skip
           </button>
           <button
@@ -540,12 +540,12 @@ function StepRecordVM({
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">{config.title}</h1>
-      <p className="text-gray-500 mb-6">{config.subtitle}</p>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">{config.title}</h1>
+      <p className="text-gray-500 dark:text-gray-400 mb-6">{config.subtitle}</p>
 
       {/* Script box */}
-      <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 mb-4">
-        <p className="text-sm text-gray-500 font-medium mb-2">Here&apos;s what to say (in your own words, keep it under 20 seconds):</p>
+      <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-xl p-5 mb-4">
+        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-2">Here&apos;s what to say (in your own words, keep it under 20 seconds):</p>
         <p className="text-gray-800 italic leading-relaxed">{config.script}</p>
       </div>
 
@@ -557,7 +557,7 @@ function StepRecordVM({
           'Keep it under 20 seconds',
           'Record in a quiet room',
         ].map((tip, i) => (
-          <div key={i} className="flex items-center gap-2 text-xs text-gray-500">
+          <div key={i} className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
             <div className="w-1 h-1 rounded-full bg-teal-400 flex-shrink-0" />
             {tip}
           </div>
@@ -574,14 +574,14 @@ function StepRecordVM({
           />
 
           {durationWarning && (
-            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700 flex items-start gap-2">
+            <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 rounded-lg text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
               <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" />
               {durationWarning}
             </div>
           )}
 
           {uploadError && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 rounded-lg text-sm text-red-700 dark:text-red-400">
               {uploadError}
             </div>
           )}
@@ -601,20 +601,20 @@ function StepRecordVM({
           )}
         </>
       ) : (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+        <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 rounded-xl p-6 text-center">
           <CheckCircle size={32} className="text-green-600 mx-auto mb-3" />
-          <p className="text-green-800 font-semibold">Uploaded!</p>
+          <p className="text-green-800 dark:text-green-400 font-semibold">Uploaded!</p>
           <p className="text-green-600 text-sm mt-1">Andrew will review and approve your recording before your first session.</p>
         </div>
       )}
 
       <div className="flex justify-between items-center mt-6">
-        <button onClick={onBack} className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium inline-flex items-center gap-1">
+        <button onClick={onBack} className="px-6 py-2.5 text-gray-600 dark:text-gray-400 hover:text-gray-800 font-medium inline-flex items-center gap-1">
           <ChevronLeft size={18} /> Back
         </button>
         <div className="flex items-center gap-3">
           {!uploaded && (
-            <button onClick={onSkip} className="text-sm text-gray-400 hover:text-gray-600 transition-colors inline-flex items-center gap-1">
+            <button onClick={onSkip} className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 transition-colors inline-flex items-center gap-1">
               <SkipForward size={14} /> Skip
             </button>
           )}
@@ -689,8 +689,8 @@ function TrainingSectionItem({
       }}
       className={`w-full text-left rounded-xl border transition-colors ${
         viewed
-          ? 'bg-teal-50/50 border-teal-200'
-          : 'bg-white border-gray-200 hover:border-gray-300'
+          ? 'bg-teal-50/50 dark:bg-teal-950/20 border-teal-200'
+          : 'bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 hover:border-gray-300'
       }`}
     >
       <div className="flex items-center justify-between px-4 py-3">
@@ -700,13 +700,13 @@ function TrainingSectionItem({
           ) : (
             <Eye size={16} className="text-gray-400" />
           )}
-          <span className="font-semibold text-sm text-gray-900">{section.title}</span>
+          <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">{section.title}</span>
         </div>
         <ChevronRight size={16} className={`text-gray-400 transition-transform ${expanded ? 'rotate-90' : ''}`} />
       </div>
       {expanded && (
         <div className="px-4 pb-3 pt-0">
-          <p className="text-sm text-gray-600 leading-relaxed">{section.content}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{section.content}</p>
         </div>
       )}
     </button>
@@ -738,8 +738,8 @@ function StepTraining({ onNext, onSkip, onBack }: { onNext: () => void; onSkip: 
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">How the Power Dialer Works</h1>
-      <p className="text-gray-500 mb-6">Key information you need before your first session. Click each section to expand.</p>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">How the Power Dialer Works</h1>
+      <p className="text-gray-500 dark:text-gray-400 mb-6">Key information you need before your first session. Click each section to expand.</p>
 
       <div className="space-y-2 mb-6">
         {TRAINING_SECTIONS.map((section, i) => (
@@ -754,17 +754,17 @@ function StepTraining({ onNext, onSkip, onBack }: { onNext: () => void; onSkip: 
       </div>
 
       {!canContinue && (
-        <p className="text-xs text-gray-400 text-center mb-4">
+        <p className="text-xs text-gray-400 dark:text-gray-500 text-center mb-4">
           Read all sections to continue ({viewedSections.size}/{TRAINING_SECTIONS.length} viewed)
         </p>
       )}
 
       <div className="flex justify-between items-center">
-        <button onClick={onBack} className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium inline-flex items-center gap-1">
+        <button onClick={onBack} className="px-6 py-2.5 text-gray-600 dark:text-gray-400 hover:text-gray-800 font-medium inline-flex items-center gap-1">
           <ChevronLeft size={18} /> Back
         </button>
         <div className="flex items-center gap-3">
-          <button onClick={onSkip} className="text-sm text-gray-400 hover:text-gray-600 transition-colors inline-flex items-center gap-1">
+          <button onClick={onSkip} className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 transition-colors inline-flex items-center gap-1">
             <SkipForward size={14} /> Skip
           </button>
           <button
@@ -825,18 +825,18 @@ function StepConfirmation({
 
   return (
     <div className="text-center">
-      <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+      <div className="w-16 h-16 bg-green-100 dark:bg-green-900/40 rounded-2xl flex items-center justify-center mx-auto mb-6">
         <CheckCircle size={32} className="text-green-600" />
       </div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">You&apos;re All Set!</h1>
-      <p className="text-gray-500 mb-8">Here&apos;s where you stand:</p>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">You&apos;re All Set!</h1>
+      <p className="text-gray-500 dark:text-gray-400 mb-8">Here&apos;s where you stand:</p>
 
       <div className="max-w-md mx-auto space-y-2 mb-8 text-left">
         {items.map((item, i) => (
           <div key={i} className={`flex items-center gap-3 p-3 rounded-xl ${
-            item.done === true ? 'bg-green-50 border border-green-200' :
-            item.done === 'skipped' ? 'bg-gray-50 border border-gray-200' :
-            'bg-gray-50 border border-gray-200'
+            item.done === true ? 'bg-green-50 dark:bg-green-950/30 border border-green-200' :
+            item.done === 'skipped' ? 'bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700' :
+            'bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700'
           }`}>
             {item.done === true ? (
               <CheckCircle size={18} className="text-green-500 flex-shrink-0" />
@@ -844,31 +844,31 @@ function StepConfirmation({
               <SkipForward size={18} className="text-gray-400 flex-shrink-0" />
             )}
             <div>
-              <p className="text-sm font-medium text-gray-900">{item.label}</p>
-              {item.detail && <p className="text-xs text-gray-500">{item.detail}</p>}
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.label}</p>
+              {item.detail && <p className="text-xs text-gray-500 dark:text-gray-400">{item.detail}</p>}
             </div>
           </div>
         ))}
       </div>
 
       {hasVMs && (
-        <div className="max-w-md mx-auto mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800">
+        <div className="max-w-md mx-auto mb-6 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-xl text-sm text-blue-800 dark:text-blue-400">
           <p>Waiting for Andrew to approve your voicemail recordings. You&apos;ll get a notification when you&apos;re cleared to start dialing.</p>
         </div>
       )}
 
       {skippedVMs && (
-        <div className="max-w-md mx-auto mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+        <div className="max-w-md mx-auto mb-6 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 rounded-xl text-sm text-amber-800">
           <p>You can record your voicemails anytime in your profile settings.</p>
         </div>
       )}
 
-      <p className="text-gray-500 text-sm mb-6">
+      <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
         In the meantime, you can explore your dashboard and review your assigned leads.
       </p>
 
       <div className="flex justify-between items-center">
-        <button onClick={onBack} className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium inline-flex items-center gap-1">
+        <button onClick={onBack} className="px-6 py-2.5 text-gray-600 dark:text-gray-400 hover:text-gray-800 font-medium inline-flex items-center gap-1">
           <ChevronLeft size={18} /> Back
         </button>
         <button

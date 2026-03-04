@@ -97,12 +97,12 @@ export function LeadInfo({ lead }: { lead: QueueLead }) {
             onChange={(e) => { setEditValue(e.target.value); setError(null) }}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') cancelEdit() }}
             autoFocus
-            className="flex-1 px-2 py-0.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+            className="flex-1 px-2 py-0.5 text-sm border border-gray-300 dark:border-slate-600 rounded focus:ring-1 focus:ring-teal-500 focus:border-teal-500 dark:bg-slate-900 dark:text-gray-100"
           />
           <button onClick={handleSave} disabled={saving} className="p-1 text-green-600 hover:text-green-700 disabled:opacity-50" title="Save">
             <Check className="w-3.5 h-3.5" />
           </button>
-          <button onClick={cancelEdit} className="p-1 text-gray-400 hover:text-gray-600" title="Cancel">
+          <button onClick={cancelEdit} className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600" title="Cancel">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -112,7 +112,7 @@ export function LeadInfo({ lead }: { lead: QueueLead }) {
     if (!value && field !== 'secondaryPhone') return null
     if (!value && field === 'secondaryPhone') {
       return (
-        <div className="group flex items-center gap-2 text-gray-400 text-sm cursor-pointer" onClick={() => startEdit(field)}>
+        <div className="group flex items-center gap-2 text-gray-400 dark:text-gray-500 text-sm cursor-pointer" onClick={() => startEdit(field)}>
           {icon}
           <span className="italic text-xs">Add 2nd phone</span>
           <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -121,7 +121,7 @@ export function LeadInfo({ lead }: { lead: QueueLead }) {
     }
 
     return (
-      <div className="group flex items-center gap-2 text-gray-600 text-sm">
+      <div className="group flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm">
         {icon}
         <span className="truncate">{field.includes('hone') ? formatPhoneDisplay(value!) : value}{suffix ? ` ${suffix}` : ''}</span>
         <button onClick={() => startEdit(field)} className="p-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-gray-300 hover:text-gray-500" title="Edit">
@@ -132,35 +132,35 @@ export function LeadInfo({ lead }: { lead: QueueLead }) {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-5">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200/80 dark:border-slate-700 shadow-sm p-5">
       <div className="flex items-start justify-between mb-1">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 tracking-tight">{lead.companyName}</h2>
-          <p className="text-sm text-gray-500 mt-0.5">{lead.firstName || lead.contactName || ''} {lead.lastName || ''}</p>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">{lead.companyName}</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{lead.firstName || lead.contactName || ''} {lead.lastName || ''}</p>
         </div>
         <span className={`px-3 py-1 text-[11px] font-semibold rounded-full tracking-wide ${
-          lead.priority === 'HOT' ? 'bg-red-100 text-red-700' :
-          lead.priority === 'WARM' ? 'bg-amber-100 text-amber-700' :
-          lead.priority === 'COLD' ? 'bg-blue-50 text-blue-600' :
-          'bg-gray-100 text-gray-600'
+          lead.priority === 'HOT' ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400' :
+          lead.priority === 'WARM' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' :
+          lead.priority === 'COLD' ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600' :
+          'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'
         }`}>
           {lead.priority || 'NORMAL'}
         </span>
       </div>
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
       <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 mt-4 text-sm">
-        {renderField('phone', <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />, lead.phone)}
-        {renderField('secondaryPhone', <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />, lead.secondaryPhone, '(2nd)')}
-        {renderField('email', <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />, lead.email)}
+        {renderField('phone', <Phone className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />, lead.phone)}
+        {renderField('secondaryPhone', <Phone className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />, lead.secondaryPhone, '(2nd)')}
+        {renderField('email', <Mail className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />, lead.email)}
         {(lead.city || lead.state) && (
-          <div className="flex items-center gap-2.5 text-gray-600">
-            <MapPin className="w-4 h-4 text-gray-400" />
+          <div className="flex items-center gap-2.5 text-gray-600 dark:text-gray-400">
+            <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500" />
             <span>{[lead.city, lead.state].filter(Boolean).join(', ')}</span>
           </div>
         )}
         {lead.industry && (
-          <div className="flex items-center gap-2.5 text-gray-600">
-            <Building className="w-4 h-4 text-gray-400" />
+          <div className="flex items-center gap-2.5 text-gray-600 dark:text-gray-400">
+            <Building className="w-4 h-4 text-gray-400 dark:text-gray-500" />
             <span className="capitalize">{lead.industry.replace(/_/g, ' ').toLowerCase()}</span>
           </div>
         )}

@@ -781,8 +781,8 @@ export default function ImportPage() {
     <div className="p-8 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Lead Import & Enrichment Pipeline</h1>
-        <p className="text-gray-500 mt-1">Upload Apollo CSV, choose processing steps, and watch the live feed</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Lead Import & Enrichment Pipeline</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Upload Apollo CSV, choose processing steps, and watch the live feed</p>
       </div>
 
       {/* ── STEP 1: UPLOAD ────────────────────────────────────────── */}
@@ -790,16 +790,16 @@ export default function ImportPage() {
         <div className="max-w-4xl mx-auto">
           {/* Abandoned Staging Leads Banner */}
           {abandonedLeads && abandonedLeads.count > 0 && (
-            <Card className="p-6 mb-6 border-l-4 border-amber-400 bg-amber-50/50">
+            <Card className="p-6 mb-6 border-l-4 border-amber-400 bg-amber-50/50 dark:bg-amber-950/30">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center flex-shrink-0">
                   <AlertTriangle size={20} className="text-amber-600" />
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900">
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100">
                     {abandonedLeads.count} unprocessed lead{abandonedLeads.count !== 1 ? 's' : ''} from a previous upload
                   </h4>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                     These leads were uploaded but never processed. They&apos;re blocking re-import of duplicates.
                   </p>
                   <div className="flex gap-3 mt-4">
@@ -808,7 +808,7 @@ export default function ImportPage() {
                     </Button>
                     <Button
                       variant="outline"
-                      className="border-red-300 text-red-600 hover:bg-red-50"
+                      className="border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                       onClick={handleDeleteAbandoned}
                       disabled={deletingAbandoned}
                     >
@@ -824,11 +824,11 @@ export default function ImportPage() {
           {/* Upload Zone */}
           <Card className="p-12">
             <div className="text-center">
-              <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-24 h-24 bg-blue-100 dark:bg-blue-900/40 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Upload size={48} className="text-blue-600" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Upload Lead CSV</h3>
-              <p className="text-gray-600 mb-6">or click to browse</p>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Upload Lead CSV</h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">or click to browse</p>
 
               <label className="inline-block">
                 <input
@@ -847,17 +847,17 @@ export default function ImportPage() {
                 </span>
               </label>
 
-              <div className="mt-12 pt-8 border-t border-gray-200">
-                <h4 className="font-semibold text-gray-900 mb-4">Accepted CSV Formats</h4>
-                <div className="text-left bg-gray-50 p-6 rounded-lg">
-                  <code className="text-sm text-gray-700 block space-y-1">
+              <div className="mt-12 pt-8 border-t border-gray-200 dark:border-slate-700">
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Accepted CSV Formats</h4>
+                <div className="text-left bg-gray-50 dark:bg-slate-800/50 p-6 rounded-lg">
+                  <code className="text-sm text-gray-700 dark:text-gray-300 block space-y-1">
                     <div>First Name, Last Name, Title, Company Name, Email</div>
                     <div>Industry, Keywords, Website, City, State, Company Phone</div>
                   </code>
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <p className="text-xs font-medium text-gray-500 mb-1">Also accepts minimal format:</p>
-                    <code className="text-sm text-gray-700">Company Name, Phone, Industry, City, State</code>
-                    <p className="text-xs text-gray-400 mt-1">First Name and Email are optional.</p>
+                  <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Also accepts minimal format:</p>
+                    <code className="text-sm text-gray-700 dark:text-gray-300">Company Name, Phone, Industry, City, State</code>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">First Name and Email are optional.</p>
                   </div>
                 </div>
               </div>
@@ -869,7 +869,7 @@ export default function ImportPage() {
             <Card className="p-6 mt-6">
               <div className="flex items-center gap-3 mb-4">
                 <ListOrdered size={20} className="text-blue-500" />
-                <h4 className="font-semibold text-gray-900">Queue ({queueBatches.length} batch{queueBatches.length !== 1 ? 'es' : ''})</h4>
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100">Queue ({queueBatches.length} batch{queueBatches.length !== 1 ? 'es' : ''})</h4>
               </div>
               <div className="space-y-2">
                 {[...queueBatches].sort((a, b) => a.position - b.position).map((batch, displayIdx) => {
@@ -880,20 +880,20 @@ export default function ImportPage() {
                       key={batch.id}
                       className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors ${
                         isProcessing
-                          ? 'border-blue-200 bg-blue-50 cursor-pointer hover:bg-blue-100'
-                          : 'border-gray-200 bg-white'
+                          ? 'border-blue-200 bg-blue-50 dark:bg-blue-950/30 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40'
+                          : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900'
                       }`}
                       onClick={() => isProcessing && viewBatchFeed(batch)}
                     >
-                      <span className="text-sm font-mono text-gray-400 w-6">{displayIdx + 1}.</span>
+                      <span className="text-sm font-mono text-gray-400 dark:text-gray-500 w-6">{displayIdx + 1}.</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900 text-sm truncate">{batch.batchName}</span>
-                          <span className="text-xs text-gray-500">{batch.totalLeads} leads</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">{batch.batchName}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{batch.totalLeads} leads</span>
                         </div>
                         {isProcessing && (
                           <div className="flex items-center gap-2 mt-1">
-                            <div className="flex-1 h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                            <div className="flex-1 h-1.5 bg-blue-100 dark:bg-blue-900/40 rounded-full overflow-hidden">
                               <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
                             </div>
                             <span className="text-xs text-blue-600 font-medium">{batch.processedLeads}/{batch.totalLeads}</span>
@@ -905,7 +905,7 @@ export default function ImportPage() {
                           <Loader2 size={16} className="text-blue-500 animate-spin" />
                           <button
                             onClick={(e) => { e.stopPropagation(); handleRestartBatch(batch) }}
-                            className="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors"
+                            className="px-3 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 hover:bg-blue-200 rounded-lg transition-colors"
                           >
                             Restart
                           </button>
@@ -916,7 +916,7 @@ export default function ImportPage() {
                           <span className="text-xs text-amber-600">{batch.failedLeads} failed</span>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleReEnrich(batch) }}
-                            className="px-3 py-1 text-xs font-medium bg-amber-100 text-amber-700 hover:bg-amber-200 rounded-lg transition-colors"
+                            className="px-3 py-1 text-xs font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 hover:bg-amber-200 rounded-lg transition-colors"
                           >
                             Re-enrich
                           </button>
@@ -927,17 +927,17 @@ export default function ImportPage() {
                       )}
                       {batch.status === 'PENDING' && (
                         <div className="flex items-center gap-1 flex-shrink-0">
-                          <span className="text-xs text-gray-500 mr-1">Pending</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">Pending</span>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleReorderBatch(batch, 'up') }}
-                            className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                            className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded"
                             title="Move up"
                           >
                             <MoveUp size={14} />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleReorderBatch(batch, 'down') }}
-                            className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                            className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 rounded"
                             title="Move down"
                           >
                             <MoveDown size={14} />
@@ -946,7 +946,7 @@ export default function ImportPage() {
                       )}
                       <button
                         onClick={(e) => { e.stopPropagation(); handleCancelBatch(batch) }}
-                        className="p-1 text-gray-400 hover:text-red-500 rounded flex-shrink-0"
+                        className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-500 rounded flex-shrink-0"
                         title="Remove from queue"
                       >
                         <X size={14} />
@@ -961,28 +961,28 @@ export default function ImportPage() {
           {/* Import History */}
           <Card className="p-6 mt-6">
             <div className="flex items-center gap-3 mb-4">
-              <History size={20} className="text-gray-500" />
-              <h4 className="font-semibold text-gray-900">Import History</h4>
+              <History size={20} className="text-gray-500 dark:text-gray-400" />
+              <h4 className="font-semibold text-gray-900 dark:text-gray-100">Import History</h4>
             </div>
             {loadingHistory ? (
-              <div className="text-center py-8 text-gray-500 text-sm">Loading history...</div>
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">Loading history...</div>
             ) : importHistory.length === 0 ? (
-              <div className="text-center py-8 text-gray-400 text-sm">No imports yet</div>
+              <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">No imports yet</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Progress</th>
-                      <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
-                      <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Enriched</th>
-                      <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Previews</th>
-                      <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Skipped</th>
+                    <tr className="border-b border-gray-200 dark:border-slate-700 dark:bg-slate-800/50">
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Progress</th>
+                      <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
+                      <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Enriched</th>
+                      <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Previews</th>
+                      <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Skipped</th>
                       <th className="w-8"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                     {importHistory.map((imp) => {
                       const meta = (imp.metadata as any) || {}
                       const created = meta.created || meta.totalProcessed || 0
@@ -995,30 +995,30 @@ export default function ImportPage() {
                       return (
                         <tr
                           key={imp.id}
-                          className="hover:bg-blue-50 cursor-pointer transition-colors"
+                          className="hover:bg-blue-50 dark:hover:bg-blue-950/30 cursor-pointer transition-colors"
                           onClick={() => viewImportDetail(imp.id)}
                         >
                           <td className="py-3 px-4">
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                               {new Date(imp.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                             </div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
                               {new Date(imp.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                             </div>
                           </td>
                           <td className="py-3 px-4 w-48">
                             <div className="flex items-center gap-3">
-                              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-900/40 rounded-full overflow-hidden">
                                 <div
                                   className="h-full bg-green-500 rounded-full transition-all"
                                   style={{ width: `${successRate}%` }}
                                 />
                               </div>
-                              <span className="text-xs font-medium text-gray-600 w-10 text-right">{successRate}%</span>
+                              <span className="text-xs font-medium text-gray-600 dark:text-gray-400 w-10 text-right">{successRate}%</span>
                             </div>
                           </td>
                           <td className="py-3 px-4 text-right">
-                            <span className="text-sm font-semibold text-gray-900">{created}</span>
+                            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{created}</span>
                           </td>
                           <td className="py-3 px-4 text-right">
                             <span className="text-sm text-green-600 font-medium">{enriched}</span>
@@ -1027,10 +1027,10 @@ export default function ImportPage() {
                             <span className="text-sm text-purple-600 font-medium">{previews}</span>
                           </td>
                           <td className="py-3 px-4 text-right">
-                            <span className="text-sm text-gray-500">{skipped}</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{skipped}</span>
                           </td>
                           <td className="py-3 px-1">
-                            <ChevronRight size={16} className="text-gray-400" />
+                            <ChevronRight size={16} className="text-gray-400 dark:text-gray-500" />
                           </td>
                         </tr>
                       )
@@ -1048,7 +1048,7 @@ export default function ImportPage() {
         <div className="max-w-5xl mx-auto">
           <button
             onClick={() => { setViewingImport(null); setImportDetail(null) }}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+            className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-4 transition-colors"
           >
             <ArrowLeft size={16} />
             Back to Import History
@@ -1056,7 +1056,7 @@ export default function ImportPage() {
 
           {loadingDetail ? (
             <Card className="p-12">
-              <div className="flex items-center justify-center gap-3 text-gray-500">
+              <div className="flex items-center justify-center gap-3 text-gray-500 dark:text-gray-400">
                 <Loader2 size={24} className="animate-spin" />
                 <span>Loading import details...</span>
               </div>
@@ -1067,10 +1067,10 @@ export default function ImportPage() {
               <Card className="p-6 mb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                       Import from {new Date(importDetail.import.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                     </h3>
-                    <p className="text-sm text-gray-500 mt-1">{importDetail.import.description}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{importDetail.import.description}</p>
                   </div>
                   <Button
                     variant="outline"
@@ -1090,25 +1090,25 @@ export default function ImportPage() {
                   const personalized = leads.filter((l: any) => l.personalization).length
                   return (
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
-                      <div className="text-center p-3 bg-blue-50 rounded-lg">
+                      <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
                         <p className="text-xl font-bold text-blue-600">{leads.length}</p>
-                        <p className="text-xs text-gray-600">Created</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">Created</p>
                       </div>
-                      <div className="text-center p-3 bg-green-50 rounded-lg">
+                      <div className="text-center p-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
                         <p className="text-xl font-bold text-green-600">{enriched}</p>
-                        <p className="text-xs text-gray-600">Enriched</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">Enriched</p>
                       </div>
-                      <div className="text-center p-3 bg-purple-50 rounded-lg">
+                      <div className="text-center p-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
                         <p className="text-xl font-bold text-purple-600">{previews}</p>
-                        <p className="text-xs text-gray-600">Previews</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">Previews</p>
                       </div>
-                      <div className="text-center p-3 bg-amber-50 rounded-lg">
+                      <div className="text-center p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
                         <p className="text-xl font-bold text-amber-600">{personalized}</p>
-                        <p className="text-xs text-gray-600">Personalized</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">Personalized</p>
                       </div>
-                      <div className="text-center p-3 bg-gray-50 rounded-lg">
-                        <p className="text-xl font-bold text-gray-600">{leads.length - enriched}</p>
-                        <p className="text-xs text-gray-600">Not Enriched</p>
+                      <div className="text-center p-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg">
+                        <p className="text-xl font-bold text-gray-600 dark:text-gray-400">{leads.length - enriched}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">Not Enriched</p>
                       </div>
                     </div>
                   )
@@ -1118,37 +1118,37 @@ export default function ImportPage() {
               {/* Leads Table */}
               <Card className="p-0 overflow-hidden">
                 {importDetail.leads.length === 0 ? (
-                  <div className="text-center py-12 text-gray-400 text-sm">
+                  <div className="text-center py-12 text-gray-400 dark:text-gray-500 text-sm">
                     No lead data stored for this import. Older imports may not have lead tracking.
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Name</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Company</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Email</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Phone</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Location</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Personalization</th>
-                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Status</th>
-                          <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Rating</th>
-                          <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 uppercase">Preview</th>
+                        <tr className="bg-gray-50 dark:bg-slate-800/50 border-b border-gray-200 dark:border-slate-700">
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Name</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Company</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Email</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Phone</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Location</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Personalization</th>
+                          <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                          <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Rating</th>
+                          <th className="text-center py-3 px-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Preview</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                         {importDetail.leads.map((lead: any) => (
-                          <tr key={lead.id} className="hover:bg-gray-50">
+                          <tr key={lead.id} className="hover:bg-gray-50 dark:hover:bg-slate-800">
                             <td className="py-3 px-4">
-                              <span className="text-sm font-medium text-gray-900">
+                              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                 {lead.firstName} {lead.lastName}
                               </span>
                             </td>
-                            <td className="py-3 px-4 text-sm text-gray-700">{lead.companyName || '—'}</td>
-                            <td className="py-3 px-4 text-sm text-gray-600">{lead.email || '—'}</td>
-                            <td className="py-3 px-4 text-sm text-gray-600">{lead.phone || '—'}</td>
-                            <td className="py-3 px-4 text-sm text-gray-600">
+                            <td className="py-3 px-4 text-sm text-gray-700 dark:text-gray-300">{lead.companyName || '—'}</td>
+                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{lead.email || '—'}</td>
+                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{lead.phone || '—'}</td>
+                            <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
                               {[lead.city, lead.state].filter(Boolean).join(', ') || '—'}
                             </td>
                             <td className="py-3 px-4">
@@ -1158,12 +1158,12 @@ export default function ImportPage() {
                                   if (p?.firstLine) {
                                     return (
                                       <div className="max-w-[280px]">
-                                        <p className="text-sm text-gray-900 leading-snug line-clamp-2">{p.firstLine}</p>
+                                        <p className="text-sm text-gray-900 dark:text-gray-100 leading-snug line-clamp-2">{p.firstLine}</p>
                                         {p.tier && (
                                           <span className={`inline-block mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                            p.tier === 'S' ? 'bg-yellow-100 text-yellow-700' :
-                                            p.tier === 'A' ? 'bg-blue-100 text-blue-700' :
-                                            'bg-gray-100 text-gray-600'
+                                            p.tier === 'S' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400' :
+                                            p.tier === 'A' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400' :
+                                            'bg-gray-100 dark:bg-gray-900/40 text-gray-600 dark:text-gray-400'
                                           }`}>
                                             Tier {p.tier}
                                           </span>
@@ -1171,9 +1171,9 @@ export default function ImportPage() {
                                       </div>
                                     )
                                   }
-                                  return <span className="text-gray-300">—</span>
+                                  return <span className="text-gray-300 dark:text-gray-600">—</span>
                                 } catch {
-                                  return <span className="text-gray-300">—</span>
+                                  return <span className="text-gray-300 dark:text-gray-600">—</span>
                                 }
                               })()}
                             </td>
@@ -1184,7 +1184,7 @@ export default function ImportPage() {
                               {lead.enrichedRating ? (
                                 <span className="text-sm font-medium text-yellow-600">{lead.enrichedRating}</span>
                               ) : (
-                                <span className="text-gray-300">—</span>
+                                <span className="text-gray-300 dark:text-gray-600">—</span>
                               )}
                             </td>
                             <td className="py-3 px-4 text-center">
@@ -1193,12 +1193,12 @@ export default function ImportPage() {
                                   href={lead.previewUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-blue-500 hover:text-blue-700"
+                                  className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-400"
                                 >
                                   <Eye size={16} className="inline" />
                                 </a>
                               ) : (
-                                <span className="text-gray-300">—</span>
+                                <span className="text-gray-300 dark:text-gray-600">—</span>
                               )}
                             </td>
                           </tr>
@@ -1211,7 +1211,7 @@ export default function ImportPage() {
             </>
           ) : (
             <Card className="p-12">
-              <div className="text-center text-gray-400">Failed to load import details.</div>
+              <div className="text-center text-gray-400 dark:text-gray-500">Failed to load import details.</div>
             </Card>
           )}
         </div>
@@ -1223,14 +1223,14 @@ export default function ImportPage() {
           {/* Import Summary */}
           <Card className="p-6">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+              <div className="w-14 h-14 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center">
                 <CheckCircle size={28} className="text-green-600" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                   {importResult?.created} leads ready to process
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {importResult?.totalCsvRows
                     ? `from ${importResult.totalCsvRows} CSV rows — ${importResult.totalInvalid || 0} invalid, ${importResult.skipped || 0} duplicates. `
                     : importResult?.skipped > 0 ? `${importResult.skipped} duplicates skipped. ` : ''}
@@ -1242,33 +1242,33 @@ export default function ImportPage() {
 
           {/* Validation Report — only when there are invalid rows */}
           {importResult?.totalInvalid > 0 && (
-            <Card className="p-6 border-l-4 border-amber-400 bg-amber-50/50">
+            <Card className="p-6 border-l-4 border-amber-400 bg-amber-50/50 dark:bg-amber-950/30">
               {/* Header */}
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center">
                   <AlertTriangle size={20} className="text-amber-600" />
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900">
+                  <h4 className="font-semibold text-gray-900 dark:text-gray-100">
                     {importResult.totalInvalid} rows couldn&apos;t be imported
                   </h4>
-                  <p className="text-xs text-gray-500">out of {importResult.totalCsvRows} total CSV rows</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">out of {importResult.totalCsvRows} total CSV rows</p>
                 </div>
               </div>
 
               {/* Summary bar */}
               <div className="flex gap-3 mb-4">
-                <div className="flex-1 text-center py-2 rounded-lg bg-green-50">
-                  <div className="text-lg font-bold text-green-700">{importResult.totalValid}</div>
+                <div className="flex-1 text-center py-2 rounded-lg bg-green-50 dark:bg-green-950/30">
+                  <div className="text-lg font-bold text-green-700 dark:text-green-400">{importResult.totalValid}</div>
                   <div className="text-xs text-green-600">valid</div>
                 </div>
-                <div className="flex-1 text-center py-2 rounded-lg bg-red-50">
-                  <div className="text-lg font-bold text-red-700">{importResult.totalInvalid}</div>
+                <div className="flex-1 text-center py-2 rounded-lg bg-red-50 dark:bg-red-950/30">
+                  <div className="text-lg font-bold text-red-700 dark:text-red-400">{importResult.totalInvalid}</div>
                   <div className="text-xs text-red-600">invalid</div>
                 </div>
-                <div className="flex-1 text-center py-2 rounded-lg bg-gray-100">
-                  <div className="text-lg font-bold text-gray-600">{importResult.skipped}</div>
-                  <div className="text-xs text-gray-500">duplicates</div>
+                <div className="flex-1 text-center py-2 rounded-lg bg-gray-100 dark:bg-gray-900/40">
+                  <div className="text-lg font-bold text-gray-600 dark:text-gray-400">{importResult.skipped}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">duplicates</div>
                 </div>
               </div>
 
@@ -1277,12 +1277,12 @@ export default function ImportPage() {
                 <div className="space-y-2 mb-3">
                   {importResult.validationErrors.map((err: any, idx: number) => (
                     <div key={idx} className="flex items-start gap-2 text-sm">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700 shrink-0">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 shrink-0">
                         {err.count}
                       </span>
                       <div>
-                        <span className="text-gray-700">{err.reason}</span>
-                        <div className="text-xs text-gray-400 mt-0.5">
+                        <span className="text-gray-700 dark:text-gray-300">{err.reason}</span>
+                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                           Rows: {err.rows.slice(0, 10).join(', ')}
                           {err.rows.length > 10 && ` +${err.rows.length - 10} more`}
                         </div>
@@ -1297,7 +1297,7 @@ export default function ImportPage() {
                 <div>
                   <button
                     onClick={() => setShowInvalidDetail(!showInvalidDetail)}
-                    className="flex items-center gap-1 text-xs text-amber-700 hover:text-amber-900 font-medium"
+                    className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400 hover:text-amber-900 font-medium"
                   >
                     {showInvalidDetail ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     {showInvalidDetail ? 'Hide affected rows' : 'Show affected rows'}
@@ -1307,23 +1307,23 @@ export default function ImportPage() {
                     <div className="mt-2 overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
-                          <tr className="border-b border-amber-200">
-                            <th className="text-left py-2 px-2 font-semibold text-gray-500">Row</th>
-                            <th className="text-left py-2 px-2 font-semibold text-gray-500">First Name</th>
-                            <th className="text-left py-2 px-2 font-semibold text-gray-500">Company</th>
-                            <th className="text-left py-2 px-2 font-semibold text-gray-500">Errors</th>
+                          <tr className="border-b border-amber-200 dark:bg-slate-800/50">
+                            <th className="text-left py-2 px-2 font-semibold text-gray-500 dark:text-gray-400">Row</th>
+                            <th className="text-left py-2 px-2 font-semibold text-gray-500 dark:text-gray-400">First Name</th>
+                            <th className="text-left py-2 px-2 font-semibold text-gray-500 dark:text-gray-400">Company</th>
+                            <th className="text-left py-2 px-2 font-semibold text-gray-500 dark:text-gray-400">Errors</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-amber-100">
                           {importResult.invalidRows.map((row: any, idx: number) => (
                             <tr key={idx}>
-                              <td className="py-1.5 px-2 text-gray-500 font-mono">{row.row}</td>
-                              <td className="py-1.5 px-2 text-gray-700">{row.firstName || '—'}</td>
-                              <td className="py-1.5 px-2 text-gray-700">{row.companyName || '—'}</td>
+                              <td className="py-1.5 px-2 text-gray-500 dark:text-gray-400 font-mono">{row.row}</td>
+                              <td className="py-1.5 px-2 text-gray-700 dark:text-gray-300">{row.firstName || '—'}</td>
+                              <td className="py-1.5 px-2 text-gray-700 dark:text-gray-300">{row.companyName || '—'}</td>
                               <td className="py-1.5 px-2">
                                 <div className="flex flex-wrap gap-1">
                                   {row.errors.map((e: string, ei: number) => (
-                                    <span key={ei} className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">
+                                    <span key={ei} className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400">
                                       {e}
                                     </span>
                                   ))}
@@ -1342,24 +1342,24 @@ export default function ImportPage() {
 
           {/* Batch Settings */}
           <Card className="p-6">
-            <h4 className="font-semibold text-gray-900 mb-1">Batch Settings</h4>
-            <p className="text-sm text-gray-500 mb-4">Name this import and optionally assign a folder and rep</p>
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Batch Settings</h4>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Name this import and optionally assign a folder and rep</p>
             <div className="space-y-4">
               {/* Batch Name */}
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">Batch Name <span className="text-red-500">*</span></label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Batch Name <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={batchName}
                   onChange={(e) => setBatchName(e.target.value)}
                   placeholder="e.g., GBP Roofing Batch 1, Apollo Legal Dallas"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:text-gray-100"
                 />
               </div>
 
               {/* Folder */}
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">Folder</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Folder</label>
                 <div className="flex gap-2">
                   <select
                     value={selectedFolderId}
@@ -1372,7 +1372,7 @@ export default function ImportPage() {
                         setShowNewFolderInput(false)
                       }
                     }}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-gray-100"
                   >
                     <option value="">No folder</option>
                     {folders.map((f) => (
@@ -1388,7 +1388,7 @@ export default function ImportPage() {
                       value={newFolderName}
                       onChange={(e) => setNewFolderName(e.target.value)}
                       placeholder="New folder name..."
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:text-gray-100"
                       onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
                     />
                     <Button size="sm" onClick={handleCreateFolder} disabled={creatingFolder || !newFolderName.trim()}>
@@ -1403,11 +1403,11 @@ export default function ImportPage() {
 
               {/* Rep Assignment */}
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">Assign to Rep</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Assign to Rep</label>
                 <select
                   value={assignTo}
                   onChange={(e) => setAssignTo(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800 dark:text-gray-100"
                 >
                   <option value="">No assignment</option>
                   {reps.map((r) => (
@@ -1420,23 +1420,23 @@ export default function ImportPage() {
 
           {/* Processing Options */}
           <Card className="p-6">
-            <h4 className="font-semibold text-gray-900 mb-1">Processing Steps</h4>
-            <p className="text-sm text-gray-500 mb-4">Toggle the steps you want to run on each lead</p>
+            <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Processing Steps</h4>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Toggle the steps you want to run on each lead</p>
             <div className="space-y-3">
               {(Object.keys(PROCESS_INFO) as (keyof ProcessOptions)[]).map((key) => {
                 const info = PROCESS_INFO[key]
                 const enabled = processOptions[key]
                 return (
                   <div key={key}>
-                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-white">
+                    <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900">
                       <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${enabled ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}>
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${enabled ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600' : 'bg-gray-100 dark:bg-gray-900/40 text-gray-400 dark:text-gray-500'}`}>
                           {info.icon}
                         </div>
-                        <span className="font-medium text-gray-900 text-sm">{info.title}</span>
+                        <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">{info.title}</span>
                         <button
                           onClick={() => setShowInfo(showInfo === key ? null : key)}
-                          className="p-1 rounded-full text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+                          className="p-1 rounded-full text-gray-400 dark:text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
                           title="What does this do?"
                         >
                           <Info size={16} />
@@ -1445,7 +1445,7 @@ export default function ImportPage() {
                       <button
                         onClick={() => toggleOption(key)}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          enabled ? 'bg-blue-600' : 'bg-gray-300'
+                          enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
                         }`}
                       >
                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -1454,8 +1454,8 @@ export default function ImportPage() {
                       </button>
                     </div>
                     {showInfo === key && (
-                      <div className="mt-1 ml-12 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-sm text-blue-800">{info.description}</p>
+                      <div className="mt-1 ml-12 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800 dark:text-blue-400">{info.description}</p>
                       </div>
                     )}
                   </div>
@@ -1464,8 +1464,8 @@ export default function ImportPage() {
             </div>
 
             {!processOptions.enrichment && !processOptions.preview && !processOptions.personalization && (
-              <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-xs text-yellow-800">No processing steps selected. Leads are already saved and can be processed later.</p>
+              <div className="mt-3 p-2 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 rounded-lg">
+                <p className="text-xs text-yellow-800 dark:text-yellow-400">No processing steps selected. Leads are already saved and can be processed later.</p>
               </div>
             )}
           </Card>
@@ -1509,7 +1509,7 @@ export default function ImportPage() {
               fetchImportHistory()
               fetchAbandonedLeads()
             }}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
           >
             <ArrowLeft size={16} />
             Back to Queue
@@ -1518,10 +1518,10 @@ export default function ImportPage() {
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                   {feedDone ? 'Processing Complete' : 'Processing Leads...'}
                 </h3>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   {completedCount} of {feedLeads.length} leads processed
                   {importResult?.skipped > 0 && ` (${importResult.skipped} skipped as duplicates)`}
                 </p>
@@ -1531,7 +1531,7 @@ export default function ImportPage() {
             </div>
 
             {/* Progress Bar */}
-            <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden mb-4">
+            <div className="w-full h-3 bg-gray-100 dark:bg-gray-900/40 rounded-full overflow-hidden mb-4">
               <div
                 className="h-full bg-blue-600 rounded-full transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
@@ -1540,32 +1540,32 @@ export default function ImportPage() {
 
             {/* Stats Row */}
             <div className="grid grid-cols-4 gap-4">
-              <div className="text-center p-3 bg-blue-50 rounded-lg">
+              <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
                 <p className="text-2xl font-bold text-blue-600">{feedLeads.length}</p>
-                <p className="text-xs text-gray-600">Created</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Created</p>
               </div>
               {processOptions.enrichment && (
-                <div className="text-center p-3 bg-green-50 rounded-lg">
+                <div className="text-center p-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
                   <p className="text-2xl font-bold text-green-600">{feedStats.enriched}</p>
-                  <p className="text-xs text-gray-600">Enriched</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Enriched</p>
                 </div>
               )}
               {processOptions.preview && (
-                <div className="text-center p-3 bg-purple-50 rounded-lg">
+                <div className="text-center p-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
                   <p className="text-2xl font-bold text-purple-600">{feedStats.previews}</p>
-                  <p className="text-xs text-gray-600">Previews</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Previews</p>
                 </div>
               )}
               {processOptions.personalization && (
-                <div className="text-center p-3 bg-amber-50 rounded-lg">
+                <div className="text-center p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
                   <p className="text-2xl font-bold text-amber-600">{feedStats.personalized}</p>
-                  <p className="text-xs text-gray-600">Personalized</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Personalized</p>
                 </div>
               )}
               {feedStats.errors > 0 && (
-                <div className="text-center p-3 bg-red-50 rounded-lg">
+                <div className="text-center p-3 bg-red-50 dark:bg-red-950/30 rounded-lg">
                   <p className="text-2xl font-bold text-red-600">{feedStats.errors}</p>
-                  <p className="text-xs text-gray-600">Errors</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Errors</p>
                 </div>
               )}
             </div>
@@ -1573,12 +1573,12 @@ export default function ImportPage() {
 
           {/* Rate Limit Banner */}
           {rateLimitHit && (
-            <Card className="p-4 border-l-4 border-amber-400 bg-amber-50">
+            <Card className="p-4 border-l-4 border-amber-400 bg-amber-50 dark:bg-amber-950/30">
               <div className="flex items-start gap-3">
                 <AlertTriangle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <h4 className="font-semibold text-amber-900 text-sm">SerpAPI daily limit reached</h4>
-                  <p className="text-sm text-amber-800 mt-1">Enrichment skipped for remaining leads. Preview and personalization continue.</p>
+                  <p className="text-sm text-amber-800 dark:text-amber-400 mt-1">Enrichment skipped for remaining leads. Preview and personalization continue.</p>
                   <p className="text-xs text-amber-600 mt-1">You can reprocess these leads tomorrow from the import history.</p>
                 </div>
               </div>
@@ -1594,40 +1594,40 @@ export default function ImportPage() {
                   data-lead-index={idx}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm ${
                     lead.status === 'processing'
-                      ? 'bg-blue-50 border border-blue-200'
+                      ? 'bg-blue-50 dark:bg-blue-950/30 border border-blue-200'
                       : lead.status === 'done'
-                      ? 'bg-white'
+                      ? 'bg-white dark:bg-slate-900'
                       : lead.status === 'error'
-                      ? 'bg-red-50'
-                      : 'bg-gray-50 opacity-60'
+                      ? 'bg-red-50 dark:bg-red-950/30'
+                      : 'bg-gray-50 dark:bg-slate-800/50 opacity-60'
                   }`}
                 >
                   <div className="flex-shrink-0 w-5">
-                    {lead.status === 'pending' && <Clock size={16} className="text-gray-300" />}
+                    {lead.status === 'pending' && <Clock size={16} className="text-gray-300 dark:text-gray-600" />}
                     {lead.status === 'processing' && <Loader2 size={16} className="text-blue-500 animate-spin" />}
                     {lead.status === 'done' && <CheckCircle size={16} className="text-green-500" />}
                     {lead.status === 'error' && <XCircle size={16} className="text-red-500" />}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <span className="font-medium text-gray-900">{lead.name || 'Unknown'}</span>
-                    {lead.company && <span className="text-gray-400 ml-2">{lead.company}</span>}
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{lead.name || 'Unknown'}</span>
+                    {lead.company && <span className="text-gray-400 dark:text-gray-500 ml-2">{lead.company}</span>}
                   </div>
 
                   {lead.status === 'done' && (
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       {lead.enrichment !== undefined && lead.enrichment !== null && (
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${lead.enrichment.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${lead.enrichment.success ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/40 text-red-600'}`}>
                           {lead.enrichment.success ? 'Enriched' : 'E-fail'}
                         </span>
                       )}
                       {lead.preview !== undefined && lead.preview !== null && (
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${lead.preview.success ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-600'}`}>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${lead.preview.success ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400' : 'bg-red-100 dark:bg-red-900/40 text-red-600'}`}>
                           {lead.preview.success ? 'Preview' : 'P-fail'}
                         </span>
                       )}
                       {lead.personalization !== undefined && lead.personalization !== null && (
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${lead.personalization.success ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'}`}>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${lead.personalization.success ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' : 'bg-red-100 dark:bg-red-900/40 text-red-600'}`}>
                           {lead.personalization.success ? 'AI' : 'AI-fail'}
                         </span>
                       )}

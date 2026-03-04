@@ -185,7 +185,7 @@ export default function PartTimeDashboard() {
           <div className="w-12 h-12 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
             <span className="text-white font-bold text-lg">B</span>
           </div>
-          <p className="text-gray-500 font-medium">Loading your dashboard...</p>
+          <p className="text-gray-500 dark:text-gray-400 font-medium">Loading your dashboard...</p>
         </div>
       </div>
     )
@@ -202,8 +202,8 @@ export default function PartTimeDashboard() {
       {/* Welcome Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Welcome back, {repData.name?.split(' ')[0] || repData.name}</h1>
-          <p className="text-gray-500 mt-1 text-sm">{todayDate}</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Welcome back, {repData.name?.split(' ')[0] || repData.name}</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">{todayDate}</p>
         </div>
         <Link href="/part-time/dialer">
           <Button className="gap-2 rounded-xl gradient-primary text-white shadow-teal hover:opacity-90 transition-all animate-glow-teal">
@@ -213,43 +213,43 @@ export default function PartTimeDashboard() {
       </div>
 
       {/* Today's Progress */}
-      <Card className="p-6 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
+      <Card className="p-6 rounded-2xl border-0 shadow-medium bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Today&apos;s Progress</h2>
-          <span className="text-sm font-semibold text-teal-600 bg-teal-50 px-3 py-1 rounded-full">{progressPercent}% of target</span>
+          <h2 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Today&apos;s Progress</h2>
+          <span className="text-sm font-semibold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/30 px-3 py-1 rounded-full">{progressPercent}% of target</span>
         </div>
         <div className="grid grid-cols-5 gap-6 mb-5">
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-gray-900">{todayStats.dials}</span>
-              <span className="text-sm text-gray-400 font-medium">/ {dailyTarget.dials}</span>
+              <span className="text-4xl font-bold text-gray-900 dark:text-gray-100">{todayStats.dials}</span>
+              <span className="text-sm text-gray-400 dark:text-gray-500 font-medium">/ {dailyTarget.dials}</span>
             </div>
-            <p className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Calls</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium uppercase tracking-wide">Calls</p>
           </div>
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-gray-900">{todayStats.conversations}</span>
-              <span className="text-sm text-gray-400 font-medium">/ {dailyTarget.conversations}</span>
+              <span className="text-4xl font-bold text-gray-900 dark:text-gray-100">{todayStats.conversations}</span>
+              <span className="text-sm text-gray-400 dark:text-gray-500 font-medium">/ {dailyTarget.conversations}</span>
             </div>
-            <p className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Conversations</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium uppercase tracking-wide">Conversations</p>
           </div>
           <div>
             <span className="text-4xl font-bold text-purple-600">{todayStats.previewLinksSent}</span>
-            <p className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Previews Sent</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium uppercase tracking-wide">Previews Sent</p>
           </div>
           <div>
             <span className="text-4xl font-bold text-emerald-600">{todayStats.previewsOpened}</span>
-            <p className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Previews Opened</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium uppercase tracking-wide">Previews Opened</p>
           </div>
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-gray-900">{todayStats.closes}</span>
-              <span className="text-sm text-gray-400 font-medium">/ {dailyTarget.closes}</span>
+              <span className="text-4xl font-bold text-gray-900 dark:text-gray-100">{todayStats.closes}</span>
+              <span className="text-sm text-gray-400 dark:text-gray-500 font-medium">/ {dailyTarget.closes}</span>
             </div>
-            <p className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">Closes</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium uppercase tracking-wide">Closes</p>
           </div>
         </div>
-        <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+        <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden">
           <div
             className="gradient-primary-vibrant h-3 rounded-full transition-all duration-700 ease-out"
             style={{ width: `${progressPercent}%` }}
@@ -259,20 +259,20 @@ export default function PartTimeDashboard() {
 
       {/* Key Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard icon={<Users size={20} />} iconBg="bg-teal-50" iconColor="text-teal-600" label="Assigned Leads" value={assignedLeads.length} />
-        <StatCard icon={<Target size={20} />} iconBg="bg-red-50" iconColor="text-red-500" label="Hot Leads" value={hotLeads.length} />
-        <StatCard icon={<CheckCircle size={20} />} iconBg="bg-emerald-50" iconColor="text-emerald-600" label="Qualified" value={qualifiedLeads.length} />
-        <StatCard icon={<DollarSign size={20} />} iconBg="bg-amber-50" iconColor="text-amber-600" label="Pipeline Value" value={formatCurrency((qualifiedLeads.length + hotLeads.length) * productPrice)} />
+        <StatCard icon={<Users size={20} />} iconBg="bg-teal-50 dark:bg-teal-950/30" iconColor="text-teal-600 dark:text-teal-400" label="Assigned Leads" value={assignedLeads.length} />
+        <StatCard icon={<Target size={20} />} iconBg="bg-red-50 dark:bg-red-950/30" iconColor="text-red-500" label="Hot Leads" value={hotLeads.length} />
+        <StatCard icon={<CheckCircle size={20} />} iconBg="bg-emerald-50 dark:bg-emerald-950/30" iconColor="text-emerald-600" label="Qualified" value={qualifiedLeads.length} />
+        <StatCard icon={<DollarSign size={20} />} iconBg="bg-amber-50 dark:bg-amber-950/30" iconColor="text-amber-600" label="Pipeline Value" value={formatCurrency((qualifiedLeads.length + hotLeads.length) * productPrice)} />
       </div>
 
       {/* Queue + Callbacks Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Queue Summary */}
-        <Card className="p-6 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
-          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-5">Queue</h2>
+        <Card className="p-6 rounded-2xl border-0 shadow-medium bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+          <h2 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-5">Queue</h2>
           <div className="space-y-2.5">
             {(queueSummary?.overdueCallbacks || 0) > 0 && (
-              <QueueRow icon={<AlertCircle size={16} />} color="text-red-500" bg="bg-red-50"
+              <QueueRow icon={<AlertCircle size={16} />} color="text-red-500" bg="bg-red-50 dark:bg-red-950/30"
                 label="Overdue callbacks" count={queueSummary.overdueCallbacks} />
             )}
             {(queueSummary?.previewEngagedNoPayment || 0) > 0 && (
@@ -284,38 +284,38 @@ export default function PartTimeDashboard() {
                 label="Hot leads (engaged last 2 hrs)" count={queueSummary.hotLeads} />
             )}
             {(queueSummary?.warmLeads || 0) > 0 && (
-              <QueueRow icon={<TrendingUp size={16} />} color="text-amber-500" bg="bg-amber-50"
+              <QueueRow icon={<TrendingUp size={16} />} color="text-amber-500" bg="bg-amber-50 dark:bg-amber-950/30"
                 label="Warm leads (email opened)" count={queueSummary.warmLeads} />
             )}
             {(queueSummary?.scheduledCallbacks || 0) > 0 && (
-              <QueueRow icon={<CalendarClock size={16} />} color="text-emerald-500" bg="bg-emerald-50"
+              <QueueRow icon={<CalendarClock size={16} />} color="text-emerald-500" bg="bg-emerald-50 dark:bg-emerald-950/30"
                 label="Scheduled callbacks (today)" count={queueSummary.scheduledCallbacks} />
             )}
             {(queueSummary?.freshLeads || 0) > 0 && (
-              <QueueRow icon={<UserPlus size={16} />} color="text-gray-500" bg="bg-gray-50"
+              <QueueRow icon={<UserPlus size={16} />} color="text-gray-500 dark:text-gray-400" bg="bg-gray-50 dark:bg-slate-800/50"
                 label="Fresh leads" count={queueSummary.freshLeads} />
             )}
             {(queueSummary?.retries || 0) > 0 && (
-              <QueueRow icon={<RotateCcw size={16} />} color="text-teal-500" bg="bg-teal-50"
+              <QueueRow icon={<RotateCcw size={16} />} color="text-teal-500" bg="bg-teal-50 dark:bg-teal-950/30"
                 label="Retries" count={queueSummary.retries} />
             )}
             {(queueSummary?.reEngage || 0) > 0 && (
               <QueueRow icon={<Clock size={16} />} color="text-indigo-500" bg="bg-indigo-50"
                 label="Re-engage" count={queueSummary.reEngage} />
             )}
-            {!queueSummary && <p className="text-sm text-gray-400 text-center py-4">Loading queue...</p>}
+            {!queueSummary && <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">Loading queue...</p>}
             {queueSummary && (
-              <div className="pt-3 mt-1 border-t border-gray-100 flex items-center justify-between">
-                <span className="font-bold text-gray-700 text-sm">Total in queue</span>
-                <span className="text-xl font-bold text-gray-900">{queueSummary.total}</span>
+              <div className="pt-3 mt-1 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                <span className="font-bold text-gray-700 dark:text-gray-300 text-sm">Total in queue</span>
+                <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{queueSummary.total}</span>
               </div>
             )}
           </div>
         </Card>
 
         {/* Callbacks */}
-        <Card className="p-6 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
-          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-5">Callbacks</h2>
+        <Card className="p-6 rounded-2xl border-0 shadow-medium bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+          <h2 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-5">Callbacks</h2>
           <div className="space-y-3">
             {callbacks.overdue.length > 0 && (
               <div>
@@ -338,16 +338,16 @@ export default function PartTimeDashboard() {
             )}
             {callbacks.upcoming.length > 0 && (
               <div>
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Upcoming</p>
-                <p className="text-sm text-gray-600">{callbacks.upcoming.length} callbacks this week</p>
+                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Upcoming</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{callbacks.upcoming.length} callbacks this week</p>
               </div>
             )}
             {callbacks.overdue.length === 0 && callbacks.today.length === 0 && callbacks.upcoming.length === 0 && (
-              <p className="text-sm text-gray-400 py-4 text-center">No callbacks scheduled</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 py-4 text-center">No callbacks scheduled</p>
             )}
             {callbacks.overdue.length > 0 && (
               <Link href="/part-time/dialer?startWith=callbacks">
-                <Button variant="outline" className="w-full text-red-600 border-red-200 hover:bg-red-50 mt-2 rounded-xl">
+                <Button variant="outline" className="w-full text-red-600 border-red-200 dark:border-slate-700 hover:bg-red-50 dark:hover:bg-red-950/30 mt-2 rounded-xl">
                   Start with overdue callbacks <ChevronRight size={16} className="ml-1" />
                 </Button>
               </Link>
@@ -359,21 +359,21 @@ export default function PartTimeDashboard() {
       {/* Conversion Funnel */}
       {weekStats.dials > 0 && (
         <Card className="p-6 rounded-2xl border-0 shadow-medium bg-gradient-to-r from-purple-50 via-teal-50 to-emerald-50">
-          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-5">This Week&apos;s Funnel</h2>
+          <h2 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-5">This Week&apos;s Funnel</h2>
           <div className="flex items-center gap-2">
             {[
-              { label: 'Calls', value: weekStats.dials, color: 'text-gray-900' },
+              { label: 'Calls', value: weekStats.dials, color: 'text-gray-900 dark:text-gray-100' },
               { label: 'Previews Sent', value: weekStats.previewsSent, pct: weekStats.dials > 0 ? Math.round((weekStats.previewsSent / weekStats.dials) * 100) : 0, color: 'text-purple-700' },
-              { label: 'Opened', value: weekStats.previewsOpened, pct: weekStats.previewsSent > 0 ? Math.round((weekStats.previewsOpened / weekStats.previewsSent) * 100) : 0, color: 'text-teal-700' },
-              { label: 'Pay Link Sent', value: weekStats.paymentLinksSent, pct: weekStats.previewsOpened > 0 ? Math.round((weekStats.paymentLinksSent / weekStats.previewsOpened) * 100) : 0, color: 'text-amber-700' },
-              { label: 'Paid', value: weekStats.closes, pct: weekStats.paymentLinksSent > 0 ? Math.round((weekStats.closes / weekStats.paymentLinksSent) * 100) : 0, color: 'text-emerald-700' },
+              { label: 'Opened', value: weekStats.previewsOpened, pct: weekStats.previewsSent > 0 ? Math.round((weekStats.previewsOpened / weekStats.previewsSent) * 100) : 0, color: 'text-teal-700 dark:text-teal-400' },
+              { label: 'Pay Link Sent', value: weekStats.paymentLinksSent, pct: weekStats.previewsOpened > 0 ? Math.round((weekStats.paymentLinksSent / weekStats.previewsOpened) * 100) : 0, color: 'text-amber-700 dark:text-amber-400' },
+              { label: 'Paid', value: weekStats.closes, pct: weekStats.paymentLinksSent > 0 ? Math.round((weekStats.closes / weekStats.paymentLinksSent) * 100) : 0, color: 'text-emerald-700 dark:text-emerald-400' },
             ].map((step, idx, arr) => (
               <div key={step.label} className="flex items-center gap-2 flex-1">
                 <div className="text-center flex-1">
                   <div className={`text-2xl font-bold ${step.color}`}>{step.value}</div>
-                  <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mt-0.5">{step.label}</div>
+                  <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-0.5">{step.label}</div>
                   {step.pct !== undefined && (
-                    <div className="text-[10px] font-semibold text-gray-400 mt-0.5">{step.pct}%</div>
+                    <div className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 mt-0.5">{step.pct}%</div>
                   )}
                 </div>
                 {idx < arr.length - 1 && (
@@ -386,57 +386,57 @@ export default function PartTimeDashboard() {
       )}
 
       {/* Assigned Leads Table */}
-      <Card className="rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm overflow-hidden">
+      <Card className="rounded-2xl border-0 shadow-medium bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm overflow-hidden">
         <div className="p-6 pb-0">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
               Your Assigned Leads
-              <span className="ml-2 text-sm font-semibold text-teal-600 bg-teal-50 px-2.5 py-0.5 rounded-full">{assignedLeads.length}</span>
+              <span className="ml-2 text-sm font-semibold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/30 px-2.5 py-0.5 rounded-full">{assignedLeads.length}</span>
             </h3>
           </div>
         </div>
 
         {assignedLeads.length === 0 ? (
           <div className="text-center py-16 px-6">
-            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-              <Users size={28} className="text-gray-400" />
+            <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+              <Users size={28} className="text-gray-400 dark:text-gray-500" />
             </div>
-            <p className="font-semibold text-gray-700">No leads assigned yet</p>
-            <p className="text-sm mt-1 text-gray-500">Check back soon — leads are assigned by admin.</p>
+            <p className="font-semibold text-gray-700 dark:text-gray-300">No leads assigned yet</p>
+            <p className="text-sm mt-1 text-gray-500 dark:text-gray-400">Check back soon — leads are assigned by admin.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-t border-b border-gray-100 bg-gray-50/50">
-                  <th className="text-left px-6 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="text-left px-6 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Company</th>
-                  <th className="text-left px-6 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Phone</th>
-                  <th className="text-left px-6 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Location</th>
-                  <th className="text-left px-6 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Industry</th>
-                  <th className="text-left px-6 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="text-right px-6 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                <tr className="border-t border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50">
+                  <th className="text-left px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                  <th className="text-left px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
+                  <th className="text-left px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Phone</th>
+                  <th className="text-left px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
+                  <th className="text-left px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Industry</th>
+                  <th className="text-left px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="text-right px-6 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                 {assignedLeads.map((lead) => (
                   <tr key={lead.id} className="hover:bg-teal-50/30 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-semibold text-gray-900 text-sm">{lead.firstName} {lead.lastName}</div>
-                      {lead.email && <div className="text-xs text-gray-500 mt-0.5">{lead.email}</div>}
+                      <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{lead.firstName} {lead.lastName}</div>
+                      {lead.email && <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{lead.email}</div>}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{lead.companyName}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">{lead.companyName}</td>
                     <td className="px-6 py-4">
-                      <a href={`tel:${lead.phone}`} className="text-teal-600 hover:text-teal-700 font-mono text-sm font-medium">
+                      <a href={`tel:${lead.phone}`} className="text-teal-600 dark:text-teal-400 hover:text-teal-700 font-mono text-sm font-medium">
                         {lead.phone}
                       </a>
                     </td>
-                    <td className="px-6 py-4 text-gray-600 text-sm">
+                    <td className="px-6 py-4 text-gray-600 dark:text-gray-400 text-sm">
                       {lead.city}{lead.city && lead.state ? ', ' : ''}{lead.state}
                     </td>
                     <td className="px-6 py-4">
                       {lead.industry && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-700">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300">
                           {lead.industry.replace(/_/g, ' ')}
                         </span>
                       )}
@@ -451,13 +451,13 @@ export default function PartTimeDashboard() {
                       <div className="flex items-center justify-end gap-1">
                         {lead.previewUrl && (
                           <>
-                            <Button variant="ghost" size="sm" className="text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg"
+                            <Button variant="ghost" size="sm" className="text-teal-600 dark:text-teal-400 hover:text-teal-700 hover:bg-teal-50 rounded-lg"
                               onClick={() => handleTextPreview(lead)} title="Text preview to prospect">
                               <MessageSquare size={14} />
                             </Button>
                             <Button variant="ghost" size="sm" className="hover:bg-teal-50 rounded-lg"
                               onClick={() => handleCopyPreview(lead.id, lead.previewUrl)} title="Copy preview link">
-                              {copiedId === lead.id ? <CheckCircle size={14} className="text-emerald-600" /> : <Copy size={14} className="text-gray-500" />}
+                              {copiedId === lead.id ? <CheckCircle size={14} className="text-emerald-600" /> : <Copy size={14} className="text-gray-500 dark:text-gray-400" />}
                             </Button>
                             <Button variant="ghost" size="sm" className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg"
                               onClick={() => window.open(lead.previewUrl, '_blank')} title="View preview">
@@ -465,9 +465,9 @@ export default function PartTimeDashboard() {
                             </Button>
                           </>
                         )}
-                        <Button variant="ghost" size="sm" className="hover:bg-gray-100 rounded-lg"
+                        <Button variant="ghost" size="sm" className="hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"
                           onClick={() => openEditDialog(lead)} title="Edit lead info">
-                          <Edit3 size={14} className="text-gray-500" />
+                          <Edit3 size={14} className="text-gray-500 dark:text-gray-400" />
                         </Button>
                       </div>
                     </td>
@@ -481,8 +481,8 @@ export default function PartTimeDashboard() {
 
       {/* Stats + Leaderboard + Coaching */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="p-6 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
-          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-5">This Week</h2>
+        <Card className="p-6 rounded-2xl border-0 shadow-medium bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+          <h2 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-5">This Week</h2>
           <div className="grid grid-cols-2 gap-3">
             <StatBlock label="Calls" value={weekStats.dials} />
             <StatBlock label="Conversations" value={weekStats.conversations} />
@@ -491,43 +491,43 @@ export default function PartTimeDashboard() {
           </div>
         </Card>
 
-        <Card className="p-6 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
-          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-5">Earnings</h2>
+        <Card className="p-6 rounded-2xl border-0 shadow-medium bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+          <h2 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-5">Earnings</h2>
           <div className="space-y-3.5">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">This week</span>
-              <span className="font-bold text-gray-900">{formatCurrency(weekStats.commissionEarned)}</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">This week</span>
+              <span className="font-bold text-gray-900 dark:text-gray-100">{formatCurrency(weekStats.commissionEarned)}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">This month</span>
-              <span className="font-bold text-gray-900">{formatCurrency(monthStats.commissionEarned)}</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">This month</span>
+              <span className="font-bold text-gray-900 dark:text-gray-100">{formatCurrency(monthStats.commissionEarned)}</span>
             </div>
-            <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-              <span className="text-sm font-semibold text-gray-700">All time</span>
+            <div className="flex justify-between items-center pt-3 border-t border-gray-100 dark:border-slate-800">
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">All time</span>
               <span className="text-xl font-bold text-emerald-600">{formatCurrency(allTimeStats.commissionEarned)}</span>
             </div>
           </div>
         </Card>
 
-        <Card className="p-6 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
-          <h2 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-5">Leaderboard</h2>
+        <Card className="p-6 rounded-2xl border-0 shadow-medium bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+          <h2 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-5">Leaderboard</h2>
           <div className="space-y-1.5">
             {leaderboard.length > 0 ? leaderboard.map((item: any, idx: number) => {
               const icons = [Trophy, Medal, Award]
-              const colors = ['text-yellow-500', 'text-gray-400', 'text-amber-600']
+              const colors = ['text-yellow-500', 'text-gray-400 dark:text-gray-500', 'text-amber-600']
               const Icon = icons[idx] || Award
               const isMe = item.rep.id === repData.id
               return (
-                <div key={item.rep.id} className={`flex items-center gap-2.5 py-2 px-3 rounded-xl transition-colors ${isMe ? 'bg-teal-50 border border-teal-200' : 'hover:bg-gray-50'}`}>
-                  {idx < 3 ? <Icon size={16} className={colors[idx]} /> : <span className="w-4 text-center text-xs text-gray-400 font-bold">{idx + 1}</span>}
-                  <span className={`flex-1 text-sm ${isMe ? 'font-bold text-teal-700' : 'text-gray-700 font-medium'}`}>
+                <div key={item.rep.id} className={`flex items-center gap-2.5 py-2 px-3 rounded-xl transition-colors ${isMe ? 'bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800' : 'hover:bg-gray-50 dark:hover:bg-slate-800'}`}>
+                  {idx < 3 ? <Icon size={16} className={colors[idx]} /> : <span className="w-4 text-center text-xs text-gray-400 dark:text-gray-500 font-bold">{idx + 1}</span>}
+                  <span className={`flex-1 text-sm ${isMe ? 'font-bold text-teal-700 dark:text-teal-400' : 'text-gray-700 dark:text-gray-300 font-medium'}`}>
                     {item.rep.name}{isMe ? ' (You)' : ''}
                   </span>
-                  <span className="text-sm font-bold text-gray-900">{formatCurrency(item.revenue)}</span>
+                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(item.revenue)}</span>
                 </div>
               )
             }) : (
-              <p className="text-sm text-gray-400 py-4 text-center">No rankings yet</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 py-4 text-center">No rankings yet</p>
             )}
           </div>
         </Card>
@@ -549,22 +549,22 @@ export default function PartTimeDashboard() {
       )}
 
       {/* Quick Links */}
-      <Card className="p-6 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Links</h3>
+      <Card className="p-6 rounded-2xl border-0 shadow-medium bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Quick Links</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Link href="/part-time/dialer">
-            <Button variant="outline" className="w-full rounded-xl border-gray-200 hover:border-teal-300 hover:bg-teal-50/50 transition-all h-12">
-              <Phone size={18} className="mr-2 text-teal-600" /> Dialer
+            <Button variant="outline" className="w-full rounded-xl border-gray-200 dark:border-slate-700 hover:border-teal-300 hover:bg-teal-50/50 transition-all h-12">
+              <Phone size={18} className="mr-2 text-teal-600 dark:text-teal-400" /> Dialer
             </Button>
           </Link>
           <Link href="/part-time/earnings">
-            <Button variant="outline" className="w-full rounded-xl border-gray-200 hover:border-teal-300 hover:bg-teal-50/50 transition-all h-12">
-              <DollarSign size={18} className="mr-2 text-teal-600" /> Earnings
+            <Button variant="outline" className="w-full rounded-xl border-gray-200 dark:border-slate-700 hover:border-teal-300 hover:bg-teal-50/50 transition-all h-12">
+              <DollarSign size={18} className="mr-2 text-teal-600 dark:text-teal-400" /> Earnings
             </Button>
           </Link>
           <Link href="/part-time/tasks">
-            <Button variant="outline" className="w-full rounded-xl border-gray-200 hover:border-teal-300 hover:bg-teal-50/50 transition-all h-12">
-              <Target size={18} className="mr-2 text-teal-600" /> Tasks
+            <Button variant="outline" className="w-full rounded-xl border-gray-200 dark:border-slate-700 hover:border-teal-300 hover:bg-teal-50/50 transition-all h-12">
+              <Target size={18} className="mr-2 text-teal-600 dark:text-teal-400" /> Tasks
             </Button>
           </Link>
         </div>
@@ -577,33 +577,33 @@ export default function PartTimeDashboard() {
           <div className="grid gap-3 py-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">First Name</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">First Name</label>
                 <Input className="rounded-xl" value={editForm.firstName || ''} onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Last Name</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Last Name</label>
                 <Input className="rounded-xl" value={editForm.lastName || ''} onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })} />
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Company</label>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Company</label>
               <Input className="rounded-xl" value={editForm.companyName || ''} onChange={(e) => setEditForm({ ...editForm, companyName: e.target.value })} />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Phone</label>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Phone</label>
               <Input className="rounded-xl" value={editForm.phone || ''} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</label>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Email</label>
               <Input className="rounded-xl" value={editForm.email || ''} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">City</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">City</label>
                 <Input className="rounded-xl" value={editForm.city || ''} onChange={(e) => setEditForm({ ...editForm, city: e.target.value })} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">State</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">State</label>
                 <Input className="rounded-xl" value={editForm.state || ''} maxLength={2} onChange={(e) => setEditForm({ ...editForm, state: e.target.value.toUpperCase() })} />
               </div>
             </div>
@@ -622,26 +622,26 @@ export default function PartTimeDashboard() {
 
 function StatCard({ icon, iconBg, iconColor, label, value }: { icon: React.ReactNode, iconBg: string, iconColor: string, label: string, value: string | number }) {
   return (
-    <Card className="p-5 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm card-hover">
+    <Card className="p-5 rounded-2xl border-0 shadow-medium bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm card-hover">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{label}</span>
+        <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{label}</span>
         <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center`}>
           <span className={iconColor}>{icon}</span>
         </div>
       </div>
-      <div className="text-3xl font-bold text-gray-900">{value}</div>
+      <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
     </Card>
   )
 }
 
 function QueueRow({ icon, color, bg, label, count }: { icon: React.ReactNode, color: string, bg: string, label: string, count: number }) {
   return (
-    <div className="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-gray-50/80 transition-colors">
+    <div className="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-gray-50/80 dark:hover:bg-slate-800/80 transition-colors">
       <div className="flex items-center gap-2.5">
         <div className={`w-7 h-7 rounded-lg ${bg} flex items-center justify-center`}>
           <span className={color}>{icon}</span>
         </div>
-        <span className="text-sm text-gray-700 font-medium">{label}</span>
+        <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{label}</span>
       </div>
       <span className={`text-sm font-bold ${color}`}>{count}</span>
     </div>
@@ -654,12 +654,12 @@ function CallbackRow({ call, overdue }: { call: any, overdue?: boolean }) {
     ? 'All Day'
     : call.scheduledAt ? new Date(call.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
   return (
-    <div className={`flex items-center gap-2 py-2 px-3 rounded-xl text-sm mb-1 ${overdue ? 'bg-red-50 border border-red-100' : 'bg-emerald-50 border border-emerald-100'}`}>
-      <span className={`font-semibold ${overdue ? 'text-red-700' : 'text-emerald-700'}`}>
+    <div className={`flex items-center gap-2 py-2 px-3 rounded-xl text-sm mb-1 ${overdue ? 'bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40' : 'bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40'}`}>
+      <span className={`font-semibold ${overdue ? 'text-red-700 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
         {lead.firstName} {lead.lastName}
       </span>
-      <span className="text-gray-400">-</span>
-      <span className="text-gray-600 truncate flex-1">{lead.companyName}</span>
+      <span className="text-gray-400 dark:text-gray-500">-</span>
+      <span className="text-gray-600 dark:text-gray-400 truncate flex-1">{lead.companyName}</span>
       <span className={`text-xs font-medium ${overdue ? 'text-red-500' : 'text-emerald-600'}`}>{time}</span>
     </div>
   )
@@ -667,9 +667,9 @@ function CallbackRow({ call, overdue }: { call: any, overdue?: boolean }) {
 
 function StatBlock({ label, value }: { label: string, value: string | number }) {
   return (
-    <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
-      <div className="text-xl font-bold text-gray-900">{value}</div>
-      <div className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mt-0.5">{label}</div>
+    <div className="bg-gray-50/80 dark:bg-slate-800/50 rounded-xl p-4 border border-gray-100 dark:border-slate-800">
+      <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
+      <div className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mt-0.5">{label}</div>
     </div>
   )
 }

@@ -97,12 +97,12 @@ export function CallControls() {
   }
 
   return (
-    <div className="relative flex-shrink-0 border-t border-gray-200/60 bg-white/95 backdrop-blur-sm px-8 py-3 shadow-[0_-2px_12px_rgba(0,0,0,0.06)]">
+    <div className="relative flex-shrink-0 border-t border-gray-200/60 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm px-8 py-3 shadow-[0_-2px_12px_rgba(0,0,0,0.06)]">
       {/* Stats ticker */}
-      <div className="flex items-center justify-center flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400 mb-2.5 font-medium">
-        <span className="text-gray-500 font-semibold">{session.session?.totalCalls || 0} dials</span>
+      <div className="flex items-center justify-center flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-400 dark:text-gray-500 mb-2.5 font-medium">
+        <span className="text-gray-500 dark:text-gray-400 font-semibold">{session.session?.totalCalls || 0} dials</span>
         <span className="text-gray-300">|</span>
-        <span className="text-gray-500 font-semibold">{session.session?.connectedCalls || 0} connected</span>
+        <span className="text-gray-500 dark:text-gray-400 font-semibold">{session.session?.connectedCalls || 0} connected</span>
         {(() => {
           const DISPOSITION_DISPLAY: { field: string; label: string; color: string }[] = [
             { field: 'wantsToMoveForwardCount', label: 'move fwd', color: 'text-green-600' },
@@ -140,8 +140,8 @@ export function CallControls() {
               onClick={() => twilioDevice.toggleMute()}
               className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 ${
                 twilioDevice.isMuted
-                  ? 'bg-red-100 text-red-600 ring-2 ring-red-200'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? 'bg-red-100 dark:bg-red-900/40 text-red-600 ring-2 ring-red-200'
+                  : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'
               }`}
               title={twilioDevice.isMuted ? 'Unmute (M)' : 'Mute (M)'}
             >
@@ -162,7 +162,7 @@ export function CallControls() {
             <button
               onClick={() => setShowKeypad(prev => !prev)}
               className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 ${
-                showKeypad ? 'bg-teal-100 text-teal-600 ring-2 ring-teal-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                showKeypad ? 'bg-teal-100 text-teal-600 ring-2 ring-teal-200' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'
               }`}
               title="Keypad"
             >
@@ -170,18 +170,18 @@ export function CallControls() {
             </button>
 
             {showKeypad && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white rounded-2xl shadow-2xl border border-gray-200/80 p-4 z-50">
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200/80 dark:border-slate-700 p-4 z-50">
                 <div className="grid grid-cols-3 gap-2.5">
                   {DTMF_KEYS.map(({ digit, letters }) => (
                     <button
                       key={digit}
                       onClick={() => handleDTMF(digit)}
                       className={`w-14 h-14 rounded-xl border flex flex-col items-center justify-center transition-all duration-100 ${
-                        pressedDigit === digit ? 'bg-teal-100 border-teal-300 scale-95' : 'bg-gray-50 border-gray-200 hover:bg-teal-50 hover:border-teal-200'
+                        pressedDigit === digit ? 'bg-teal-100 border-teal-300 scale-95' : 'bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-slate-700 hover:bg-teal-50 hover:border-teal-200'
                       }`}
                     >
-                      <span className="text-lg font-bold text-gray-900">{digit}</span>
-                      {letters && <span className="text-[8px] text-gray-400 leading-none font-medium">{letters}</span>}
+                      <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{digit}</span>
+                      {letters && <span className="text-[8px] text-gray-400 dark:text-gray-500 leading-none font-medium">{letters}</span>}
                     </button>
                   ))}
                 </div>
@@ -189,13 +189,13 @@ export function CallControls() {
             )}
 
             {activeCallerId && (
-              <span className="text-xs text-gray-400 font-medium">
-                From: <span className="text-gray-600">{formatCallerId(activeCallerId)}</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+                From: <span className="text-gray-600 dark:text-gray-400">{formatCallerId(activeCallerId)}</span>
               </span>
             )}
 
-            <div className="bg-gray-50 rounded-xl px-6 py-2.5 min-w-[90px] text-center">
-              <div className="text-xl font-mono font-bold text-gray-900 tracking-tight">
+            <div className="bg-gray-50 dark:bg-slate-800/50 rounded-xl px-6 py-2.5 min-w-[90px] text-center">
+              <div className="text-xl font-mono font-bold text-gray-900 dark:text-gray-100 tracking-tight">
                 {timer.formatted}
               </div>
             </div>
@@ -208,10 +208,10 @@ export function CallControls() {
               <PhoneOff className="w-5 h-5" />
             </button>
 
-            <div className="ml-4 pl-4 border-l border-gray-200">
+            <div className="ml-4 pl-4 border-l border-gray-200 dark:border-slate-700">
               <button
                 onClick={() => endSessionFull()}
-                className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-red-600 border border-red-200 rounded-xl hover:bg-red-50 hover:border-red-300 transition-all duration-200"
+                className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-red-600 border border-red-200 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-300 transition-all duration-200"
               >
                 <Power className="w-3.5 h-3.5" />
                 End Session
@@ -235,7 +235,7 @@ export function CallControls() {
               className={`flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl font-bold text-sm transition-all duration-200 ${
                 showManualDial
                   ? 'bg-teal-50 text-teal-700 border border-teal-200 ring-2 ring-teal-100'
-                  : 'bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+                  : 'bg-gray-50 dark:bg-slate-800/50 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-700 hover:bg-gray-100 dark:hover:bg-slate-700 hover:border-gray-300'
               }`}
               title="Manual Dial"
             >
@@ -252,7 +252,7 @@ export function CallControls() {
                   onChange={(e) => setManualDialPhone(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleManualDial(); if (e.key === 'Escape') setShowManualDial(false) }}
                   autoFocus
-                  className="w-48 px-4 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 transition-all"
+                  className="w-48 px-4 py-2.5 text-sm border border-gray-200 dark:border-slate-700 rounded-xl bg-gray-50 dark:bg-slate-800/50 dark:text-gray-100 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400 transition-all"
                 />
                 <button
                   onClick={handleManualDial}
@@ -274,24 +274,24 @@ export function CallControls() {
               <span className="text-xs text-amber-500 animate-pulse font-medium">Connecting dialer...</span>
             )}
             {twilioDevice.deviceState === 'unregistered' && (
-              <span className="text-xs text-gray-400 font-medium">Dialer not connected</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">Dialer not connected</span>
             )}
 
             <button
               onClick={() => queue.selectNext()}
-              className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700 hover:border-gray-300 flex items-center justify-center transition-all duration-200"
+              className="w-12 h-12 rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-700 hover:border-gray-300 flex items-center justify-center transition-all duration-200"
               title="Skip / Next"
             >
               <SkipForward className="w-5 h-5" />
             </button>
 
-            <div className="ml-4 pl-4 border-l border-gray-200 flex items-center gap-2.5">
+            <div className="ml-4 pl-4 border-l border-gray-200 dark:border-slate-700 flex items-center gap-2.5">
               {/* Info tooltip */}
               <div className="relative">
                 <button
                   onMouseEnter={() => setShowTooltip(true)}
                   onMouseLeave={() => setShowTooltip(false)}
-                  className="p-1.5 text-gray-300 hover:text-gray-500 transition-colors"
+                  className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-gray-500 transition-colors"
                 >
                   <Info className="w-4 h-4" />
                 </button>
@@ -305,7 +305,7 @@ export function CallControls() {
 
               <button
                 onClick={() => endSessionFull()}
-                className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-red-600 border border-red-200 rounded-xl hover:bg-red-50 hover:border-red-300 transition-all duration-200"
+                className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-red-600 border border-red-200 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-300 transition-all duration-200"
               >
                 <Power className="w-3.5 h-3.5" />
                 End Session

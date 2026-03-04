@@ -113,26 +113,26 @@ export function BulkSelectDropdown({ pageItemIds, allItemIds, selectedIds, onSel
         type="checkbox"
         checked={allSelected}
         onChange={handleCheckboxClick}
-        className="w-4 h-4 cursor-pointer rounded border-gray-300"
+        className="w-4 h-4 cursor-pointer rounded border-gray-300 dark:border-slate-600"
       />
       <button
         ref={chevronRef}
         onClick={() => setOpen(!open)}
-        className="p-0.5 rounded hover:bg-gray-200 transition-colors"
+        className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
         aria-label="Selection options"
       >
-        <ChevronDown size={12} className="text-gray-400" />
+        <ChevronDown size={12} className="text-gray-400 dark:text-gray-500" />
       </button>
       {open && pos && createPortal(
         <div
           ref={dropdownRef}
-          className="bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-[9999] w-56"
+          className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg py-1 z-[9999] w-56"
           style={{ position: 'fixed', top: pos.top, left: pos.left }}
         >
           {/* Select number */}
-          <div className="px-3 py-2 hover:bg-gray-50">
+          <div className="px-3 py-2 hover:bg-gray-50 dark:hover:bg-slate-800">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-700">Select</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Select</span>
               <input
                 type="number"
                 value={selectCount}
@@ -140,7 +140,7 @@ export function BulkSelectDropdown({ pageItemIds, allItemIds, selectedIds, onSel
                 onKeyDown={e => { if (e.key === 'Enter') handleSelectNumber() }}
                 min={1}
                 max={allItemIds?.length || pageItemIds.length}
-                className="w-16 border border-gray-300 rounded px-2 py-1 text-sm"
+                className="w-16 border border-gray-300 dark:border-slate-600 rounded px-2 py-1 text-sm dark:bg-slate-800 dark:text-gray-100"
               />
               <button
                 onClick={handleSelectNumber}
@@ -153,7 +153,7 @@ export function BulkSelectDropdown({ pageItemIds, allItemIds, selectedIds, onSel
           {/* Select this page */}
           <button
             onClick={handleSelectPage}
-            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
           >
             Select this page [{pageItemIds.length}]
           </button>
@@ -161,7 +161,7 @@ export function BulkSelectDropdown({ pageItemIds, allItemIds, selectedIds, onSel
           {allItemIds && allItemIds.length > pageItemIds.length && (
             <button
               onClick={handleSelectAll}
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
             >
               Select all in list [{allItemIds.length}]
             </button>
@@ -170,7 +170,7 @@ export function BulkSelectDropdown({ pageItemIds, allItemIds, selectedIds, onSel
           {selectedIds.size > 0 && (
             <button
               onClick={handleDeselectAll}
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100"
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors border-t border-gray-100 dark:border-slate-800"
             >
               Deselect all
             </button>

@@ -259,8 +259,8 @@ export function DispositionTree() {
 
   if (submitting) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-        <div className="text-sm text-gray-500 animate-pulse">Logging outcome...</div>
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 p-4 text-center">
+        <div className="text-sm text-gray-500 dark:text-gray-400 animate-pulse">Logging outcome...</div>
       </div>
     )
   }
@@ -299,15 +299,15 @@ export function DispositionTree() {
       )}
 
       {/* DISPOSITION BOX */}
-      <div className="bg-white rounded-xl border border-gray-200 p-3">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 p-3">
         <div className="flex items-center justify-between mb-2.5">
-          <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+          <h3 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
             {layer === 'L1' ? 'What happened?' : 'How\'d it go?'}
           </h3>
           {layer === 'L2' && (
             <button
               onClick={() => { setLayer('L1'); setL1Choice(null) }}
-              className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"
+              className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 flex items-center gap-1"
             >
               <ArrowLeft size={12} /> Back
             </button>
@@ -316,8 +316,8 @@ export function DispositionTree() {
 
         {/* Queued indicator */}
         {queuedDisposition && isOnCall && (
-          <div className="mb-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
-            <span className="text-xs text-amber-700 font-medium">
+          <div className="mb-3 px-3 py-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 rounded-lg flex items-center justify-between">
+            <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">
               Queued: {queuedDisposition.result.replace(/_/g, ' ')}
             </span>
             <button
@@ -358,8 +358,8 @@ export function DispositionTree() {
               onClick={() => handleL1('no_answer')}
               className={`flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 transition-all duration-150 font-medium text-sm active:scale-[0.95] ${
                 lastClicked === 'no_answer'
-                  ? 'border-gray-400 bg-gray-200 text-gray-800 scale-[1.03] ring-2 ring-gray-300 ring-offset-1'
-                  : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
+                  ? 'border-gray-400 bg-gray-200 dark:bg-slate-700 text-gray-800 scale-[1.03] ring-2 ring-gray-300 ring-offset-1'
+                  : 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 hover:border-gray-300'
               }`}
             >
               <PhoneMissed size={20} />
@@ -370,7 +370,7 @@ export function DispositionTree() {
               className={`flex flex-col items-center gap-1 px-3 py-3 rounded-xl border-2 transition-all duration-150 font-medium text-sm active:scale-[0.95] ${
                 lastClicked === 'bad_number'
                   ? 'border-red-400 bg-red-200 text-red-800 scale-[1.03] ring-2 ring-red-300 ring-offset-1'
-                  : 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100 hover:border-red-300'
+                  : 'border-red-200 bg-red-50 dark:bg-red-950/30 text-red-600 hover:bg-red-100 hover:border-red-300'
               }`}
             >
               <Ban size={20} />
@@ -421,14 +421,14 @@ export function DispositionTree() {
                       value={callbackDate}
                       onChange={(e) => setCallbackDate(e.target.value)}
                       min={new Date().toISOString().split('T')[0]}
-                      className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 flex-1"
+                      className="text-xs border border-gray-200 dark:border-slate-700 rounded-lg px-2 py-1.5 flex-1 dark:bg-slate-800 dark:text-gray-100"
                     />
                     {!allDay && (
                       <input
                         type="time"
                         value={callbackTime}
                         onChange={(e) => setCallbackTime(e.target.value)}
-                        className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 w-24"
+                        className="text-xs border border-gray-200 dark:border-slate-700 rounded-lg px-2 py-1.5 w-24 dark:bg-slate-800 dark:text-gray-100"
                       />
                     )}
                   </div>
@@ -439,7 +439,7 @@ export function DispositionTree() {
                       onChange={(e) => setAllDay(e.target.checked)}
                       className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
                     />
-                    <span className="text-xs text-teal-700 font-medium">All Day</span>
+                    <span className="text-xs text-teal-700 dark:text-teal-400 font-medium">All Day</span>
                   </label>
                   <button
                     onClick={handleCallbackSubmit}
@@ -491,10 +491,10 @@ export function DispositionTree() {
                 disabled={submitting}
                 className={`w-full px-3 py-2.5 rounded-xl border-2 transition-all duration-150 font-medium text-sm text-left disabled:opacity-50 active:scale-[0.97] ${
                   lastClicked === 'NOT_INTERESTED'
-                    ? 'border-gray-400 bg-gray-200 text-gray-900 scale-[1.02] ring-2 ring-gray-300 ring-offset-1 shadow-md'
+                    ? 'border-gray-400 bg-gray-200 dark:bg-slate-700 text-gray-900 dark:text-gray-100 scale-[1.02] ring-2 ring-gray-300 ring-offset-1 shadow-md'
                     : queuedDisposition?.result === 'NOT_INTERESTED' || queuedDisposition?.result === 'DNC'
-                      ? 'border-gray-400 bg-gray-100 text-gray-700 ring-1 ring-gray-300'
-                      : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'
+                      ? 'border-gray-400 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 ring-1 ring-gray-300'
+                      : 'border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
                 Not Interested

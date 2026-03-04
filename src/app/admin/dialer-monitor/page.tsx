@@ -295,7 +295,7 @@ export default function DialerMonitorPage() {
   const onCallReps = liveReps.filter(r => r.status === 'on_call')
 
   if (loading) {
-    return <div className="p-8 text-center text-gray-500">Loading live monitor...</div>
+    return <div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading live monitor...</div>
   }
 
   return (
@@ -303,11 +303,11 @@ export default function DialerMonitorPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <Radio size={28} className="text-red-500" />
             Live Dialer Monitor
           </h1>
-          <p className="text-gray-500 mt-1">
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
             Real-time view of all rep dialing activity
           </p>
         </div>
@@ -315,7 +315,7 @@ export default function DialerMonitorPage() {
           <button
             onClick={() => setAutoRefresh(!autoRefresh)}
             className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border ${
-              autoRefresh ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-500'
+              autoRefresh ? 'bg-green-50 dark:bg-green-950/30 border-green-200 text-green-700 dark:text-green-400' : 'bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-slate-700 text-gray-500 dark:text-gray-400'
             }`}
           >
             <RefreshCw size={14} className={autoRefresh ? 'animate-spin' : ''} />
@@ -330,41 +330,41 @@ export default function DialerMonitorPage() {
       {/* Aggregate Stats */}
       <div className="grid grid-cols-5 gap-4">
         <Card className="p-4 text-center">
-          <div className="text-3xl font-bold text-gray-900">{liveReps.length}</div>
-          <div className="text-xs text-gray-500 mt-1">Total Reps</div>
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{liveReps.length}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Total Reps</div>
         </Card>
-        <Card className={`p-4 text-center ${onCallReps.length > 0 ? 'border-green-300 bg-green-50' : ''}`}>
+        <Card className={`p-4 text-center ${onCallReps.length > 0 ? 'border-green-300 bg-green-50 dark:bg-green-950/30' : ''}`}>
           <div className="text-3xl font-bold text-green-600">{onCallReps.length}</div>
-          <div className="text-xs text-gray-500 mt-1">On Call Now</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">On Call Now</div>
         </Card>
         <Card className="p-4 text-center">
           <div className="text-3xl font-bold text-blue-600">{totalDials}</div>
-          <div className="text-xs text-gray-500 mt-1">Total Dials Today</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Total Dials Today</div>
         </Card>
         <Card className="p-4 text-center">
           <div className="text-3xl font-bold text-purple-600">{totalConversations}</div>
-          <div className="text-xs text-gray-500 mt-1">Conversations</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Conversations</div>
         </Card>
         <Card className="p-4 text-center">
           <div className="text-3xl font-bold text-green-600">{totalMoveForward}</div>
-          <div className="text-xs text-gray-500 mt-1">Move Forward</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Move Forward</div>
         </Card>
       </div>
 
       {/* Aggregate Disposition Breakdown */}
       {(() => {
         const DISPOSITION_BADGES: { key: keyof LiveRep['todayStats']; label: string; bg: string; text: string }[] = [
-          { key: 'wantsToMoveForward', label: 'Move Fwd', bg: 'bg-green-100', text: 'text-green-700' },
-          { key: 'callback', label: 'Callback', bg: 'bg-teal-100', text: 'text-teal-700' },
-          { key: 'interestedVerbal', label: 'Verbal Int', bg: 'bg-green-50', text: 'text-green-600' },
-          { key: 'wantsChanges', label: 'Changes', bg: 'bg-blue-100', text: 'text-blue-700' },
-          { key: 'willLookLater', label: 'Look Later', bg: 'bg-amber-100', text: 'text-amber-700' },
-          { key: 'notInterested', label: 'Not Int', bg: 'bg-gray-100', text: 'text-gray-600' },
-          { key: 'voicemail', label: 'VM', bg: 'bg-gray-100', text: 'text-gray-500' },
-          { key: 'noAnswer', label: 'No Ans', bg: 'bg-gray-50', text: 'text-gray-500' },
-          { key: 'wrongNumber', label: 'Wrong #', bg: 'bg-red-50', text: 'text-red-600' },
-          { key: 'disconnected', label: 'Disconn', bg: 'bg-red-50', text: 'text-red-600' },
-          { key: 'dnc', label: 'DNC', bg: 'bg-red-100', text: 'text-red-700' },
+          { key: 'wantsToMoveForward', label: 'Move Fwd', bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-700 dark:text-green-400' },
+          { key: 'callback', label: 'Callback', bg: 'bg-teal-100', text: 'text-teal-700 dark:text-teal-400' },
+          { key: 'interestedVerbal', label: 'Verbal Int', bg: 'bg-green-50 dark:bg-green-950/30', text: 'text-green-600' },
+          { key: 'wantsChanges', label: 'Changes', bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-700 dark:text-blue-400' },
+          { key: 'willLookLater', label: 'Look Later', bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-700 dark:text-amber-400' },
+          { key: 'notInterested', label: 'Not Int', bg: 'bg-gray-100 dark:bg-slate-800', text: 'text-gray-600 dark:text-gray-400' },
+          { key: 'voicemail', label: 'VM', bg: 'bg-gray-100 dark:bg-slate-800', text: 'text-gray-500 dark:text-gray-400' },
+          { key: 'noAnswer', label: 'No Ans', bg: 'bg-gray-50 dark:bg-slate-800/50', text: 'text-gray-500 dark:text-gray-400' },
+          { key: 'wrongNumber', label: 'Wrong #', bg: 'bg-red-50 dark:bg-red-950/30', text: 'text-red-600' },
+          { key: 'disconnected', label: 'Disconn', bg: 'bg-red-50 dark:bg-red-950/30', text: 'text-red-600' },
+          { key: 'dnc', label: 'DNC', bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-700 dark:text-red-400' },
         ]
         const totals = DISPOSITION_BADGES.map(b => ({
           ...b,
@@ -385,9 +385,9 @@ export default function DialerMonitorPage() {
       <div className="space-y-4">
         {liveReps.length === 0 ? (
           <Card className="p-12 text-center">
-            <Users size={48} className="text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-700">No Active Reps</h3>
-            <p className="text-gray-500 mt-1">Rep status will appear here when they start dialing.</p>
+            <Users size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">No Active Reps</h3>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">Rep status will appear here when they start dialing.</p>
           </Card>
         ) : (
           liveReps.map(rep => (
@@ -409,12 +409,12 @@ export default function DialerMonitorPage() {
 
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-gray-900">{rep.repName}</h3>
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">{rep.repName}</h3>
                       <Badge variant="outline" className={
-                        rep.status === 'on_call' ? 'bg-green-100 text-green-700 border-green-200' :
-                        rep.status === 'dialing' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                        rep.status === 'on_hold' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
-                        'bg-gray-100 text-gray-600'
+                        rep.status === 'on_call' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 border-green-200' :
+                        rep.status === 'dialing' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 border-blue-200' :
+                        rep.status === 'on_hold' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 border-yellow-200' :
+                        'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'
                       }>
                         {rep.status === 'on_call' ? `ON CALL (${formatTime(rep.callDuration)})` :
                          rep.status === 'dialing' ? 'DIALING' :
@@ -424,7 +424,7 @@ export default function DialerMonitorPage() {
                     </div>
 
                     {rep.currentLead && (
-                      <p className="text-sm text-gray-600 mt-0.5">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
                         with <span className="font-medium">{rep.currentLead.firstName} {rep.currentLead.lastName}</span>
                         {' — '}{rep.currentLead.companyName}
                       </p>
@@ -455,7 +455,7 @@ export default function DialerMonitorPage() {
                       </div>
                     )}
 
-                    <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-500">
+                    <div className="flex items-center gap-4 mt-1.5 text-xs text-gray-500 dark:text-gray-400">
                       <span className="flex items-center gap-1">
                         <Phone size={12} /> {rep.todayStats.dials} dials
                       </span>
@@ -468,17 +468,17 @@ export default function DialerMonitorPage() {
                     </div>
                     <div className="flex flex-wrap gap-1.5 mt-1">
                       {[
-                        { val: rep.todayStats.wantsToMoveForward, label: 'Move Fwd', bg: 'bg-green-100', text: 'text-green-700' },
-                        { val: rep.todayStats.callback, label: 'Callback', bg: 'bg-teal-100', text: 'text-teal-700' },
-                        { val: rep.todayStats.interestedVerbal, label: 'Verbal Int', bg: 'bg-green-50', text: 'text-green-600' },
-                        { val: rep.todayStats.wantsChanges, label: 'Changes', bg: 'bg-blue-100', text: 'text-blue-700' },
-                        { val: rep.todayStats.willLookLater, label: 'Look Later', bg: 'bg-amber-100', text: 'text-amber-700' },
-                        { val: rep.todayStats.notInterested, label: 'Not Int', bg: 'bg-gray-100', text: 'text-gray-600' },
-                        { val: rep.todayStats.voicemail, label: 'VM', bg: 'bg-gray-100', text: 'text-gray-500' },
-                        { val: rep.todayStats.noAnswer, label: 'No Ans', bg: 'bg-gray-50', text: 'text-gray-500' },
-                        { val: rep.todayStats.wrongNumber, label: 'Wrong #', bg: 'bg-red-50', text: 'text-red-600' },
-                        { val: rep.todayStats.disconnected, label: 'Disconn', bg: 'bg-red-50', text: 'text-red-600' },
-                        { val: rep.todayStats.dnc, label: 'DNC', bg: 'bg-red-100', text: 'text-red-700' },
+                        { val: rep.todayStats.wantsToMoveForward, label: 'Move Fwd', bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-700 dark:text-green-400' },
+                        { val: rep.todayStats.callback, label: 'Callback', bg: 'bg-teal-100', text: 'text-teal-700 dark:text-teal-400' },
+                        { val: rep.todayStats.interestedVerbal, label: 'Verbal Int', bg: 'bg-green-50 dark:bg-green-950/30', text: 'text-green-600' },
+                        { val: rep.todayStats.wantsChanges, label: 'Changes', bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-700 dark:text-blue-400' },
+                        { val: rep.todayStats.willLookLater, label: 'Look Later', bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-700 dark:text-amber-400' },
+                        { val: rep.todayStats.notInterested, label: 'Not Int', bg: 'bg-gray-100 dark:bg-slate-800', text: 'text-gray-600 dark:text-gray-400' },
+                        { val: rep.todayStats.voicemail, label: 'VM', bg: 'bg-gray-100 dark:bg-slate-800', text: 'text-gray-500 dark:text-gray-400' },
+                        { val: rep.todayStats.noAnswer, label: 'No Ans', bg: 'bg-gray-50 dark:bg-slate-800/50', text: 'text-gray-500 dark:text-gray-400' },
+                        { val: rep.todayStats.wrongNumber, label: 'Wrong #', bg: 'bg-red-50 dark:bg-red-950/30', text: 'text-red-600' },
+                        { val: rep.todayStats.disconnected, label: 'Disconn', bg: 'bg-red-50 dark:bg-red-950/30', text: 'text-red-600' },
+                        { val: rep.todayStats.dnc, label: 'DNC', bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-700 dark:text-red-400' },
                       ].filter(d => d.val > 0).map(d => (
                         <span key={d.label} className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${d.bg} ${d.text}`}>
                           {d.val} {d.label}
@@ -494,7 +494,7 @@ export default function DialerMonitorPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-gray-400 border-gray-200 cursor-not-allowed"
+                      className="text-gray-400 dark:text-gray-500 border-gray-200 dark:border-slate-700 cursor-not-allowed"
                       disabled
                       title="Coming Soon — Requires Twilio Conference API"
                     >
@@ -503,7 +503,7 @@ export default function DialerMonitorPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-gray-400 border-gray-200 cursor-not-allowed"
+                      className="text-gray-400 dark:text-gray-500 border-gray-200 dark:border-slate-700 cursor-not-allowed"
                       disabled
                       title="Coming Soon — Requires Twilio Conference API"
                     >
@@ -512,7 +512,7 @@ export default function DialerMonitorPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-gray-400 border-gray-200 cursor-not-allowed"
+                      className="text-gray-400 dark:text-gray-500 border-gray-200 dark:border-slate-700 cursor-not-allowed"
                       disabled
                       title="Coming Soon — Requires Twilio Conference API"
                     >
@@ -527,32 +527,32 @@ export default function DialerMonitorPage() {
       </div>
 
       {/* Info Card */}
-      <Card className="p-5 bg-gray-50 border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">Monitor Controls</h3>
-        <div className="grid grid-cols-3 gap-4 text-sm text-gray-600">
+      <Card className="p-5 bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-slate-700">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Monitor Controls</h3>
+        <div className="grid grid-cols-3 gap-4 text-sm text-gray-600 dark:text-gray-400">
           <div className="flex items-start gap-2">
             <Headphones size={16} className="text-blue-500 mt-0.5" />
             <div>
               <span className="font-medium">Listen</span>
-              <p className="text-xs text-gray-400">Hear the call silently. Rep and lead don&apos;t know.</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Hear the call silently. Rep and lead don&apos;t know.</p>
             </div>
           </div>
           <div className="flex items-start gap-2">
             <VolumeX size={16} className="text-purple-500 mt-0.5" />
             <div>
               <span className="font-medium">Whisper</span>
-              <p className="text-xs text-gray-400">Talk to rep only. Lead can&apos;t hear you.</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Talk to rep only. Lead can&apos;t hear you.</p>
             </div>
           </div>
           <div className="flex items-start gap-2">
             <Volume2 size={16} className="text-red-500 mt-0.5" />
             <div>
               <span className="font-medium">Barge</span>
-              <p className="text-xs text-gray-400">Join the call. Both rep and lead hear you.</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Join the call. Both rep and lead hear you.</p>
             </div>
           </div>
         </div>
-        <p className="text-xs text-gray-400 mt-3">
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
           All monitoring features use Twilio Conference API. These features are coming soon — connect your Twilio account in Settings to enable when ready.
         </p>
       </Card>
@@ -561,23 +561,23 @@ export default function DialerMonitorPage() {
       {/* Session History Section                                     */}
       {/* ═══════════════════════════════════════════════════════════ */}
 
-      <div className="border-t border-gray-200 pt-8 mt-4">
+      <div className="border-t border-gray-200 dark:border-slate-700 pt-8 mt-4">
         <div className="mb-4">
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <History size={24} className="text-gray-500" />
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <History size={24} className="text-gray-500 dark:text-gray-400" />
             Session History
           </h2>
-          <p className="text-gray-500 text-sm mt-1">Past dialer sessions by rep</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Past dialer sessions by rep</p>
         </div>
 
         {/* Filters */}
         <div className="flex flex-wrap items-end gap-3 mb-4">
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">Rep</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Rep</label>
             <select
               value={filters.repId}
               onChange={e => setFilters(f => ({ ...f, repId: e.target.value }))}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white"
+              className="text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-900 dark:text-gray-100"
             >
               <option value="">All Reps</option>
               {liveReps.map(r => (
@@ -586,25 +586,25 @@ export default function DialerMonitorPage() {
             </select>
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">From</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">From</label>
             <input
               type="date"
               value={filters.from}
               onChange={e => setFilters(f => ({ ...f, from: e.target.value }))}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5"
+              className="text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-1.5 dark:bg-slate-900 dark:text-gray-100"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">To</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">To</label>
             <input
               type="date"
               value={filters.to}
               onChange={e => setFilters(f => ({ ...f, to: e.target.value }))}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5"
+              className="text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-1.5 dark:bg-slate-900 dark:text-gray-100"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">Search</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Search</label>
             <div className="flex gap-1">
               <input
                 type="text"
@@ -626,15 +626,15 @@ export default function DialerMonitorPage() {
 
         {/* Session List */}
         {historyLoading ? (
-          <div className="text-center text-gray-500 py-12">
+          <div className="text-center text-gray-500 dark:text-gray-400 py-12">
             <Loader2 size={24} className="animate-spin mx-auto mb-2" />
             Loading sessions...
           </div>
         ) : sessions.length === 0 ? (
           <Card className="p-12 text-center">
-            <History size={40} className="text-gray-300 mx-auto mb-3" />
-            <h3 className="text-lg font-semibold text-gray-700">No Sessions Found</h3>
-            <p className="text-gray-500 mt-1 text-sm">No completed sessions match your filters. Try adjusting the date range or rep filter.</p>
+            <History size={40} className="text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">No Sessions Found</h3>
+            <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">No completed sessions match your filters. Try adjusting the date range or rep filter.</p>
           </Card>
         ) : (
           <div className="space-y-3">
@@ -649,11 +649,11 @@ export default function DialerMonitorPage() {
                   {/* Collapsed Row */}
                   <button
                     onClick={() => setExpandedSessionId(isExpanded ? null : s.id)}
-                    className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+                    className="w-full p-4 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-gray-900 truncate">{s.name || 'Unnamed Session'}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">
+                      <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">{s.name || 'Unnamed Session'}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                         {formatSessionTime(s.startedAt, s.endedAt)}
                       </div>
                       {s.freshLeadsAtStart != null && (
@@ -662,9 +662,9 @@ export default function DialerMonitorPage() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-gray-500 shrink-0 ml-4">
-                      <span><strong className="text-gray-700">{s.totalCalls}</strong> dials</span>
-                      <span><strong className="text-gray-700">{s.conversations}</strong> convos</span>
+                    <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 shrink-0 ml-4">
+                      <span><strong className="text-gray-700 dark:text-gray-300">{s.totalCalls}</strong> dials</span>
+                      <span><strong className="text-gray-700 dark:text-gray-300">{s.conversations}</strong> convos</span>
                       <span><strong className="text-green-600">{s.wantsToMoveForwardCount}</strong> fwd</span>
                       <span><strong className="text-purple-600">{s.previewsSent}</strong> previews</span>
                       <Badge variant="outline" className="text-xs">{formatDuration(s.duration)}</Badge>
@@ -674,13 +674,13 @@ export default function DialerMonitorPage() {
 
                   {/* Expanded Detail */}
                   {isExpanded && (
-                    <div className="border-t border-gray-100 p-4 bg-gray-50/50 space-y-4">
+                    <div className="border-t border-gray-100 dark:border-slate-800 p-4 bg-gray-50/50 dark:bg-slate-800/50 space-y-4">
                       {/* Session Name + Hide Button */}
                       <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-gray-900">{s.name || 'Unnamed Session'}</h3>
+                        <h3 className="font-bold text-gray-900 dark:text-gray-100">{s.name || 'Unnamed Session'}</h3>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleHideSession(s.id) }}
-                          className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50"
+                          className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-950/30"
                         >
                           <Trash2 size={14} />
                           Hide
@@ -689,20 +689,20 @@ export default function DialerMonitorPage() {
 
                       {/* Disposition Breakdown */}
                       <div>
-                        <h4 className="text-xs font-semibold text-gray-600 mb-1.5">Dispositions</h4>
+                        <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Dispositions</h4>
                         <div className="flex flex-wrap gap-1.5">
                           {[
-                            { val: s.wantsToMoveForwardCount, label: 'Move Fwd', bg: 'bg-green-100', text: 'text-green-700' },
-                            { val: s.callbackCount, label: 'Callback', bg: 'bg-teal-100', text: 'text-teal-700' },
-                            { val: s.interestedVerbalCount, label: 'Verbal Int', bg: 'bg-green-50', text: 'text-green-600' },
-                            { val: s.wantsChangesCount, label: 'Changes', bg: 'bg-blue-100', text: 'text-blue-700' },
-                            { val: s.willLookLaterCount, label: 'Look Later', bg: 'bg-amber-100', text: 'text-amber-700' },
-                            { val: s.notInterestedCount, label: 'Not Int', bg: 'bg-gray-100', text: 'text-gray-600' },
-                            { val: s.voicemails, label: 'VM', bg: 'bg-gray-100', text: 'text-gray-500' },
-                            { val: s.noAnswers, label: 'No Ans', bg: 'bg-gray-50', text: 'text-gray-500' },
-                            { val: s.wrongNumberCount, label: 'Wrong #', bg: 'bg-red-50', text: 'text-red-600' },
-                            { val: s.disconnectedCount, label: 'Disconn', bg: 'bg-red-50', text: 'text-red-600' },
-                            { val: s.dncCount, label: 'DNC', bg: 'bg-red-100', text: 'text-red-700' },
+                            { val: s.wantsToMoveForwardCount, label: 'Move Fwd', bg: 'bg-green-100 dark:bg-green-900/40', text: 'text-green-700 dark:text-green-400' },
+                            { val: s.callbackCount, label: 'Callback', bg: 'bg-teal-100', text: 'text-teal-700 dark:text-teal-400' },
+                            { val: s.interestedVerbalCount, label: 'Verbal Int', bg: 'bg-green-50 dark:bg-green-950/30', text: 'text-green-600' },
+                            { val: s.wantsChangesCount, label: 'Changes', bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-700 dark:text-blue-400' },
+                            { val: s.willLookLaterCount, label: 'Look Later', bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-700 dark:text-amber-400' },
+                            { val: s.notInterestedCount, label: 'Not Int', bg: 'bg-gray-100 dark:bg-slate-800', text: 'text-gray-600 dark:text-gray-400' },
+                            { val: s.voicemails, label: 'VM', bg: 'bg-gray-100 dark:bg-slate-800', text: 'text-gray-500 dark:text-gray-400' },
+                            { val: s.noAnswers, label: 'No Ans', bg: 'bg-gray-50 dark:bg-slate-800/50', text: 'text-gray-500 dark:text-gray-400' },
+                            { val: s.wrongNumberCount, label: 'Wrong #', bg: 'bg-red-50 dark:bg-red-950/30', text: 'text-red-600' },
+                            { val: s.disconnectedCount, label: 'Disconn', bg: 'bg-red-50 dark:bg-red-950/30', text: 'text-red-600' },
+                            { val: s.dncCount, label: 'DNC', bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-700 dark:text-red-400' },
                           ].filter(d => d.val > 0).map(d => (
                             <span key={d.label} className={`px-2.5 py-1 rounded-full text-xs font-medium ${d.bg} ${d.text}`}>
                               {d.val} {d.label}
@@ -713,7 +713,7 @@ export default function DialerMonitorPage() {
 
                       {/* Stats Grid */}
                       <div>
-                        <h4 className="text-xs font-semibold text-gray-600 mb-1.5">Stats</h4>
+                        <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Stats</h4>
                         <div className="grid grid-cols-4 gap-3">
                           {[
                             { label: 'Connect Rate', value: `${connectRate}%` },
@@ -729,9 +729,9 @@ export default function DialerMonitorPage() {
                             { label: 'Total Dials', value: String(s.totalCalls) },
                             { label: 'Auto-Dial', value: s.autoDialEnabled ? 'Yes' : 'No' },
                           ].map(stat => (
-                            <div key={stat.label} className="bg-white rounded-lg border border-gray-100 p-2.5">
-                              <div className="text-[10px] text-gray-400 uppercase tracking-wide">{stat.label}</div>
-                              <div className="text-sm font-semibold text-gray-900 mt-0.5">{stat.value}</div>
+                            <div key={stat.label} className="bg-white dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800 p-2.5">
+                              <div className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">{stat.label}</div>
+                              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-0.5">{stat.value}</div>
                             </div>
                           ))}
                         </div>
@@ -739,19 +739,19 @@ export default function DialerMonitorPage() {
 
                       {/* AI Recommendation */}
                       <div>
-                        <h4 className="text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1">
+                        <h4 className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 flex items-center gap-1">
                           <Sparkles size={12} /> AI Recommendation
                         </h4>
-                        <Card className="p-3 bg-white">
+                        <Card className="p-3 bg-white dark:bg-slate-900">
                           {s.aiRecommendation ? (
-                            <p className="text-sm text-gray-700 leading-relaxed">{s.aiRecommendation}</p>
+                            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{s.aiRecommendation}</p>
                           ) : generatingAI === s.id ? (
-                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                               <Loader2 size={14} className="animate-spin" />
                               Generating AI analysis...
                             </div>
                           ) : s.totalCalls < 10 ? (
-                            <p className="text-sm text-gray-400 italic">Not enough data for analysis (minimum 10 calls)</p>
+                            <p className="text-sm text-gray-400 dark:text-gray-500 italic">Not enough data for analysis (minimum 10 calls)</p>
                           ) : (
                             <Button
                               variant="outline"
@@ -773,7 +773,7 @@ export default function DialerMonitorPage() {
 
         {/* Pagination */}
         {sessionPagination.totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
+          <div className="flex items-center justify-between mt-4 text-sm text-gray-600 dark:text-gray-400">
             <span>
               Showing {(sessionPagination.page - 1) * sessionPagination.limit + 1}–{Math.min(sessionPagination.page * sessionPagination.limit, sessionPagination.total)} of {sessionPagination.total} sessions
             </span>

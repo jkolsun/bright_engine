@@ -32,7 +32,7 @@ export default function ToggleSwitch({
       `}
     >
       {label && (
-        <span className="text-xs text-gray-500 select-none">{label}</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400 select-none">{label}</span>
       )}
       <span
         className={`
@@ -40,7 +40,7 @@ export default function ToggleSwitch({
           transition-colors duration-200 ease-in-out
           ${checked
             ? 'bg-teal-500'
-            : 'bg-gray-300'
+            : 'bg-gray-300 dark:bg-slate-600'
           }
         `}
       >

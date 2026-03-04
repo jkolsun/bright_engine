@@ -23,6 +23,8 @@ import {
   Search,
 } from 'lucide-react'
 import { BriefingModal } from '@/components/admin/BriefingModal'
+import { ThemeProvider, useTheme } from '@/components/theme/ThemeProvider'
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,7 +33,20 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
+  return (
+    <ThemeProvider>
+      <AdminLayoutInner>{children}</AdminLayoutInner>
+    </ThemeProvider>
+  )
+}
+
+function AdminLayoutInner({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   const router = useRouter()
+  const { resolvedTheme } = useTheme()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [pendingApprovals, setPendingApprovals] = useState(0)
   const [buildQueueBadge, setBuildQueueBadge] = useState(0)
@@ -66,7 +81,7 @@ export default function AdminLayout({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         router.push(data.redirectUrl)
@@ -77,8 +92,10 @@ export default function AdminLayout({
     }
   }
 
+  const isDark = resolvedTheme === 'dark'
+
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className={`flex h-screen ${isDark ? 'dark bg-background' : 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'}`}>
       {/* Sidebar - Hidden on mobile */}
       <aside className="w-72 gradient-dark text-white flex-col shadow-large border-r border-slate-700/50 hidden md:flex">
         <div className="p-6 border-b border-white/10">
@@ -92,7 +109,7 @@ export default function AdminLayout({
             </div>
           </div>
         </div>
-        
+
         <nav className="flex-1 p-4 space-y-1">
           <NavLink href="/admin/dashboard" icon={<LayoutDashboard size={20} />}>
             Dashboard
@@ -145,6 +162,7 @@ export default function AdminLayout({
         </nav>
 
         <div className="p-4 border-t border-slate-700 space-y-2">
+          <ThemeToggle />
           <Link
             href="/admin/reps"
             className="flex items-center gap-2 text-sm text-slate-300 hover:text-white w-full transition-colors px-3 py-2 rounded-lg hover:bg-slate-700/50"

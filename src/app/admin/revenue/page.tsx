@@ -49,92 +49,92 @@ export default function RevenuePage() {
   return (
     <div className="p-8 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Revenue</h1>
-        <p className="text-gray-500 mt-1">Financial overview and projections</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Revenue</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Financial overview and projections</p>
       </div>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50">
+        <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">MRR</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">MRR</span>
             <DollarSign size={20} className="text-blue-600" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">{formatCurrency(mrr)}</div>
-          <div className="text-sm text-green-600 mt-2">Monthly Recurring</div>
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(mrr)}</div>
+          <div className="text-sm text-green-600 dark:text-green-400 mt-2">Monthly Recurring</div>
         </Card>
 
         <Card className="p-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">ARR</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">ARR</span>
             <TrendingUp size={20} className="text-purple-600" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">{formatCurrency(arr)}</div>
-          <div className="text-sm text-gray-500 mt-2">Annual Run Rate</div>
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(arr)}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">Annual Run Rate</div>
         </Card>
 
         <Card className="p-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Active Clients</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Active Clients</span>
             <Users size={20} className="text-green-600" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">{activeClients}</div>
-          <div className="text-sm text-gray-500 mt-2">Paying customers</div>
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{activeClients}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">Paying customers</div>
         </Card>
 
         <Card className="p-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Avg Rev/Client</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Avg Rev/Client</span>
             <Calendar size={20} className="text-amber-600" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             {payingClients > 0 ? formatCurrency(Math.round(mrr / payingClients)) : '$0'}
           </div>
-          <div className="text-sm text-gray-500 mt-2">Per month</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">Per month</div>
         </Card>
       </div>
 
       {/* Recent Transactions */}
       <Card className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Transactions</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Recent Transactions</h3>
         {transactions.length === 0 ? (
           <div className="text-center py-12">
-            <DollarSign size={48} className="mx-auto mb-3 text-gray-300" />
-            <h4 className="text-lg font-semibold text-gray-700 mb-1">No transactions yet</h4>
-            <p className="text-sm text-gray-500">Revenue transactions will appear here as clients make payments.</p>
+            <DollarSign size={48} className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+            <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-1">No transactions yet</h4>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Revenue transactions will appear here as clients make payments.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50 dark:bg-slate-800/50 border-b dark:border-slate-700">
                 <tr>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Date</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Client</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Type</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Product</th>
-                  <th className="text-right p-4 text-sm font-semibold text-gray-700">Amount</th>
-                  <th className="text-right p-4 text-sm font-semibold text-gray-700">Status</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Date</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Client</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Type</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Product</th>
+                  <th className="text-right p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Amount</th>
+                  <th className="text-right p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
                 {transactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-gray-50">
-                    <td className="p-4 text-sm text-gray-700">
+                  <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-slate-800">
+                    <td className="p-4 text-sm text-gray-700 dark:text-gray-300">
                       {new Date(tx.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="p-4 text-sm font-medium text-gray-900">
+                    <td className="p-4 text-sm font-medium text-gray-900 dark:text-gray-100">
                       {tx.client?.companyName || 'N/A'}
                     </td>
-                    <td className="p-4 text-sm text-gray-700">{tx.type.replace(/_/g, ' ')}</td>
-                    <td className="p-4 text-sm text-gray-700">{tx.product || '-'}</td>
-                    <td className="p-4 text-sm font-semibold text-right text-gray-900">
+                    <td className="p-4 text-sm text-gray-700 dark:text-gray-300">{tx.type.replace(/_/g, ' ')}</td>
+                    <td className="p-4 text-sm text-gray-700 dark:text-gray-300">{tx.product || '-'}</td>
+                    <td className="p-4 text-sm font-semibold text-right text-gray-900 dark:text-gray-100">
                       {formatCurrency(tx.amount)}
                     </td>
                     <td className="p-4 text-right">
                       <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${
-                        tx.status === 'PAID' ? 'bg-green-100 text-green-800' :
-                        tx.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
+                        tx.status === 'PAID' ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-400' :
+                        tx.status === 'PENDING' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-400' :
+                        'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-400'
                       }`}>
                         {tx.status}
                       </span>

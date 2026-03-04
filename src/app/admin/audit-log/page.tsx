@@ -33,15 +33,15 @@ export default function AuditLogPage() {
   const eventTypeColor = (type: string) => {
     switch (type) {
       case 'STAGE_CHANGE':
-        return 'bg-blue-100 text-blue-800'
+        return 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-400'
       case 'EMAIL_SENT':
-        return 'bg-green-100 text-green-800'
+        return 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-400'
       case 'PREVIEW_VIEWED':
-        return 'bg-purple-100 text-purple-800'
+        return 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-400'
       case 'CALL_MADE':
-        return 'bg-orange-100 text-orange-800'
+        return 'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-400'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-400'
     }
   }
 
@@ -58,15 +58,15 @@ export default function AuditLogPage() {
   return (
     <div className="p-8 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Audit Log</h1>
-        <p className="text-gray-500 mt-1">Track all changes and activities in the system</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Audit Log</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Track all changes and activities in the system</p>
       </div>
 
       {/* Filters */}
       <Card className="p-4">
         <div className="flex items-center gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={18} />
             <Input
               className="pl-10"
               placeholder="Search audit log..."
@@ -77,7 +77,7 @@ export default function AuditLogPage() {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-md"
+            className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-md dark:bg-slate-800 dark:text-gray-200"
           >
             <option value="all">All Events</option>
             <option value="STAGE_CHANGE">Status Changes</option>
@@ -91,7 +91,7 @@ export default function AuditLogPage() {
       {/* Events Timeline */}
       <Card className="p-6">
         {filteredEvents.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
             <p>No audit events found</p>
           </div>
         ) : (
@@ -99,7 +99,7 @@ export default function AuditLogPage() {
             {filteredEvents.map((event, index) => (
               <div key={event.id || index} className="flex gap-4 pb-4 border-b last:border-0">
                 <div className="w-32 flex-shrink-0">
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     {new Date(event.createdAt).toLocaleString()}
                   </div>
                 </div>
@@ -109,18 +109,18 @@ export default function AuditLogPage() {
                     <Badge className={eventTypeColor(event.eventType)}>
                       {event.eventType.replace(/_/g, ' ')}
                     </Badge>
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       Lead ID: {event.leadId}
                     </span>
                   </div>
                   
                   {event.metadata && (
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
                       <p>Changes: {JSON.stringify(event.metadata)}</p>
                     </div>
                   )}
 
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     By: {event.actor || 'system'}
                   </div>
                 </div>
@@ -133,27 +133,27 @@ export default function AuditLogPage() {
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-6">
-          <div className="text-sm text-gray-600 mb-1">Total Events</div>
-          <div className="text-3xl font-bold text-gray-900">{events.length}</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Events</div>
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{events.length}</div>
         </Card>
 
         <Card className="p-6">
-          <div className="text-sm text-gray-600 mb-1">Status Changes</div>
-          <div className="text-3xl font-bold text-gray-900">
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Status Changes</div>
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             {events.filter(e => e.eventType === 'STAGE_CHANGE').length}
           </div>
         </Card>
 
         <Card className="p-6">
-          <div className="text-sm text-gray-600 mb-1">Admin Actions</div>
-          <div className="text-3xl font-bold text-gray-900">
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Admin Actions</div>
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             {events.filter(e => e.actor === 'admin').length}
           </div>
         </Card>
 
         <Card className="p-6">
-          <div className="text-sm text-gray-600 mb-1">System Events</div>
-          <div className="text-3xl font-bold text-gray-900">
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">System Events</div>
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             {events.filter(e => e.actor === 'system' || e.actor === 'instantly').length}
           </div>
         </Card>

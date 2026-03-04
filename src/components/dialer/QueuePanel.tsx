@@ -4,16 +4,16 @@ import { useDialer } from './DialerProvider'
 import { Phone, RefreshCw, Clock, PhoneMissed, CheckCircle, Search, X, ChevronDown, PanelLeftClose } from 'lucide-react'
 
 const DISPOSITION_BADGE: Record<string, { label: string; className: string }> = {
-  WANTS_TO_MOVE_FORWARD: { label: 'Moving Forward', className: 'bg-green-100 text-green-700' },
-  INTERESTED_VERBAL: { label: 'Interested', className: 'bg-green-100 text-green-700' },
-  CALLBACK: { label: 'Callback', className: 'bg-teal-100 text-teal-700' },
-  WANTS_CHANGES: { label: 'Wants Changes', className: 'bg-teal-100 text-teal-700' },
-  WILL_LOOK_LATER: { label: 'Will Look Later', className: 'bg-blue-100 text-blue-700' },
-  NOT_INTERESTED: { label: 'Not Interested', className: 'bg-gray-100 text-gray-600' },
-  DNC: { label: 'DNC', className: 'bg-red-100 text-red-700' },
-  WRONG_NUMBER: { label: 'Wrong Number', className: 'bg-red-100 text-red-600' },
-  DISCONNECTED: { label: 'Disconnected', className: 'bg-red-100 text-red-600' },
-  NO_ANSWER: { label: 'No Answer', className: 'bg-amber-100 text-amber-700' },
+  WANTS_TO_MOVE_FORWARD: { label: 'Moving Forward', className: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' },
+  INTERESTED_VERBAL: { label: 'Interested', className: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' },
+  CALLBACK: { label: 'Callback', className: 'bg-teal-100 text-teal-700 dark:text-teal-400' },
+  WANTS_CHANGES: { label: 'Wants Changes', className: 'bg-teal-100 text-teal-700 dark:text-teal-400' },
+  WILL_LOOK_LATER: { label: 'Will Look Later', className: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400' },
+  NOT_INTERESTED: { label: 'Not Interested', className: 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400' },
+  DNC: { label: 'DNC', className: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400' },
+  WRONG_NUMBER: { label: 'Wrong Number', className: 'bg-red-100 dark:bg-red-900/40 text-red-600' },
+  DISCONNECTED: { label: 'Disconnected', className: 'bg-red-100 dark:bg-red-900/40 text-red-600' },
+  NO_ANSWER: { label: 'No Answer', className: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' },
   VOICEMAIL: { label: 'Voicemail', className: 'bg-purple-100 text-purple-700' },
 }
 
@@ -48,7 +48,7 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
     { key: 'retry' as const, label: 'Retry', icon: RefreshCw, count: queue.retryLeads.length, color: 'text-blue-600', bg: 'bg-blue-50' },
     { key: 'scheduled' as const, label: 'Scheduled', icon: Clock, count: queue.callbacks.length, color: 'text-purple-600', bg: 'bg-purple-50' },
     { key: 'missed' as const, label: 'Missed', icon: PhoneMissed, count: queue.missed.length, color: 'text-red-600', bg: 'bg-red-50' },
-    { key: 'called' as const, label: 'Called', icon: CheckCircle, count: queue.calledLeads.length, color: 'text-gray-600', bg: 'bg-gray-100' },
+    { key: 'called' as const, label: 'Called', icon: CheckCircle, count: queue.calledLeads.length, color: 'text-gray-600', bg: 'bg-gray-100 dark:bg-slate-800' },
   ]
 
   const active = filters.find(f => f.key === queue.activeTab) || filters[0]
@@ -92,23 +92,23 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
         <div className="relative flex items-center gap-1.5">
           <button
             onClick={() => setFilterOpen(!filterOpen)}
-            className="flex-1 flex items-center justify-between px-3 py-2 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors shadow-sm"
+            className="flex-1 flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg hover:border-gray-300 transition-colors shadow-sm"
           >
             <div className="flex items-center gap-2">
               <active.icon className={`w-4 h-4 ${active.color}`} />
-              <span className="text-sm font-medium text-gray-900">{active.label}</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{active.label}</span>
               {active.count > 0 && (
                 <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${active.bg} ${active.color}`}>
                   {active.count}
                 </span>
               )}
             </div>
-            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${filterOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-gray-400 dark:text-gray-500 transition-transform duration-200 ${filterOpen ? 'rotate-180' : ''}`} />
           </button>
           {onCollapse && (
             <button
               onClick={onCollapse}
-              className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0"
+              className="p-2 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
               title="Collapse queue"
             >
               <PanelLeftClose className="w-4 h-4" />
@@ -116,15 +116,15 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
           )}
 
           {filterOpen && (
-            <div className="absolute top-full left-0 z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
+            <div className="absolute top-full left-0 z-50 w-full mt-1 bg-white dark:bg-slate-900 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 py-1">
               {filters.map(f => (
                 <button
                   key={f.key}
                   onClick={() => handleFilterSelect(f.key)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 text-sm transition-colors ${
                     queue.activeTab === f.key
-                      ? 'bg-teal-50 text-teal-700'
-                      : 'text-gray-700 hover:bg-gray-50'
+                      ? 'bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-400'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
@@ -135,8 +135,8 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
                     queue.activeTab === f.key
                       ? 'bg-teal-100 text-teal-700'
                       : f.key === 'missed' && f.count > 0
-                        ? 'bg-red-100 text-red-600'
-                        : 'bg-gray-100 text-gray-500'
+                        ? 'bg-red-100 dark:bg-red-900/40 text-red-600'
+                        : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400'
                   }`}>
                     {f.count}
                   </span>
@@ -151,18 +151,18 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
       {showSearch && (
         <div className="px-3 pb-2">
           <div className="relative">
-            <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-400" />
+            <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Search leads..."
               value={queue.searchQuery}
               onChange={(e) => queue.setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-8 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+              className="w-full pl-8 pr-8 py-1.5 text-xs border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500 dark:bg-slate-800 dark:text-gray-100"
             />
             {queue.searchQuery && (
               <button
                 onClick={() => queue.setSearchQuery('')}
-                className="absolute right-2.5 top-2 text-gray-400 hover:text-gray-600"
+                className="absolute right-2.5 top-2 text-gray-400 dark:text-gray-500 hover:text-gray-600"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -185,12 +185,12 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap transition-colors ${
                   dispoFilter === pill.key
                     ? 'bg-teal-500 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'
                 }`}
               >
                 {pill.label}
                 <span className={`px-1 py-0.5 rounded-full text-[9px] ${
-                  dispoFilter === pill.key ? 'bg-teal-600 text-teal-100' : 'bg-gray-200 text-gray-500'
+                  dispoFilter === pill.key ? 'bg-teal-600 text-teal-100' : 'bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400'
                 }`}>
                   {count}
                 </span>
@@ -216,26 +216,26 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
                   <button
                     key={`recent-${lead.id}`}
                     onClick={() => queue.setSelectedLeadId(lead.id)}
-                    className={`w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-amber-50/40 transition-colors ${
-                      queue.selectedLeadId === lead.id ? 'bg-amber-50/60 border-l-2 border-l-amber-400' : ''
+                    className={`w-full text-left px-3 py-2 border-b border-gray-100 dark:border-slate-800 hover:bg-amber-50/40 dark:hover:bg-amber-950/20 transition-colors ${
+                      queue.selectedLeadId === lead.id ? 'bg-amber-50/60 dark:bg-amber-950/30 border-l-2 border-l-amber-400' : ''
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-900 truncate">{lead.companyName}</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{lead.companyName}</span>
                       {lead.lastDisposition && (
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ml-2 ${
-                          DISPOSITION_BADGE[lead.lastDisposition]?.className || 'bg-gray-100 text-gray-500'
+                          DISPOSITION_BADGE[lead.lastDisposition]?.className || 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400'
                         }`}>
                           {DISPOSITION_BADGE[lead.lastDisposition]?.label || lead.lastDisposition}
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-gray-500 mt-0.5 truncate">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                       {lead.firstName || lead.contactName || lead.city || 'Contact'} &middot; {lead.phone?.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-****')}
                     </div>
                   </button>
                 ))}
-                <div className="border-t-2 border-gray-200 mx-3 my-1" />
+                <div className="border-t-2 border-gray-200 dark:border-slate-700 mx-3 my-1" />
               </>
             )}
 
@@ -245,15 +245,15 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
                 <button
                   key={lead.id}
                   onClick={() => queue.setSelectedLeadId(lead.id)}
-                  className={`w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-white transition-colors ${
-                    queue.selectedLeadId === lead.id ? 'bg-teal-50/40 border-l-2 border-l-teal-500' : ''
+                  className={`w-full text-left px-3 py-2 border-b border-gray-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800 transition-colors ${
+                    queue.selectedLeadId === lead.id ? 'bg-teal-50/40 dark:bg-teal-950/20 border-l-2 border-l-teal-500' : ''
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-900 truncate">{lead.companyName}</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{lead.companyName}</span>
                     {(queue.activeTab === 'called' || queue.activeTab === 'retry') && lead.lastDisposition ? (
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ml-2 ${
-                        DISPOSITION_BADGE[lead.lastDisposition]?.className || 'bg-gray-100 text-gray-500'
+                        DISPOSITION_BADGE[lead.lastDisposition]?.className || 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400'
                       }`}>
                         {DISPOSITION_BADGE[lead.lastDisposition]?.label || lead.lastDisposition}
                       </span>
@@ -263,17 +263,17 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
                       }`} />
                     )}
                   </div>
-                  <div className="text-xs text-gray-500 mt-0.5 truncate">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                     {lead.firstName || lead.contactName || lead.city || 'Contact'} &middot; {lead.phone?.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-****')}
                   </div>
                   {lead._count?.dialerCalls !== undefined && lead._count.dialerCalls > 0 && (
-                    <div className="text-[10px] text-gray-400 mt-0.5">{lead._count.dialerCalls} calls</div>
+                    <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{lead._count.dialerCalls} calls</div>
                   )}
                 </button>
               ))
             ) : (
               <div className="text-center py-8 px-4">
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-400 dark:text-gray-500">
                   {queue.searchQuery
                     ? 'No leads match your search'
                     : dispoFilter
@@ -295,26 +295,26 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
             queue.callbacks.map(cb => (
               <div
                 key={cb.id}
-                className="flex items-center w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-white"
+                className="flex items-center w-full text-left px-3 py-2 border-b border-gray-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800"
               >
                 <button
                   onClick={() => { if (cb.lead) queue.setSelectedLeadId(cb.lead.id) }}
                   className="flex-1 text-left min-w-0"
                 >
-                  <div className="text-sm font-medium text-gray-900 truncate">{cb.lead?.companyName || 'Unknown'}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{cb.lead?.companyName || 'Unknown'}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     {cb.notes?.startsWith('[ALL_DAY]')
                       ? `${new Date(cb.scheduledAt).toLocaleDateString([], { month: 'short', day: 'numeric' })} — All Day`
                       : new Date(cb.scheduledAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                   </div>
                   {cb.notes && cb.notes.replace('[ALL_DAY]', '').trim() && (
-                    <div className="text-xs text-gray-400 mt-0.5 truncate">{cb.notes.replace('[ALL_DAY]', '').trim()}</div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">{cb.notes.replace('[ALL_DAY]', '').trim()}</div>
                   )}
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleCancelCallback(cb.id) }}
                   disabled={cancellingId === cb.id}
-                  className="ml-2 p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 flex-shrink-0"
+                  className="ml-2 p-1 rounded text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50 flex-shrink-0"
                   title="Cancel callback"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -335,10 +335,10 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
               <button
                 key={m.id}
                 onClick={() => { if (m.lead) queue.setSelectedLeadId(m.lead.id) }}
-                className="w-full text-left px-3 py-2 border-b border-gray-100 hover:bg-white"
+                className="w-full text-left px-3 py-2 border-b border-gray-100 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800"
               >
-                <div className="text-sm font-medium text-gray-900">{m.lead?.companyName || m.phoneNumberUsed || 'Unknown'}</div>
-                <div className="text-xs text-gray-500 mt-0.5">
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{m.lead?.companyName || m.phoneNumberUsed || 'Unknown'}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                   {new Date(m.startedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                 </div>
               </button>
@@ -350,7 +350,7 @@ export function QueuePanel({ onCollapse }: { onCollapse?: () => void }) {
           )
         )}
 
-        {queue.loading && <div className="text-center py-4 text-xs text-gray-400">Loading...</div>}
+        {queue.loading && <div className="text-center py-4 text-xs text-gray-400 dark:text-gray-500">Loading...</div>}
       </div>
     </div>
   )

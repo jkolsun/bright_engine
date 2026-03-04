@@ -63,8 +63,8 @@ export default function RepPerformancePage() {
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Rep Performance</h1>
-          <p className="text-gray-500 mt-1">Monitor team metrics and earnings</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Rep Performance</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Monitor team metrics and earnings</p>
         </div>
         <Link href="/admin/settings/reps">
           <Button>
@@ -78,75 +78,75 @@ export default function RepPerformancePage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Total Reps</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Total Reps</span>
             <Users size={20} className="text-blue-600" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">{reps.length}</div>
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{reps.length}</div>
         </Card>
 
         <Card className="p-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Active</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Active</span>
             <TrendingUp size={20} className="text-green-600" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             {reps.filter(r => r.status === 'ACTIVE').length}
           </div>
         </Card>
 
         <Card className="p-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Assigned Leads</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Assigned Leads</span>
             <Target size={20} className="text-purple-600" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">0</div>
-          <p className="text-xs text-gray-500 mt-1">Across all reps</p>
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">0</div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Across all reps</p>
         </Card>
 
         <Card className="p-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Total Earnings</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Total Earnings</span>
             <DollarSign size={20} className="text-amber-600" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">$0</div>
-          <p className="text-xs text-gray-500 mt-1">YTD commissions</p>
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">$0</div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">YTD commissions</p>
         </Card>
       </div>
 
       {/* Reps Table */}
       <Card>
-        <div className="p-6 border-b">
-          <h3 className="text-lg font-semibold text-gray-900">Your Sales Team</h3>
+        <div className="p-6 border-b dark:border-slate-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Your Sales Team</h3>
         </div>
         {reps.length === 0 ? (
-          <div className="p-12 text-center text-gray-500">
+          <div className="p-12 text-center text-gray-500 dark:text-gray-400">
             <p>No reps yet</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50 dark:bg-slate-800/50 border-b dark:border-slate-700">
                 <tr>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Rep Name</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Email</th>
-                  <th className="text-center p-4 text-sm font-semibold text-gray-700">Assigned Leads</th>
-                  <th className="text-center p-4 text-sm font-semibold text-gray-700">Hot Leads</th>
-                  <th className="text-center p-4 text-sm font-semibold text-gray-700">Closed Deals</th>
-                  <th className="text-right p-4 text-sm font-semibold text-gray-700">Commission</th>
-                  <th className="text-right p-4 text-sm font-semibold text-gray-700">Actions</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Rep Name</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Email</th>
+                  <th className="text-center p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Assigned Leads</th>
+                  <th className="text-center p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Hot Leads</th>
+                  <th className="text-center p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Closed Deals</th>
+                  <th className="text-right p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Commission</th>
+                  <th className="text-right p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
                 {reps.map((rep) => {
                   const stats = repStats(rep)
                   return (
-                    <tr key={rep.id} className="hover:bg-gray-50">
-                      <td className="p-4 font-medium text-gray-900">{rep.name}</td>
-                      <td className="p-4 text-gray-700">{rep.email}</td>
-                      <td className="p-4 text-center text-gray-700">{stats.assignedLeads}</td>
-                      <td className="p-4 text-center text-gray-700">{stats.hotLeads}</td>
-                      <td className="p-4 text-center text-gray-700">{stats.closedDeals}</td>
-                      <td className="p-4 text-right font-semibold text-gray-900">{formatCurrency(stats.commission)}</td>
+                    <tr key={rep.id} className="hover:bg-gray-50 dark:hover:bg-slate-800">
+                      <td className="p-4 font-medium text-gray-900 dark:text-gray-100">{rep.name}</td>
+                      <td className="p-4 text-gray-700 dark:text-gray-300">{rep.email}</td>
+                      <td className="p-4 text-center text-gray-700 dark:text-gray-300">{stats.assignedLeads}</td>
+                      <td className="p-4 text-center text-gray-700 dark:text-gray-300">{stats.hotLeads}</td>
+                      <td className="p-4 text-center text-gray-700 dark:text-gray-300">{stats.closedDeals}</td>
+                      <td className="p-4 text-right font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(stats.commission)}</td>
                       <td className="p-4 text-right">
                         <Link href={`/admin/reps/${rep.id}`}>
                           <Button variant="ghost" size="sm">View</Button>

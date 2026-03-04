@@ -18,13 +18,13 @@ import SiteEditorPanel from '@/components/site-editor/SiteEditorPanel'
 const SITE_STEPS = ['QA_REVIEW', 'EDITING', 'QA_APPROVED', 'CLIENT_REVIEW', 'CLIENT_APPROVED', 'LAUNCHING', 'LIVE'] as const
 
 const SITE_STEP_CONFIG: Record<string, { label: string; icon: any; color: string; bgColor: string }> = {
-  QA_REVIEW: { label: 'QA Review', icon: Eye, color: 'text-blue-600', bgColor: 'bg-blue-100' },
-  EDITING: { label: 'Editing', icon: Pencil, color: 'text-amber-600', bgColor: 'bg-amber-100' },
-  QA_APPROVED: { label: 'Awaiting Andrew', icon: Send, color: 'text-purple-600', bgColor: 'bg-purple-100' },
-  CLIENT_REVIEW: { label: 'Client Review', icon: Eye, color: 'text-indigo-600', bgColor: 'bg-indigo-100' },
-  CLIENT_APPROVED: { label: 'Client Approved', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100' },
-  LAUNCHING: { label: 'Launching', icon: Rocket, color: 'text-orange-600', bgColor: 'bg-orange-100' },
-  LIVE: { label: 'Live', icon: Globe, color: 'text-emerald-600', bgColor: 'bg-emerald-100' },
+  QA_REVIEW: { label: 'QA Review', icon: Eye, color: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-900/40' },
+  EDITING: { label: 'Editing', icon: Pencil, color: 'text-amber-600', bgColor: 'bg-amber-100 dark:bg-amber-900/40' },
+  QA_APPROVED: { label: 'Awaiting Andrew', icon: Send, color: 'text-purple-600', bgColor: 'bg-purple-100 dark:bg-purple-900/40' },
+  CLIENT_REVIEW: { label: 'Client Review', icon: Eye, color: 'text-indigo-600', bgColor: 'bg-indigo-100 dark:bg-indigo-900/40' },
+  CLIENT_APPROVED: { label: 'Client Approved', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100 dark:bg-green-900/40' },
+  LAUNCHING: { label: 'Launching', icon: Rocket, color: 'text-orange-600', bgColor: 'bg-orange-100 dark:bg-orange-900/40' },
+  LIVE: { label: 'Live', icon: Globe, color: 'text-emerald-600', bgColor: 'bg-emerald-100 dark:bg-emerald-900/40' },
 }
 
 // Worker pipeline steps (secondary tab)
@@ -99,12 +99,12 @@ function EditPanel({ leadId, onDone }: { leadId: string; onDone: () => void }) {
   }
 
   return (
-    <div className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+    <div className="mt-3 p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700">
       <textarea
         value={instructions}
         onChange={(e) => setInstructions(e.target.value)}
         placeholder='Type edit instructions in plain English... e.g. "Change the headline to Dallas Roofing You Can Trust"'
-        className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-800 dark:text-gray-100"
         rows={3}
         disabled={applying}
       />
@@ -119,7 +119,7 @@ function EditPanel({ leadId, onDone }: { leadId: string; onDone: () => void }) {
         </button>
       </div>
       {result && (
-        <div className={`mt-3 p-3 rounded-lg text-sm ${result.error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+        <div className={`mt-3 p-3 rounded-lg text-sm ${result.error ? 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400' : 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400'}`}>
           {result.error ? (
             <p>{result.error}</p>
           ) : (
@@ -169,14 +169,14 @@ function LaunchPanel({ leadId, onDone }: { leadId: string; onDone: () => void })
   }
 
   return (
-    <div className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-      <label className="block text-sm font-medium text-gray-700 mb-1">Client Domain</label>
+    <div className="mt-3 p-4 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Domain</label>
       <input
         type="text"
         value={domain}
         onChange={(e) => setDomain(e.target.value)}
         placeholder="www.johnsonroofing.com"
-        className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-800 dark:text-gray-100"
         disabled={launching}
       />
       <button
@@ -188,7 +188,7 @@ function LaunchPanel({ leadId, onDone }: { leadId: string; onDone: () => void })
         {launching ? 'Launching...' : 'Launch Site'}
       </button>
       {result && (
-        <div className={`mt-3 p-3 rounded-lg text-sm ${result.error ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+        <div className={`mt-3 p-3 rounded-lg text-sm ${result.error ? 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400' : 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400'}`}>
           {result.error || result.instructions}
         </div>
       )}
@@ -290,10 +290,10 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
             )}
           </div>
           <div>
-            <Link href={`/admin/leads/${lead.id}`} className="font-semibold text-gray-900 hover:text-blue-600">
+            <Link href={`/admin/leads/${lead.id}`} className="font-semibold text-gray-900 dark:text-gray-100 hover:text-blue-600">
               {lead.companyName}
             </Link>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               {lead.firstName} {lead.lastName || ''} &middot; {(lead.industry || 'General').replace(/_/g, ' ')}
               {lead.city && ` &middot; ${lead.city}${lead.state ? `, ${lead.state}` : ''}`}
             </p>
@@ -310,7 +310,7 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
                 const hoursSinceUpdate = (Date.now() - new Date(lead.updatedAt).getTime()) / (1000 * 60 * 60)
                 if (hoursSinceUpdate > 48) {
                   return (
-                    <Badge className="bg-red-100 text-red-700 border-red-200 text-xs">
+                    <Badge className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 text-xs">
                       <AlertTriangle size={10} className="mr-1" />
                       Stuck — {Math.floor(hoursSinceUpdate / 24)}d+
                     </Badge>
@@ -318,7 +318,7 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
                 }
                 if (hoursSinceUpdate > 24) {
                   return (
-                    <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200 text-xs">
+                    <Badge className="bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800 text-xs">
                       <Clock size={10} className="mr-1" />
                       Stale — {Math.floor(hoursSinceUpdate)}h+
                     </Badge>
@@ -326,7 +326,7 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
                 }
                 return null
               })()}
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-400 dark:text-gray-500">
                 {formatTimeAgo(lead.updatedAt)}
               </span>
             </div>
@@ -339,7 +339,7 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
               href={previewUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+              className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-1.5"
             >
               <ExternalLink size={14} />
               Preview
@@ -349,7 +349,7 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
             <button
               onClick={() => handleRebuild()}
               disabled={rebuilding}
-              className="px-3 py-1.5 text-sm text-amber-600 border border-amber-300 rounded-lg hover:bg-amber-50 disabled:opacity-50 flex items-center gap-1.5"
+              className="px-3 py-1.5 text-sm text-amber-600 border border-amber-300 dark:border-amber-700 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/30 disabled:opacity-50 flex items-center gap-1.5"
             >
               {rebuilding ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
               Rebuild
@@ -358,7 +358,7 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
           {['QA_REVIEW', 'EDITING', 'QA_APPROVED'].includes(step) && (
             <button
               onClick={() => onOpenEditor(lead)}
-              className="px-3 py-1.5 text-sm text-purple-600 border border-purple-300 rounded-lg hover:bg-purple-50 flex items-center gap-1.5"
+              className="px-3 py-1.5 text-sm text-purple-600 border border-purple-300 dark:border-purple-700 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-950/30 flex items-center gap-1.5"
             >
               <Code size={14} />
               Site Editor
@@ -367,7 +367,7 @@ function SiteBuildCard({ lead, onRefresh, onOpenEditor }: { lead: any; onRefresh
           {showEdit && (
             <button
               onClick={() => setExpanded(expanded === 'edit' ? null : 'edit')}
-              className="px-3 py-1.5 text-sm text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 flex items-center gap-1.5"
+              className="px-3 py-1.5 text-sm text-blue-600 border border-blue-300 dark:border-blue-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 flex items-center gap-1.5"
             >
               <Pencil size={14} />
               Edit
@@ -555,65 +555,65 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
       <div className="grid grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
               <MessageSquare size={18} className="text-amber-600" />
             </div>
             <div>
-              <p className="text-xl font-bold text-gray-900">{actionableCount}</p>
-              <p className="text-xs text-gray-500">Need Attention</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{actionableCount}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Need Attention</p>
             </div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
               <Loader2 size={18} className="text-blue-600" />
             </div>
             <div>
-              <p className="text-xl font-bold text-gray-900">{aiProcessing.length}</p>
-              <p className="text-xs text-gray-500">AI Processing</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{aiProcessing.length}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">AI Processing</p>
             </div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
               <CheckCircle size={18} className="text-green-600" />
             </div>
             <div>
-              <p className="text-xl font-bold text-gray-900">{completed.length}</p>
-              <p className="text-xs text-gray-500">Completed</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{completed.length}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Completed</p>
             </div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
               <Clock size={18} className="text-indigo-600" />
             </div>
             <div>
-              <p className="text-xl font-bold text-gray-900">{avgTurnaround > 0 ? `${avgTurnaround}h` : '--'}</p>
-              <p className="text-xs text-gray-500">Avg Turnaround</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{avgTurnaround > 0 ? `${avgTurnaround}h` : '--'}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Avg Turnaround</p>
             </div>
           </div>
         </Card>
       </div>
 
       {loading ? (
-        <Card className="p-12 text-center text-gray-500">Loading edit requests...</Card>
+        <Card className="p-12 text-center text-gray-500 dark:text-gray-400">Loading edit requests...</Card>
       ) : editRequests.length === 0 ? (
         <Card className="p-12 text-center">
           <CheckCircle2 size={48} className="mx-auto mb-4 text-green-400" />
-          <h3 className="text-lg font-semibold text-gray-900">All caught up!</h3>
-          <p className="text-gray-500 text-sm">No pending edit requests from clients.</p>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">All caught up!</h3>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">No pending edit requests from clients.</p>
         </Card>
       ) : (
         <>
           {/* Unprocessed: New edits that need to be kicked off */}
           {unprocessed.length > 0 && (
-            <Card className="p-5 border-blue-200 bg-blue-50/50">
+            <Card className="p-5 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-blue-800 flex items-center gap-2">
+                <h3 className="font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-2">
                   <Clock size={16} /> New Requests ({unprocessed.length})
                 </h3>
                 <button
@@ -628,15 +628,15 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                   const leadId = getLeadId(req)
                   const previewUrl = getPreviewUrl(req)
                   return (
-                    <div key={req.id} className="bg-white rounded-lg p-4 border border-blue-100">
+                    <div key={req.id} className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-blue-100 dark:border-blue-900">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900">{req.client?.companyName}</div>
-                          <div className="text-sm text-gray-600 mt-1">&quot;{req.requestText}&quot;</div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{req.client?.companyName}</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">&quot;{req.requestText}&quot;</div>
                           {req.aiInterpretation && (
-                            <div className="text-xs text-blue-600 mt-1">AI interpretation: {req.aiInterpretation}</div>
+                            <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">AI interpretation: {req.aiInterpretation}</div>
                           )}
-                          <div className="text-xs text-gray-400 mt-1">
+                          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                             {formatTimeSince(req.createdAt)} via {req.requestChannel}
                           </div>
                         </div>
@@ -656,7 +656,7 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                             href={previewUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+                            className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-1.5"
                           >
                             <ExternalLink size={14} /> View Site
                           </a>
@@ -664,7 +664,7 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                         <button
                           onClick={() => handleProcess(req.id)}
                           disabled={processingIds.has(req.id)}
-                          className="px-3 py-1.5 text-sm text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 disabled:opacity-50 flex items-center gap-1.5"
+                          className="px-3 py-1.5 text-sm text-blue-600 border border-blue-300 dark:border-blue-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 disabled:opacity-50 flex items-center gap-1.5"
                         >
                           {processingIds.has(req.id) ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                           {processingIds.has(req.id) ? 'Processing...' : 'Let AI Try'}
@@ -679,18 +679,18 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
 
           {/* AI Processing */}
           {aiProcessing.length > 0 && (
-            <Card className="p-5 bg-yellow-50/50 border-yellow-200">
-              <h3 className="font-semibold text-yellow-800 mb-4 flex items-center gap-2">
+            <Card className="p-5 bg-yellow-50/50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800">
+              <h3 className="font-semibold text-yellow-800 dark:text-yellow-300 mb-4 flex items-center gap-2">
                 <Loader2 size={16} className="animate-spin" /> AI Processing ({aiProcessing.length})
               </h3>
               <div className="space-y-2">
                 {aiProcessing.map((req: any) => (
-                  <div key={req.id} className="bg-white rounded-lg p-3 text-sm flex items-center justify-between border border-yellow-100">
+                  <div key={req.id} className="bg-white dark:bg-slate-900 rounded-lg p-3 text-sm flex items-center justify-between border border-yellow-100 dark:border-yellow-900">
                     <div>
-                      <span className="font-medium text-gray-900">{req.client?.companyName}</span>
-                      <span className="text-gray-500 ml-2">&mdash; {req.requestText}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{req.client?.companyName}</span>
+                      <span className="text-gray-500 dark:text-gray-400 ml-2">&mdash; {req.requestText}</span>
                     </div>
-                    <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">AI Working...</Badge>
+                    <Badge className="bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-400 border-yellow-300 dark:border-yellow-700">AI Working...</Badge>
                   </div>
                 ))}
               </div>
@@ -699,9 +699,9 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
 
           {/* Awaiting Approval: AI applied, needs admin sign-off */}
           {awaitingApproval.length > 0 && (
-            <Card className="p-5 border-indigo-200 bg-indigo-50/30">
+            <Card className="p-5 border-indigo-200 dark:border-indigo-800 bg-indigo-50/30 dark:bg-indigo-950/20">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-indigo-800 flex items-center gap-2">
+                <h3 className="font-semibold text-indigo-800 dark:text-indigo-300 flex items-center gap-2">
                   <Eye size={16} /> Awaiting Approval ({awaitingApproval.length})
                 </h3>
                 {awaitingApproval.length > 1 && (
@@ -722,17 +722,17 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                   const leadId = getLeadId(req)
                   const previewUrl = getPreviewUrl(req)
                   return (
-                    <div key={req.id} className="bg-white border border-indigo-100 rounded-lg p-4">
+                    <div key={req.id} className="bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900 rounded-lg p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900">{req.client?.companyName}</div>
-                          <div className="text-sm text-gray-600 mt-1">Request: &quot;{req.requestText}&quot;</div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{req.client?.companyName}</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">Request: &quot;{req.requestText}&quot;</div>
                           {req.editSummary && (
-                            <div className="text-sm text-green-700 mt-1 bg-green-50 rounded px-2 py-1 inline-block">
+                            <div className="text-sm text-green-700 dark:text-green-400 mt-1 bg-green-50 dark:bg-green-950/30 rounded px-2 py-1 inline-block">
                               AI applied: {req.editSummary.replace('[AI attempt] ', '')}
                             </div>
                           )}
-                          <div className="text-xs text-gray-400 mt-1">
+                          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                             {formatTimeSince(req.createdAt)} via {req.requestChannel}
                           </div>
                         </div>
@@ -754,7 +754,7 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                             href={previewUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+                            className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-1.5"
                           >
                             <ExternalLink size={14} /> View Site
                           </a>
@@ -762,7 +762,7 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                         {leadId && (
                           <button
                             onClick={() => openEditorForRequest(req)}
-                            className="px-3 py-1.5 text-sm text-purple-600 border border-purple-300 rounded-lg hover:bg-purple-50 flex items-center gap-1.5"
+                            className="px-3 py-1.5 text-sm text-purple-600 border border-purple-300 dark:border-purple-700 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-950/30 flex items-center gap-1.5"
                           >
                             <Code size={14} /> Edit More
                           </button>
@@ -773,7 +773,7 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                               handleEditAction(req.id, 'rejected')
                             }
                           }}
-                          className="px-3 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+                          className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-1.5"
                         >
                           <X size={14} /> Reject
                         </button>
@@ -787,8 +787,8 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
 
           {/* Manual Edit Required: Complex edits */}
           {needsManualEdit.length > 0 && (
-            <Card className="p-5 border-amber-200 bg-amber-50/30">
-              <h3 className="font-semibold text-amber-800 mb-4 flex items-center gap-2">
+            <Card className="p-5 border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-950/20">
+              <h3 className="font-semibold text-amber-800 dark:text-amber-300 mb-4 flex items-center gap-2">
                 <AlertTriangle size={16} /> Manual Edit Required ({needsManualEdit.length})
               </h3>
               <div className="space-y-3">
@@ -796,15 +796,15 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                   const leadId = getLeadId(req)
                   const previewUrl = getPreviewUrl(req)
                   return (
-                    <div key={req.id} className="bg-white border border-amber-100 rounded-lg p-4">
+                    <div key={req.id} className="bg-white dark:bg-slate-900 border border-amber-100 dark:border-amber-900 rounded-lg p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900">{req.client?.companyName}</div>
-                          <div className="text-sm text-gray-600 mt-1">&quot;{req.requestText}&quot;</div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{req.client?.companyName}</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">&quot;{req.requestText}&quot;</div>
                           {req.aiInterpretation && (
-                            <div className="text-xs text-blue-600 mt-1">AI interpretation: {req.aiInterpretation}</div>
+                            <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">AI interpretation: {req.aiInterpretation}</div>
                           )}
-                          <div className="text-xs text-gray-400 mt-1">
+                          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                             {formatTimeSince(req.createdAt)} via {req.requestChannel}
                           </div>
                         </div>
@@ -824,7 +824,7 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                             href={previewUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+                            className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-1.5"
                           >
                             <ExternalLink size={14} /> View Site
                           </a>
@@ -839,7 +839,7 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                         <button
                           onClick={() => handleProcess(req.id, 'medium')}
                           disabled={processingIds.has(req.id)}
-                          className="px-3 py-1.5 text-sm text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 disabled:opacity-50 flex items-center gap-1.5"
+                          className="px-3 py-1.5 text-sm text-blue-600 border border-blue-300 dark:border-blue-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 disabled:opacity-50 flex items-center gap-1.5"
                         >
                           {processingIds.has(req.id) ? 'Processing...' : 'Let AI Try'}
                         </button>
@@ -849,7 +849,7 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                               handleEditAction(req.id, 'rejected')
                             }
                           }}
-                          className="px-3 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+                          className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-1.5"
                         >
                           <X size={14} /> Dismiss
                         </button>
@@ -863,8 +863,8 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
 
           {/* Failed: AI edit failed */}
           {failed.length > 0 && (
-            <Card className="p-5 border-red-200 bg-red-50/30">
-              <h3 className="font-semibold text-red-800 mb-4 flex items-center gap-2">
+            <Card className="p-5 border-red-200 dark:border-red-800 bg-red-50/30 dark:bg-red-950/20">
+              <h3 className="font-semibold text-red-800 dark:text-red-300 mb-4 flex items-center gap-2">
                 <XCircle size={16} /> Failed &mdash; Needs Attention ({failed.length})
               </h3>
               <div className="space-y-3">
@@ -872,12 +872,12 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                   const leadId = getLeadId(req)
                   const previewUrl = getPreviewUrl(req)
                   return (
-                    <div key={req.id} className="bg-white border border-red-100 rounded-lg p-4">
+                    <div key={req.id} className="bg-white dark:bg-slate-900 border border-red-100 dark:border-red-900 rounded-lg p-4">
                       <div className="flex items-start justify-between">
                         <div>
-                          <div className="font-medium text-gray-900">{req.client?.companyName}</div>
-                          <div className="text-sm text-gray-600 mt-1">&quot;{req.requestText}&quot;</div>
-                          <div className="text-xs text-red-600 mt-1">AI edit failed &mdash; manual edit needed</div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">{req.client?.companyName}</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">&quot;{req.requestText}&quot;</div>
+                          <div className="text-xs text-red-600 dark:text-red-400 mt-1">AI edit failed &mdash; manual edit needed</div>
                         </div>
                         <Badge className="bg-red-100 text-red-800 border-red-300">Failed</Badge>
                       </div>
@@ -895,7 +895,7 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                             href={previewUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+                            className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-1.5"
                           >
                             <ExternalLink size={14} /> View Site
                           </a>
@@ -910,7 +910,7 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                         <button
                           onClick={() => handleProcess(req.id)}
                           disabled={processingIds.has(req.id)}
-                          className="px-3 py-1.5 text-sm text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 disabled:opacity-50 flex items-center gap-1.5"
+                          className="px-3 py-1.5 text-sm text-blue-600 border border-blue-300 dark:border-blue-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 disabled:opacity-50 flex items-center gap-1.5"
                         >
                           {processingIds.has(req.id) ? 'Retrying...' : 'Retry AI'}
                         </button>
@@ -920,7 +920,7 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                               handleEditAction(req.id, 'rejected')
                             }
                           }}
-                          className="px-3 py-1.5 text-sm text-gray-500 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+                          className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 flex items-center gap-1.5"
                         >
                           <X size={14} /> Dismiss
                         </button>
@@ -935,20 +935,20 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
           {/* Completed */}
           {completed.length > 0 && (
             <Card className="p-5">
-              <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
                 <CheckCircle2 size={16} className="text-green-500" /> Completed ({completed.length})
               </h3>
               <div className="space-y-2 text-sm">
                 {autoApplied.length > 0 && (
-                  <div className="text-xs text-gray-400 mb-2">{autoApplied.length} auto-applied by AI</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500 mb-2">{autoApplied.length} auto-applied by AI</div>
                 )}
                 {manuallyCompleted.slice(0, 10).map((req: any) => (
-                  <div key={req.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                  <div key={req.id} className="flex items-center justify-between py-2 border-b border-gray-50 dark:border-slate-800 last:border-0">
                     <div>
-                      <span className="font-medium text-gray-700">{req.client?.companyName}</span>
-                      <span className="text-gray-500 ml-2">&mdash; &quot;{req.requestText}&quot;</span>
+                      <span className="font-medium text-gray-700 dark:text-gray-300">{req.client?.companyName}</span>
+                      <span className="text-gray-500 dark:text-gray-400 ml-2">&mdash; &quot;{req.requestText}&quot;</span>
                     </div>
-                    <div className="text-xs text-gray-400">
+                    <div className="text-xs text-gray-400 dark:text-gray-500">
                       {req.approvedBy === 'ai_auto' ? 'Auto' : req.approvedBy || 'System'}
                       {req.approvedAt && ` · ${new Date(req.approvedAt).toLocaleDateString()}`}
                     </div>
@@ -957,11 +957,11 @@ function ClientEditsView({ onOpenEditor, onRefreshBuildData }: {
                 {autoApplied.slice(0, 5).map((req: any) => (
                   <div key={req.id} className="flex items-center justify-between py-2 opacity-60">
                     <div>
-                      <Badge className="text-xs mr-2 bg-gray-100 text-gray-600">Auto</Badge>
-                      <span className="font-medium text-gray-700">{req.client?.companyName}</span>
-                      <span className="text-gray-500 ml-2">&mdash; {req.editSummary || req.requestText}</span>
+                      <Badge className="text-xs mr-2 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400">Auto</Badge>
+                      <span className="font-medium text-gray-700 dark:text-gray-300">{req.client?.companyName}</span>
+                      <span className="text-gray-500 dark:text-gray-400 ml-2">&mdash; {req.editSummary || req.requestText}</span>
                     </div>
-                    <div className="text-xs text-gray-400">
+                    <div className="text-xs text-gray-400 dark:text-gray-500">
                       {req.approvedAt && new Date(req.approvedAt).toLocaleDateString()}
                     </div>
                   </div>
@@ -1000,7 +1000,7 @@ function WorkerPipelineView() {
     return () => clearInterval(interval)
   }, [loadData])
 
-  if (loading) return <Card className="p-8 text-center text-gray-500">Loading worker pipeline...</Card>
+  if (loading) return <Card className="p-8 text-center text-gray-500 dark:text-gray-400">Loading worker pipeline...</Card>
 
   const summary = data?.summary || { inProgress: 0, failed: 0, completedToday: 0, avgBuildTimeMs: 0 }
 
@@ -1010,58 +1010,58 @@ function WorkerPipelineView() {
       <div className="grid grid-cols-4 gap-4 mb-6">
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
               <Loader2 size={18} className="text-blue-600 animate-spin" />
             </div>
             <div>
-              <p className="text-xl font-bold text-gray-900">{summary.inProgress}</p>
-              <p className="text-xs text-gray-500">In Progress</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{summary.inProgress}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">In Progress</p>
             </div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
               <XCircle size={18} className="text-red-600" />
             </div>
             <div>
-              <p className="text-xl font-bold text-gray-900">{summary.failed}</p>
-              <p className="text-xs text-gray-500">Failed</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{summary.failed}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Failed</p>
             </div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
               <CheckCircle size={18} className="text-green-600" />
             </div>
             <div>
-              <p className="text-xl font-bold text-gray-900">{summary.completedToday}</p>
-              <p className="text-xs text-gray-500">Completed Today</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{summary.completedToday}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Completed Today</p>
             </div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
               <Clock size={18} className="text-amber-600" />
             </div>
             <div>
-              <p className="text-xl font-bold text-gray-900">{formatDuration(summary.avgBuildTimeMs)}</p>
-              <p className="text-xs text-gray-500">Avg Build Time</p>
+              <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatDuration(summary.avgBuildTimeMs)}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Avg Build Time</p>
             </div>
           </div>
         </Card>
       </div>
 
       {/* Pipeline legend */}
-      <div className="flex items-center gap-4 mb-4 text-sm text-gray-500">
-        <span className="font-medium text-gray-700">Pipeline:</span>
+      <div className="flex items-center gap-4 mb-4 text-sm text-gray-500 dark:text-gray-400">
+        <span className="font-medium text-gray-700 dark:text-gray-300">Pipeline:</span>
         {WORKER_STEPS.map((step, idx) => (
           <span key={step} className="flex items-center gap-1">
             <span className={`w-3 h-3 rounded-full ${WORKER_CONFIG[step].color}`} />
             {WORKER_CONFIG[step].label}
-            {idx < WORKER_STEPS.length - 1 && <span className="text-gray-300 ml-2">&rarr;</span>}
+            {idx < WORKER_STEPS.length - 1 && <span className="text-gray-300 dark:text-gray-600 ml-2">&rarr;</span>}
           </span>
         ))}
       </div>
@@ -1074,14 +1074,14 @@ function WorkerPipelineView() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div>
-                    <Link href={`/admin/leads/${build.id}`} className="font-medium text-gray-900 hover:text-blue-600">
+                    <Link href={`/admin/leads/${build.id}`} className="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600">
                       {build.firstName} {build.lastName || ''}
                     </Link>
-                    <p className="text-sm text-gray-500">{build.companyName}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{build.companyName}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <Badge className="bg-blue-100 text-blue-700">
+                  <Badge className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400">
                     {WORKER_CONFIG[build.buildStep]?.label || build.buildStep}
                   </Badge>
                 </div>
@@ -1090,28 +1090,28 @@ function WorkerPipelineView() {
           ))}
         </div>
       ) : (
-        <Card className="p-8 text-center text-gray-500 mb-6">No active worker builds</Card>
+        <Card className="p-8 text-center text-gray-500 dark:text-gray-400 mb-6">No active worker builds</Card>
       )}
 
       {/* Failed builds */}
       {data?.failedBuilds?.length > 0 && (
         <>
-          <h3 className="text-base font-semibold text-red-700 mb-2">Failed Builds</h3>
+          <h3 className="text-base font-semibold text-red-700 dark:text-red-400 mb-2">Failed Builds</h3>
           <div className="space-y-2">
             {data.failedBuilds.map((build: any) => (
-              <Card key={build.id} className="p-4 border-red-200">
+              <Card key={build.id} className="p-4 border-red-200 dark:border-red-800">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Link href={`/admin/leads/${build.id}`} className="font-medium text-gray-900 hover:text-blue-600">
+                    <Link href={`/admin/leads/${build.id}`} className="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600">
                       {build.firstName} {build.lastName || ''}
                     </Link>
-                    <p className="text-sm text-gray-500">{build.companyName}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{build.companyName}</p>
                   </div>
                   <div className="text-right">
-                    <Badge className="bg-red-100 text-red-700">
+                    <Badge className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400">
                       Failed at {WORKER_CONFIG[build.buildStep]?.label || build.buildStep}
                     </Badge>
-                    <p className="text-xs text-red-500 mt-1 max-w-xs truncate">{build.buildError}</p>
+                    <p className="text-xs text-red-500 dark:text-red-400 mt-1 max-w-xs truncate">{build.buildError}</p>
                   </div>
                 </div>
               </Card>
@@ -1170,24 +1170,24 @@ export default function BuildQueuePage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
         <div className="p-6">
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
             <Hammer size={28} className="text-amber-500" />
             Build Queue
           </h1>
-          <p className="text-gray-600 mt-1">Site builds, client edits, and deployments</p>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Site builds, client edits, and deployments</p>
 
           {/* View tabs */}
-          <div className="flex items-center gap-1 mt-4 border-b border-gray-200 -mb-px">
+          <div className="flex items-center gap-1 mt-4 border-b border-gray-200 dark:border-slate-700 -mb-px">
             <button
               onClick={() => setViewTab('site')}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 viewTab === 'site'
                   ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               Site Builds
@@ -1197,7 +1197,7 @@ export default function BuildQueuePage() {
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
                 viewTab === 'edits'
                   ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               Client Edits
@@ -1212,7 +1212,7 @@ export default function BuildQueuePage() {
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 viewTab === 'worker'
                   ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
               Worker Pipeline
@@ -1240,13 +1240,13 @@ export default function BuildQueuePage() {
                   className={`px-3 py-1.5 text-sm rounded-full border transition-colors flex items-center gap-1.5 ${
                     filterTab === tab.key
                       ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                      : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-800'
                   }`}
                 >
                   {tab.label}
                   {tab.count != null && tab.count > 0 && (
                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                      filterTab === tab.key ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
+                      filterTab === tab.key ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'
                     }`}>
                       {tab.count}
                     </span>
@@ -1257,7 +1257,7 @@ export default function BuildQueuePage() {
 
             {/* Site Build Cards */}
             {loading ? (
-              <Card className="p-8 text-center text-gray-500">Loading build queue...</Card>
+              <Card className="p-8 text-center text-gray-500 dark:text-gray-400">Loading build queue...</Card>
             ) : filteredLeads.length > 0 ? (
               <div className="space-y-3">
                 {filteredLeads.map((lead: any) => (
@@ -1266,9 +1266,9 @@ export default function BuildQueuePage() {
               </div>
             ) : (
               <Card className="p-12 text-center">
-                <Hammer size={32} className="text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 font-medium">No sites in this stage</p>
-                <p className="text-sm text-gray-400 mt-1">Sites will appear here as leads complete qualification</p>
+                <Hammer size={32} className="text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-500 dark:text-gray-400 font-medium">No sites in this stage</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Sites will appear here as leads complete qualification</p>
               </Card>
             )}
           </>

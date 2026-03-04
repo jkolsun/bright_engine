@@ -32,6 +32,30 @@
     --ring: 187 50% 36%;
     --radius: 0.75rem;
   }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 217.2 32.6% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 217.2 32.6% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 187 50% 44%;
+    --primary-hover: 187 50% 52%;
+    --primary-light: 184 44% 58%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 160 60% 30%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 15%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 15%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 50.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 20%;
+    --input: 217.2 32.6% 20%;
+    --ring: 187 50% 44%;
+  }
 }
 
 @layer base {
@@ -192,6 +216,41 @@
     100% { transform: scale(1.5); opacity: 0; }
   }
 
+  /* ─── Dark Mode Utility Overrides ─── */
+  .dark .glass-effect {
+    background: rgba(15, 23, 42, 0.85);
+  }
+
+  .dark .glass-card {
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .dark .gradient-surface {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  }
+
+  .dark .gradient-card {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.7) 100%);
+  }
+
+  .dark .card-hover:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2);
+    border-color: rgba(46, 125, 138, 0.4);
+  }
+
+  .dark .shadow-soft {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+
+  .dark .shadow-medium {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .dark .shadow-large {
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
   /* ─── Background Meshes ─── */
   .bg-mesh-teal {
     background-image:
@@ -340,4 +399,38 @@
 
 *:not(.site-editor-root *)::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
+}
+
+/* ─── Dark Mode Scrollbar ─── */
+.dark *:not(.site-editor-root *)::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark *:not(.site-editor-root *)::-webkit-scrollbar-thumb:hover {
+  background: #64748B;
+}
+
+/* ─── Radix Portal Dark Mode ─── */
+/* Portals render at body level, outside the layout .dark div.
+   body:has(.dark) propagates dark CSS vars to portal content. */
+body:has(.dark) [data-radix-portal] {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 217.2 32.6% 11%;
+  --card-foreground: 210 40% 98%;
+  --popover: 217.2 32.6% 11%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 187 50% 44%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 160 60% 30%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 15%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 15%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 50.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 20%;
+  --input: 217.2 32.6% 20%;
+  --ring: 187 50% 44%;
 }

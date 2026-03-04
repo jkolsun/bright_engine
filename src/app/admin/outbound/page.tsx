@@ -193,9 +193,9 @@ export default function SalesRepTrackerPage() {
     const temperature = lead.engagementLevel || 'COLD'
 
     const colorMap: Record<string, string> = {
-      'COLD': 'bg-blue-100 text-blue-800',
-      'WARM': 'bg-amber-100 text-amber-800',
-      'HOT': 'bg-red-100 text-red-800',
+      'COLD': 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-400',
+      'WARM': 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-400',
+      'HOT': 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-400',
     }
 
     return { label: temperature, color: colorMap[temperature] || colorMap['COLD'] }
@@ -229,8 +229,8 @@ export default function SalesRepTrackerPage() {
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Sales Rep Tracker</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Sales Rep Tracker</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
             Track every touchpoint across email, calls, texts, and previews with AI-powered recommendations
           </p>
         </div>
@@ -255,7 +255,7 @@ export default function SalesRepTrackerPage() {
       </div>
 
       {loadError && leads.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg flex items-center justify-between">
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 text-amber-800 dark:text-amber-400 px-4 py-3 rounded-lg flex items-center justify-between">
           <span className="text-sm">Some data may be incomplete. {loadError}</span>
           <Button variant="ghost" size="sm" onClick={() => { setLoading(true); loadData(); fetchReps() }}>
             Retry
@@ -266,8 +266,8 @@ export default function SalesRepTrackerPage() {
       {feedbackMsg && (
         <div className={`px-4 py-3 rounded-lg text-sm font-medium ${
           feedbackMsg.type === 'success'
-            ? 'bg-green-50 border border-green-200 text-green-800'
-            : 'bg-red-50 border border-red-200 text-red-800'
+            ? 'bg-green-50 dark:bg-green-950/30 border border-green-200 text-green-800 dark:text-green-400'
+            : 'bg-red-50 dark:bg-red-950/30 border border-red-200 text-red-800 dark:text-red-400'
         }`}>
           {feedbackMsg.text}
         </div>
@@ -286,14 +286,14 @@ export default function SalesRepTrackerPage() {
             <button
               onClick={() => handleBulkAssign(null)}
               disabled={assigning}
-              className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-left disabled:opacity-50"
+              className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-left disabled:opacity-50"
             >
-              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                <UserMinus size={18} className="text-gray-500" />
+              <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
+                <UserMinus size={18} className="text-gray-500 dark:text-gray-400" />
               </div>
               <div className="flex-1">
-                <div className="font-medium text-gray-900">Unassign</div>
-                <div className="text-sm text-gray-500">Remove rep assignment</div>
+                <div className="font-medium text-gray-900 dark:text-gray-100">Unassign</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Remove rep assignment</div>
               </div>
             </button>
 
@@ -302,21 +302,21 @@ export default function SalesRepTrackerPage() {
                 key={rep.id}
                 onClick={() => handleBulkAssign(rep.id)}
                 disabled={assigning}
-                className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors text-left disabled:opacity-50"
+                className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:border-blue-300 transition-colors text-left disabled:opacity-50"
               >
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                  <span className="text-blue-700 font-semibold text-sm">
+                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                  <span className="text-blue-700 dark:text-blue-400 font-semibold text-sm">
                     {rep.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
                   </span>
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900">
+                  <div className="font-medium text-gray-900 dark:text-gray-100">
                     {rep.name}
                     {rep.portalType === 'PART_TIME' && (
                       <Badge variant="secondary" className="ml-2 text-xs">Part-Time</Badge>
                     )}
                   </div>
-                  <div className="text-sm text-gray-500">{rep.stats?.assignedLeads || 0} leads assigned</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">{rep.stats?.assignedLeads || 0} leads assigned</div>
                 </div>
                 <Badge variant="secondary" className="text-xs">
                   {rep.stats?.monthActivity?.closes || 0} closes
@@ -326,7 +326,7 @@ export default function SalesRepTrackerPage() {
 
             {activeReps.length === 0 && (
               <div className="text-center py-8 text-gray-500">
-                <Users size={32} className="mx-auto mb-2 text-gray-300" />
+                <Users size={32} className="mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                 <p>No active reps found.</p>
                 <p className="text-sm">Create reps in Settings first.</p>
               </div>
@@ -339,40 +339,40 @@ export default function SalesRepTrackerPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Total Leads</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Total Leads</span>
             <Mail size={20} className="text-blue-600" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">{data.totalLeads}</div>
-          <div className="text-sm text-gray-500 mt-2">In pipeline</div>
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{data.totalLeads}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">In pipeline</div>
         </Card>
 
         <Card className="p-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Preview Views</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Preview Views</span>
             <Eye size={20} className="text-purple-600" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">{data.previewViews}</div>
-          <div className="text-sm text-gray-500 mt-2">Total views</div>
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{data.previewViews}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">Total views</div>
         </Card>
 
         <Card className="p-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Preview Clicks</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Preview Clicks</span>
             <TrendingUp size={20} className="text-green-600" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">{data.previewClicks}</div>
-          <div className="text-sm text-gray-500 mt-2">CTA clicks</div>
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{data.previewClicks}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">CTA clicks</div>
         </Card>
 
         <Card className="p-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Hot Leads</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">Hot Leads</span>
             <Phone size={20} className="text-red-600" />
           </div>
           <div className="text-3xl font-bold text-gray-900">
             {leads.filter(l => l.priority === 'HOT').length}
           </div>
-          <div className="text-sm text-gray-500 mt-2">Needs attention</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">Needs attention</div>
         </Card>
       </div>
 
@@ -421,7 +421,7 @@ export default function SalesRepTrackerPage() {
           <select
             value={contactedFilter}
             onChange={(e) => { setContactedFilter(e.target.value); setSelectedLeads(new Set()) }}
-            className="h-10 px-3 rounded-md border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="h-10 px-3 rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Last Contacted</option>
             <option value="today">Today</option>
@@ -437,9 +437,9 @@ export default function SalesRepTrackerPage() {
       <Card>
         {filteredLeads.length === 0 ? (
           <div className="p-12 text-center">
-            <TrendingUp size={48} className="text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No leads found</h3>
-            <p className="text-gray-600 mb-4">
+            <TrendingUp size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No leads found</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
               {searchTerm ? 'Try adjusting your search' : 'Add leads to start tracking outbound activity'}
             </p>
             {!searchTerm && (
@@ -454,7 +454,7 @@ export default function SalesRepTrackerPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50 dark:bg-slate-800/50 border-b">
                 <tr>
                   <th className="text-center p-4 w-12">
                     <BulkSelectDropdown
@@ -464,24 +464,24 @@ export default function SalesRepTrackerPage() {
                       onSelectionChange={setSelectedLeads}
                     />
                   </th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Lead</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Company</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Location</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Assigned To</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Status</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Temperature</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Engagement</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-700">Last Contacted</th>
-                  <th className="text-right p-4 text-sm font-semibold text-gray-700">Actions</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Lead</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Company</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Location</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Assigned To</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Temperature</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Engagement</th>
+                  <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Last Contacted</th>
+                  <th className="text-right p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
                 {filteredLeads.map((lead) => {
                   const score = getEngagementScore(lead)
                   const temp = getTemperature(lead)
 
                   return (
-                    <tr key={lead.id} className={`hover:bg-gray-50 ${selectedLeads.has(lead.id) ? 'bg-blue-50' : ''}`}>
+                    <tr key={lead.id} className={`hover:bg-gray-50 dark:hover:bg-slate-800 ${selectedLeads.has(lead.id) ? 'bg-blue-50 dark:bg-blue-950/30' : ''}`}>
                       <td className="text-center p-4">
                         <input
                           type="checkbox"
@@ -491,27 +491,27 @@ export default function SalesRepTrackerPage() {
                         />
                       </td>
                       <td className="p-4">
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-gray-900 dark:text-gray-100">
                           {lead.firstName} {lead.lastName}
                         </div>
                         {lead.email && (
-                          <div className="text-sm text-gray-500">{lead.email}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{lead.email}</div>
                         )}
                       </td>
-                      <td className="p-4 text-gray-700">{lead.companyName}</td>
-                      <td className="p-4 text-gray-700">
+                      <td className="p-4 text-gray-700 dark:text-gray-300">{lead.companyName}</td>
+                      <td className="p-4 text-gray-700 dark:text-gray-300">
                         {lead.city && lead.state ? `${lead.city}, ${lead.state}` : '-'}
                       </td>
                       <td className="p-4">
                         {lead.assignedTo ? (
-                          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-full">
+                          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 px-2 py-1 rounded-full">
                             <span className="w-5 h-5 rounded-full bg-blue-200 flex items-center justify-center text-[10px] font-bold text-blue-800">
                               {lead.assignedTo.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                             </span>
                             {lead.assignedTo.name}
                           </span>
                         ) : (
-                          <span className="text-sm text-gray-400">&mdash;</span>
+                          <span className="text-sm text-gray-400 dark:text-gray-500">&mdash;</span>
                         )}
                       </td>
                       <td className="p-4">
@@ -529,11 +529,11 @@ export default function SalesRepTrackerPage() {
                         </span>
                       </td>
                       <td className="p-4">
-                        <div className="text-sm text-gray-700">Score: {score}</div>
+                        <div className="text-sm text-gray-700 dark:text-gray-300">Score: {score}</div>
                       </td>
-                      <td className="p-4 text-sm text-gray-600 whitespace-nowrap">
+                      <td className="p-4 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
                         {lead.lastContactedAt ? formatTimeAgo(new Date(lead.lastContactedAt)) : (
-                          <span className="text-gray-400">Never</span>
+                          <span className="text-gray-400 dark:text-gray-500">Never</span>
                         )}
                       </td>
                       <td className="p-4 text-right">
@@ -551,9 +551,9 @@ export default function SalesRepTrackerPage() {
       </Card>
 
       {/* Info Card */}
-      <Card className="p-6 bg-blue-50 border-blue-200">
-        <h3 className="font-semibold text-gray-900 mb-3">Engagement Scoring</h3>
-        <div className="space-y-2 text-sm text-gray-700">
+      <Card className="p-6 bg-blue-50 dark:bg-blue-950/30 border-blue-200">
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3">Engagement Scoring</h3>
+        <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
           <p className="font-medium">Score Calculation:</p>
           <div className="grid grid-cols-2 gap-4 ml-2">
             <div>
@@ -568,9 +568,9 @@ export default function SalesRepTrackerPage() {
           </div>
           <p className="font-medium mt-3">Temperature Ranges:</p>
           <div className="ml-2 space-y-1">
-            <div><span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">COLD</span> 0-5 points</div>
-            <div><span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">WARM</span> 6-15 points</div>
-            <div><span className="px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">HOT</span> 16+ points</div>
+            <div><span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-400">COLD</span> 0-5 points</div>
+            <div><span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-400">WARM</span> 6-15 points</div>
+            <div><span className="px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-400">HOT</span> 16+ points</div>
           </div>
         </div>
       </Card>

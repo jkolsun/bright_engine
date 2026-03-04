@@ -11,22 +11,22 @@ import { UpsellTags } from './UpsellTags'
 import { Phone, Search, Plus, Link, UserPlus } from 'lucide-react'
 
 const DISPOSITION_COLORS: Record<string, string> = {
-  WANTS_TO_MOVE_FORWARD: 'bg-green-100 text-green-700',
-  CALLBACK: 'bg-teal-100 text-teal-700',
-  WANTS_CHANGES: 'bg-blue-100 text-blue-700',
-  WILL_LOOK_LATER: 'bg-amber-100 text-amber-700',
-  NOT_INTERESTED: 'bg-gray-100 text-gray-600',
-  VOICEMAIL: 'bg-gray-100 text-gray-600',
-  NO_ANSWER: 'bg-gray-100 text-gray-600',
-  DNC: 'bg-red-100 text-red-700',
-  WRONG_NUMBER: 'bg-red-100 text-red-700',
+  WANTS_TO_MOVE_FORWARD: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400',
+  CALLBACK: 'bg-teal-100 text-teal-700 dark:text-teal-400',
+  WANTS_CHANGES: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400',
+  WILL_LOOK_LATER: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400',
+  NOT_INTERESTED: 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400',
+  VOICEMAIL: 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400',
+  NO_ANSWER: 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400',
+  DNC: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400',
+  WRONG_NUMBER: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400',
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  NEW: 'bg-blue-100 text-blue-700',
-  HOT_LEAD: 'bg-red-100 text-red-700',
-  QUALIFIED: 'bg-green-100 text-green-700',
-  NURTURE: 'bg-amber-100 text-amber-700',
+  NEW: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400',
+  HOT_LEAD: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400',
+  QUALIFIED: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400',
+  NURTURE: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400',
 }
 
 const formatPhoneDisplay = (phone: string): string => {
@@ -108,48 +108,48 @@ function ManualCallPanel() {
 
   return (
     <div className="p-4 space-y-3 overflow-y-auto">
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 p-4">
         <div className="flex items-center gap-2 mb-3">
           <Phone className="w-4 h-4 text-teal-600" />
-          <h2 className="text-base font-bold text-gray-900">Manual Call</h2>
+          <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">Manual Call</h2>
           {manualDialState?.phone && (
-            <span className="text-sm text-gray-500">{formatPhoneDisplay(manualDialState.phone)}</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">{formatPhoneDisplay(manualDialState.phone)}</span>
           )}
         </div>
 
         {/* Search */}
         <div className="relative mb-3">
-          <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-gray-400" />
+          <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
           <input
             type="text"
             placeholder="Search by company, name, or phone..."
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setSelectedResult(null) }}
-            className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+            className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500 dark:bg-slate-800 dark:text-gray-100"
           />
         </div>
 
         {/* Search results */}
-        {searchLoading && <p className="text-xs text-gray-400 py-2">Searching...</p>}
+        {searchLoading && <p className="text-xs text-gray-400 dark:text-gray-500 py-2">Searching...</p>}
         {!searchLoading && searchResults.length > 0 && (
-          <div className="max-h-48 overflow-y-auto border border-gray-100 rounded-lg mb-3">
+          <div className="max-h-48 overflow-y-auto border border-gray-100 dark:border-slate-800 rounded-lg mb-3">
             {searchResults.map((r: any) => (
               <button
                 key={r.id}
                 onClick={() => setSelectedResult(r)}
-                className={`w-full text-left px-3 py-2 text-sm border-b border-gray-50 transition-colors ${
-                  selectedResult?.id === r.id ? 'bg-teal-50 border-l-2 border-l-teal-500' : 'hover:bg-gray-50'
+                className={`w-full text-left px-3 py-2 text-sm border-b border-gray-50 dark:border-slate-800 transition-colors ${
+                  selectedResult?.id === r.id ? 'bg-teal-50 dark:bg-teal-950/30 border-l-2 border-l-teal-500' : 'hover:bg-gray-50 dark:hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-medium text-gray-900 truncate">{r.companyName}</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{r.companyName}</span>
                   {r.status && (
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[r.status] || 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[r.status] || 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400'}`}>
                       {r.status.replace(/_/g, ' ')}
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-gray-500 mt-0.5">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                   {r.firstName || 'Unknown'} {r.phone ? `· ${r.phone}` : ''}
                 </div>
               </button>
@@ -157,7 +157,7 @@ function ManualCallPanel() {
           </div>
         )}
         {!searchLoading && searchQuery.length >= 2 && searchResults.length === 0 && (
-          <p className="text-xs text-gray-400 py-2">No leads found</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 py-2">No leads found</p>
         )}
 
         {/* Link actions for selected result */}
@@ -174,7 +174,7 @@ function ManualCallPanel() {
             <button
               onClick={handleLinkAsSecondary}
               disabled={linking}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200 disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-200 dark:hover:bg-slate-700 disabled:opacity-50"
             >
               <UserPlus className="w-3.5 h-3.5" />
               {linking ? 'Linking...' : 'Link & Save as 2nd'}
@@ -183,7 +183,7 @@ function ManualCallPanel() {
         )}
 
         {/* Create new lead */}
-        <div className="border-t border-gray-100 pt-3">
+        <div className="border-t border-gray-100 dark:border-slate-800 pt-3">
           {!showCreateNew ? (
             <button
               onClick={() => setShowCreateNew(true)}
@@ -200,14 +200,14 @@ function ManualCallPanel() {
                 value={newCompanyName}
                 onChange={(e) => setNewCompanyName(e.target.value)}
                 autoFocus
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500 dark:bg-slate-800 dark:text-gray-100"
               />
               <input
                 type="text"
                 placeholder="Contact name (optional)"
                 value={newContactName}
                 onChange={(e) => setNewContactName(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+                className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-1 focus:ring-teal-500 focus:border-teal-500 dark:bg-slate-800 dark:text-gray-100"
               />
               <div className="flex gap-2">
                 <button
@@ -219,7 +219,7 @@ function ManualCallPanel() {
                 </button>
                 <button
                   onClick={() => { setShowCreateNew(false); setNewCompanyName(''); setNewContactName('') }}
-                  className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700"
+                  className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700"
                 >
                   Cancel
                 </button>
@@ -254,7 +254,7 @@ export function LeadCard() {
 
   if (!lead) {
     return (
-      <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
+      <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm">
         Select a lead from the queue to get started
       </div>
     )
@@ -272,8 +272,8 @@ export function LeadCard() {
     <div className="p-6 lg:p-8 overflow-y-auto h-full">
       <div className="max-w-3xl mx-auto space-y-5">
         {showRecentLeadBanner && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between">
-            <span className="text-xs text-amber-700 font-medium">Viewing a recently called lead. Your active call is still running.</span>
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 rounded-xl p-3 flex items-center justify-between">
+            <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">Viewing a recently called lead. Your active call is still running.</span>
             <button
               onClick={() => { if (currentCall?.leadId) queue.setSelectedLeadId(currentCall.leadId) }}
               className="text-xs font-semibold text-amber-600 hover:text-amber-800 whitespace-nowrap ml-3"
@@ -308,7 +308,7 @@ export function LeadCard() {
                   <span className="text-sm font-mono text-slate-500">{Math.floor(lastCall.duration / 60)}:{String(lastCall.duration % 60).padStart(2, '0')}</span>
                 )}
                 {lastCall.dispositionResult && (
-                  <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${DISPOSITION_COLORS[lastCall.dispositionResult] || 'bg-gray-100 text-gray-600'}`}>
+                  <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${DISPOSITION_COLORS[lastCall.dispositionResult] || 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'}`}>
                     {lastCall.dispositionResult.replace(/_/g, ' ')}
                   </span>
                 )}

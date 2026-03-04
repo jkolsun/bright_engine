@@ -134,7 +134,7 @@ export default function RepsPage() {
           <div className="w-12 h-12 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
             <Users size={22} className="text-white" />
           </div>
-          <p className="text-gray-500 font-medium">Loading sales team...</p>
+          <p className="text-gray-500 dark:text-gray-400 font-medium">Loading sales team...</p>
         </div>
       </div>
     )
@@ -160,8 +160,8 @@ export default function RepsPage() {
     <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Sales Team</h1>
-          <p className="text-gray-500 mt-1">Manage FT and PT reps in one place</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Sales Team</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Manage FT and PT reps in one place</p>
         </div>
         <Button onClick={() => setViewMode('create')} className="gap-2">
           <UserPlus size={18} /> Add Rep
@@ -169,11 +169,11 @@ export default function RepsPage() {
       </div>
 
       <div className="grid grid-cols-5 gap-4">
-        <Card className="p-4 rounded-xl"><div className="text-sm text-gray-500">Total</div><div className="text-2xl font-bold">{totalReps}</div></Card>
-        <Card className="p-4 rounded-xl"><div className="text-sm text-gray-500">Active</div><div className="text-2xl font-bold text-green-600">{activeReps}</div></Card>
-        <Card className="p-4 rounded-xl"><div className="text-sm text-gray-500">Full-Time</div><div className="text-2xl font-bold text-blue-600">{ftCount}</div></Card>
-        <Card className="p-4 rounded-xl"><div className="text-sm text-gray-500">Part-Time</div><div className="text-2xl font-bold text-purple-600">{ptCount}</div></Card>
-        <Card className="p-4 rounded-xl"><div className="text-sm text-gray-500">Total Commissions</div><div className="text-2xl font-bold text-amber-600">{formatCurrency(totalComm)}</div></Card>
+        <Card className="p-4 rounded-xl"><div className="text-sm text-gray-500 dark:text-gray-400">Total</div><div className="text-2xl font-bold">{totalReps}</div></Card>
+        <Card className="p-4 rounded-xl"><div className="text-sm text-gray-500 dark:text-gray-400">Active</div><div className="text-2xl font-bold text-green-600">{activeReps}</div></Card>
+        <Card className="p-4 rounded-xl"><div className="text-sm text-gray-500 dark:text-gray-400">Full-Time</div><div className="text-2xl font-bold text-blue-600">{ftCount}</div></Card>
+        <Card className="p-4 rounded-xl"><div className="text-sm text-gray-500 dark:text-gray-400">Part-Time</div><div className="text-2xl font-bold text-purple-600">{ptCount}</div></Card>
+        <Card className="p-4 rounded-xl"><div className="text-sm text-gray-500 dark:text-gray-400">Total Commissions</div><div className="text-2xl font-bold text-amber-600">{formatCurrency(totalComm)}</div></Card>
       </div>
 
       <div className="flex gap-2">
@@ -186,7 +186,7 @@ export default function RepsPage() {
             key={f.key}
             onClick={() => setFilter(f.key)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              filter === f.key ? 'bg-slate-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              filter === f.key ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-700'
             }`}
           >
             {f.label}
@@ -197,7 +197,7 @@ export default function RepsPage() {
       <Card className="rounded-xl overflow-hidden">
         <table className="w-full">
           <thead>
-            <tr className="border-b text-left text-xs text-gray-500 uppercase tracking-wider">
+            <tr className="border-b dark:border-slate-700 text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               <th className="px-4 py-3 w-10">
                 <BulkSelectDropdown
                   pageItemIds={filteredReps.map(r => r.id)}
@@ -220,7 +220,7 @@ export default function RepsPage() {
             {filteredReps.map(rep => {
               const stats = getRepStats(rep)
               return (
-                <tr key={rep.id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => { setSelectedRep(rep); setViewMode('edit') }}>
+                <tr key={rep.id} className="border-b dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer" onClick={() => { setSelectedRep(rep); setViewMode('edit') }}>
                   <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                     <input
                       type="checkbox"
@@ -231,12 +231,12 @@ export default function RepsPage() {
                         else next.add(rep.id)
                         setSelectedReps(next)
                       }}
-                      className="rounded border-gray-300"
+                      className="rounded border-gray-300 dark:border-slate-600"
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">{rep.name}</div>
-                    <div className="text-xs text-gray-500">{rep.email}</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{rep.name}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{rep.email}</div>
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant={rep.portalType === 'FULL' ? 'default' : 'secondary'}>
@@ -246,7 +246,7 @@ export default function RepsPage() {
                   <td className="px-4 py-3">
                     <Badge
                       variant="secondary"
-                      className={rep.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}
+                      className={rep.status === 'ACTIVE' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-gray-400'}
                     >
                       {rep.status}
                     </Badge>
@@ -260,7 +260,7 @@ export default function RepsPage() {
                       <Button size="sm" variant="outline" className="rounded-lg" onClick={() => { setSelectedRep(rep); setViewMode('edit') }}>
                         <Edit size={14} />
                       </Button>
-                      <Button size="sm" variant="outline" className="rounded-lg text-red-500 hover:bg-red-50" onClick={() => handleDeleteRep(rep.id, rep.name)}>
+                      <Button size="sm" variant="outline" className="rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => handleDeleteRep(rep.id, rep.name)}>
                         <Trash2 size={14} />
                       </Button>
                     </div>
@@ -269,7 +269,7 @@ export default function RepsPage() {
               )
             })}
             {filteredReps.length === 0 && (
-              <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-500">No reps found</td></tr>
+              <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">No reps found</td></tr>
             )}
           </tbody>
         </table>
@@ -277,9 +277,9 @@ export default function RepsPage() {
 
       {/* Bulk action bar */}
       {selectedReps.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 px-6 py-3">
+        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 shadow-lg z-50 px-6 py-3">
           <div className="max-w-[1400px] mx-auto flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">{selectedReps.size} rep{selectedReps.size !== 1 ? 's' : ''} selected</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{selectedReps.size} rep{selectedReps.size !== 1 ? 's' : ''} selected</span>
             <div className="flex items-center gap-2">
               <button
                 onClick={async () => {
@@ -300,7 +300,7 @@ export default function RepsPage() {
               </button>
               <button
                 onClick={() => setSelectedReps(new Set())}
-                className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700"
+                className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
               >
                 Cancel
               </button>
@@ -319,21 +319,21 @@ export default function RepsPage() {
 
         return (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
+            <div className="bg-white dark:bg-slate-900 rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
                   <AlertTriangle size={20} className="text-red-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Deactivate {deactivateRep.name}?</h3>
-                  <p className="text-sm text-gray-500">This rep will no longer be able to log in or receive leads.</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Deactivate {deactivateRep.name}?</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">This rep will no longer be able to log in or receive leads.</p>
                 </div>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-1 text-sm">
-                <p className="text-gray-700">This rep currently has:</p>
-                <p className="font-medium text-gray-900">{repLeads.length} assigned leads</p>
-                <p className="font-medium text-gray-900">{repClients.length} active client{repClients.length !== 1 ? 's' : ''}</p>
+              <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4 mb-4 space-y-1 text-sm">
+                <p className="text-gray-700 dark:text-gray-300">This rep currently has:</p>
+                <p className="font-medium text-gray-900 dark:text-gray-100">{repLeads.length} assigned leads</p>
+                <p className="font-medium text-gray-900 dark:text-gray-100">{repClients.length} active client{repClients.length !== 1 ? 's' : ''}</p>
                 {pendingComm > 0 && (
                   <p className="font-medium text-amber-600">{formatCurrency(pendingComm)} in pending commissions</p>
                 )}
@@ -341,7 +341,7 @@ export default function RepsPage() {
 
               {repLeads.length > 0 && (
                 <div className="mb-4">
-                  <label className="text-sm font-medium text-gray-700 block mb-1">Reassign {repLeads.length} leads to:</label>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Reassign {repLeads.length} leads to:</label>
                   <select
                     value={reassignTo}
                     onChange={(e) => setReassignTo(e.target.value)}
@@ -355,7 +355,7 @@ export default function RepsPage() {
                 </div>
               )}
 
-              <p className="text-xs text-gray-400 mb-4">Existing commission records will remain. Unreleased payouts can still be managed from the Payouts page.</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Existing commission records will remain. Unreleased payouts can still be managed from the Payouts page.</p>
 
               <div className="flex justify-end gap-3">
                 <Button variant="outline" size="sm" onClick={() => setDeactivateRep(null)} disabled={deactivating}>Cancel</Button>
@@ -399,39 +399,39 @@ function RepEditForm({ rep, onSave, onBack }: { rep: any; onSave: (data: any) =>
 
   return (
     <div className="p-8 max-w-2xl">
-      <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6">
+      <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-6">
         <ArrowLeft size={16} /> Back to Sales Team
       </button>
 
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">{isNew ? 'Add New Rep' : `Edit: ${rep.name}`}</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">{isNew ? 'Add New Rep' : `Edit: ${rep.name}`}</h1>
 
       <div className="space-y-6">
         <Card className="p-6 space-y-4 rounded-xl">
-          <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Basic Info</h3>
+          <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Basic Info</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">Name</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Name</label>
               <Input value={name} onChange={e => setName(e.target.value)} placeholder="Full name" className="rounded-lg" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">Email</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Email</label>
               <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="rep@email.com" className="rounded-lg" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">Phone</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Phone</label>
               <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1234567890" className="rounded-lg" />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">{isNew ? 'Password' : 'Reset Password'}</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">{isNew ? 'Password' : 'Reset Password'}</label>
               <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={isNew ? 'Login password' : 'Leave blank to keep current'} className="rounded-lg" />
             </div>
           </div>
         </Card>
 
         <Card className="p-6 space-y-4 rounded-xl">
-          <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Role & Status</h3>
+          <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role & Status</h3>
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Type</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Type</label>
             <div className="flex gap-2">
               {[
                 { key: 'FULL', label: 'Full-Time', desc: 'Full dialer access, daily targets' },
@@ -442,8 +442,8 @@ function RepEditForm({ rep, onSave, onBack }: { rep: any; onSave: (data: any) =>
                   onClick={() => setPortalType(t.key)}
                   className={`flex-1 px-4 py-3 rounded-lg text-sm font-medium border transition-colors text-left ${
                     portalType === t.key
-                      ? 'bg-blue-50 border-blue-300 text-blue-700'
-                      : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                      ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 text-blue-700 dark:text-blue-400'
+                      : 'bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-slate-600'
                   }`}
                 >
                   <div>{t.label}</div>
@@ -453,7 +453,7 @@ function RepEditForm({ rep, onSave, onBack }: { rep: any; onSave: (data: any) =>
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Status</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Status</label>
             <div className="flex gap-2">
               {['ACTIVE', 'INACTIVE', 'SUSPENDED'].map(s => (
                 <button
@@ -461,10 +461,10 @@ function RepEditForm({ rep, onSave, onBack }: { rep: any; onSave: (data: any) =>
                   onClick={() => setStatus(s)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
                     status === s
-                      ? s === 'ACTIVE' ? 'bg-green-50 border-green-300 text-green-700'
-                        : s === 'SUSPENDED' ? 'bg-red-50 border-red-300 text-red-700'
-                        : 'bg-gray-100 border-gray-300 text-gray-700'
-                      : 'bg-white border-gray-200 text-gray-500'
+                      ? s === 'ACTIVE' ? 'bg-green-50 dark:bg-green-950/30 border-green-300 text-green-700 dark:text-green-400'
+                        : s === 'SUSPENDED' ? 'bg-red-50 dark:bg-red-950/30 border-red-300 text-red-700 dark:text-red-400'
+                        : 'bg-gray-100 dark:bg-slate-800 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300'
+                      : 'bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700 text-gray-500 dark:text-gray-400'
                   }`}
                 >
                   {s}
@@ -475,37 +475,37 @@ function RepEditForm({ rep, onSave, onBack }: { rep: any; onSave: (data: any) =>
         </Card>
 
         <Card className="p-6 space-y-4 rounded-xl">
-          <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Commission & Targets</h3>
+          <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Commission & Targets</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">Commission Rate (%)</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Commission Rate (%)</label>
               <Input type="number" min="0" max="100" step="5" value={commissionRate} onChange={e => setCommissionRate(e.target.value)} className="rounded-lg" />
-              <p className="text-xs text-gray-400 mt-1">Standard: 50%. Top performers: 60%.</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Standard: 50%. Top performers: 60%.</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">Daily Lead Cap</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Daily Lead Cap</label>
               <Input type="number" min="1" max="100" value={dailyLeadCap} onChange={e => setDailyLeadCap(e.target.value)} className="rounded-lg" />
-              <p className="text-xs text-gray-400 mt-1">Max leads assigned per day</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Max leads assigned per day</p>
             </div>
           </div>
         </Card>
 
         {!isNew && (
           <Card className="p-6 space-y-3 rounded-xl">
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Activity Summary</h3>
-            <p className="text-xs text-gray-400">Read-only — sourced from rep activity tracking</p>
+            <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Activity Summary</h3>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Read-only — sourced from rep activity tracking</p>
             <div className="grid grid-cols-3 gap-4">
-              <div className="bg-gray-50 rounded-lg p-3">
-                <div className="text-xs text-gray-500">Total Closes</div>
-                <div className="text-xl font-bold text-gray-900">{rep.totalCloses || 0}</div>
+              <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3">
+                <div className="text-xs text-gray-500 dark:text-gray-400">Total Closes</div>
+                <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{rep.totalCloses || 0}</div>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <div className="text-xs text-gray-500">Commission Rate</div>
-                <div className="text-xl font-bold text-gray-900">{((rep.commissionRate || 0) * 100).toFixed(0)}%</div>
+              <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3">
+                <div className="text-xs text-gray-500 dark:text-gray-400">Commission Rate</div>
+                <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{((rep.commissionRate || 0) * 100).toFixed(0)}%</div>
               </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <div className="text-xs text-gray-500">Member Since</div>
-                <div className="text-xl font-bold text-gray-900">{new Date(rep.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</div>
+              <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3">
+                <div className="text-xs text-gray-500 dark:text-gray-400">Member Since</div>
+                <div className="text-xl font-bold text-gray-900 dark:text-gray-100">{new Date(rep.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</div>
               </div>
             </div>
           </Card>

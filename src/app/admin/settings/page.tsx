@@ -92,7 +92,7 @@ function SettingsInner() {
 
   if (loadingSettings) {
     return (
-      <div className="p-8 flex items-center justify-center text-gray-500 gap-2">
+      <div className="p-8 flex items-center justify-center text-gray-500 dark:text-gray-400 gap-2">
         <Loader2 size={20} className="animate-spin" />
         <span>Loading settings...</span>
       </div>
@@ -103,8 +103,8 @@ function SettingsInner() {
     <div className="p-8 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-500 mt-1">Manage your system configuration</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Settings</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Manage your system configuration</p>
       </div>
 
       {/* Tabs */}
@@ -117,7 +117,7 @@ function SettingsInner() {
               className={`flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition-colors ${
                 activeTab === tab.id
                   ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
               }`}
             >
               {tab.icon}
@@ -143,7 +143,7 @@ export default function SettingsPage() {
   return (
     <SettingsProvider>
       <Suspense fallback={
-        <div className="p-8 flex items-center justify-center text-gray-500 gap-2">
+        <div className="p-8 flex items-center justify-center text-gray-500 dark:text-gray-400 gap-2">
           <Loader2 size={20} className="animate-spin" />
           <span>Loading settings...</span>
         </div>

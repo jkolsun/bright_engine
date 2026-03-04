@@ -41,13 +41,13 @@ export function PreviewButton({ lead }: { lead: QueueLead }) {
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-4">
-      <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">Preview</h3>
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200/80 dark:border-slate-700 shadow-sm p-4">
+      <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">Preview</h3>
       <div className="flex items-center gap-2.5">
         <button
           onClick={handleSend}
           disabled={sending || !lead.previewUrl && !lead.previewId}
-          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold bg-teal-50 text-teal-700 rounded-xl hover:bg-teal-100 border border-teal-200/60 disabled:opacity-40 transition-all duration-200"
+          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-400 rounded-xl hover:bg-teal-100 border border-teal-200/60 disabled:opacity-40 transition-all duration-200"
         >
           <Send className="w-3.5 h-3.5" />
           {sent ? 'Sent!' : sending ? 'Sending...' : 'Text Preview'}
@@ -55,7 +55,7 @@ export function PreviewButton({ lead }: { lead: QueueLead }) {
         <button
           onClick={handleSendEmail}
           disabled={sendingEmail || !lead.email || (!lead.previewUrl && !lead.previewId)}
-          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 border border-blue-200/60 disabled:opacity-40 transition-all duration-200"
+          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 rounded-xl hover:bg-blue-100 border border-blue-200/60 disabled:opacity-40 transition-all duration-200"
         >
           <Mail className="w-3.5 h-3.5" />
           {sentEmail ? 'Sent!' : sendingEmail ? 'Sending...' : 'Email Preview'}
@@ -65,7 +65,7 @@ export function PreviewButton({ lead }: { lead: QueueLead }) {
             href={lead.previewUrl || `${window.location.origin}/preview/${lead.previewId}`}
             target="_blank"
             rel="noopener"
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-500 hover:text-gray-800 rounded-xl hover:bg-gray-50 transition-all duration-200"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-all duration-200"
           >
             <ExternalLink className="w-3.5 h-3.5" /> View
           </a>

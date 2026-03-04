@@ -164,15 +164,15 @@ export default function EarningsView() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'PENDING':
-        return { icon: <Clock size={12} />, label: 'Pending', className: 'bg-amber-100 text-amber-700', reason: 'Awaiting Friday payout' }
+        return { icon: <Clock size={12} />, label: 'Pending', className: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400', reason: 'Awaiting Friday payout' }
       case 'APPROVED':
-        return { icon: <CheckCircle size={12} />, label: 'Approved', className: 'bg-green-100 text-green-700', reason: 'Ready for payout' }
+        return { icon: <CheckCircle size={12} />, label: 'Approved', className: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400', reason: 'Ready for payout' }
       case 'PAID':
-        return { icon: <DollarSign size={12} />, label: 'Paid', className: 'bg-emerald-100 text-emerald-700', reason: 'Sent via Wise' }
+        return { icon: <DollarSign size={12} />, label: 'Paid', className: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400', reason: 'Sent via Wise' }
       case 'REJECTED':
-        return { icon: <XCircle size={12} />, label: 'Refunded', className: 'bg-red-100 text-red-700', reason: 'Client refunded' }
+        return { icon: <XCircle size={12} />, label: 'Refunded', className: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400', reason: 'Client refunded' }
       default:
-        return { icon: <AlertCircle size={12} />, label: status, className: 'bg-gray-100 text-gray-700', reason: '' }
+        return { icon: <AlertCircle size={12} />, label: status, className: 'bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-300', reason: '' }
     }
   }
 
@@ -190,7 +190,7 @@ export default function EarningsView() {
           <div className="w-12 h-12 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
             <DollarSign size={22} className="text-white" />
           </div>
-          <p className="text-gray-500 font-medium">Loading your commission data...</p>
+          <p className="text-gray-500 dark:text-gray-400 font-medium">Loading your commission data...</p>
         </div>
       </div>
     )
@@ -200,14 +200,14 @@ export default function EarningsView() {
     return (
       <div className="p-8 space-y-6 max-w-5xl mx-auto">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 font-[family-name:var(--font-space-grotesk),_'Space_Grotesk',_sans-serif]">Earnings</h1>
-          <p className="text-gray-500 mt-1 text-sm">Track your commissions and payouts</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 font-[family-name:var(--font-space-grotesk),_'Space_Grotesk',_sans-serif]">Earnings</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">Track your commissions and payouts</p>
         </div>
-        <Card className="p-8 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm text-center">
-          <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-            <DollarSign size={24} className="text-gray-400" />
+        <Card className="p-8 rounded-2xl border-0 shadow-medium bg-white/80 dark:bg-slate-900 backdrop-blur-sm text-center">
+          <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-900/40 flex items-center justify-center mx-auto mb-4">
+            <DollarSign size={24} className="text-gray-400 dark:text-gray-500" />
           </div>
-          <p className="text-gray-600 font-medium">
+          <p className="text-gray-600 dark:text-gray-400 font-medium">
             {error || 'No commission data available yet. Complete your first sale to see earnings here.'}
           </p>
         </Card>
@@ -220,40 +220,40 @@ export default function EarningsView() {
   return (
     <div className="p-6 lg:p-8 space-y-6 max-w-5xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 font-[family-name:var(--font-space-grotesk),_'Space_Grotesk',_sans-serif]">Earnings</h1>
-        <p className="text-gray-500 mt-1 text-sm">Track your commissions and payouts</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 font-[family-name:var(--font-space-grotesk),_'Space_Grotesk',_sans-serif]">Earnings</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">Track your commissions and payouts</p>
       </div>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <EarningsCard
           icon={<TrendingUp size={20} />}
-          iconBg="bg-purple-50"
-          iconColor="text-purple-600"
+          iconBg="bg-purple-50 dark:bg-purple-950/30"
+          iconColor="text-purple-600 dark:text-purple-400"
           label="This Month"
           value={formatCurrency(data.thisMonth)}
           subtitle="Current month"
         />
         <EarningsCard
           icon={<Clock size={20} />}
-          iconBg="bg-amber-50"
-          iconColor="text-amber-600"
+          iconBg="bg-amber-50 dark:bg-amber-950/30"
+          iconColor="text-amber-600 dark:text-amber-400"
           label="Pending"
           value={formatCurrency(data.pending.amount)}
           subtitle="Awaiting payout"
         />
         <EarningsCard
           icon={<CheckCircle size={20} />}
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-600"
+          iconBg="bg-emerald-50 dark:bg-emerald-950/30"
+          iconColor="text-emerald-600 dark:text-emerald-400"
           label="Paid"
           value={formatCurrency(data.paidTotal)}
           subtitle="Sent via Wise"
         />
         <EarningsCard
           icon={<DollarSign size={20} />}
-          iconBg="bg-teal-50"
-          iconColor="text-teal-600"
+          iconBg="bg-teal-50 dark:bg-teal-950/30"
+          iconColor="text-teal-600 dark:text-teal-400"
           label="Total"
           value={formatCurrency(data.totalEarned)}
           subtitle="All-time earnings"
@@ -262,37 +262,37 @@ export default function EarningsView() {
 
       {/* My Deals Summary */}
       {(data.activeLeads > 0 || data.paymentLinksSent > 0 || data.dealsThisMonth > 0) && (
-        <Card className="p-5 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm">
-          <h3 className="text-sm font-bold text-gray-900 mb-3">My Pipeline</h3>
+        <Card className="p-5 rounded-2xl border-0 shadow-medium bg-white/80 dark:bg-slate-900 backdrop-blur-sm">
+          <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">My Pipeline</h3>
           <div className="flex items-center gap-6 text-sm flex-wrap">
-            <span className="text-gray-600">
-              You&apos;re assigned to <span className="font-bold text-gray-900">{data.activeLeads}</span> active lead{data.activeLeads !== 1 ? 's' : ''}
+            <span className="text-gray-600 dark:text-gray-400">
+              You&apos;re assigned to <span className="font-bold text-gray-900 dark:text-gray-100">{data.activeLeads}</span> active lead{data.activeLeads !== 1 ? 's' : ''}
             </span>
-            <span className="text-gray-400">|</span>
-            <span className="text-gray-600">
-              <span className="font-bold text-amber-600">{data.paymentLinksSent}</span> payment link{data.paymentLinksSent !== 1 ? 's' : ''} sent (awaiting payment)
+            <span className="text-gray-400 dark:text-gray-500">|</span>
+            <span className="text-gray-600 dark:text-gray-400">
+              <span className="font-bold text-amber-600 dark:text-amber-400">{data.paymentLinksSent}</span> payment link{data.paymentLinksSent !== 1 ? 's' : ''} sent (awaiting payment)
             </span>
-            <span className="text-gray-400">|</span>
-            <span className="text-gray-600">
-              <span className="font-bold text-emerald-600">{data.dealsThisMonth}</span> deal{data.dealsThisMonth !== 1 ? 's' : ''} closed this month
+            <span className="text-gray-400 dark:text-gray-500">|</span>
+            <span className="text-gray-600 dark:text-gray-400">
+              <span className="font-bold text-emerald-600 dark:text-emerald-400">{data.dealsThisMonth}</span> deal{data.dealsThisMonth !== 1 ? 's' : ''} closed this month
             </span>
           </div>
         </Card>
       )}
 
       {/* Deal-by-Deal Breakdown */}
-      <Card className="rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm overflow-hidden">
-        <div className="p-5 border-b border-gray-100">
+      <Card className="rounded-2xl border-0 shadow-medium bg-white/80 dark:bg-slate-900 backdrop-blur-sm overflow-hidden">
+        <div className="p-5 border-b border-gray-100 dark:border-slate-700">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <h3 className="text-lg font-bold text-gray-900">Commission History</h3>
-              <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mt-0.5">Deal-by-deal breakdown</p>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Commission History</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider mt-0.5">Deal-by-deal breakdown</p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="text-xs border rounded-xl px-2.5 py-1.5 bg-white focus:ring-teal-500 focus:ring-2 focus:outline-none"
+                className="text-xs border rounded-xl px-2.5 py-1.5 bg-white dark:bg-slate-800 dark:text-gray-100 dark:border-slate-600 focus:ring-teal-500 focus:ring-2 focus:outline-none"
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
@@ -303,7 +303,7 @@ export default function EarningsView() {
               <select
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="text-xs border rounded-xl px-2.5 py-1.5 bg-white focus:ring-teal-500 focus:ring-2 focus:outline-none"
+                className="text-xs border rounded-xl px-2.5 py-1.5 bg-white dark:bg-slate-800 dark:text-gray-100 dark:border-slate-600 focus:ring-teal-500 focus:ring-2 focus:outline-none"
               >
                 <option value="all">All Time</option>
                 <option value="week">This Week</option>
@@ -315,48 +315,48 @@ export default function EarningsView() {
         </div>
 
         {filtered.length === 0 ? (
-          <div className="text-center text-gray-500 py-12">
-            <DollarSign size={24} className="text-gray-300 mx-auto mb-2" />
-            <p className="font-medium text-gray-600">No commissions found</p>
-            <p className="text-sm text-gray-400 mt-1">
+          <div className="text-center text-gray-500 dark:text-gray-400 py-12">
+            <DollarSign size={24} className="text-gray-300 dark:text-gray-400 mx-auto mb-2" />
+            <p className="font-medium text-gray-600 dark:text-gray-400">No commissions found</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
               {statusFilter !== 'all' || dateFilter !== 'all' ? 'Try changing your filters' : 'Complete sales to start earning'}
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50/80">
+              <thead className="bg-gray-50/80 dark:bg-slate-800/50">
                 <tr>
-                  <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Company</th>
-                  <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Type</th>
-                  <th className="text-right px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Deal Amount</th>
-                  <th className="text-right px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Your Rate</th>
-                  <th className="text-right px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Your Commission</th>
-                  <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                  <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
+                  <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+                  <th className="text-right px-5 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Deal Amount</th>
+                  <th className="text-right px-5 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Your Rate</th>
+                  <th className="text-right px-5 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Your Commission</th>
+                  <th className="text-left px-5 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                 {filtered.map((comm) => {
                   const status = getStatusBadge(comm.status)
                   return (
-                    <tr key={comm.id} className="hover:bg-gray-50/50">
-                      <td className="px-5 py-3 text-gray-600">
+                    <tr key={comm.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800">
+                      <td className="px-5 py-3 text-gray-600 dark:text-gray-400">
                         {new Date(comm.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </td>
-                      <td className="px-5 py-3 font-medium text-gray-900">
+                      <td className="px-5 py-3 font-medium text-gray-900 dark:text-gray-100">
                         {comm.client?.companyName || 'Unknown'}
                       </td>
-                      <td className="px-5 py-3 text-gray-600">
+                      <td className="px-5 py-3 text-gray-600 dark:text-gray-400">
                         {getDealType(comm)}
                       </td>
-                      <td className="px-5 py-3 text-right text-gray-600">
+                      <td className="px-5 py-3 text-right text-gray-600 dark:text-gray-400">
                         {comm.dealAmount ? formatCurrency(comm.dealAmount) : '—'}
                       </td>
-                      <td className="px-5 py-3 text-right text-gray-600">
+                      <td className="px-5 py-3 text-right text-gray-600 dark:text-gray-400">
                         {comm.commissionRate ? `${Math.round(comm.commissionRate * 100)}%` : '—'}
                       </td>
-                      <td className="px-5 py-3 text-right font-semibold text-gray-900">
+                      <td className="px-5 py-3 text-right font-semibold text-gray-900 dark:text-gray-100">
                         {formatCurrency(comm.amount)}
                       </td>
                       <td className="px-5 py-3">
@@ -364,9 +364,9 @@ export default function EarningsView() {
                           <Badge variant="outline" className={`${status.className} text-[10px] gap-1`}>
                             {status.icon} {status.label}
                           </Badge>
-                          <p className="text-[10px] text-gray-400 mt-0.5">{status.reason}</p>
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{status.reason}</p>
                           {comm.status === 'PAID' && comm.paidAt && (
-                            <p className="text-[10px] text-gray-400">Released {new Date(comm.paidAt).toLocaleDateString()}</p>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500">Released {new Date(comm.paidAt).toLocaleDateString()}</p>
                           )}
                         </div>
                       </td>
@@ -380,19 +380,19 @@ export default function EarningsView() {
       </Card>
 
       {/* Payout History */}
-      <Card className="rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm overflow-hidden">
+      <Card className="rounded-2xl border-0 shadow-medium bg-white/80 dark:bg-slate-900 backdrop-blur-sm overflow-hidden">
         <div className="p-5">
-          <h3 className="text-lg font-bold text-gray-900">Payout History</h3>
-          <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mt-0.5">Transfers to your bank account</p>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Payout History</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider mt-0.5">Transfers to your bank account</p>
         </div>
-        <div className="text-center text-gray-500 py-12 border-t border-gray-100">
-          <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
-            <Award size={24} className="text-gray-300" />
+        <div className="text-center text-gray-500 dark:text-gray-400 py-12 border-t border-gray-100 dark:border-slate-700">
+          <div className="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-slate-800/50 flex items-center justify-center mx-auto mb-3">
+            <Award size={24} className="text-gray-300 dark:text-gray-400" />
           </div>
-          <p className="font-medium text-gray-600">
+          <p className="font-medium text-gray-600 dark:text-gray-400">
             {data.commissions.some(c => c.status === 'PAID') ? 'Payout history will appear here' : 'No payouts yet'}
           </p>
-          <p className="text-sm text-gray-400 mt-1">Set up your payout account in Settings to receive payouts</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Set up your payout account in Settings to receive payouts</p>
         </div>
       </Card>
     </div>
@@ -403,15 +403,15 @@ function EarningsCard({ icon, iconBg, iconColor, label, value, subtitle }: {
   icon: React.ReactNode, iconBg: string, iconColor: string, label: string, value: string, subtitle: string
 }) {
   return (
-    <Card className="p-5 rounded-2xl border-0 shadow-medium bg-white/80 backdrop-blur-sm card-hover">
+    <Card className="p-5 rounded-2xl border-0 shadow-medium bg-white/80 dark:bg-slate-900 backdrop-blur-sm card-hover">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{label}</span>
+        <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{label}</span>
         <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center`}>
           <span className={iconColor}>{icon}</span>
         </div>
       </div>
-      <div className="text-2xl font-bold text-gray-900">{value}</div>
-      <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mt-1">{subtitle}</div>
+      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
+      <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider mt-1">{subtitle}</div>
     </Card>
   )
 }

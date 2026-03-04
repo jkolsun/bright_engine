@@ -40,9 +40,9 @@ class LeadsErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <div className="p-8">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <h2 className="text-lg font-bold text-red-800">Leads Page Error</h2>
-            <pre className="text-xs text-red-500 mt-4 p-3 bg-red-100 rounded overflow-auto max-h-40">{this.state.error}</pre>
+          <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-6">
+            <h2 className="text-lg font-bold text-red-800 dark:text-red-400">Leads Page Error</h2>
+            <pre className="text-xs text-red-500 dark:text-red-400 mt-4 p-3 bg-red-100 dark:bg-red-900/40 rounded overflow-auto max-h-40">{this.state.error}</pre>
             <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md text-sm">
               Reload
             </button>
@@ -608,21 +608,21 @@ function LeadsPageInner() {
       <div className="p-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Leads</h1>
-            <p className="text-gray-500 mt-1">{leads.length} total leads in {folders.length} folders</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Leads</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">{leads.length} total leads in {folders.length} folders</p>
           </div>
           <div className="flex gap-3">
             {/* View Mode Toggle */}
-            <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+            <div className="flex rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
               <button
                 onClick={() => setViewMode('folders')}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-gray-100 text-gray-900 border-r border-gray-200"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-slate-700"
               >
                 <LayoutGrid size={16} /> Folders
               </button>
               <button
                 onClick={() => { setViewMode('leads'); setCurrentPage(0); setStatusFilter('all'); setSearchTerm('') }}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
               >
                 <List size={16} /> All Leads
               </button>
@@ -693,7 +693,7 @@ function LeadsPageInner() {
 
         {/* Folders Grid */}
         {loading ? (
-          <div className="text-center py-12 text-gray-500">Loading...</div>
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">Loading...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {folders.map((folder) => {
@@ -712,8 +712,8 @@ function LeadsPageInner() {
                       <FolderOpen size={22} style={{ color: folder.color }} />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{folder.name}</h3>
-                      <p className="text-sm text-gray-500 mt-1">{folder._count?.leads || 0} leads</p>
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">{folder.name}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{folder._count?.leads || 0} leads</p>
                       <div className="flex gap-2 mt-2">
                         {newCount > 0 && <Badge variant="secondary" className="text-xs">{newCount} new</Badge>}
                         {hotCount > 0 && <Badge variant="destructive" className="text-xs">{hotCount} hot</Badge>}
@@ -723,14 +723,14 @@ function LeadsPageInner() {
                     <div className="relative">
                       <button
                         onClick={(e) => { e.stopPropagation(); setFolderMenuOpen(folderMenuOpen === folder.id ? null : folder.id) }}
-                        className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                        className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
                       >
                         <MoreVertical size={18} />
                       </button>
                       {folderMenuOpen === folder.id && (
-                        <div className="absolute right-0 top-8 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-40" onClick={(e) => e.stopPropagation()}>
+                        <div className="absolute right-0 top-8 z-50 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg py-1 w-40" onClick={(e) => e.stopPropagation()}>
                           <button
-                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
                             onClick={() => {
                               setEditFolderId(folder.id)
                               setEditFolderName(folder.name)
@@ -741,13 +741,13 @@ function LeadsPageInner() {
                             <Pencil size={14} /> Edit
                           </button>
                           <button
-                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
                             onClick={() => handleAssignFolder(folder.id)}
                           >
                             <UserPlus size={14} /> Assign Leads
                           </button>
                           <button
-                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
                             onClick={() => { setFolderMenuOpen(null); handleDeleteFolder(folder.id, folder.name) }}
                           >
                             <Trash2 size={14} /> Delete
@@ -767,12 +767,12 @@ function LeadsPageInner() {
                 onClick={() => { setActiveFolder('unfoldered'); setSelectedLeads(new Set()); setStatusFilter('all') }}
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                    <FolderOpen size={22} className="text-gray-400" />
+                  <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
+                    <FolderOpen size={22} className="text-gray-400 dark:text-gray-500" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-700">Unorganized</h3>
-                    <p className="text-sm text-gray-500 mt-1">{unfolderedCount} leads not in any folder</p>
+                    <h3 className="font-semibold text-gray-700 dark:text-gray-300">Unorganized</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{unfolderedCount} leads not in any folder</p>
                   </div>
                 </div>
               </Card>
@@ -780,9 +780,9 @@ function LeadsPageInner() {
 
             {folders.length === 0 && unfolderedCount === 0 && (
               <div className="col-span-full text-center py-12">
-                <FolderOpen size={48} className="text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No folders yet</h3>
-                <p className="text-gray-600 mb-4">Create a folder or import leads to get started</p>
+                <FolderOpen size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No folders yet</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">Create a folder or import leads to get started</p>
                 <div className="flex gap-3 justify-center">
                   <Button onClick={() => setNewFolderDialogOpen(true)}>
                     <FolderPlus size={18} className="mr-2" />
@@ -820,22 +820,22 @@ function LeadsPageInner() {
             <ArrowLeft size={18} />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               {isAllLeadsView ? 'All Leads' : (activeFolderData?.name || 'Unorganized')}
             </h1>
-            <p className="text-gray-500 mt-1">{stats.total} leads</p>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">{stats.total} leads</p>
           </div>
           {/* View toggle in All Leads mode */}
           {isAllLeadsView && (
-            <div className="flex rounded-lg border border-gray-200 overflow-hidden ml-4">
+            <div className="flex rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden ml-4">
               <button
                 onClick={() => { setViewMode('folders'); setSelectedLeads(new Set()) }}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors border-r border-gray-200"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors border-r border-gray-200 dark:border-slate-700"
               >
                 <LayoutGrid size={16} /> Folders
               </button>
               <button
-                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-gray-100 text-gray-900"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-gray-100"
               >
                 <List size={16} /> All Leads
               </button>
@@ -1023,26 +1023,26 @@ function LeadsPageInner() {
               <div className="py-4 space-y-3">
                 <button
                   onClick={() => setAssignDestination('rep-tracker')}
-                  className="w-full flex items-center gap-4 p-4 rounded-lg border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all text-left"
+                  className="w-full flex items-center gap-4 p-4 rounded-lg border-2 border-gray-200 dark:border-slate-700 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all text-left"
                 >
-                  <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
                     <Target size={24} className="text-blue-600" />
                   </div>
                   <div>
-                    <div className="font-semibold text-gray-900">Sales Rep Tracker</div>
-                    <div className="text-sm text-gray-500">Assign to a sales rep for calling</div>
+                    <div className="font-semibold text-gray-900 dark:text-gray-100">Sales Rep Tracker</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Assign to a sales rep for calling</div>
                   </div>
                 </button>
                 <button
                   onClick={handleAssignToInstantly}
-                  className="w-full flex items-center gap-4 p-4 rounded-lg border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 transition-all text-left"
+                  className="w-full flex items-center gap-4 p-4 rounded-lg border-2 border-gray-200 dark:border-slate-700 hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-all text-left"
                 >
-                  <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-lg bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
                     <Mail size={24} className="text-purple-600" />
                   </div>
                   <div>
-                    <div className="font-semibold text-gray-900">Instantly Campaigns</div>
-                    <div className="text-sm text-gray-500">Add to an email campaign</div>
+                    <div className="font-semibold text-gray-900 dark:text-gray-100">Instantly Campaigns</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Add to an email campaign</div>
                   </div>
                 </button>
               </div>
@@ -1052,7 +1052,7 @@ function LeadsPageInner() {
               {/* Step 2: Choose rep */}
               <DialogHeader>
                 <DialogTitle>
-                  <button onClick={() => setAssignDestination(null)} className="mr-2 text-gray-400 hover:text-gray-600">
+                  <button onClick={() => setAssignDestination(null)} className="mr-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400">
                     <ArrowLeft size={18} className="inline" />
                   </button>
                   Assign to Sales Rep
@@ -1066,14 +1066,14 @@ function LeadsPageInner() {
                 <button
                   onClick={() => handleBulkAssign(null)}
                   disabled={assigning}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-left disabled:opacity-50"
+                  className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-left disabled:opacity-50"
                 >
-                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                    <UserMinus size={18} className="text-gray-500" />
+                  <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
+                    <UserMinus size={18} className="text-gray-500 dark:text-gray-400" />
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-gray-900">Unassign</div>
-                    <div className="text-sm text-gray-500">Remove rep assignment</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">Unassign</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Remove rep assignment</div>
                   </div>
                 </button>
 
@@ -1083,21 +1083,21 @@ function LeadsPageInner() {
                     key={rep.id}
                     onClick={() => handleBulkAssign(rep.id)}
                     disabled={assigning}
-                    className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors text-left disabled:opacity-50"
+                    className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:border-blue-300 dark:hover:border-blue-700 transition-colors text-left disabled:opacity-50"
                   >
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                      <span className="text-blue-700 font-semibold text-sm">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                      <span className="text-blue-700 dark:text-blue-400 font-semibold text-sm">
                         {rep.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || '?'}
                       </span>
                     </div>
                     <div className="flex-1">
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-gray-900 dark:text-gray-100">
                         {rep.name}
                         {rep.portalType === 'PART_TIME' && (
                           <Badge variant="secondary" className="ml-2 text-xs">Part-Time</Badge>
                         )}
                       </div>
-                      <div className="text-sm text-gray-500">{rep.stats?.assignedLeads || 0} leads assigned</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">{rep.stats?.assignedLeads || 0} leads assigned</div>
                     </div>
                     <Badge variant="secondary" className="text-xs">
                       {rep.stats?.monthActivity?.closes || 0} closes
@@ -1106,8 +1106,8 @@ function LeadsPageInner() {
                 ))}
 
                 {activeReps.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <Users size={32} className="mx-auto mb-2 text-gray-300" />
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <Users size={32} className="mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                     <p>No active reps found.</p>
                     <p className="text-sm">Create reps in Settings first.</p>
                   </div>
@@ -1132,14 +1132,14 @@ function LeadsPageInner() {
             <button
               onClick={() => handleAssignToFolder(null)}
               disabled={assigningFolder}
-              className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-left disabled:opacity-50"
+              className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-left disabled:opacity-50"
             >
-              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                <FolderOpen size={18} className="text-gray-400" />
+              <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
+                <FolderOpen size={18} className="text-gray-400 dark:text-gray-500" />
               </div>
               <div className="flex-1">
-                <div className="font-medium text-gray-900">Remove from Folder</div>
-                <div className="text-sm text-gray-500">Move to Unorganized</div>
+                <div className="font-medium text-gray-900 dark:text-gray-100">Remove from Folder</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Move to Unorganized</div>
               </div>
             </button>
 
@@ -1150,22 +1150,22 @@ function LeadsPageInner() {
                   key={folder.id}
                   onClick={() => handleAssignToFolder(folder.id)}
                   disabled={assigningFolder}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors text-left disabled:opacity-50"
+                  className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:border-blue-300 dark:hover:border-blue-700 transition-colors text-left disabled:opacity-50"
                 >
                   <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: folder.color + '20' }}>
                     <FolderOpen size={18} style={{ color: folder.color }} />
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-gray-900">{folder.name}</div>
-                    <div className="text-sm text-gray-500">{count} leads</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">{folder.name}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{count} leads</div>
                   </div>
                 </button>
               )
             })}
 
             {folders.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <FolderOpen size={32} className="mx-auto mb-2 text-gray-300" />
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <FolderOpen size={32} className="mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                 <p>No folders yet.</p>
                 <p className="text-sm">Create a folder from the Folders view first.</p>
               </div>
@@ -1198,7 +1198,7 @@ function LeadsPageInner() {
           <select
             value={repFilter}
             onChange={(e) => { setRepFilter(e.target.value); setSelectedLeads(new Set()); setCurrentPage(0) }}
-            className="h-10 px-3 rounded-md border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="h-10 px-3 rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Reps</option>
             <option value="unassigned">Unassigned</option>
@@ -1210,7 +1210,7 @@ function LeadsPageInner() {
           <select
             value={contactedFilter}
             onChange={(e) => { setContactedFilter(e.target.value); setSelectedLeads(new Set()); setCurrentPage(0) }}
-            className="h-10 px-3 rounded-md border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="h-10 px-3 rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Last Contacted</option>
             <option value="today">Today</option>
@@ -1225,14 +1225,14 @@ function LeadsPageInner() {
       {/* Leads Table — horizontally scrollable with frozen columns */}
       <Card className="overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-gray-500">Loading leads...</div>
+          <div className="p-12 text-center text-gray-500 dark:text-gray-400">Loading leads...</div>
         ) : filteredLeads.length === 0 ? (
           <div className="p-12 text-center">
-            <div className="text-gray-400 mb-4">
+            <div className="text-gray-400 dark:text-gray-500 mb-4">
               <TrendingUp size={48} className="mx-auto mb-2" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No leads yet</h3>
-            <p className="text-gray-600 mb-4">Add your first lead or import from CSV</p>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No leads yet</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">Add your first lead or import from CSV</p>
             <div className="flex gap-3 justify-center">
               <Button onClick={() => setDialogOpen(true)}>
                 <Plus size={18} className="mr-2" />
@@ -1249,10 +1249,10 @@ function LeadsPageInner() {
         ) : (
           <div className="overflow-x-auto relative">
             <table className="w-max min-w-full border-collapse">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50 dark:bg-slate-800/50 border-b dark:border-slate-700">
                 <tr>
                   {/* Sticky left: checkbox */}
-                  <th className="sticky left-0 z-20 bg-gray-50 text-center p-3 w-12 border-r border-gray-200">
+                  <th className="sticky left-0 z-20 bg-gray-50 dark:bg-slate-800/50 text-center p-3 w-12 border-r border-gray-200 dark:border-slate-700">
                     <BulkSelectDropdown
                       pageItemIds={paginatedLeads.map(l => l.id)}
                       allItemIds={filteredLeads.map(l => l.id)}
@@ -1261,32 +1261,32 @@ function LeadsPageInner() {
                     />
                   </th>
                   {/* Scrollable columns */}
-                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Name</th>
-                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Company</th>
-                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Phone</th>
-                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Email</th>
-                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Location</th>
-                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Industry</th>
-                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Source</th>
-                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Website</th>
-                  <th className="text-center p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Rating</th>
-                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Last Contacted</th>
-                  <th className="text-center p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Reviews</th>
-                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Personalization</th>
-                  <th className="text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Notes</th>
-                  <th className="text-center p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Build</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Name</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Company</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Phone</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Email</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Location</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Industry</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Source</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Website</th>
+                  <th className="text-center p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Rating</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Last Contacted</th>
+                  <th className="text-center p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Reviews</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Personalization</th>
+                  <th className="text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Notes</th>
+                  <th className="text-center p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Build</th>
                   {/* Sticky right: Assigned To, Status, Actions */}
-                  <th className="sticky right-[200px] z-20 bg-gray-50 text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap border-l border-gray-200 shadow-[-2px_0_4px_rgba(0,0,0,0.06)]">Assigned To</th>
-                  <th className="sticky right-[100px] z-20 bg-gray-50 text-left p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
-                  <th className="sticky right-0 z-20 bg-gray-50 text-center p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap w-[100px]">Actions</th>
+                  <th className="sticky right-[200px] z-20 bg-gray-50 dark:bg-slate-800/50 text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-l border-gray-200 shadow-[-2px_0_4px_rgba(0,0,0,0.06)]">Assigned To</th>
+                  <th className="sticky right-[100px] z-20 bg-gray-50 dark:bg-slate-800/50 text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Status</th>
+                  <th className="sticky right-0 z-20 bg-gray-50 dark:bg-slate-800/50 text-center p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap w-[100px]">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
                 {paginatedLeads.map((lead) => {
                   const isSelected = selectedLeads.has(lead.id)
                   const isExpanded = expandedLead === lead.id
-                  const rowBg = isSelected ? 'bg-blue-50' : 'bg-white'
-                  const hoverBg = isSelected ? 'hover:bg-blue-100' : 'hover:bg-gray-50'
+                  const rowBg = isSelected ? 'bg-blue-50 dark:bg-blue-950/30' : 'bg-white dark:bg-slate-900'
+                  const hoverBg = isSelected ? 'hover:bg-blue-100 dark:hover:bg-blue-900/40' : 'hover:bg-gray-50 dark:hover:bg-slate-800'
 
                   let personalizationData: any = null
                   try {
@@ -1301,7 +1301,7 @@ function LeadsPageInner() {
                     <React.Fragment key={lead.id}>
                       <tr className={`${hoverBg} ${rowBg} cursor-pointer`} onClick={() => { const next = isExpanded ? null : lead.id; setExpandedLead(next); if (next) fetchLeadEvents(lead.id) }}>
                         {/* Sticky left: checkbox */}
-                        <td className={`sticky left-0 z-10 ${rowBg} text-center p-3 border-r border-gray-100`} onClick={(e) => e.stopPropagation()}>
+                        <td className={`sticky left-0 z-10 ${rowBg} text-center p-3 border-r border-gray-100 dark:border-slate-800`} onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -1313,17 +1313,17 @@ function LeadsPageInner() {
                         <td className="p-3 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             {isExpanded ? <ChevronDown size={14} className="text-gray-400 flex-shrink-0" /> : <ChevronRight size={14} className="text-gray-400 flex-shrink-0" />}
-                            <div className="font-medium text-gray-900 text-sm">{lead.firstName} {lead.lastName}</div>
+                            <div className="font-medium text-gray-900 dark:text-gray-100 text-sm">{lead.firstName} {lead.lastName}</div>
                           </div>
                         </td>
-                        <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.companyName || '—'}</td>
-                        <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.phone ? formatPhone(lead.phone) : '—'}</td>
-                        <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.email || '���'}</td>
-                        <td className="p-3 whitespace-nowrap text-sm text-gray-700">
+                        <td className="p-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{lead.companyName || '—'}</td>
+                        <td className="p-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{lead.phone ? formatPhone(lead.phone) : '—'}</td>
+                        <td className="p-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{lead.email || '���'}</td>
+                        <td className="p-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                           {lead.city || lead.state ? `${lead.city || ''}${lead.city && lead.state ? ', ' : ''}${lead.state || ''}` : '—'}
                         </td>
-                        <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.industry || '—'}</td>
-                        <td className="p-3 whitespace-nowrap text-sm text-gray-700">{lead.source || '—'}</td>
+                        <td className="p-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{lead.industry || '—'}</td>
+                        <td className="p-3 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{lead.source || '—'}</td>
                         <td className="p-3 whitespace-nowrap text-sm">
                           {lead.website ? (
                             <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline max-w-[180px] truncate block" onClick={(e) => e.stopPropagation()}>
@@ -1331,17 +1331,17 @@ function LeadsPageInner() {
                             </a>
                           ) : '—'}
                         </td>
-                        <td className="p-3 whitespace-nowrap text-sm text-center text-gray-700">
+                        <td className="p-3 whitespace-nowrap text-sm text-center text-gray-700 dark:text-gray-300">
                           {lead.enrichedRating ? (
                             <span className="font-medium">{Number(lead.enrichedRating).toFixed(1)}</span>
                           ) : '—'}
                         </td>
-                        <td className="p-3 text-sm text-gray-600 whitespace-nowrap">
+                        <td className="p-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
                           {lead.lastContactedAt ? formatTimeAgo(new Date(lead.lastContactedAt)) : (
-                            <span className="text-gray-400">Never</span>
+                            <span className="text-gray-400 dark:text-gray-500">Never</span>
                           )}
                         </td>
-                        <td className="p-3 whitespace-nowrap text-sm text-center text-gray-700">
+                        <td className="p-3 whitespace-nowrap text-sm text-center text-gray-700 dark:text-gray-300">
                           {lead.enrichedReviews ?? '—'}
                         </td>
                         <td className="p-3 text-sm text-gray-700 max-w-[250px] relative group/pers">
@@ -1357,7 +1357,7 @@ function LeadsPageInner() {
                               <Sparkles size={13} className="text-purple-500 flex-shrink-0" />
                               <span className="truncate">{safeRender(personalizationData.firstLine)}</span>
                               {/* Hover tooltip showing full personalization */}
-                              <div className="hidden group-hover/pers:block absolute left-0 top-full z-50 mt-1 w-80 bg-white border border-purple-200 rounded-lg shadow-xl p-4 space-y-2" onClick={(e) => e.stopPropagation()}>
+                              <div className="hidden group-hover/pers:block absolute left-0 top-full z-50 mt-1 w-80 bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-800 rounded-lg shadow-xl p-4 space-y-2" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
                                   <Sparkles size={14} className="text-purple-500" />
                                   <span className="text-xs font-semibold text-purple-700 uppercase tracking-wider">AI Personalization</span>
@@ -1414,7 +1414,7 @@ function LeadsPageInner() {
                           <BuildDotsInline step={lead.buildStep} completed={!!lead.buildCompletedAt} error={lead.buildError} />
                         </td>
                         {/* Sticky right: Assigned To */}
-                        <td className={`sticky right-[200px] z-10 ${rowBg} p-3 whitespace-nowrap border-l border-gray-100 shadow-[-2px_0_4px_rgba(0,0,0,0.06)]`}>
+                        <td className={`sticky right-[200px] z-10 ${rowBg} p-3 whitespace-nowrap border-l border-gray-100 dark:border-slate-800 shadow-[-2px_0_4px_rgba(0,0,0,0.06)]`}>
                           <div className="flex flex-col gap-1">
                             {lead.assignedTo && (
                               <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-full">
@@ -1486,18 +1486,18 @@ function LeadsPageInner() {
 
                       {/* Expanded detail row */}
                       {isExpanded && (
-                        <tr className="bg-gray-50/70">
+                        <tr className="bg-gray-50/70 dark:bg-slate-800/50">
                           <td colSpan={16} className="p-0">
-                            <div className="px-6 py-5 border-t border-b border-gray-200">
+                            <div className="px-6 py-5 border-t border-b border-gray-200 dark:border-slate-700">
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
                                 {/* Rep Call Notes — full width */}
-                                <div className="col-span-1 md:col-span-3 bg-white rounded-lg border border-blue-200 p-4 shadow-sm">
+                                <div className="col-span-1 md:col-span-3 bg-white dark:bg-slate-900 rounded-lg border border-blue-200 dark:border-blue-800 p-4 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
-                                    <div className="w-7 h-7 rounded-md bg-blue-100 flex items-center justify-center">
+                                    <div className="w-7 h-7 rounded-md bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
                                       <Phone size={15} className="text-blue-600" />
                                     </div>
-                                    <h4 className="font-semibold text-gray-900 text-sm">Rep Call Notes</h4>
+                                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Rep Call Notes</h4>
                                   </div>
                                   {(() => {
                                     const calls = (expandedLeadData[lead.id]?.dialerCalls || []).filter((c: any) => c.notes)
@@ -1507,7 +1507,7 @@ function LeadsPageInner() {
                                         {calls.map((call: any) => (
                                           <div key={call.id} className="border-b border-gray-100 pb-2 last:border-0 last:pb-0">
                                             <div className="flex items-center flex-wrap gap-2 text-xs text-gray-600 mb-1">
-                                              <span className="font-semibold text-gray-800">{call.rep?.name || 'Unknown'}</span>
+                                              <span className="font-semibold text-gray-800 dark:text-gray-200">{call.rep?.name || 'Unknown'}</span>
                                               <span className="text-gray-400">{new Date(call.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                                               <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${call.connectedAt ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                                                 {call.connectedAt ? 'Connected' : 'Not Connected'}
@@ -1529,12 +1529,12 @@ function LeadsPageInner() {
                                 </div>
 
                                 {/* Lead Info */}
-                                <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                                <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-4 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
-                                    <div className="w-7 h-7 rounded-md bg-gray-100 flex items-center justify-center">
+                                    <div className="w-7 h-7 rounded-md bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
                                       <Eye size={15} className="text-gray-600" />
                                     </div>
-                                    <h4 className="font-semibold text-gray-900 text-sm">Lead Info</h4>
+                                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Lead Info</h4>
                                   </div>
                                   <div className="space-y-2 text-sm">
                                     <div className="flex justify-between">
@@ -1569,12 +1569,12 @@ function LeadsPageInner() {
                                 </div>
 
                                 {/* Alt Contacts */}
-                                <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                                <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-4 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
-                                    <div className="w-7 h-7 rounded-md bg-gray-100 flex items-center justify-center">
+                                    <div className="w-7 h-7 rounded-md bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
                                       <Users size={15} className="text-gray-600" />
                                     </div>
-                                    <h4 className="font-semibold text-gray-900 text-sm">Alt Contacts</h4>
+                                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Alt Contacts</h4>
                                   </div>
                                   <div className="space-y-2 text-sm">
                                     {lead.phone && (
@@ -1604,12 +1604,12 @@ function LeadsPageInner() {
                                 </div>
 
                                 {/* AI Personalization */}
-                                <div className="bg-white rounded-lg border border-purple-200 p-4 shadow-sm">
+                                <div className="bg-white dark:bg-slate-900 rounded-lg border border-purple-200 dark:border-purple-800 p-4 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
-                                    <div className="w-7 h-7 rounded-md bg-purple-100 flex items-center justify-center">
+                                    <div className="w-7 h-7 rounded-md bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
                                       <Sparkles size={15} className="text-purple-600" />
                                     </div>
-                                    <h4 className="font-semibold text-gray-900 text-sm">AI Personalization</h4>
+                                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">AI Personalization</h4>
                                     {personalizationData?.tier && (
                                       <span className={`ml-auto text-xs font-bold px-2 py-0.5 rounded-full ${
                                         personalizationData.tier === 'S' ? 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-300' :
@@ -1660,13 +1660,13 @@ function LeadsPageInner() {
                                 </div>
 
                                 {/* Editable Notes */}
-                                <div className="bg-white rounded-lg border border-amber-200 p-4 shadow-sm">
+                                <div className="bg-white dark:bg-slate-900 rounded-lg border border-amber-200 dark:border-amber-800 p-4 shadow-sm">
                                   <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-2">
-                                      <div className="w-7 h-7 rounded-md bg-amber-100 flex items-center justify-center">
+                                      <div className="w-7 h-7 rounded-md bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
                                         <Pencil size={15} className="text-amber-600" />
                                       </div>
-                                      <h4 className="font-semibold text-gray-900 text-sm">Notes</h4>
+                                      <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Notes</h4>
                                     </div>
                                     <button
                                       onClick={() => saveLeadNotes(lead.id)}
@@ -1686,12 +1686,12 @@ function LeadsPageInner() {
                                 </div>
 
                                 {/* Enrichment Data */}
-                                <div className="bg-white rounded-lg border border-teal-200 p-4 shadow-sm">
+                                <div className="bg-white dark:bg-slate-900 rounded-lg border border-teal-200 dark:border-teal-800 p-4 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
-                                    <div className="w-7 h-7 rounded-md bg-teal-100 flex items-center justify-center">
+                                    <div className="w-7 h-7 rounded-md bg-teal-100 dark:bg-teal-950/30 flex items-center justify-center">
                                       <Globe size={15} className="text-teal-600" />
                                     </div>
-                                    <h4 className="font-semibold text-gray-900 text-sm">Enrichment Data</h4>
+                                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Enrichment Data</h4>
                                   </div>
                                   {(lead.enrichedRating != null || lead.enrichedAddress || (Array.isArray(lead.enrichedServices) && lead.enrichedServices.length > 0)) ? (
                                     <div className="space-y-3">
@@ -1716,7 +1716,7 @@ function LeadsPageInner() {
                                           </div>
                                           <div className="flex flex-wrap gap-1">
                                             {(lead.enrichedServices as any[]).slice(0, 8).map((svc: any, i: number) => (
-                                              <span key={i} className="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full">{typeof svc === 'string' ? svc : String(svc)}</span>
+                                              <span key={i} className="text-xs bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-400 px-2 py-0.5 rounded-full">{typeof svc === 'string' ? svc : String(svc)}</span>
                                             ))}
                                             {(lead.enrichedServices as any[]).length > 8 && (
                                               <span className="text-xs text-gray-400">+{(lead.enrichedServices as any[]).length - 8} more</span>
@@ -1745,12 +1745,12 @@ function LeadsPageInner() {
                                 </div>
 
                                 {/* Call History */}
-                                <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                                <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-4 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
-                                    <div className="w-7 h-7 rounded-md bg-gray-100 flex items-center justify-center">
+                                    <div className="w-7 h-7 rounded-md bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
                                       <Clock size={15} className="text-gray-600" />
                                     </div>
-                                    <h4 className="font-semibold text-gray-900 text-sm">Call History</h4>
+                                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Call History</h4>
                                   </div>
                                   {(() => {
                                     const ld = expandedLeadData[lead.id]
@@ -1794,12 +1794,12 @@ function LeadsPageInner() {
                                 </div>
 
                                 {/* Recent Activity — full width */}
-                                <div className="col-span-1 md:col-span-3 bg-white rounded-lg border border-blue-200 p-4 shadow-sm">
+                                <div className="col-span-1 md:col-span-3 bg-white dark:bg-slate-900 rounded-lg border border-blue-200 dark:border-blue-800 p-4 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
-                                    <div className="w-7 h-7 rounded-md bg-blue-100 flex items-center justify-center">
+                                    <div className="w-7 h-7 rounded-md bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
                                       <Clock size={15} className="text-blue-600" />
                                     </div>
-                                    <h4 className="font-semibold text-gray-900 text-sm">Recent Activity</h4>
+                                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Recent Activity</h4>
                                   </div>
                                   {(() => {
                                     const events = expandedLeadEvents[lead.id]
@@ -1859,7 +1859,7 @@ function LeadsPageInner() {
       {/* Pagination Controls */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Showing {safePage * LEADS_PER_PAGE + 1}–{Math.min((safePage + 1) * LEADS_PER_PAGE, filteredLeads.length)} of {filteredLeads.length} leads
           </p>
           <div className="flex items-center gap-2">
@@ -1871,7 +1871,7 @@ function LeadsPageInner() {
             >
               <ChevronLeft size={16} className="mr-1" /> Previous
             </Button>
-            <span className="text-sm text-gray-600 px-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400 px-2">
               Page {safePage + 1} of {totalPages}
             </span>
             <Button
@@ -1896,40 +1896,40 @@ function LeadsPageInner() {
           <div className="grid gap-3 py-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">First Name</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">First Name</label>
                 <Input value={editLeadForm.firstName || ''} onChange={(e) => setEditLeadForm({ ...editLeadForm, firstName: e.target.value })} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Last Name</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Last Name</label>
                 <Input value={editLeadForm.lastName || ''} onChange={(e) => setEditLeadForm({ ...editLeadForm, lastName: e.target.value })} />
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Company</label>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Company</label>
               <Input value={editLeadForm.companyName || ''} onChange={(e) => setEditLeadForm({ ...editLeadForm, companyName: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Phone</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Phone</label>
                 <Input value={editLeadForm.phone || ''} onChange={(e) => setEditLeadForm({ ...editLeadForm, phone: e.target.value })} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Email</label>
                 <Input value={editLeadForm.email || ''} onChange={(e) => setEditLeadForm({ ...editLeadForm, email: e.target.value })} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">City</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">City</label>
                 <Input value={editLeadForm.city || ''} onChange={(e) => setEditLeadForm({ ...editLeadForm, city: e.target.value })} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">State</label>
+                <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">State</label>
                 <Input value={editLeadForm.state || ''} maxLength={2} onChange={(e) => setEditLeadForm({ ...editLeadForm, state: e.target.value.toUpperCase() })} />
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</label>
+              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Status</label>
               <select
                 value={editLeadForm.status || 'NEW'}
                 onChange={(e) => setEditLeadForm({ ...editLeadForm, status: e.target.value })}
@@ -1976,7 +1976,7 @@ function BuildDotsInline({ step, completed, error }: { step: string | null; comp
               ? `${BUILD_COLORS[idx]} text-white`
               : idx === currentIdx
               ? `${BUILD_COLORS[idx]} text-white animate-pulse`
-              : 'bg-gray-200 text-gray-400'
+              : 'bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500'
           }`}
           title={['Enrichment', 'Preview', 'Personalization', 'Scripts', 'Distribution'][idx]}
         >
@@ -2001,11 +2001,11 @@ function StatCard({
   active?: boolean
 }) {
   const colors = {
-    default: 'bg-white border-gray-200',
-    primary: 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200',
-    success: 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200',
-    danger: 'bg-gradient-to-br from-red-50 to-pink-50 border-red-200',
-    warning: 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200'
+    default: 'bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700',
+    primary: 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-200 dark:border-blue-800',
+    success: 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-800',
+    danger: 'bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-950/30 dark:to-pink-950/30 border-red-200 dark:border-red-800',
+    warning: 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-amber-200 dark:border-amber-800'
   }
 
   return (
@@ -2013,8 +2013,8 @@ function StatCard({
       className={`p-6 cursor-pointer transition-all ${colors[variant]} ${active ? 'ring-2 ring-blue-500' : ''}`}
       onClick={onClick}
     >
-      <div className="text-sm text-gray-600 mb-1">{label}</div>
-      <div className="text-2xl font-bold text-gray-900">{value}</div>
+      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">{label}</div>
+      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</div>
     </Card>
   )
 }

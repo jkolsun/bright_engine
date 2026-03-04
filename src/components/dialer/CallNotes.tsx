@@ -58,21 +58,21 @@ export function CallNotes() {
   if (!leadId) return null
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
-      <div className="px-4 py-3 bg-gray-50/80 border-b border-gray-100 flex items-center justify-between">
-        <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Call Notes</h3>
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200/80 dark:border-slate-700 shadow-sm overflow-hidden">
+      <div className="px-4 py-3 bg-gray-50/80 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
+        <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Call Notes</h3>
         {(currentCall || effectiveCallId) && (
-          <span className="text-[10px] text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full">Auto-saving</span>
+          <span className="text-[10px] text-green-600 font-semibold bg-green-50 dark:bg-green-950/30 px-2 py-0.5 rounded-full">Auto-saving</span>
         )}
       </div>
 
       {/* Previous notes */}
       {previousNotes.length > 0 && (
-        <div className="px-4 py-2.5 bg-gray-50/30 border-b border-gray-100 max-h-28 overflow-y-auto">
+        <div className="px-4 py-2.5 bg-gray-50/30 dark:bg-slate-800/30 border-b border-gray-100 dark:border-slate-800 max-h-28 overflow-y-auto">
           {previousNotes.slice(0, 5).map((note, i) => (
-            <div key={i} className="text-xs text-gray-500 py-1.5 border-b border-gray-100/60 last:border-0">
-              <span className="text-gray-400 font-medium">{note.date}</span>
-              {note.actor && <span className="text-gray-400"> · {note.actor}</span>}
+            <div key={i} className="text-xs text-gray-500 dark:text-gray-400 py-1.5 border-b border-gray-100/60 dark:border-slate-800/60 last:border-0">
+              <span className="text-gray-400 dark:text-gray-500 font-medium">{note.date}</span>
+              {note.actor && <span className="text-gray-400 dark:text-gray-500"> · {note.actor}</span>}
               {' — '}
               {note.text}
             </div>
@@ -85,7 +85,7 @@ export function CallNotes() {
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Type notes for this call..."
-        className="w-full h-24 text-sm p-4 resize-none focus:outline-none focus:ring-0 border-0 placeholder:text-gray-300"
+        className="w-full h-24 text-sm p-4 resize-none focus:outline-none focus:ring-0 border-0 placeholder:text-gray-300 dark:placeholder:text-gray-600 dark:bg-slate-900 dark:text-gray-100"
       />
     </div>
   )
