@@ -175,7 +175,16 @@ model Lead {
   siteEditVersion        Int                      @default(0) @map("site_edit_version")
   selectedTemplate       String?                  @map("selected_template")
   importBatchId           String?                  @map("import_batch_id")
+  icpId                  String?                  @map("icp_id")
+  scraperRunId           String?                  @map("scraper_run_id")
+  phoneType              String?                  @map("phone_type")
+  emailEnrichmentSource  String?                  @map("email_enrichment_source")
+  tierAtFirstDial        String?                  @map("tier_at_first_dial")
+  firstConvertingTouch   String?                  @map("first_converting_touch")
+  firstConvertingTouchAt DateTime?                @map("first_converting_touch_at")
   siteVersions           SiteVersion[]
+  icp                    ICP?                     @relation(fields: [icpId], references: [id], onDelete: SetNull)
+  scraperRun             ScraperRun?              @relation(fields: [scraperRunId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([assignedToId])
@@ -195,6 +204,10 @@ model Lead {
   @@index([dncAt])
   @@index([importBatchId])
   @@index([lastContactedAt])
+  @@index([icpId])
+  @@index([scraperRunId])
+  @@index([phoneType])
+  @@index([firstConvertingTouch])
   @@map("leads")
 }
 
@@ -1090,6 +1103,8 @@ enum LeadSource {
   CSV_IMPORT
   MANUAL
   FORM
+  GBP_SCRAPE
+  REDDIT
 }
 
 enum LeadPriority {
@@ -1487,9 +1502,38 @@ model ScraperConfig {
   @@map("scraper_configs")
 }
 
+model ICP {
+  id                    String       @id @default(cuid())
+  name                  String
+  description           String?
+  active                Boolean      @default(true)
+  targetIndustries      Json         @map("target_industries")
+  targetStates          Json         @map("target_states")
+  minReviews            Int          @default(3) @map("min_reviews")
+  minRating             Float        @default(3.5) @map("min_rating")
+  instantlyCampaignId   String?      @map("instantly_campaign_id")
+  instantlyCampaignName String?      @map("instantly_campaign_name")
+  smsEnabled            Boolean      @default(false) @map("sms_enabled")
+  smsTemplate           String?      @map("sms_template")
+  repAllocation         Json         @default("{}") @map("rep_allocation")
+  scheduledScrape       Boolean      @default(false) @map("scheduled_scrape")
+  scheduleFrequency     String?      @map("schedule_frequency")
+  scheduleTime          String?      @map("schedule_time")
+  createdAt             DateTime     @default(now()) @map("created_at")
+  updatedAt             DateTime     @updatedAt @map("updated_at")
+
+  scraperRuns           ScraperRun[]
+  leads                 Lead[]
+
+  @@index([active])
+  @@index([createdAt])
+  @@map("icps")
+}
+
 model ScraperRun {
   id             String         @id @default(cuid())
   configId       String?        @map("config_id")
+  icpId          String?        @map("icp_id")
   name           String
   searchTerms    Json           @map("search_terms")
   cities         Json
@@ -1503,9 +1547,12 @@ model ScraperRun {
   startedAt      DateTime       @default(now()) @map("started_at")
   completedAt    DateTime?      @map("completed_at")
   config         ScraperConfig? @relation(fields: [configId], references: [id])
+  icp            ICP?           @relation(fields: [icpId], references: [id])
+  leads          Lead[]
 
   @@index([status])
   @@index([startedAt])
+  @@index([icpId])
   @@map("scraper_runs")
 }
 
