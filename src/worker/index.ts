@@ -334,7 +334,7 @@ async function startWorkers() {
           try {
             const needsEmail = await prisma.lead.findMany({
               where: { id: { in: leadIds }, OR: [{ email: null }, { email: '' }] },
-              select: { id: true, companyName: true },
+              select: { id: true, companyName: true, firstName: true, lastName: true },
             })
             if (needsEmail.length > 0) {
               const { callFullEnrich } = await import('../lib/fullenrich')

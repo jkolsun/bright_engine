@@ -4,7 +4,7 @@
  */
 
 export async function callFullEnrich(params: {
-  leads: Array<{ id: string; companyName: string }>
+  leads: Array<{ id: string; companyName: string; firstName?: string; lastName?: string | null }>
   batchName: string
 }): Promise<void> {
   const apiKey = process.env.FULLENRICH_API_KEY
@@ -25,8 +25,8 @@ export async function callFullEnrich(params: {
       name: 'Bright Automations — ' + params.batchName,
       webhook_url: webhookUrl,
       datas: chunk.map(lead => ({
-        firstname: '',
-        lastname: '',
+        firstname: lead.firstName || '',
+        lastname: lead.lastName || '',
         company_name: lead.companyName,
         enrich_fields: ['contact.emails'],
         custom: { lead_id: lead.id },
