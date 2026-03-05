@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Validate entryPoint
-    const validEntryPoints = ['INSTANTLY_REPLY', 'SMS_REPLY', 'REP_CLOSE', 'PREVIEW_CTA'];
+    const validEntryPoints = ['SMS_REPLY', 'REP_CLOSE', 'PREVIEW_CTA'];
     if (!validEntryPoints.includes(entryPoint)) {
       return NextResponse.json({ error: 'Invalid entryPoint' }, { status: 400 });
     }

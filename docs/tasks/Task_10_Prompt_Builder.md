@@ -103,7 +103,6 @@ Create an object `STAGE_INSTRUCTIONS` keyed by stage name:
 
 Returns entry-point-specific first message strings:
 
-- **INSTANTLY_REPLY**: `"Hey {firstName}! Saw your reply about the website — excited to get {companyName} set up. Quick question: What are the top 3 services you want highlighted on your site?"`
 - **SMS_REPLY**: `"Hey {firstName}! Great to hear from you. Let's get {companyName}'s site built. Quick question to start: What are the top 3 services you want front and center on your website?"`
 - **REP_CLOSE**: `"Hey {firstName}! Just spoke with the team — let's get your site live. Quick question: What are the top 3 services {companyName} offers that you want highlighted?"` (Note: we use generic "the team" here since repName may not be available)
 - **PREVIEW_CTA**: `"Hey {firstName}! Saw you're ready to get your site live — love it. Quick question before we build it out: What are the top 3 services {companyName} offers that you want front and center?"`

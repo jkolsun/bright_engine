@@ -29,7 +29,6 @@ Fetch from `/api/close-engine/conversations` (you may need to create a simple li
 - Each row shows: company name, lead name, entry point badge, stage badge, last message preview, timestamp
 
 **Entry point badges** (small colored pills):
-- INSTANTLY_REPLY → blue pill "Email"
 - SMS_REPLY → green pill "SMS"
 - REP_CLOSE → purple pill "Rep"
 - PREVIEW_CTA → orange pill "CTA"

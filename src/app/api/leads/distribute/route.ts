@@ -5,7 +5,7 @@ import { verifySession } from '@/lib/session'
 
 /**
  * POST /api/leads/distribute
- * SMS distribution coming soon — Instantly integration removed.
+ * SMS distribution coming soon.
  */
 export async function POST(request: NextRequest) {
   try {

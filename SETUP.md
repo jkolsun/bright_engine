@@ -124,16 +124,6 @@ CLOUDINARY_API_SECRET="your_api_secret"
 3. Copy Cloud name, API Key, API Secret
 4. Free tier: 25GB storage, 25GB bandwidth/month
 
-### Instantly (Cold Email)
-```env
-INSTANTLY_API_KEY="your_instantly_key"
-```
-
-**Get this from:**
-1. Sign up at https://instantly.ai
-2. Go to Settings → API
-3. Generate API key
-
 ### Sentry (Error Tracking - Optional)
 ```env
 SENTRY_DSN="https://xxxxx@sentry.io/xxxxx"
@@ -264,11 +254,6 @@ Open http://localhost:3000 in your browser.
    ```bash
    stripe listen --forward-to localhost:3000/api/webhooks/stripe
    ```
-
-### Instantly Webhook (Optional)
-1. Go to Instantly → Settings → Webhooks
-2. Add webhook URL: `https://your-domain.com/api/webhooks/instantly`
-3. Enable events: email.opened, email.replied, email.bounced
 
 ---
 

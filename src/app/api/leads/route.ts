@@ -100,7 +100,6 @@ export async function GET(request: NextRequest) {
           engagementLevel: true,
           engagementUpdatedAt: true,
           lastContactedAt: true,
-          emailEnrichmentSource: true,
           createdAt: true,
           updatedAt: true,
         },

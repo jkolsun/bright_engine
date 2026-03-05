@@ -179,7 +179,6 @@ Use credentials from .env:
 ### Webhooks
 - `POST /api/webhooks/twilio` - Inbound SMS
 - `POST /api/webhooks/stripe` - Payment events
-- `POST /api/webhooks/instantly` - Email events
 
 ### Enrichment
 - `POST /api/enrichment/serpapi` - Enrich lead data

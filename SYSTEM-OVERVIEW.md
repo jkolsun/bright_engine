@@ -259,19 +259,17 @@ Complete helper library:
 
 ## 🔄 Complete Workflows Implemented
 
-### **Cold Email → Close**
-1. ✅ Import leads from Apollo CSV
+### **Lead → Close**
+1. ✅ Import leads from CSV / GBP Scraper
 2. ✅ System enriches via SerpAPI
 3. ✅ System personalizes via Serper
-4. ✅ Export to Instantly with preview URLs
-5. ✅ Instantly sends emails
-6. ✅ Prospect clicks preview
-7. ✅ Preview analytics tracked → hot lead alert
-8. ✅ Andrew/Clawdbot texts prospect
-9. ✅ Qualification via SMS (3 questions)
-10. ✅ Info collection
-11. ✅ Site built from template
-12. ✅ QA by Jared
+4. ✅ Prospect clicks preview
+5. ✅ Preview analytics tracked → hot lead alert
+6. ✅ Andrew/Clawdbot texts prospect
+7. ✅ Qualification via SMS (3 questions)
+8. ✅ Info collection
+9. ✅ Site built from template
+10. ✅ QA by Jared
 13. ✅ Draft sent to client
 14. ✅ Client approves → Stripe link sent
 15. ✅ Payment received → site goes live
@@ -321,7 +319,6 @@ Complete helper library:
 - Settings page (backend ready, needs UI)
 
 ### **Optional Enhancements**
-- Email integration (Instantly webhook)
 - Meta ads landing page (real-time SerpAPI)
 - Client portal (for customers to view analytics)
 - Advanced reporting dashboards
@@ -414,10 +411,8 @@ With this system, you can:
    - Process test payment
 
 4. **First production leads** (2 days)
-   - Export from Apollo
-   - Import to platform
+   - Import to platform (CSV or GBP Scraper)
    - Enrich + personalize
-   - Upload to Instantly
 
 5. **Close first deal** (1-2 weeks)
    - Monitor hot leads

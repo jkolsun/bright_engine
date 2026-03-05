@@ -25,7 +25,7 @@ model CloseEngineConversation {
   id              String    @id @default(cuid())
   leadId          String    @unique @map("lead_id")
   repId           String?   @map("rep_id")
-  entryPoint      String    @map("entry_point")     // INSTANTLY_REPLY, SMS_REPLY, REP_CLOSE, PREVIEW_CTA
+  entryPoint      String    @map("entry_point")     // SMS_REPLY, REP_CLOSE, PREVIEW_CTA
   stage           String    @default("INITIATED")    // INITIATED, QUALIFYING, COLLECTING_INFO, BUILDING, PREVIEW_SENT, EDIT_LOOP, PENDING_APPROVAL, PAYMENT_SENT, COMPLETED, STALLED, CLOSED_LOST
   autonomyLevel   String    @default("FULL_AUTO") @map("autonomy_level") // FULL_AUTO, SEMI_AUTO, MANUAL
   questionsAsked  Json?     @map("questions_asked")  // Array of question IDs asked so far
@@ -85,7 +85,7 @@ Find the existing `Lead` model and add these fields (place them near the other s
 ```prisma
   // Close Engine fields
   autonomyLevel     String   @default("FULL_AUTO") @map("autonomy_level") // FULL_AUTO, SEMI_AUTO, MANUAL
-  closeEntryPoint   String?  @map("close_entry_point")  // INSTANTLY_REPLY, SMS_REPLY, REP_CLOSE, PREVIEW_CTA
+  closeEntryPoint   String?  @map("close_entry_point")  // SMS_REPLY, REP_CLOSE, PREVIEW_CTA
   qualificationData Json?    @map("qualification_data") // Structured data collected by Claude
 ```
 

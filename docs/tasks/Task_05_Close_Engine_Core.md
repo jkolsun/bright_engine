@@ -11,7 +11,7 @@ Create the central orchestration module for the AI Close Engine. This is the bra
 
 ## Context
 
-The Close Engine has 4 entry points (Instantly email reply, SMS reply, rep close button, preview CTA click). All of them call `triggerCloseEngine()` which creates a `CloseEngineConversation` record and kicks off the AI conversation.
+The Close Engine has 3 entry points (SMS reply, rep close button, preview CTA click). All of them call `triggerCloseEngine()` which creates a `CloseEngineConversation` record and kicks off the AI conversation.
 
 Each conversation progresses through these stages:
 - **INITIATED** → First message about to be sent
@@ -55,7 +55,6 @@ export const CONVERSATION_STAGES = {
 } as const;
 
 export const ENTRY_POINTS = {
-  INSTANTLY_REPLY: 'INSTANTLY_REPLY',
   SMS_REPLY: 'SMS_REPLY',
   REP_CLOSE: 'REP_CLOSE',
   PREVIEW_CTA: 'PREVIEW_CTA',

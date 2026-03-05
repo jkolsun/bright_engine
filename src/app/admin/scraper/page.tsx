@@ -1033,8 +1033,6 @@ export default function ScraperPage() {
                         <th className="text-left py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Status</th>
                         <th className="text-right py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Found</th>
                         <th className="text-right py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Imported</th>
-                        <th className="text-right py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Emails</th>
-                        <th className="text-right py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Pushed</th>
                         <th className="text-right py-2 px-3 font-medium text-slate-500 dark:text-gray-400">Credits</th>
                       </tr>
                     </thead>
@@ -1058,8 +1056,6 @@ export default function ScraperPage() {
                           </td>
                           <td className="py-2 px-3 text-right text-slate-600 dark:text-gray-300">{run.totalLeads}</td>
                           <td className="py-2 px-3 text-right text-slate-600 dark:text-gray-300">{run.importedLeads}</td>
-                          <td className="py-2 px-3 text-right text-teal-600 dark:text-teal-400">{run.emailsFound ?? 0}</td>
-                          <td className="py-2 px-3 text-right text-slate-600 dark:text-gray-300">{run.pushedToInstantly ?? 0}</td>
                           <td className="py-2 px-3 text-right text-slate-600 dark:text-gray-300">{run.creditsUsed}</td>
                         </tr>
                       ))}
