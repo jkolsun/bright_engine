@@ -89,7 +89,6 @@ export async function GET(request: NextRequest) {
           notes: true,
           campaign: true,
           sourceDetail: true,
-          instantlyCampaignId: true,
           personalization: true,
           enrichedServices: true,
           enrichedHours: true,

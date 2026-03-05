@@ -179,6 +179,58 @@ export async function processCloseEngineFirstMessage(conversationId: string): Pr
 
     const entryLabel = context.conversation.entryPoint.replace(/_/g, ' ').toLowerCase()
 
+    // For SMS_REPLY: include the lead's inbound message so the AI responds contextually.
+    // The lead is responding to a missed call/voicemail — they may not know what it's about yet.
+    // The AI must read their message and respond appropriately instead of jumping to qualification.
+    const recentInbound = context.messages
+      .filter(m => m.direction === 'INBOUND')
+      .slice(-1)[0]
+
+    const hasPreview = !!lead.previewUrl
+    const previewInstruction = hasPreview
+      ? `Preview URL (include in your message when appropriate): ${lead.previewUrl}`
+      : 'No preview site exists for this lead yet. Do NOT mention or promise a preview. Just say you called to discuss building a professional website for their company.'
+
+    let inboundContext = ''
+    if (recentInbound && context.conversation.entryPoint === 'SMS_REPLY') {
+      inboundContext = `
+The lead just texted you: "${recentInbound.content}"
+
+CRITICAL — This lead is responding to a missed call, voicemail, or outreach text. They may not know what the call was about. Read their message and match your response to their tone and intent:
+
+BUSY / CALLBACK REQUEST ("in a meeting", "can I call later", "not a good time", "call me back", "busy", "at work", "driving", "give me 30 min", "I'll call you back")
+→ Say no worries. Briefly mention you called about a website you put together for their company.${hasPreview ? ' Drop the preview URL and say check it out when free.' : ''} No qualifying questions.
+
+CONFUSED / WHO IS THIS ("who is this", "you called me", "what's this about", "?", "huh", "what do you want", "I got a missed call", "what company is this", "did you call me", "don't recognize this number")
+→ Introduce yourself (Bright Automations team). Explain you called about a website for their company.${hasPreview ? ' Share the preview URL.' : ''} Brief and casual.
+
+VOICEMAIL REFERENCE ("got your voicemail", "saw your message", "returning your call", "you left me a voicemail", "just got your message")
+→ Confirm what the voicemail was about — a website for their company.${hasPreview ? ' Share the preview URL.' : ''} Keep it short.
+
+INTERESTED / POSITIVE ("yes", "yeah", "tell me more", "sounds good", "interested", "send it", "sure", "what do you have", "let's see it")
+→${hasPreview ? ' Share the preview URL.' : ' Mention you can build a site for their company.'} You can include one qualifying question here since they're engaged.
+
+PRICING / COST QUESTION ("how much", "what's the cost", "is this free", "what do you charge", "price")
+→ Don't quote specific prices in the first message. Say happy to go over details.${hasPreview ? ' Share the preview URL so they can see what they\'d be getting.' : ''} Pricing gets covered in the next conversation stage.
+
+ALREADY HAS A WEBSITE ("I already have a website", "we're good", "already working with someone", "we use Wix/Squarespace/etc", "my nephew does my website")
+→ Acknowledge casually. ${hasPreview ? 'Mention you put one together anyway, no obligation — share the preview URL.' : 'Mention you specialize in professional sites for their industry, no pressure.'} Don't push.
+
+NEGATIVE / HOSTILE / NOT INTERESTED ("not interested", "no thanks", "don't need it", "leave me alone", "stop texting", "remove me", "spam", profanity)
+→ Respect their response completely. Say no worries, you'll note that down. Do NOT share the preview URL or pitch anything. Keep it to one short sentence.
+
+SHORT / AMBIGUOUS ("ok", "k", "hey", "hi", "sup", single emoji, "👍", "lol", "what", "ya")
+→ Treat as soft engagement. Briefly explain why you reached out — a website for their company.${hasPreview ? ' Share the preview URL.' : ''} Very casual, no pressure.
+
+WRONG NUMBER ("wrong number", "I don't own a business", "who are you looking for", "you have the wrong person")
+→ Apologize briefly. Say sorry about that, must have the wrong number. Don't push further.
+
+NON-ENGLISH (Spanish, etc.)
+→ Respond in the SAME language they used. Follow the same logic above — provide context about the website call.${hasPreview ? ' Include the preview URL.' : ''}
+
+IMPORTANT: Do NOT ask qualifying questions ("do you have a website?") unless the lead is clearly interested and engaged. For most SMS_REPLY leads, just provide context about why you called${hasPreview ? ' + the preview link' : ''}. Qualifying happens naturally when they respond again.`
+    }
+
     const client = getAnthropicClient()
     const aiResponse = await client.messages.create({
       model: MODELS.PRE_CLIENT,
@@ -187,11 +239,11 @@ export async function processCloseEngineFirstMessage(conversationId: string): Pr
       messages: [{
         role: 'user',
         content: `SCENARIO: ${entryLabel}
-Use this template as your approach (adapt naturally, don't copy word-for-word):
+${inboundContext ? 'Use this template as a GENERAL guide (but prioritize responding to the lead\'s actual message below):' : 'Use this template as your approach (adapt naturally, don\'t copy word-for-word):'}
 "${template}"
 
 Lead: ${lead.firstName || '(no name)'} from ${lead.companyName} (${lead.industry || 'service business'})${!lead.firstName ? '\nIMPORTANT: This lead has no name on file. Do NOT use any name in the message — just jump in naturally.' : ''}
-${lead.previewUrl ? `Preview URL: ${lead.previewUrl}` : 'No preview yet.'}
+${previewInstruction}${inboundContext}
 
 Write ONE text message. 1-2 sentences max. Casual and human. Do not include quotes around the message.`,
       }],

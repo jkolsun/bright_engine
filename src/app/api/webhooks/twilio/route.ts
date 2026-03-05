@@ -384,19 +384,75 @@ export async function POST(request: NextRequest) {
           console.error('[Twilio] Close Engine processing failed:', err)
           // Don't fail the webhook
         }
-      } else if (!activeConversation) {
-        // No active conversation — check if this is an interested reply
-        const isInterested = checkInterestSignal(body)
-        if (isInterested) {
-          console.log(`[Twilio] Interest detected from ${from}, triggering Close Engine`)
-          try {
-            await triggerCloseEngine({
-              leadId: lead.id,
-              entryPoint: 'SMS_REPLY',
-            })
-          } catch (err) {
-            console.error('[Twilio] Close Engine trigger failed:', err)
+      } else if (!client) {
+        // No active Close Engine conversation AND not a client.
+        // This lead is texting back — responding to our voicemail, preview link, or outreach.
+        //
+        // Trigger rules:
+        //   - No conversation at all → trigger (fresh lead engaging)
+        //   - CLOSED_LOST conversation → trigger (re-engagement opportunity)
+        //   - COMPLETED conversation → skip (already converted, may not have client record yet)
+        const isClosedLost = activeConversation?.stage === 'CLOSED_LOST'
+        const noConversation = !activeConversation
+        const isCompleted = activeConversation?.stage === 'COMPLETED'
+
+        if (noConversation || isClosedLost) {
+          // Check for clearly negative responses — don't waste a CE conversation on "not interested"
+          if (isNegativeLeadResponse(body)) {
+            console.log(`[Twilio] Negative response from ${from} (${lead.companyName}): "${body.substring(0, 60)}" — skipping CE trigger`)
+
+            // Send a brief polite ack directly (no CE conversation needed)
+            try {
+              const { sendSMSViaProvider } = await import('@/lib/sms-provider')
+              await sendSMSViaProvider({
+                to: from,
+                message: 'No worries at all, have a great day!',
+                sender: 'system',
+                trigger: 'negative_lead_ack',
+                leadId: lead.id,
+              })
+            } catch (err) {
+              console.error('[Twilio] Failed to send negative ack:', err)
+            }
+          } else {
+            console.log(`[Twilio] Lead inbound from ${from} (${lead.companyName}), triggering pre-acquisition flow`)
+
+            // Reset dedup flag if previously set (allows re-engagement after CLOSED_LOST)
+            if (lead.closeEngineTriggeredAt) {
+              await prisma.lead.update({
+                where: { id: lead.id },
+                data: { closeEngineTriggeredAt: null },
+              })
+            }
+
+            try {
+              await triggerCloseEngine({
+                leadId: lead.id,
+                entryPoint: 'SMS_REPLY',
+              })
+            } catch (err) {
+              console.error('[Twilio] Close Engine trigger failed:', err)
+            }
           }
+        }
+
+        // Admin notification — always alert when a lead texts back (even COMPLETED)
+        const leadName = [lead.firstName, lead.lastName].filter(Boolean).join(' ') || lead.companyName
+        await prisma.notification.create({
+          data: {
+            type: 'HOT_LEAD',
+            title: isClosedLost ? 'Lost Lead Re-Engaged' : isCompleted ? 'Converted Lead Texted' : 'Lead Texted Back',
+            message: `${leadName} (${lead.companyName}) texted: "${body.substring(0, 80)}"`,
+            metadata: { leadId: lead.id, from, body: body.substring(0, 200), conversationStage: activeConversation?.stage || 'none' },
+          },
+        })
+
+        // SMS alert to admin
+        try {
+          const { notifyAdmin } = await import('@/lib/notifications')
+          await notifyAdmin('hot_lead', 'Lead Texted Back', `${leadName} (${lead.companyName}): "${body.substring(0, 60)}"`)
+        } catch (err) {
+          console.error('[Twilio] Admin SMS notification failed:', err)
         }
       }
     }
@@ -425,6 +481,27 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// ── Negative Response Detection ──
+
+const NEGATIVE_PATTERNS = [
+  // Explicit opt-out
+  /\b(not interested|no thanks|no thank you|don'?t need|don'?t want|pass|hard pass)\b/i,
+  // Stop / removal requests
+  /\b(stop|unsubscribe|remove me|take me off|opt out|opt-out)\b/i,
+  // Wrong number
+  /\b(wrong number|wrong person|don'?t own a business|not my number)\b/i,
+  // Hostile / spam flags
+  /\b(leave me alone|quit texting|quit calling|stop texting|stop calling|do not (text|call|contact)|reported|spam|block(ed|ing)?)\b/i,
+  // Profanity-laced rejection (common single-word responses)
+  /^(f[*u]ck off|go away|piss off|no)\s*[.!]*$/i,
+]
+
+function isNegativeLeadResponse(text: string): boolean {
+  const trimmed = text.trim()
+  if (!trimmed || trimmed.length > 200) return false // Long messages = nuanced, let AI handle
+  return NEGATIVE_PATTERNS.some(p => p.test(trimmed))
 }
 
 // ── iMessage Reaction Detection ──
@@ -535,23 +612,6 @@ function translateReactionForAI(
   }
 
   return { shouldRoute: false, aiMessage: '' }
-}
-
-function checkInterestSignal(message: string): boolean {
-  const lowerMessage = message.toLowerCase().trim()
-
-  const positiveKeywords = [
-    'yes', 'yeah', 'yep', 'yup', 'sure',
-    'interested', 'tell me more', 'sounds good',
-    'let\'s do it', 'lets do it', 'i\'m in', 'im in',
-    'ready', 'sign me up', 'how much',
-    'let\'s go', 'lets go', 'i want', 'i\'d like',
-    'sounds great', 'love it', 'looks good',
-    'get started', 'how do i', 'what\'s next',
-    'send me', 'set it up',
-  ]
-
-  return positiveKeywords.some(keyword => lowerMessage.includes(keyword))
 }
 
 // Keyword map for each configurable escalation trigger ID

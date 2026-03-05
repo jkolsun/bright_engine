@@ -13,7 +13,6 @@ import {
   LogOut,
   Upload,
   Target,
-  Mail,
   Radio,
   ShieldCheck,
   Hammer,
@@ -143,9 +142,6 @@ function AdminLayoutInner({
           </NavLink>
           <NavLink href="/admin/lead-bank" icon={<Clock size={20} />}>
             Lead Bank
-          </NavLink>
-          <NavLink href="/admin/instantly" icon={<Mail size={20} />}>
-            Instantly Campaigns
           </NavLink>
           <NavLink href="/admin/dialer-monitor" icon={<Radio size={20} />}>
             Live Dialer

@@ -154,7 +154,7 @@ export default function AuditLogPage() {
         <Card className="p-6">
           <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">System Events</div>
           <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            {events.filter(e => e.actor === 'system' || e.actor === 'instantly').length}
+            {events.filter(e => e.actor === 'system').length}
           </div>
         </Card>
       </div>

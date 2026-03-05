@@ -52,8 +52,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.minReviews !== undefined) data.minReviews = body.minReviews
     if (body.minRating !== undefined) data.minRating = body.minRating
     if (body.repAllocation !== undefined) data.repAllocation = body.repAllocation
-    if (body.instantlyCampaignId !== undefined) data.instantlyCampaignId = body.instantlyCampaignId
-    if (body.instantlyCampaignName !== undefined) data.instantlyCampaignName = body.instantlyCampaignName
     if (body.smsEnabled !== undefined) data.smsEnabled = body.smsEnabled
     if (body.smsTemplate !== undefined) data.smsTemplate = body.smsTemplate
 

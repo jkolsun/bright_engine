@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
-  Loader2, Plus, Trash2, ChevronDown, Pencil, X, RefreshCw,
+  Loader2, Plus, Trash2, ChevronDown, Pencil,
   Target, Users, Split, Sparkles,
 } from 'lucide-react'
 import { useSettingsContext } from '../_lib/context'
@@ -63,17 +63,6 @@ export default function CommunicationTab() {
   const [retentionSelectedClient, setRetentionSelectedClient] = useState<any>(null)
   const [retentionPreviews, setRetentionPreviews] = useState<Record<number, string>>({})
   const [retentionGenerating, setRetentionGenerating] = useState<number | null>(null)
-
-  // ── Section 5: Instantly Campaigns ───────────────────────────
-  const [campaigns, setCampaigns] = useState<Record<string, string>>({ campaign_a: '', campaign_b: '' })
-  const [addCampaignOpen, setAddCampaignOpen] = useState(false)
-  const [newCampaignName, setNewCampaignName] = useState('')
-  const [newCampaignId, setNewCampaignId] = useState('')
-  const [editingCampaignKey, setEditingCampaignKey] = useState<string | null>(null)
-  const [editCampaignId, setEditCampaignId] = useState('')
-  const [remoteCampaigns, setRemoteCampaigns] = useState<{ id: string; name: string; status: string }[]>([])
-  const [showRemotePicker, setShowRemotePicker] = useState(false)
-  const [syncing, setSyncing] = useState(false)
 
   // ── Load settings from context ───────────────────────────────
   useEffect(() => {
@@ -159,10 +148,6 @@ export default function CommunicationTab() {
       setChannelRouting({ ...DEFAULT_CHANNEL_ROUTING, ...s.channel_routing })
     }
 
-    // Instantly campaigns
-    if (s.instantly_campaigns && typeof s.instantly_campaigns === 'object') {
-      setCampaigns(s.instantly_campaigns)
-    }
   }, [settingsLoaded, rawSettings])
 
   // ── Load AI Handler separately ────────────────────────────────
@@ -298,55 +283,6 @@ export default function CommunicationTab() {
       }
     } catch { /* ignore */ }
     finally { setRetentionGenerating(null) }
-  }
-
-  // ── Instantly campaign CRUD ────────────────────────────────────
-  const syncCampaigns = async () => {
-    setSyncing(true)
-    try {
-      const res = await fetch('/api/instantly/sync-campaigns', { method: 'POST' })
-      if (res.ok) {
-        const data = await res.json()
-        if (data.campaigns?.length) {
-          setRemoteCampaigns(data.campaigns)
-          setShowRemotePicker(true)
-        }
-      }
-    } catch (e) { console.error('Sync failed:', e) }
-    finally { setSyncing(false) }
-  }
-
-  const importRemoteCampaign = async (remote: { id: string; name: string }) => {
-    const key = remote.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_')
-    const updated = { ...campaigns, [key]: remote.id }
-    setCampaigns(updated)
-    await saveSetting('instantly_campaigns', updated)
-  }
-
-  const addCampaign = async () => {
-    if (!newCampaignName.trim() || !newCampaignId.trim()) return
-    const key = newCampaignName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_')
-    const updated = { ...campaigns, [key]: newCampaignId.trim() }
-    setCampaigns(updated)
-    await saveSetting('instantly_campaigns', updated)
-    setNewCampaignName('')
-    setNewCampaignId('')
-    setAddCampaignOpen(false)
-  }
-
-  const removeCampaign = async (key: string) => {
-    const updated = { ...campaigns }
-    delete updated[key]
-    setCampaigns(updated)
-    await saveSetting('instantly_campaigns', updated)
-  }
-
-  const updateCampaignId = async (key: string, newId: string) => {
-    const updated = { ...campaigns, [key]: newId.trim() }
-    setCampaigns(updated)
-    await saveSetting('instantly_campaigns', updated)
-    setEditingCampaignKey(null)
-    setEditCampaignId('')
   }
 
   // ── Render ─────────────────────────────────────────────────────
@@ -593,7 +529,6 @@ export default function CommunicationTab() {
                 />
                 <div className="space-y-4">
                   {[
-                    { key: 'INSTANTLY_REPLY', label: 'Email Reply', desc: 'Lead replied to an Instantly email', default: DEFAULT_FIRST_MESSAGES.INSTANTLY_REPLY },
                     { key: 'SMS_REPLY', label: 'SMS Reply', desc: 'Lead replied to an SMS', default: DEFAULT_FIRST_MESSAGES.SMS_REPLY },
                     { key: 'REP_CLOSE', label: 'Rep Close', desc: 'Rep handed off a lead', default: DEFAULT_FIRST_MESSAGES.REP_CLOSE },
                     { key: 'PREVIEW_CTA', label: 'Preview CTA', desc: 'Lead clicked the preview CTA', default: DEFAULT_FIRST_MESSAGES.PREVIEW_CTA },
@@ -1191,9 +1126,9 @@ export default function CommunicationTab() {
                         value={sequences.safetyBuffer}
                         onChange={(e) => setSequences({ ...sequences, safetyBuffer: parseFloat(e.target.value) || 0.85 })}
                       />
-                      <span className="text-sm text-gray-500">({Math.round(sequences.safetyBuffer * 100)}% of Instantly daily limit)</span>
+                      <span className="text-sm text-gray-500">({Math.round(sequences.safetyBuffer * 100)}% of daily limit)</span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">Conservative margin to avoid hitting Instantly rate limits. 0.85 = use 85% of capacity.</p>
+                    <p className="text-xs text-gray-400 mt-1">Conservative margin to avoid hitting rate limits. 0.85 = use 85% of capacity.</p>
                   </div>
                 </div>
                 <div className="mt-4 flex justify-end">
@@ -1535,141 +1470,6 @@ export default function CommunicationTab() {
               />
             </div>
           )}
-        </div>
-      </AccordionSection>
-
-      {/* ═══════════════════════════════════════════════════════════
-          SECTION 5: INSTANTLY CAMPAIGNS
-         ═══════════════════════════════════════════════════════════ */}
-      <AccordionSection
-        title="Instantly Campaigns"
-        description="Manage your cold email campaign IDs for lead distribution"
-      >
-        <div className="space-y-4 pt-4">
-          <div className="flex items-center justify-between">
-            <SectionHeader title="Campaign Mapping" description="Map Instantly campaign names to their IDs for lead distribution" />
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setAddCampaignOpen(!addCampaignOpen)}>
-                <Plus size={14} className="mr-1" />
-                Add Manual
-              </Button>
-              <Button variant="outline" size="sm" onClick={syncCampaigns} disabled={syncing}>
-                {syncing ? <Loader2 size={14} className="mr-1 animate-spin" /> : <RefreshCw size={14} className="mr-1" />}
-                {syncing ? 'Fetching...' : 'Import from Instantly'}
-              </Button>
-            </div>
-          </div>
-
-          {/* Add Campaign Form (manual) */}
-          {addCampaignOpen && (
-            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <FieldLabel>Campaign Name</FieldLabel>
-                  <Input
-                    placeholder="e.g., Campaign C"
-                    value={newCampaignName}
-                    onChange={(e) => setNewCampaignName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <FieldLabel>Campaign ID</FieldLabel>
-                  <Input
-                    placeholder="Paste Instantly campaign ID"
-                    value={newCampaignId}
-                    onChange={(e) => setNewCampaignId(e.target.value)}
-                    className="font-mono text-sm"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button variant="outline" size="sm" onClick={() => { setAddCampaignOpen(false); setNewCampaignName(''); setNewCampaignId('') }}>Cancel</Button>
-                <Button size="sm" onClick={addCampaign} disabled={!newCampaignName.trim() || !newCampaignId.trim()}>Add Campaign</Button>
-              </div>
-            </div>
-          )}
-
-          {/* Remote Campaign Picker (from Instantly sync) */}
-          {showRemotePicker && remoteCampaigns.length > 0 && (
-            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg space-y-3">
-              <div className="flex items-center justify-between">
-                <FieldLabel>Select campaigns to import from Instantly</FieldLabel>
-                <button onClick={() => setShowRemotePicker(false)} className="text-gray-400 hover:text-gray-600">
-                  <X size={16} />
-                </button>
-              </div>
-              <div className="max-h-60 overflow-y-auto space-y-2">
-                {remoteCampaigns.map((rc) => {
-                  const alreadyImported = Object.values(campaigns).includes(rc.id)
-                  return (
-                    <div key={rc.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
-                      <div>
-                        <div className="text-sm font-medium">{rc.name}</div>
-                        <div className="text-xs text-gray-400 font-mono">{rc.id}</div>
-                      </div>
-                      {alreadyImported ? (
-                        <span className="text-xs text-green-600 font-medium">Already added</span>
-                      ) : (
-                        <Button size="sm" variant="outline" onClick={() => importRemoteCampaign(rc)}>
-                          <Plus size={14} className="mr-1" />
-                          Import
-                        </Button>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(campaigns).map(([key, id]) => (
-              <div key={key} className="p-4 bg-gray-50 rounded-lg group relative">
-                <div className="text-sm font-medium text-gray-700 mb-1 capitalize">{key.replace(/_/g, ' ')}</div>
-                {editingCampaignKey === key ? (
-                  <div className="flex gap-2 items-center">
-                    <Input
-                      value={editCampaignId}
-                      onChange={(e) => setEditCampaignId(e.target.value)}
-                      className="font-mono text-xs h-8"
-                      placeholder="Campaign ID"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') updateCampaignId(key, editCampaignId)
-                        if (e.key === 'Escape') { setEditingCampaignKey(null); setEditCampaignId('') }
-                      }}
-                    />
-                    <Button size="sm" className="h-8 px-2" onClick={() => updateCampaignId(key, editCampaignId)}>Save</Button>
-                    <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => { setEditingCampaignKey(null); setEditCampaignId('') }}>Cancel</Button>
-                  </div>
-                ) : (
-                  <p
-                    className="text-xs text-gray-400 font-mono truncate cursor-pointer hover:text-blue-500 transition-colors"
-                    title="Click to edit"
-                    onClick={() => { setEditingCampaignKey(key); setEditCampaignId(id) }}
-                  >
-                    {id || 'Click to set campaign ID'}
-                  </p>
-                )}
-                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                  <button
-                    onClick={() => { setEditingCampaignKey(key); setEditCampaignId(id) }}
-                    className="p-1 rounded-md text-gray-400 hover:text-blue-500 hover:bg-blue-50"
-                    title="Edit campaign ID"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    onClick={() => removeCampaign(key)}
-                    className="p-1 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50"
-                    title="Remove campaign"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </AccordionSection>
 

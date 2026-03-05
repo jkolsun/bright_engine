@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       'ANTHROPIC_API_KEY',
     ]
     const optionalEnvVars = [
-      'SERPAPI_KEY', 'SERPER_API_KEY', 'INSTANTLY_API_KEY',
+      'SERPAPI_KEY', 'SERPER_API_KEY',
       'RESEND_API_KEY', 'CLAWDBOT_API_KEY',
     ]
     for (const key of requiredEnvVars) {

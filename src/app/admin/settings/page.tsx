@@ -33,10 +33,6 @@ import DiagnosticsTab from './_tabs/DiagnosticsTab'
 //   close_engine_scenarios → Close engine conversation scenarios (close-engine-prompts)
 //   channel_routing     → Channel routing rules: SMS vs email logic (channel-router)
 //
-// INSTANTLY / OUTBOUND:
-//   instantly_campaigns → Cached Instantly campaign data (instantly, distribution, store-campaigns)
-//   instantly_webhook   → Instantly webhook config (instantly)
-//
 // SEQUENCES & RETENTION:
 //   client_sequences    → Client retention sequences (retention-messages, worker, upsell-products)
 //   onboarding_flow     → Onboarding flow config (onboarding)

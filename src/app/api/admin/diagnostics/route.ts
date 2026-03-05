@@ -38,7 +38,6 @@ export async function GET(request: NextRequest) {
       REDIS_URL: !!process.env.REDIS_URL ? 'SET' : 'MISSING',
       SERPAPI_KEY: !!process.env.SERPAPI_KEY ? 'SET' : 'MISSING',
       ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY ? 'SET' : 'MISSING',
-      INSTANTLY_API_KEY: !!process.env.INSTANTLY_API_KEY ? 'SET' : 'MISSING',
       BASE_URL: !!process.env.BASE_URL ? 'SET' : 'MISSING',
       SESSION_SECRET: !!process.env.SESSION_SECRET ? 'SET' : 'MISSING',
       NODE_ENV: process.env.NODE_ENV || 'unknown',

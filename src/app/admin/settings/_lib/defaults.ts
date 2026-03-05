@@ -215,7 +215,6 @@ export const DEFAULT_STAGE_PLAYBOOK: Record<string, { instructions_override: str
 }
 
 export const DEFAULT_FIRST_MESSAGES: Record<string, string> = {
-  INSTANTLY_REPLY: "Hey {name}! Thanks for getting back to us. I actually already put together a preview site for {company} \u2014 check it out: {previewUrl}. Let me know what you think!",
   SMS_REPLY: "Hey {name}, this is the Bright Automations team. We built a preview site for {company} \u2014 take a look: {previewUrl}. What do you think?",
   REP_CLOSE: "Hey {name}, I just got off the phone with our team and they put together a site for {company}. Check it out here: {previewUrl} \u2014 I think you're going to like it.",
   PREVIEW_CTA: "Hey {name}! Saw you checking out the preview we built for {company}. What do you think so far? Any changes you'd want before we make it official?",

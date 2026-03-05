@@ -466,7 +466,7 @@ export async function addScriptGenerationJob(data: { leadId: string }) {
 
 export async function addDistributionJob(data: {
   leadId: string
-  channel: 'INSTANTLY' | 'REP_QUEUE' | 'BOTH'
+  channel: 'SMS_QUEUE' | 'REP_QUEUE' | 'BOTH'
 }) {
   const queue = await getDistributionQueue()
   if (!queue || !isRedisAvailable) {

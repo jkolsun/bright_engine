@@ -45,10 +45,6 @@ export const SERVICE_CONFIG: ServiceKeyConfig[] = [
     ],
   },
   {
-    id: 'instantly', label: 'Instantly',
-    keys: [{ name: 'INSTANTLY_API_KEY', label: 'API Key' }],
-  },
-  {
     id: 'serpapi', label: 'SerpAPI',
     keys: [{ name: 'SERPAPI_KEY', label: 'API Key' }],
   },

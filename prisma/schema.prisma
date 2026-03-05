@@ -116,11 +116,6 @@ model Lead {
   source                 LeadSource
   callScript             String?                  @map("call_script")
   campaign               String?
-  instantlyAddedDate     DateTime?                @map("instantly_added_date")
-  instantlyCampaignId    String?                  @map("instantly_campaign_id")
-  instantlyCurrentStep   Int                      @default(0) @map("instantly_current_step")
-  instantlyStatus        String?                  @map("instantly_status")
-  replySentiment         String?                  @map("reply_sentiment")
   industry               String                   @default("GENERAL_CONTRACTING")
   folderId               String?                  @map("folder_id")
   autonomyLevel          String                   @default("FULL_AUTO") @map("autonomy_level")
@@ -194,10 +189,6 @@ model Lead {
   @@index([email])
   @@index([previewId])
   @@index([createdAt])
-  @@index([instantlyCampaignId])
-  @@index([instantlyStatus])
-  @@index([instantlyCampaignId, instantlyStatus])
-  @@index([instantlyCampaignId, replySentiment])
   @@index([previewUrl])
   @@index([buildStep])
   @@index([ownerRepId])
@@ -629,50 +620,6 @@ model RepTask {
   @@map("rep_tasks")
 }
 
-model InstantlyDripLog {
-  id                    String   @id @default(cuid())
-  date                  DateTime @map("date")
-  campaign              String?
-  totalLimit            Int      @map("total_limit")
-  usableSends           Int      @map("usable_sends")
-  followupObligations   Int      @map("followup_obligations")
-  availableForNew       Int      @map("available_for_new")
-  leadsPushed           Int      @map("leads_pushed")
-  leadsRemainingInQueue Int      @map("leads_remaining_in_queue")
-  estDaysToClear        Int?     @map("est_days_to_clear")
-  createdAt             DateTime @default(now()) @map("created_at")
-
-  @@index([date])
-  @@map("instantly_drip_log")
-}
-
-model InstantlySyncLog {
-  id            String   @id @default(cuid())
-  timestamp     DateTime @map("timestamp")
-  fullReport    Json?    @map("full_report")
-  alerts        Json?    @map("alerts")
-  totalCapacity Int?     @map("total_capacity")
-  totalPushed   Int?     @map("total_pushed")
-  createdAt     DateTime @default(now()) @map("created_at")
-
-  @@index([timestamp])
-  @@map("instantly_sync_log")
-}
-
-model InstantlySyncChange {
-  id            String   @id @default(cuid())
-  syncTimestamp DateTime @map("sync_timestamp")
-  changeType    String   @map("change_type")
-  entity        String
-  fieldChanged  String?  @map("field_changed")
-  oldValue      String?  @map("old_value")
-  newValue      String?  @map("new_value")
-  impact        String?
-  createdAt     DateTime @default(now()) @map("created_at")
-
-  @@index([syncTimestamp])
-  @@map("instantly_sync_changes")
-}
 
 model CallScoring {
   id                String   @id @default(cuid())
@@ -709,28 +656,6 @@ model DoNotCall {
   @@map("do_not_call")
 }
 
-model InstantlyDailyReport {
-  id                  String    @id @default(cuid())
-  reportDate          DateTime  @unique @map("report_date")
-  syncTimestamp       DateTime  @map("sync_timestamp")
-  fullReport          String    @map("full_report")
-  smsReport           String?   @map("sms_report")
-  changes             Json?     @map("changes")
-  todayPlan           Json?     @map("today_plan")
-  alerts              Json?     @map("alerts")
-  totalCapacity       Int?      @map("total_capacity")
-  totalPushing        Int?      @map("total_pushing")
-  totalFollowups      Int?      @map("total_followups")
-  totalSendsExpected  Int?      @map("total_sends_expected")
-  capacityUtilization Float?    @map("capacity_utilization")
-  smsSent             Boolean   @default(false) @map("sms_sent")
-  smsSentAt           DateTime? @map("sms_sent_at")
-  createdAt           DateTime  @default(now()) @map("created_at")
-
-  @@index([reportDate])
-  @@index([createdAt])
-  @@map("instantly_daily_reports")
-}
 
 model EditRequest {
   id                 String    @id @default(cuid())
@@ -1512,8 +1437,6 @@ model ICP {
   targetStates          Json         @map("target_states")
   minReviews            Int          @default(3) @map("min_reviews")
   minRating             Float        @default(3.5) @map("min_rating")
-  instantlyCampaignId   String?      @map("instantly_campaign_id")
-  instantlyCampaignName String?      @map("instantly_campaign_name")
   smsEnabled            Boolean      @default(false) @map("sms_enabled")
   smsTemplate           String?      @map("sms_template")
   repAllocation         Json         @default("{}") @map("rep_allocation")

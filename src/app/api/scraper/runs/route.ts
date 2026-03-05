@@ -34,18 +34,12 @@ export async function GET(request: NextRequest) {
 
     // Aggregate email found + pushed counts per run
     const runIds = runs.map(r => r.id)
-    const [emailCounts, pushedCounts] = await Promise.all([
-      prisma.lead.groupBy({
-        by: ['scraperRunId'],
-        where: { scraperRunId: { in: runIds }, emailEnrichmentSource: 'FULLENRICH' },
-        _count: { id: true },
-      }),
-      prisma.lead.groupBy({
-        by: ['scraperRunId'],
-        where: { scraperRunId: { in: runIds }, instantlyStatus: 'IN_SEQUENCE' },
-        _count: { id: true },
-      }),
-    ])
+    const emailCounts = await prisma.lead.groupBy({
+      by: ['scraperRunId'],
+      where: { scraperRunId: { in: runIds }, emailEnrichmentSource: 'FULLENRICH' },
+      _count: { id: true },
+    })
+    const pushedCounts: any[] = []
     const emailFoundMap: Record<string, number> = {}
     for (const e of emailCounts) { if (e.scraperRunId) emailFoundMap[e.scraperRunId] = e._count.id }
     const pushedMap: Record<string, number> = {}

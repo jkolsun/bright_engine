@@ -29,7 +29,6 @@ export async function GET(request: NextRequest) {
     await syncApiKeysToEnv()
 
     const results: ServiceStatus[] = await Promise.all([
-      checkInstantly(),
       checkStripe(),
       checkTwilio(),
       checkResend(),
@@ -44,25 +43,6 @@ export async function GET(request: NextRequest) {
       { error: 'Status check failed', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
-  }
-}
-
-// ── Instantly ────────────────────────────────────────────────
-async function checkInstantly(): Promise<ServiceStatus> {
-  const key = process.env.INSTANTLY_API_KEY
-  if (!key) return { key: 'instantly', label: 'Instantly', configured: false, connected: null, detail: 'INSTANTLY_API_KEY not set' }
-
-  try {
-    const res = await fetch('https://api.instantly.ai/api/v2/accounts?limit=1', {
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(8000),
-    })
-    if (res.ok) {
-      return { key: 'instantly', label: 'Instantly', configured: true, connected: true, detail: 'API key valid' }
-    }
-    return { key: 'instantly', label: 'Instantly', configured: true, connected: false, detail: `API returned ${res.status}` }
-  } catch (e) {
-    return { key: 'instantly', label: 'Instantly', configured: true, connected: false, detail: (e as Error).message }
   }
 }
 

@@ -4,16 +4,15 @@ import { logActivity } from './logging'
 
 /**
  * Distribution Service
- * Final step of import pipeline: sends leads to Instantly + rep queue
+ * Final step of import pipeline: sends leads to SMS queue + rep queue
  */
 
-export type DistributionChannel = 'INSTANTLY' | 'REP_QUEUE' | 'BOTH'
+export type DistributionChannel = 'SMS_QUEUE' | 'REP_QUEUE' | 'BOTH'
 
 export interface DistributionOptions {
   leadId: string
   channel: DistributionChannel
   repId?: string
-  campaignId?: string
 }
 
 /**
@@ -24,7 +23,6 @@ export async function distributeLead(
   options: DistributionOptions
 ): Promise<{
   success: boolean
-  instantly?: { success: boolean; instantlyId?: string; error?: string }
   repQueue?: { success: boolean; taskId?: string; error?: string }
   errors?: string[]
 }> {
@@ -52,55 +50,6 @@ export async function distributeLead(
 
     const results: any = {}
     const errors: string[] = []
-
-    // Distribute to Instantly (email automation)
-    if (
-      options.channel === 'INSTANTLY' ||
-      options.channel === 'BOTH'
-    ) {
-      try {
-        // Queue lead for Instantly drip feed instead of pushing directly
-        // The daily 8AM sync handles actual pushing based on capacity
-        const campaignId = options.campaignId || null
-        
-        // Determine campaign based on website field
-        let assignedCampaign = campaignId
-        if (!assignedCampaign) {
-          const leadData = await prisma.lead.findUnique({
-            where: { id: options.leadId },
-            select: { website: true },
-          })
-          
-          // Has website = Campaign A, No website = Campaign B
-          // Actual Instantly campaign IDs are stored in Settings after first sync
-          const campaignSettings = await prisma.settings.findUnique({
-            where: { key: 'instantly_campaigns' },
-          })
-          
-          if (campaignSettings) {
-            const campaigns = campaignSettings.value as any
-            assignedCampaign = leadData?.website ? campaigns.campaign_a : campaigns.campaign_b
-          }
-        }
-        
-        await prisma.lead.update({
-          where: { id: options.leadId },
-          data: {
-            instantlyStatus: 'QUEUED',
-            instantlyCampaignId: assignedCampaign,
-          },
-        })
-        
-        results.instantly = {
-          success: true,
-          instantlyId: `queued_${Date.now()}`,
-        }
-      } catch (err) {
-        const error = err instanceof Error ? err.message : 'Unknown error'
-        results.instantly = { success: false, error }
-        errors.push(`Instantly: ${error}`)
-      }
-    }
 
     // Add to rep queue (human follow-up)
     if (
@@ -136,7 +85,7 @@ export async function distributeLead(
     // Log distribution
     const channels = [
       options.channel === 'BOTH'
-        ? 'Instantly + Rep Queue'
+        ? 'SMS Queue + Rep Queue'
         : options.channel,
     ].join(', ')
 
@@ -147,7 +96,6 @@ export async function distributeLead(
         leadId: options.leadId,
         metadata: {
           channels,
-          instantly: results.instantly?.success,
           repQueue: results.repQueue?.success,
         },
       }
@@ -175,8 +123,7 @@ export async function distributeLead(
 export async function distributeLeadsBatch(
   leadIds: string[],
   channel: DistributionChannel,
-  repId?: string,
-  campaignId?: string
+  repId?: string
 ) {
   const results = await Promise.allSettled(
     leadIds.map((id) =>
@@ -184,7 +131,6 @@ export async function distributeLeadsBatch(
         leadId: id,
         channel,
         repId,
-        campaignId,
       })
     )
   )

@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 
-// ── Email sequences (mirrors src/lib/instantly.ts) ──────────
+// ── Email sequences ──────────
 
 const SEQUENCE_A = [
   {
@@ -385,11 +385,6 @@ export default function EmailPreviewPage() {
               <Badge variant="secondary" className="text-xs">{campaignLabel}</Badge>
             )}
           </div>
-          <Link href="/admin/instantly">
-            <Button variant="outline" size="sm">
-              <ArrowLeft size={14} className="mr-1" /> Back to Instantly
-            </Button>
-          </Link>
         </div>
 
         {!selectedLead ? (

@@ -131,7 +131,7 @@ function LeadsPageInner() {
   const [savingLead, setSavingLead] = useState(false)
 
   // Assignment destination state
-  const [assignDestination, setAssignDestination] = useState<'rep-tracker' | 'instantly' | null>(null)
+  const [assignDestination, setAssignDestination] = useState<'rep-tracker' | null>(null)
 
   // Add to folder state
   const [folderAssignDialogOpen, setFolderAssignDialogOpen] = useState(false)
@@ -468,12 +468,6 @@ function LeadsPageInner() {
     }
   }
 
-  const handleAssignToInstantly = () => {
-    // Navigate to Instantly campaigns page with selected lead IDs in query
-    const leadIds = Array.from(selectedLeads).join(',')
-    window.location.href = `/admin/instantly?assignLeads=${leadIds}`
-  }
-
   const handleClearNames = async () => {
     if (selectedLeads.size === 0) return
     const count = selectedLeads.size
@@ -553,10 +547,8 @@ function LeadsPageInner() {
     const matchesRep = repFilter === 'all'
       ? true
       : repFilter === 'unassigned'
-        ? !lead.assignedTo && !lead.instantlyCampaignId
-        : repFilter === 'instantly'
-          ? !!lead.instantlyCampaignId
-          : lead.assignedTo?.id === repFilter
+        ? !lead.assignedTo
+        : lead.assignedTo?.id === repFilter
 
     const matchesContacted = (() => {
       if (contactedFilter === 'all') return true
@@ -1012,51 +1004,9 @@ function LeadsPageInner() {
       {/* Assignment Dialog — Step 1: Choose destination */}
       <Dialog open={assignDialogOpen} onOpenChange={(open) => { setAssignDialogOpen(open); if (!open) setAssignDestination(null) }}>
         <DialogContent className="sm:max-w-[450px]">
-          {!assignDestination ? (
             <>
               <DialogHeader>
-                <DialogTitle>Assign {selectedLeads.size} Lead{selectedLeads.size !== 1 ? 's' : ''}</DialogTitle>
-                <DialogDescription>
-                  Choose where to assign the selected leads.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="py-4 space-y-3">
-                <button
-                  onClick={() => setAssignDestination('rep-tracker')}
-                  className="w-full flex items-center gap-4 p-4 rounded-lg border-2 border-gray-200 dark:border-slate-700 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all text-left"
-                >
-                  <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
-                    <Target size={24} className="text-blue-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900 dark:text-gray-100">Sales Rep Tracker</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Assign to a sales rep for calling</div>
-                  </div>
-                </button>
-                <button
-                  onClick={handleAssignToInstantly}
-                  className="w-full flex items-center gap-4 p-4 rounded-lg border-2 border-gray-200 dark:border-slate-700 hover:border-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-all text-left"
-                >
-                  <div className="w-12 h-12 rounded-lg bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
-                    <Mail size={24} className="text-purple-600" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-gray-900 dark:text-gray-100">Instantly Campaigns</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Add to an email campaign</div>
-                  </div>
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Step 2: Choose rep */}
-              <DialogHeader>
-                <DialogTitle>
-                  <button onClick={() => setAssignDestination(null)} className="mr-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400">
-                    <ArrowLeft size={18} className="inline" />
-                  </button>
-                  Assign to Sales Rep
-                </DialogTitle>
+                <DialogTitle>Assign to Sales Rep</DialogTitle>
                 <DialogDescription>
                   Choose a sales rep to assign {selectedLeads.size} lead{selectedLeads.size !== 1 ? 's' : ''} to.
                 </DialogDescription>
@@ -1114,7 +1064,6 @@ function LeadsPageInner() {
                 )}
               </div>
             </>
-          )}
         </DialogContent>
       </Dialog>
 
@@ -1202,7 +1151,6 @@ function LeadsPageInner() {
           >
             <option value="all">All Reps</option>
             <option value="unassigned">Unassigned</option>
-            <option value="instantly">Instantly Campaigns</option>
             {activeReps.map((rep) => (
               <option key={rep.id} value={rep.id}>{rep.name}</option>
             ))}
@@ -1435,13 +1383,7 @@ function LeadsPageInner() {
                                 {lead.assignedTo.name}
                               </span>
                             )}
-                            {lead.instantlyCampaignId && (
-                              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-700 bg-purple-50 px-2 py-1 rounded-full">
-                                <Mail size={12} />
-                                Instantly
-                              </span>
-                            )}
-                            {!lead.assignedTo && !lead.instantlyCampaignId && (
+                            {!lead.assignedTo && (
                               <span className="text-xs text-gray-400">&mdash;</span>
                             )}
                           </div>

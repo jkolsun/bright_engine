@@ -7,7 +7,7 @@ import {
   CheckCircle2, AlertTriangle, RefreshCw, Loader2,
   Save, Trash2, Phone, Brain, DollarSign,
   ExternalLink, Search, ChevronDown, Pencil, X,
-  MessageSquare, Zap,
+  MessageSquare,
 } from 'lucide-react'
 
 // ── Types ──
@@ -159,7 +159,6 @@ export default function ApiKeysTab() {
           svc.id === 'stripe' ? <DollarSign size={18} /> :
           svc.id === 'twilio' ? <Phone size={18} /> :
           svc.id === 'resend' ? <MessageSquare size={18} /> :
-          svc.id === 'instantly' ? <Zap size={18} /> :
           svc.id === 'serpapi' || svc.id === 'serper' ? <Search size={18} /> :
           <ExternalLink size={18} />
 

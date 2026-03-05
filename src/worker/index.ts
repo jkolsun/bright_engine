@@ -195,7 +195,7 @@ async function startWorkers() {
         const { leadId, channel } = job.data
         const stepStart = Date.now()
         await prisma.lead.update({ where: { id: leadId }, data: { buildStep: 'DISTRIBUTION' } }).catch(err => console.error('[Worker] Build step update failed:', err))
-        const result = await distributeLead({ leadId, channel: channel || 'BOTH' })
+        const result = await distributeLead({ leadId, channel: channel || 'REP_QUEUE' })
         await prisma.lead.update({ where: { id: leadId }, data: { buildDistributionMs: Date.now() - stepStart } }).catch(err => console.error('[Worker] Distribution timing write failed:', err))
         return result
       },
@@ -246,7 +246,7 @@ async function startWorkers() {
     })
 
     scriptWorker.on('completed', async (job) => {
-      if (job?.data?.leadId) await addDistributionJob({ leadId: job.data.leadId, channel: 'BOTH' })
+      if (job?.data?.leadId) await addDistributionJob({ leadId: job.data.leadId, channel: 'REP_QUEUE' })
     })
 
     // After distribution completes, mark build done + calculate engagement score + readiness check
@@ -326,32 +326,6 @@ async function startWorkers() {
         const updateProgress = async () => {
           if (redisConn) {
             await redisConn.set(`import:${jobId}`, JSON.stringify(progress), 'EX', 7200).catch(err => console.error('[Worker] Redis progress write failed:', err))
-          }
-        }
-
-        // FullEnrich bulk fire — request emails for all no-email leads before per-lead loop
-        if (options.enrichment && process.env.FULLENRICH_API_KEY) {
-          try {
-            const needsEmail = await prisma.lead.findMany({
-              where: { id: { in: leadIds }, OR: [{ email: null }, { email: '' }] },
-              select: { id: true, companyName: true, firstName: true, lastName: true },
-            })
-            if (needsEmail.length > 0) {
-              const { callFullEnrich } = await import('../lib/fullenrich')
-              await callFullEnrich({ leads: needsEmail, batchName: jobId })
-              await prisma.lead.updateMany({
-                where: { id: { in: needsEmail.map(l => l.id) }, OR: [{ email: null }, { email: '' }] },
-                data: { emailEnrichmentSource: 'PENDING' },
-              }).catch(err => console.warn('[IMPORT] Failed to set PENDING:', err))
-              if (redisConn) {
-                for (const lead of needsEmail) {
-                  redisConn.set('enrichment:' + lead.id, 'pending', 'EX', 600).catch(() => {})
-                }
-              }
-              console.log('[IMPORT] FullEnrich fired for ' + needsEmail.length + ' leads')
-            }
-          } catch (err) {
-            console.warn('[IMPORT] FullEnrich bulk fire failed:', err)
           }
         }
 
