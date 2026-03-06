@@ -1381,15 +1381,37 @@ function LeadsPageInner() {
                         </td>
                         {/* Sticky right: Status */}
                         <td className={`sticky right-[100px] z-10 ${rowBg} p-3 whitespace-nowrap`}>
-                          <Badge variant={
-                            lead.status === 'HOT_LEAD' ? 'destructive' :
-                            lead.status === 'QUALIFIED' ? 'default' :
-                            lead.status === 'BUILDING' ? 'secondary' :
-                            lead.status === 'PAID' ? 'default' :
-                            'secondary'
-                          } className="text-xs">
-                            {lead.status}
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge variant={
+                              lead.status === 'HOT_LEAD' ? 'destructive' :
+                              lead.status === 'QUALIFIED' ? 'default' :
+                              lead.status === 'BUILDING' ? 'secondary' :
+                              lead.status === 'PAID' ? 'default' :
+                              'secondary'
+                            } className="text-xs">
+                              {lead.status}
+                            </Badge>
+                            {lead.smsCampaign && (
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 truncate max-w-[120px]" title={lead.smsCampaign.name}>
+                                  {lead.smsCampaign.name}
+                                </span>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                  lead.smsCampaign.funnelStage === 'QUEUED' ? 'bg-gray-100 text-gray-600' :
+                                  lead.smsCampaign.funnelStage === 'TEXTED' ? 'bg-blue-100 text-blue-700' :
+                                  lead.smsCampaign.funnelStage === 'CLICKED' ? 'bg-orange-100 text-orange-700' :
+                                  lead.smsCampaign.funnelStage === 'REP_CALLED' ? 'bg-purple-100 text-purple-700' :
+                                  lead.smsCampaign.funnelStage === 'OPTED_IN' ? 'bg-green-100 text-green-700' :
+                                  lead.smsCampaign.funnelStage === 'DRIP_ACTIVE' ? 'bg-teal-100 text-teal-700' :
+                                  lead.smsCampaign.funnelStage === 'HOT' ? 'bg-red-100 text-red-700' :
+                                  lead.smsCampaign.funnelStage === 'CLOSED' ? 'bg-emerald-100 text-emerald-700' :
+                                  'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {lead.smsCampaign.funnelStage.replace(/_/g, ' ')}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </td>
                         {/* Sticky right: Actions */}
                         <td className={`sticky right-0 z-10 ${rowBg} p-3 whitespace-nowrap w-[100px]`} onClick={(e) => e.stopPropagation()}>

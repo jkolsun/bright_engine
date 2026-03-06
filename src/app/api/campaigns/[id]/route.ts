@@ -73,12 +73,36 @@ export async function PUT(
 
     const { id } = await params
     const body = await request.json()
-    const { name, status } = body
+    const { name, status, templateBody, fromNumber } = body
 
     // Verify campaign exists
     const existing = await prisma.smsCampaign.findUnique({ where: { id } })
     if (!existing) {
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+    }
+
+    // Block templateBody changes on non-DRAFT campaigns
+    if (templateBody !== undefined && existing.status !== 'DRAFT') {
+      return NextResponse.json(
+        { error: 'Template body cannot be changed after campaign has started sending' },
+        { status: 400 }
+      )
+    }
+
+    // Block name changes on non-DRAFT campaigns
+    if (name !== undefined && existing.status !== 'DRAFT') {
+      return NextResponse.json(
+        { error: 'Campaign name can only be edited while in DRAFT status' },
+        { status: 400 }
+      )
+    }
+
+    // Block fromNumber changes on SENDING or COMPLETED campaigns
+    if (fromNumber !== undefined && (existing.status === 'SENDING' || existing.status === 'COMPLETED')) {
+      return NextResponse.json(
+        { error: 'From number can only be changed on DRAFT or PAUSED campaigns' },
+        { status: 400 }
+      )
     }
 
     let updatedCampaign = existing
@@ -90,11 +114,16 @@ export async function PUT(
       updatedCampaign = await startCampaign(id)
     }
 
-    // Handle name update
-    if (name && name !== updatedCampaign.name) {
+    // Handle field updates
+    const updateData: Record<string, unknown> = {}
+    if (name !== undefined && name !== updatedCampaign.name) updateData.name = name
+    if (templateBody !== undefined) updateData.templateBody = templateBody
+    if (fromNumber !== undefined) updateData.fromNumber = fromNumber
+
+    if (Object.keys(updateData).length > 0) {
       updatedCampaign = await prisma.smsCampaign.update({
         where: { id },
-        data: { name },
+        data: updateData,
       })
     }
 
@@ -111,6 +140,51 @@ export async function PUT(
     console.error('Error updating campaign:', error)
     return NextResponse.json(
       { error: 'Failed to update campaign', details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE /api/campaigns/[id] — Delete a campaign
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 401 })
+    }
+
+    const { id } = await params
+    const campaign = await prisma.smsCampaign.findUnique({ where: { id } })
+    if (!campaign) {
+      return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+    }
+
+    if (campaign.status === 'SENDING') {
+      return NextResponse.json(
+        { error: 'Pause the campaign before deleting' },
+        { status: 400 }
+      )
+    }
+
+    // Reset Lead.lastSmsCampaignId and smsFunnelStage for affected leads
+    // Only reset if this campaign was their most recent
+    await prisma.lead.updateMany({
+      where: { lastSmsCampaignId: id },
+      data: { lastSmsCampaignId: null, smsFunnelStage: null },
+    })
+
+    // Delete campaign — Cascade handles SmsCampaignLead + SmsCampaignMessage
+    await prisma.smsCampaign.delete({ where: { id } })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting campaign:', error)
+    return NextResponse.json(
+      { error: 'Failed to delete campaign', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }

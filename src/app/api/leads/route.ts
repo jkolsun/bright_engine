@@ -100,6 +100,8 @@ export async function GET(request: NextRequest) {
           engagementLevel: true,
           engagementUpdatedAt: true,
           lastContactedAt: true,
+          lastSmsCampaignId: true,
+          smsFunnelStage: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -110,7 +112,36 @@ export async function GET(request: NextRequest) {
       prisma.lead.count({ where })
     ])
 
-    return NextResponse.json({ leads, total, limit, offset })
+    // Enrich leads with SMS campaign names (batch query to avoid N+1)
+    const campaignIds = [...new Set(
+      leads.map((l: any) => l.lastSmsCampaignId).filter(Boolean)
+    )] as string[]
+    let campaignMap: Record<string, string> = {}
+    if (campaignIds.length > 0) {
+      const campaigns = await prisma.smsCampaign.findMany({
+        where: { id: { in: campaignIds } },
+        select: { id: true, name: true },
+      })
+      for (const c of campaigns) {
+        campaignMap[c.id] = c.name
+      }
+    }
+
+    const enrichedLeads = leads.map((lead: any) => {
+      const hasActiveCampaign = lead.lastSmsCampaignId
+        && lead.smsFunnelStage
+        && lead.smsFunnelStage !== 'ARCHIVED'
+        && lead.smsFunnelStage !== 'OPTED_OUT'
+      return {
+        ...lead,
+        smsCampaign: hasActiveCampaign ? {
+          name: campaignMap[lead.lastSmsCampaignId] || '',
+          funnelStage: lead.smsFunnelStage,
+        } : null,
+      }
+    })
+
+    return NextResponse.json({ leads: enrichedLeads, total, limit, offset })
   } catch (error) {
     console.error('Error fetching leads:', error)
     return NextResponse.json(

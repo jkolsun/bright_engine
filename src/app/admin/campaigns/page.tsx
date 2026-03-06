@@ -12,6 +12,9 @@ import {
   ChevronRight,
   RefreshCw,
   X,
+  Trash2,
+  UserPlus,
+  Pencil,
 } from 'lucide-react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -247,10 +250,14 @@ export default function CampaignsPage() {
           campaign={selectedCampaign}
           onBack={goBackToList}
           onRefresh={async () => {
-            const res = await fetch(`/api/campaigns/${selectedCampaign.id}`)
-            if (res.ok) {
-              const data = await res.json()
-              setSelectedCampaign(data.campaign)
+            try {
+              const res = await fetch(`/api/campaigns/${selectedCampaign.id}`)
+              if (res.ok) {
+                const data = await res.json()
+                setSelectedCampaign(data.campaign)
+              }
+            } catch (err) {
+              console.error('Failed to refresh campaign:', err)
             }
           }}
         />
@@ -650,6 +657,8 @@ function CampaignDetailTab({
   const [timelineLoading, setTimelineLoading] = useState(false)
   const [funnelCounts, setFunnelCounts] = useState<Record<string, number>>({})
   const [actionLoading, setActionLoading] = useState(false)
+  const [showAddLeads, setShowAddLeads] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
 
   const fetchLeads = useCallback(async () => {
     setLeadsLoading(true)
@@ -706,24 +715,31 @@ function CampaignDetailTab({
     async (action: 'start' | 'pause' | 'resume') => {
       setActionLoading(true)
       try {
+        let res: Response
         if (action === 'start') {
-          await fetch(`/api/campaigns/${campaign.id}/start`, { method: 'POST' })
+          res = await fetch(`/api/campaigns/${campaign.id}/start`, { method: 'POST' })
         } else if (action === 'pause') {
-          await fetch(`/api/campaigns/${campaign.id}`, {
+          res = await fetch(`/api/campaigns/${campaign.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: 'PAUSED' }),
           })
-        } else if (action === 'resume') {
-          await fetch(`/api/campaigns/${campaign.id}`, {
+        } else {
+          res = await fetch(`/api/campaigns/${campaign.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: 'SENDING' }),
           })
         }
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          alert(data.error || `Failed to ${action} campaign`)
+          return
+        }
         onRefresh()
       } catch (err) {
         console.error('Campaign action failed:', err)
+        alert('Network error — please try again')
       } finally {
         setActionLoading(false)
       }
@@ -784,6 +800,52 @@ function CampaignDetailTab({
             >
               <Play size={16} />
               Resume
+            </button>
+          )}
+          {/* Add Leads — available for DRAFT, SENDING, PAUSED */}
+          {['DRAFT', 'SENDING', 'PAUSED'].includes(campaign.status) && (
+            <button
+              onClick={() => setShowAddLeads(true)}
+              className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium flex items-center gap-2"
+            >
+              <UserPlus size={16} />
+              Add Leads
+            </button>
+          )}
+          {/* Edit — DRAFT only */}
+          {campaign.status === 'DRAFT' && (
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium flex items-center gap-2"
+            >
+              <Pencil size={16} />
+              Edit
+            </button>
+          )}
+          {/* Delete — not available for SENDING */}
+          {campaign.status !== 'SENDING' && (
+            <button
+              onClick={async () => {
+                if (!window.confirm('Are you sure? This will permanently delete this campaign and all associated records. Leads will not be deleted.')) return
+                setActionLoading(true)
+                try {
+                  const res = await fetch(`/api/campaigns/${campaign.id}`, { method: 'DELETE' })
+                  if (res.ok) onBack()
+                  else {
+                    const data = await res.json().catch(() => ({}))
+                    alert(data.error || 'Failed to delete campaign')
+                  }
+                } catch (err) {
+                  console.error('Delete failed:', err)
+                } finally {
+                  setActionLoading(false)
+                }
+              }}
+              disabled={actionLoading}
+              className="border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 px-4 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+            >
+              <Trash2 size={16} />
+              Delete
             </button>
           )}
           <button
@@ -893,6 +955,8 @@ function CampaignDetailTab({
                   <th className="text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider px-6 py-3">
                     Rep
                   </th>
+                  <th className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider px-6 py-3 w-16">
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -906,6 +970,16 @@ function CampaignDetailTab({
                       stageInfo={stageInfo}
                       isExpanded={isExpanded}
                       onToggle={() => handleExpandLead(lead.leadId)}
+                      onRemove={async () => {
+                        try {
+                          const res = await fetch(`/api/campaigns/${campaign.id}/leads/${lead.leadId}`, { method: 'DELETE' })
+                          if (res.ok) { fetchLeads(); onRefresh() }
+                          else {
+                            const data = await res.json().catch(() => ({}))
+                            alert(data.error || 'Failed to remove lead')
+                          }
+                        } catch (err) { console.error('Remove lead failed:', err) }
+                      }}
                       timeline={isExpanded ? timeline : []}
                       timelineLoading={isExpanded && timelineLoading}
                     />
@@ -939,6 +1013,274 @@ function CampaignDetailTab({
           </div>
         )}
       </div>
+
+      {/* From Number display */}
+      {campaign.fromNumber && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">From Number</p>
+          <p className="text-sm font-mono text-gray-900 dark:text-white">{campaign.fromNumber}</p>
+        </div>
+      )}
+
+      {/* Add Leads Modal */}
+      {showAddLeads && (
+        <AddLeadsModal
+          campaignId={campaign.id}
+          onClose={() => setShowAddLeads(false)}
+          onAdded={() => { setShowAddLeads(false); fetchLeads(); onRefresh() }}
+        />
+      )}
+
+      {/* Edit Campaign Modal (DRAFT only) */}
+      {showEditModal && (
+        <EditCampaignModal
+          campaign={campaign}
+          onClose={() => setShowEditModal(false)}
+          onSaved={() => { setShowEditModal(false); onRefresh() }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── Add Leads Modal ────────────────────────────────────────────────────────
+
+function AddLeadsModal({
+  campaignId,
+  onClose,
+  onAdded,
+}: {
+  campaignId: string
+  onClose: () => void
+  onAdded: () => void
+}) {
+  const [folders, setFolders] = useState<any[]>([])
+  const [selectedFolderId, setSelectedFolderId] = useState('')
+  const [manualLeadIds, setManualLeadIds] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [error, setError] = useState('')
+  const [result, setResult] = useState<{ added: number; skipped: number; total: number } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/folders')
+      .then((r) => r.json())
+      .then((data) => setFolders(data.folders || []))
+      .catch(() => {})
+  }, [])
+
+  const handleAdd = async () => {
+    if (!selectedFolderId && !manualLeadIds.trim()) {
+      setError('Select a folder or paste lead IDs')
+      return
+    }
+    setAdding(true)
+    setError('')
+    setResult(null)
+    try {
+      const body: any = {}
+      if (selectedFolderId) body.folderId = selectedFolderId
+      if (manualLeadIds.trim()) {
+        body.leadIds = manualLeadIds.split(',').map(s => s.trim()).filter(Boolean)
+      }
+      const res = await fetch(`/api/campaigns/${campaignId}/leads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to add leads')
+      setResult(data)
+      if (data.added > 0) setTimeout(onAdded, 1500)
+    } catch (err: any) {
+      setError(err.message || 'Failed to add leads')
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Add Leads to Campaign</h3>
+          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><X size={18} /></button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Select a Folder</label>
+            <select
+              value={selectedFolderId}
+              onChange={(e) => setSelectedFolderId(e.target.value)}
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            >
+              <option value="">— None —</option>
+              {folders.map((f: any) => (
+                <option key={f.id} value={f.id}>{f.name} ({f._count?.leads ?? '?'} leads)</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Or Paste Lead IDs (comma-separated)</label>
+            <textarea
+              value={manualLeadIds}
+              onChange={(e) => setManualLeadIds(e.target.value)}
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none text-sm"
+              rows={3}
+              placeholder="lead-id-1, lead-id-2, ..."
+            />
+          </div>
+
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          {result && (
+            <p className="text-sm text-green-600 dark:text-green-400">
+              Added {result.added} leads{result.skipped > 0 ? `, ${result.skipped} already in campaign` : ''}. Total: {result.total}
+            </p>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-3 mt-6">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
+          <button
+            onClick={handleAdd}
+            disabled={adding}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 flex items-center gap-2"
+          >
+            {adding ? 'Adding...' : 'Add Leads'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Edit Campaign Modal ────────────────────────────────────────────────────
+
+function EditCampaignModal({
+  campaign,
+  onClose,
+  onSaved,
+}: {
+  campaign: Campaign
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [name, setName] = useState(campaign.name)
+  const [templateBody, setTemplateBody] = useState(campaign.templateBody)
+  const [fromNumber, setFromNumber] = useState(campaign.fromNumber || '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const templateRef = useRef<HTMLTextAreaElement>(null)
+
+  const insertMergeField = (field: string) => {
+    const ta = templateRef.current
+    if (!ta) return
+    const start = ta.selectionStart
+    const end = ta.selectionEnd
+    const before = templateBody.slice(0, start)
+    const after = templateBody.slice(end)
+    setTemplateBody(before + field + after)
+    setTimeout(() => { ta.focus(); ta.selectionStart = ta.selectionEnd = start + field.length }, 0)
+  }
+
+  const handleSave = async () => {
+    if (!name.trim()) { setError('Name is required'); return }
+    if (!templateBody.trim()) { setError('Template is required'); return }
+    setSaving(true)
+    setError('')
+    try {
+      const body: any = {}
+      if (name !== campaign.name) body.name = name.trim()
+      if (templateBody !== campaign.templateBody) body.templateBody = templateBody.trim()
+      if (fromNumber !== campaign.fromNumber) body.fromNumber = fromNumber.trim()
+      if (Object.keys(body).length === 0) { onSaved(); return }
+
+      const res = await fetch(`/api/campaigns/${campaign.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to save')
+      }
+      onSaved()
+    } catch (err: any) {
+      setError(err.message || 'Failed to save')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const charCount = templateBody.length
+  const segmentCount = Math.ceil(charCount / 160) || 0
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white">Edit Campaign</h3>
+          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"><X size={18} /></button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Campaign Name</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Cold Text Template</label>
+            <div className="flex flex-wrap gap-1 mb-2">
+              {['{companyName}', '{firstName}', '{city}', '{state}', '{industry}', '{previewUrl}'].map(f => (
+                <button
+                  key={f}
+                  onClick={() => insertMergeField(f)}
+                  className="text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+            <textarea
+              ref={templateRef}
+              value={templateBody}
+              onChange={(e) => setTemplateBody(e.target.value)}
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none text-sm"
+              rows={4}
+            />
+            <p className="text-xs text-gray-400 mt-1">{charCount} chars · {segmentCount} segment{segmentCount !== 1 ? 's' : ''}</p>
+          </div>
+
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">From Number</label>
+            <input
+              value={fromNumber}
+              onChange={(e) => setFromNumber(e.target.value)}
+              placeholder="+1XXXXXXXXXX"
+              className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm"
+            />
+          </div>
+
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        </div>
+
+        <div className="flex justify-end gap-3 mt-6">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -957,6 +1299,7 @@ function LeadRow({
   stageInfo,
   isExpanded,
   onToggle,
+  onRemove,
   timeline,
   timelineLoading,
 }: {
@@ -964,6 +1307,7 @@ function LeadRow({
   stageInfo: (typeof FUNNEL_STAGES)[number] | undefined
   isExpanded: boolean
   onToggle: () => void
+  onRemove?: () => void
   timeline: TimelineEvent[]
   timelineLoading: boolean
 }) {
@@ -1009,12 +1353,25 @@ function LeadRow({
         <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
           {lead.repName || '\u2014'}
         </td>
+        <td className="px-6 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+          {onRemove && ['QUEUED', 'TEXTED'].includes(lead.stage) && (
+            <button
+              onClick={() => {
+                if (window.confirm(`Remove ${lead.companyName || lead.firstName} from this campaign?`)) onRemove()
+              }}
+              title="Remove from campaign"
+              className="p-1 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </td>
       </tr>
 
       {/* Expanded timeline */}
       {isExpanded && (
         <tr className="bg-gray-50 dark:bg-gray-900/40">
-          <td colSpan={7} className="px-6 py-4">
+          <td colSpan={8} className="px-6 py-4">
             <div className="ml-6">
               <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
                 Lead Timeline
