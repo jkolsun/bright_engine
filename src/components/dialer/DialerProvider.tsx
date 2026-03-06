@@ -59,7 +59,7 @@ interface DialerContextValue {
   showRecentLeadBanner: boolean
   recentCallId: string | null
   // Hot lead notification
-  hotLeadNotification: { leadId: string; companyName: string } | null
+  hotLeadNotification: { leadId: string; companyName: string; phone?: string } | null
   dismissHotLeadNotification: () => void
 }
 
@@ -112,7 +112,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
   useEffect(() => { queueRef.current = queue }, [queue])
 
   // HOT_LEAD notification state
-  const [hotLeadNotification, setHotLeadNotification] = useState<{ leadId: string; companyName: string } | null>(null)
+  const [hotLeadNotification, setHotLeadNotification] = useState<{ leadId: string; companyName: string; phone?: string } | null>(null)
   const hotLeadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Recent-lead computed flags
@@ -330,7 +330,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsub = sse.on('HOT_LEAD', (data: any) => {
       console.log('[DialerProvider] HOT_LEAD received:', data.leadId, data.companyName)
-      setHotLeadNotification({ leadId: data.leadId, companyName: data.companyName || 'Unknown' })
+      setHotLeadNotification({ leadId: data.leadId, companyName: data.companyName || 'Unknown', phone: data.phone || '' })
 
       // Auto-dismiss after 30 seconds
       if (hotLeadTimerRef.current) clearTimeout(hotLeadTimerRef.current)

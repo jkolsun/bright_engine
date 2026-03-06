@@ -140,11 +140,13 @@ export async function POST(request: NextRequest) {
           data: { smsFunnelStage: 'CLICKED', priority: 'HOT' },
         })
 
-        // Increment SmsCampaign click count
-        await prisma.smsCampaign.update({
-          where: { id: smsCampaignLead.campaignId },
-          data: { clickCount: { increment: 1 } },
-        })
+        // Increment SmsCampaign click count — only on first click (TEXTED → CLICKED transition)
+        if (smsCampaignLead.funnelStage === 'TEXTED') {
+          await prisma.smsCampaign.update({
+            where: { id: smsCampaignLead.campaignId },
+            data: { clickCount: { increment: 1 } },
+          })
+        }
 
         // Create LeadEvent for CTA click from SMS campaign
         await prisma.leadEvent.create({

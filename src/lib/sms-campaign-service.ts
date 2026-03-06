@@ -63,6 +63,8 @@ export async function createCampaign(params: {
   fromNumber?: string
   leadIds: string[]
 }): Promise<SmsCampaign> {
+  // Deduplicate to prevent @@unique constraint violations
+  const uniqueLeadIds = [...new Set(params.leadIds)]
   let fromNumber = params.fromNumber
 
   // Resolve fromNumber from Settings or env if not provided
@@ -77,13 +79,13 @@ export async function createCampaign(params: {
       templateBody: params.templateBody,
       fromNumber,
       status: 'DRAFT',
-      totalLeads: params.leadIds.length,
+      totalLeads: uniqueLeadIds.length,
     },
   })
 
   // Create SmsCampaignLead records and update leads in a transaction
   await prisma.$transaction(
-    params.leadIds.map((leadId) =>
+    uniqueLeadIds.map((leadId) =>
       prisma.smsCampaignLead.create({
         data: {
           campaignId: campaign.id,
@@ -95,7 +97,7 @@ export async function createCampaign(params: {
   )
 
   await prisma.$transaction(
-    params.leadIds.map((leadId) =>
+    uniqueLeadIds.map((leadId) =>
       prisma.lead.update({
         where: { id: leadId },
         data: {
@@ -516,6 +518,12 @@ export async function processDripStep(
   await prisma.smsCampaignLead.update({
     where: { id: campaignLeadId },
     data: updateData as any,
+  })
+
+  // Sync Lead.smsFunnelStage to DRIP_ACTIVE
+  await prisma.lead.update({
+    where: { id: campaignLead.leadId },
+    data: { smsFunnelStage: 'DRIP_ACTIVE' },
   })
 
   // Create lead event

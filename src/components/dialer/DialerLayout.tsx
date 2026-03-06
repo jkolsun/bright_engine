@@ -17,6 +17,14 @@ function HotLeadToast() {
   if (!hotLeadNotification) return null
 
   const handleCallNow = () => {
+    // Inject lead into queue so it can be selected (may not be in any queue array)
+    queue.injectLead({
+      id: hotLeadNotification.leadId,
+      companyName: hotLeadNotification.companyName,
+      phone: hotLeadNotification.phone || '',
+      status: 'ACTIVE',
+      priority: 'HOT',
+    } as any)
     queue.setSelectedLeadId(hotLeadNotification.leadId)
     dismissHotLeadNotification()
   }

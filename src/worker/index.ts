@@ -1100,7 +1100,13 @@ async function startWorkers() {
           where: { campaignId, funnelStage: 'QUEUED' },
         })
 
-        if (remainingQueued > 0 && campaign.status === 'SENDING') {
+        // Fresh status check — admin may have paused during the run
+        const freshCampaign = await prisma.smsCampaign.findUnique({
+          where: { id: campaignId },
+          select: { status: true },
+        })
+
+        if (remainingQueued > 0 && freshCampaign?.status === 'SENDING') {
           // Reschedule for next send window (check every 30 minutes)
           const { addSmsCampaignJob } = await import('./queue')
           await addSmsCampaignJob('send-cold-texts', { campaignId }, { delay: 30 * 60 * 1000 })
@@ -1219,7 +1225,7 @@ async function startWorkers() {
         res.writeHead(200, { 'Content-Type': 'application/json' })
         res.end(JSON.stringify({
           status: 'ok',
-          workers: 8,
+          workers: 10,
           uptime: process.uptime(),
           redis: connection?.status || 'unknown',
         }))

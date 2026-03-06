@@ -15,6 +15,92 @@ const SMS_SETTING_KEYS: Record<string, unknown> = {
   sms_throttle_per_minute: 10,
 }
 
+// Default drip templates used when none are configured
+const DEFAULT_DRIP_TEMPLATES = [
+  { body: "Thanks for chatting {firstName}! Here's your website again: {previewUrl} — Let me know if you want any changes.", dayOffset: 0 },
+  { body: "Hey {firstName}, quick question — are you getting enough calls from Google right now? Most {industry} businesses in {city} are leaving money on the table without a website.", dayOffset: 2 },
+  { body: "Just wanted to share — we helped a {industry} company in {state} go from 0 to 15+ calls/month within 60 days of launching their site. Happy to do the same for {companyName}.", dayOffset: 5 },
+  { body: "{firstName}, your custom website for {companyName} is still ready to go. First month is free — just $199 to get set up. Want me to send over the details?", dayOffset: 8 },
+  { body: "Last check-in {firstName} — I'll keep your website saved for a bit longer in case you change your mind. Just reply here anytime. Have a great week!", dayOffset: 12 },
+]
+
+/**
+ * Convert DB settings (snake_case keys, compound JSON) to UI settings (camelCase, flat fields)
+ */
+function dbToUiSettings(dbSettings: Record<string, unknown>): Record<string, unknown> {
+  const dripTemplates = (dbSettings.sms_drip_templates as Array<{ body: string; dayOffset: number }>) || DEFAULT_DRIP_TEMPLATES
+  const sendWindow = (dbSettings.sms_send_window as { startHour: number; endHour: number; days: string[] }) || { startHour: 9, endHour: 11, days: ['tue', 'wed', 'thu'] }
+
+  // Capitalize day names to match UI format (Mon, Tue, etc.)
+  const capitalizedDays = (sendWindow.days || []).map((d: string) =>
+    d.charAt(0).toUpperCase() + d.slice(1).toLowerCase()
+  )
+
+  return {
+    coldTextTemplate: dbSettings.sms_cold_template || '',
+    drip1Template: dripTemplates[0]?.body || '',
+    drip1DayOffset: dripTemplates[0]?.dayOffset ?? 0,
+    drip2Template: dripTemplates[1]?.body || '',
+    drip2DayOffset: dripTemplates[1]?.dayOffset ?? 2,
+    drip3Template: dripTemplates[2]?.body || '',
+    drip3DayOffset: dripTemplates[2]?.dayOffset ?? 5,
+    drip4Template: dripTemplates[3]?.body || '',
+    drip4DayOffset: dripTemplates[3]?.dayOffset ?? 8,
+    drip5Template: dripTemplates[4]?.body || '',
+    drip5DayOffset: dripTemplates[4]?.dayOffset ?? 12,
+    sendWindowStart: sendWindow.startHour ?? 9,
+    sendWindowEnd: sendWindow.endHour ?? 11,
+    sendDays: capitalizedDays,
+    dailyLimit: dbSettings.sms_daily_limit ?? 200,
+    messagesPerMinute: dbSettings.sms_throttle_per_minute ?? 10,
+    smsFromNumber: dbSettings.sms_from_number || '',
+  }
+}
+
+/**
+ * Convert UI settings (camelCase, flat fields) to DB settings (snake_case keys, compound JSON)
+ */
+function uiToDbSettings(uiSettings: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+
+  if ('coldTextTemplate' in uiSettings) {
+    result.sms_cold_template = uiSettings.coldTextTemplate
+  }
+
+  if ('smsFromNumber' in uiSettings) {
+    result.sms_from_number = uiSettings.smsFromNumber
+  }
+
+  if ('dailyLimit' in uiSettings) {
+    result.sms_daily_limit = uiSettings.dailyLimit
+  }
+
+  if ('messagesPerMinute' in uiSettings) {
+    result.sms_throttle_per_minute = uiSettings.messagesPerMinute
+  }
+
+  // Compose drip templates array from individual fields
+  if ('drip1Template' in uiSettings) {
+    result.sms_drip_templates = [1, 2, 3, 4, 5].map(n => ({
+      body: (uiSettings[`drip${n}Template`] as string) || '',
+      dayOffset: (uiSettings[`drip${n}DayOffset`] as number) ?? (n === 1 ? 0 : n === 2 ? 2 : n === 3 ? 5 : n === 4 ? 8 : 12),
+    }))
+  }
+
+  // Compose send window object from individual fields
+  if ('sendWindowStart' in uiSettings || 'sendWindowEnd' in uiSettings || 'sendDays' in uiSettings) {
+    const days = (uiSettings.sendDays as string[]) || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+    result.sms_send_window = {
+      startHour: (uiSettings.sendWindowStart as number) ?? 9,
+      endHour: (uiSettings.sendWindowEnd as number) ?? 11,
+      // Store days in lowercase to match backend expectations
+      days: days.map(d => d.toLowerCase()),
+    }
+  }
+
+  return result
+}
+
 // GET /api/campaigns/settings — Read SMS campaign settings
 export async function GET(request: NextRequest) {
   try {
@@ -29,14 +115,17 @@ export async function GET(request: NextRequest) {
       where: { key: { in: keys } },
     })
 
-    // Build response with defaults for missing keys
-    const result: Record<string, unknown> = {}
+    // Build DB-level result with defaults for missing keys
+    const dbResult: Record<string, unknown> = {}
     for (const key of keys) {
       const found = settings.find((s) => s.key === key)
-      result[key] = found ? found.value : SMS_SETTING_KEYS[key]
+      dbResult[key] = found ? found.value : SMS_SETTING_KEYS[key]
     }
 
-    return NextResponse.json({ settings: result })
+    // Translate to UI-expected shape
+    const uiResult = dbToUiSettings(dbResult)
+
+    return NextResponse.json({ settings: uiResult })
   } catch (error) {
     console.error('Error fetching campaign settings:', error)
     return NextResponse.json(
@@ -56,19 +145,23 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
+
+    // Translate UI camelCase keys to DB snake_case keys
+    const dbSettings = uiToDbSettings(body)
+
     const validKeys = Object.keys(SMS_SETTING_KEYS)
 
     // Filter to only valid SMS setting keys
     const updates: { key: string; value: unknown }[] = []
     for (const key of validKeys) {
-      if (key in body && body[key] !== undefined) {
-        updates.push({ key, value: body[key] })
+      if (key in dbSettings && dbSettings[key] !== undefined) {
+        updates.push({ key, value: dbSettings[key] })
       }
     }
 
     if (updates.length === 0) {
       return NextResponse.json(
-        { error: 'No valid settings provided. Valid keys: ' + validKeys.join(', ') },
+        { error: 'No valid settings provided' },
         { status: 400 }
       )
     }
@@ -84,18 +177,20 @@ export async function PUT(request: NextRequest) {
       )
     )
 
-    // Return updated settings
+    // Return updated settings in UI format
     const allSettings = await prisma.settings.findMany({
       where: { key: { in: validKeys } },
     })
 
-    const result: Record<string, unknown> = {}
+    const dbResult: Record<string, unknown> = {}
     for (const key of validKeys) {
       const found = allSettings.find((s) => s.key === key)
-      result[key] = found ? found.value : SMS_SETTING_KEYS[key]
+      dbResult[key] = found ? found.value : SMS_SETTING_KEYS[key]
     }
 
-    return NextResponse.json({ settings: result })
+    const uiResult = dbToUiSettings(dbResult)
+
+    return NextResponse.json({ settings: uiResult })
   } catch (error) {
     console.error('Error updating campaign settings:', error)
     return NextResponse.json(

@@ -402,13 +402,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ── SMS Campaign: Drip reply → HOT signal ──
+    // ── SMS Campaign: Reply → HOT signal ──
+    // Any reply from a campaign lead (cold text reply, click stage reply, or drip reply) = HOT signal
     if (lead) {
       try {
         const dripCampaignLead = await prisma.smsCampaignLead.findFirst({
           where: {
             leadId: lead.id,
-            funnelStage: { in: ['OPTED_IN', 'DRIP_ACTIVE'] },
+            funnelStage: { in: ['TEXTED', 'CLICKED', 'REP_CALLED', 'OPTED_IN', 'DRIP_ACTIVE'] },
           },
           include: { campaign: { select: { id: true, name: true } } },
         })
@@ -614,9 +615,11 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error('Twilio webhook error:', error)
-    return NextResponse.json(
-      { error: 'Webhook processing failed' },
-      { status: 500 }
+    // Always return 200 TwiML to Twilio — returning 500 causes Twilio retries
+    // which can lead to duplicate message processing
+    return new NextResponse(
+      '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+      { headers: { 'Content-Type': 'text/xml' } }
     )
   }
 }

@@ -34,6 +34,11 @@ export async function GET(request: NextRequest) {
 
         return {
           ...campaign,
+          // Map schema field names to UI-expected names
+          clickedCount: campaign.clickCount,
+          optedInCount: campaign.optInCount,
+          optedOutCount: campaign.optOutCount,
+          closedCount: campaign.closeCount,
           funnelBreakdown,
         }
       })

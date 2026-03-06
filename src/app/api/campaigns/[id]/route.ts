@@ -39,7 +39,17 @@ export async function GET(
       funnelBreakdown[row.funnelStage] = row._count.id
     }
 
-    return NextResponse.json({ campaign, funnelBreakdown })
+    return NextResponse.json({
+      campaign: {
+        ...campaign,
+        // Map schema field names to UI-expected names
+        clickedCount: campaign.clickCount,
+        optedInCount: campaign.optInCount,
+        optedOutCount: campaign.optOutCount,
+        closedCount: campaign.closeCount,
+      },
+      funnelBreakdown,
+    })
   } catch (error) {
     console.error('Error fetching campaign:', error)
     return NextResponse.json(
@@ -88,7 +98,15 @@ export async function PUT(
       })
     }
 
-    return NextResponse.json({ campaign: updatedCampaign })
+    return NextResponse.json({
+      campaign: {
+        ...updatedCampaign,
+        clickedCount: updatedCampaign.clickCount,
+        optedInCount: updatedCampaign.optInCount,
+        optedOutCount: updatedCampaign.optOutCount,
+        closedCount: updatedCampaign.closeCount,
+      },
+    })
   } catch (error) {
     console.error('Error updating campaign:', error)
     return NextResponse.json(

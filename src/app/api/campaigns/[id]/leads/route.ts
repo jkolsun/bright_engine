@@ -35,7 +35,7 @@ export async function GET(
       where.funnelStage = stage
     }
 
-    const [campaignLeads, total] = await Promise.all([
+    const [campaignLeads, total, stageCounts] = await Promise.all([
       prisma.smsCampaignLead.findMany({
         where,
         include: {
@@ -60,15 +60,55 @@ export async function GET(
         skip,
       }),
       prisma.smsCampaignLead.count({ where }),
+      prisma.smsCampaignLead.groupBy({
+        by: ['funnelStage'],
+        where: { campaignId },
+        _count: { id: true },
+      }),
     ])
 
     const totalPages = Math.ceil(total / limit)
 
+    // Build funnelCounts map: { QUEUED: 5, TEXTED: 12, ... }
+    const funnelCounts: Record<string, number> = {}
+    for (const row of stageCounts) {
+      funnelCounts[row.funnelStage] = row._count.id
+    }
+
+    // Look up rep names for assigned leads
+    const repIds = [...new Set(campaignLeads.map(cl => cl.assignedRepId).filter(Boolean))] as string[]
+    const repMap: Record<string, string> = {}
+    if (repIds.length > 0) {
+      const reps = await prisma.user.findMany({
+        where: { id: { in: repIds } },
+        select: { id: true, name: true },
+      })
+      for (const r of reps) {
+        repMap[r.id] = r.name || ''
+      }
+    }
+
+    // Flatten nested lead data to match UI CampaignLead interface
+    const flatLeads = campaignLeads.map(cl => ({
+      id: cl.id,
+      leadId: cl.leadId,
+      companyName: cl.lead.companyName || '',
+      firstName: cl.lead.firstName || '',
+      lastName: cl.lead.lastName || '',
+      phone: cl.lead.phone || '',
+      city: cl.lead.city || '',
+      state: cl.lead.state || '',
+      stage: cl.funnelStage,
+      lastActivityAt: cl.updatedAt.toISOString(),
+      repName: cl.assignedRepId ? (repMap[cl.assignedRepId] || '') : '',
+    }))
+
     return NextResponse.json({
-      leads: campaignLeads,
+      leads: flatLeads,
       total,
       page,
       totalPages,
+      funnelCounts,
     })
   } catch (error) {
     console.error('Error fetching campaign leads:', error)

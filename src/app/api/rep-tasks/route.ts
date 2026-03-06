@@ -27,9 +27,20 @@ export async function GET(request: NextRequest) {
     const tasks = await prisma.repTask.findMany({
       where,
       include: { lead: { select: { id: true, firstName: true, lastName: true, companyName: true, phone: true, status: true } } },
-      orderBy: [{ priority: 'asc' }, { dueAt: 'asc' }],
+      orderBy: [{ dueAt: 'asc' }],
       take: 100,
     })
+
+    // Custom priority sort: URGENT first, then HIGH, then MEDIUM, then LOW
+    const PRIORITY_ORDER: Record<string, number> = { URGENT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
+    tasks.sort((a, b) => {
+      const aPri = PRIORITY_ORDER[a.priority] ?? 9
+      const bPri = PRIORITY_ORDER[b.priority] ?? 9
+      if (aPri !== bPri) return aPri - bPri
+      // Secondary sort by dueAt (already sorted by Prisma, stable sort preserves)
+      return 0
+    })
+
     return NextResponse.json({ tasks })
   } catch (error) {
     console.error('Error fetching rep tasks:', error)

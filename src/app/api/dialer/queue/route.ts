@@ -31,6 +31,50 @@ const BASE_SELECT = {
   _count: { select: { dialerCalls: true } },
 }
 
+/**
+ * Batch-enrich leads with SMS campaign data (avoids N+1 queries)
+ */
+async function enrichWithSmsCampaignData(leads: any[]): Promise<any[]> {
+  if (leads.length === 0) return leads
+  const leadIds = leads.map(l => l.id)
+
+  // Find the latest non-archived SmsCampaignLead for each lead
+  const campaignLeads = await prisma.smsCampaignLead.findMany({
+    where: {
+      leadId: { in: leadIds },
+      funnelStage: { notIn: ['ARCHIVED', 'OPTED_OUT'] },
+    },
+    include: { campaign: { select: { id: true, name: true } } },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  // Build a map: leadId → most recent SmsCampaignLead
+  const campaignLeadMap: Record<string, typeof campaignLeads[0]> = {}
+  for (const cl of campaignLeads) {
+    if (!campaignLeadMap[cl.leadId]) {
+      campaignLeadMap[cl.leadId] = cl
+    }
+  }
+
+  return leads.map(lead => {
+    const cl = campaignLeadMap[lead.id]
+    return {
+      ...lead,
+      smsCampaignLead: cl ? {
+        id: cl.id,
+        campaignId: cl.campaignId,
+        campaignName: cl.campaign.name,
+        funnelStage: cl.funnelStage,
+        coldTextSentAt: cl.coldTextSentAt?.toISOString() || null,
+        previewClickedAt: cl.previewClickedAt?.toISOString() || null,
+        optedInAt: cl.optedInAt?.toISOString() || null,
+        dripCurrentStep: cl.dripCurrentStep,
+        assignedRepId: cl.assignedRepId,
+      } : null,
+    }
+  })
+}
+
 export async function GET(request: NextRequest) {
   try {
     const sessionCookie = request.cookies.get('session')?.value
@@ -89,7 +133,8 @@ export async function GET(request: NextRequest) {
         })
       }
 
-      return NextResponse.json({ leads, hasMore: totalCount > 500, totalCount })
+      const enrichedLeads = await enrichWithSmsCampaignData(leads)
+      return NextResponse.json({ leads: enrichedLeads, hasMore: totalCount > 500, totalCount })
     }
 
     // --- RETRY: No Answer / Voicemail with cooldown + max 3 attempts ---
@@ -136,7 +181,8 @@ export async function GET(request: NextRequest) {
 
       // Strip dialerCalls from response to match QueueLead shape
       const cleanLeads = retryLeads.map(({ dialerCalls, ...lead }) => lead)
-      return NextResponse.json({ leads: cleanLeads.slice(0, 500), hasMore: cleanLeads.length > 500, totalCount: cleanLeads.length })
+      const enrichedRetry = await enrichWithSmsCampaignData(cleanLeads.slice(0, 500))
+      return NextResponse.json({ leads: enrichedRetry, hasMore: cleanLeads.length > 500, totalCount: cleanLeads.length })
     }
 
     // --- CALLED: terminal disposition leads ---
@@ -176,7 +222,8 @@ export async function GET(request: NextRequest) {
         ...lead,
         lastDisposition: dialerCalls[0]?.dispositionResult || null,
       }))
-      return NextResponse.json({ leads: cleanLeads.slice(0, 500), hasMore: cleanLeads.length > 500, totalCount: cleanLeads.length })
+      const enrichedCalled = await enrichWithSmsCampaignData(cleanLeads.slice(0, 500))
+      return NextResponse.json({ leads: enrichedCalled, hasMore: cleanLeads.length > 500, totalCount: cleanLeads.length })
     }
 
     // --- DEFAULT (no tab) — all leads (original behavior) ---
@@ -210,7 +257,8 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({ leads, hasMore: totalCount > 500, totalCount })
+    const enrichedDefault = await enrichWithSmsCampaignData(leads)
+    return NextResponse.json({ leads: enrichedDefault, hasMore: totalCount > 500, totalCount })
   } catch (error) {
     console.error('[Dialer Queue API] GET error:', error)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

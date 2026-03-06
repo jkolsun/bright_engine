@@ -42,13 +42,14 @@ export async function POST(request: NextRequest) {
     // Update SmsCampaignMessage if this is a campaign message
     const campaignMessage = await prisma.smsCampaignMessage.findFirst({
       where: { twilioSid: messageSid },
-      select: { id: true, campaignId: true, campaignLeadId: true, leadId: true },
+      select: { id: true, campaignId: true, campaignLeadId: true, leadId: true, twilioStatus: true },
     })
 
     if (campaignMessage) {
       const now = new Date()
       const isDelivered = messageStatus === 'delivered'
       const isFailed = messageStatus === 'failed' || messageStatus === 'undelivered'
+      const prevStatus = campaignMessage.twilioStatus
 
       // Update SmsCampaignMessage timestamps
       await prisma.smsCampaignMessage.update({
@@ -71,21 +72,25 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // Update SmsCampaign counters
-      if (isDelivered) {
-        await prisma.smsCampaign.update({
-          where: { id: campaignMessage.campaignId },
-          data: { deliveredCount: { increment: 1 } },
-        })
-      } else if (isFailed) {
-        await prisma.smsCampaign.update({
-          where: { id: campaignMessage.campaignId },
-          data: { failedCount: { increment: 1 } },
-        })
+      // Idempotent counter updates — only increment if the status actually changed
+      // Prevents double-counting from Twilio retries or duplicate callbacks
+      const alreadyCounted = prevStatus === 'delivered' || prevStatus === 'failed' || prevStatus === 'undelivered'
+      if (!alreadyCounted) {
+        if (isDelivered) {
+          await prisma.smsCampaign.update({
+            where: { id: campaignMessage.campaignId },
+            data: { deliveredCount: { increment: 1 } },
+          })
+        } else if (isFailed) {
+          await prisma.smsCampaign.update({
+            where: { id: campaignMessage.campaignId },
+            data: { failedCount: { increment: 1 } },
+          })
+        }
       }
 
-      // Create LeadEvent
-      if (campaignMessage.leadId && (isDelivered || isFailed)) {
+      // Create LeadEvent (also idempotent — only on first terminal status)
+      if (!alreadyCounted && campaignMessage.leadId && (isDelivered || isFailed)) {
         await prisma.leadEvent.create({
           data: {
             leadId: campaignMessage.leadId,

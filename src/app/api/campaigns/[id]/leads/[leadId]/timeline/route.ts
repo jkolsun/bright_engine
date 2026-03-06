@@ -20,7 +20,16 @@ export async function GET(
 
     const timeline = await buildTimeline(campaignId, leadId)
 
-    return NextResponse.json({ timeline })
+    // Map to UI TimelineEvent interface: { id, type, title, description?, createdAt }
+    const events = timeline.map((entry, i) => ({
+      id: `tl-${i}`,
+      type: entry.type,
+      title: entry.title,
+      description: entry.description || undefined,
+      createdAt: entry.timestamp.toISOString(),
+    }))
+
+    return NextResponse.json({ events })
   } catch (error) {
     console.error('Error building timeline:', error)
     return NextResponse.json(
