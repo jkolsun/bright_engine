@@ -64,11 +64,27 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, templateBody, fromNumber, leadIds } = body
+    const { name, templateBody, fromNumber, folderId } = body
+    let { leadIds } = body
+
+    // Resolve folderId to leadIds if no explicit leadIds provided
+    if (folderId && (!leadIds || !Array.isArray(leadIds) || leadIds.length === 0)) {
+      const folderLeads = await prisma.lead.findMany({
+        where: {
+          folderId,
+          dncAt: null,
+          smsOptedOutAt: null,
+          previewUrl: { not: null },
+          status: { notIn: ['CLOSED_LOST', 'DO_NOT_CONTACT', 'PAID'] },
+        },
+        select: { id: true },
+      })
+      leadIds = [...new Set(folderLeads.map(l => l.id))]
+    }
 
     if (!name || !templateBody || !leadIds || !Array.isArray(leadIds) || leadIds.length === 0) {
       return NextResponse.json(
-        { error: 'name, templateBody, and leadIds (non-empty array) are required' },
+        { error: folderId ? 'No eligible leads found in that folder' : 'name, templateBody, and leadIds (non-empty array) are required' },
         { status: 400 }
       )
     }
