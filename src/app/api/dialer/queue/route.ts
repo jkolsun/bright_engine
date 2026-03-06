@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
         dialerCalls: { none: { direction: 'OUTBOUND' } },
       }
 
-      const [leads, totalCount] = await Promise.all([
+      const [leads, totalCount, smsClickerTaskLeadIds] = await Promise.all([
         prisma.lead.findMany({
           where: whereClause,
           select: BASE_SELECT,
@@ -69,7 +69,25 @@ export async function GET(request: NextRequest) {
           take: 500,
         }),
         prisma.lead.count({ where: whereClause }),
+        // Fetch lead IDs that have pending SMS_CLICKER_CALL tasks for priority boosting
+        prisma.repTask.findMany({
+          where: {
+            repId: targetRepId,
+            taskType: 'SMS_CLICKER_CALL',
+            status: 'PENDING',
+          },
+          select: { leadId: true },
+        }).then(tasks => new Set(tasks.map(t => t.leadId))),
       ])
+
+      // Priority boost: SMS_CLICKER_CALL leads go to the top
+      if (smsClickerTaskLeadIds.size > 0) {
+        leads.sort((a, b) => {
+          const aIsClicker = smsClickerTaskLeadIds.has(a.id) ? 1 : 0
+          const bIsClicker = smsClickerTaskLeadIds.has(b.id) ? 1 : 0
+          return bIsClicker - aIsClicker // Clicker leads first
+        })
+      }
 
       return NextResponse.json({ leads, hasMore: totalCount > 500, totalCount })
     }
@@ -164,7 +182,7 @@ export async function GET(request: NextRequest) {
     // --- DEFAULT (no tab) — all leads (original behavior) ---
     const whereClause = baseWhere
 
-    const [leads, totalCount] = await Promise.all([
+    const [leads, totalCount, defaultSmsClickerIds] = await Promise.all([
       prisma.lead.findMany({
         where: whereClause,
         select: BASE_SELECT,
@@ -172,7 +190,25 @@ export async function GET(request: NextRequest) {
         take: 500,
       }),
       prisma.lead.count({ where: whereClause }),
+      // Fetch lead IDs that have pending SMS_CLICKER_CALL tasks for priority boosting
+      prisma.repTask.findMany({
+        where: {
+          repId: targetRepId,
+          taskType: 'SMS_CLICKER_CALL',
+          status: 'PENDING',
+        },
+        select: { leadId: true },
+      }).then(tasks => new Set(tasks.map(t => t.leadId))),
     ])
+
+    // Priority boost: SMS_CLICKER_CALL leads go to the top
+    if (defaultSmsClickerIds.size > 0) {
+      leads.sort((a, b) => {
+        const aIsClicker = defaultSmsClickerIds.has(a.id) ? 1 : 0
+        const bIsClicker = defaultSmsClickerIds.has(b.id) ? 1 : 0
+        return bIsClicker - aIsClicker
+      })
+    }
 
     return NextResponse.json({ leads, hasMore: totalCount > 500, totalCount })
   } catch (error) {

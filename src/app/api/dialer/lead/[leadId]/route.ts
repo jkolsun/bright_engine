@@ -44,7 +44,32 @@ export async function GET(
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ lead })
+    // Include SMS campaign data
+    const smsCampaignLead = await prisma.smsCampaignLead.findFirst({
+      where: {
+        leadId: lead.id,
+        funnelStage: { notIn: ['ARCHIVED', 'OPTED_OUT'] },
+      },
+      include: { campaign: { select: { id: true, name: true } } },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    return NextResponse.json({
+      lead: {
+        ...lead,
+        smsCampaignLead: smsCampaignLead ? {
+          id: smsCampaignLead.id,
+          campaignId: smsCampaignLead.campaignId,
+          campaignName: smsCampaignLead.campaign.name,
+          funnelStage: smsCampaignLead.funnelStage,
+          coldTextSentAt: smsCampaignLead.coldTextSentAt?.toISOString(),
+          previewClickedAt: smsCampaignLead.previewClickedAt?.toISOString(),
+          optedInAt: smsCampaignLead.optedInAt?.toISOString(),
+          dripCurrentStep: smsCampaignLead.dripCurrentStep,
+          assignedRepId: smsCampaignLead.assignedRepId,
+        } : null,
+      },
+    })
   } catch (error) {
     console.error('[Dialer Lead] Error:', error)
     return NextResponse.json({ error: 'Failed to fetch lead' }, { status: 500 })

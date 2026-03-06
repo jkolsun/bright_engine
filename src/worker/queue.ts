@@ -93,6 +93,7 @@ let sequenceQueue: Queue | null = null
 let importQueue: Queue | null = null
 let scraperQueue: Queue | null = null
 let monitoringQueue: Queue | null = null
+let smsCampaignQueue: Queue | null = null
 
 let enrichmentEvents: QueueEvents | null = null
 let previewEvents: QueueEvents | null = null
@@ -167,6 +168,10 @@ async function getQueues() {
     // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
     monitoringEvents = new QueueEvents('monitoring', { connection })
   }
+  if (!smsCampaignQueue && connection) {
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    smsCampaignQueue = new Queue('sms-campaign', { connection })
+  }
 }
 
 // Export getters instead of direct references
@@ -213,6 +218,11 @@ export async function getScraperQueue() {
 export async function getMonitoringQueue() {
   await getQueues()
   return monitoringQueue
+}
+
+export async function getSmsCampaignQueue() {
+  await getQueues()
+  return smsCampaignQueue
 }
 
 export async function getEnrichmentEvents() {
@@ -814,6 +824,57 @@ export async function addScraperJob(data: {
     )
   } catch (err) {
     console.warn('Failed to add scraper job:', err)
+    return null
+  }
+}
+
+export async function addSmsCampaignJob(
+  type: string,
+  data: any,
+  opts?: { delay?: number }
+) {
+  const queue = await getSmsCampaignQueue()
+  if (!queue) {
+    console.warn('[QUEUE] SMS campaign queue unavailable, skipping job:', type)
+    return null
+  }
+
+  try {
+    return await queue.add(
+      type,
+      data,
+      {
+        delay: opts?.delay,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: true,
+      }
+    )
+  } catch (err) {
+    console.warn('[QUEUE] Failed to add SMS campaign job:', err)
+    return null
+  }
+}
+
+export async function scheduleDripCheck() {
+  const queue = await getSmsCampaignQueue()
+  if (!queue) {
+    console.warn('[QUEUE] SMS campaign queue unavailable, skipping drip check schedule')
+    return null
+  }
+
+  try {
+    return await queue.add(
+      'drip-check',
+      {},
+      {
+        repeat: {
+          every: 6 * 60 * 60 * 1000, // Every 6 hours
+        },
+      }
+    )
+  } catch (err) {
+    console.warn('[QUEUE] Failed to schedule drip check:', err)
     return null
   }
 }

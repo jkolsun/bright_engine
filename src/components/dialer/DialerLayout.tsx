@@ -12,6 +12,45 @@ import { PanelLeftOpen, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+function HotLeadToast() {
+  const { hotLeadNotification, dismissHotLeadNotification, queue, dial } = useDialer()
+  if (!hotLeadNotification) return null
+
+  const handleCallNow = () => {
+    queue.setSelectedLeadId(hotLeadNotification.leadId)
+    dismissHotLeadNotification()
+  }
+
+  return (
+    <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 max-w-sm">
+      <div className="bg-orange-50 dark:bg-orange-950/80 border-2 border-orange-400 dark:border-orange-600 rounded-xl p-4 shadow-lg">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl flex-shrink-0">🔥</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-orange-900 dark:text-orange-200">
+              {hotLeadNotification.companyName} just clicked their preview!
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                onClick={handleCallNow}
+                className="px-3 py-1.5 bg-orange-600 text-white text-xs font-semibold rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                Call Now
+              </button>
+              <button
+                onClick={dismissHotLeadNotification}
+                className="px-3 py-1.5 text-orange-600 dark:text-orange-400 text-xs font-medium hover:text-orange-800 transition-colors"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function DialerContent() {
   const { session, queue } = useDialer()
   const [queueCollapsed, setQueueCollapsed] = useState(false)
@@ -111,6 +150,7 @@ export default function DialerLayout() {
         </Link>
       </div>
       <DialerContent />
+      <HotLeadToast />
     </div>
   )
 }

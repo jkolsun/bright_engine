@@ -293,6 +293,53 @@ export async function POST(request: NextRequest) {
           },
         })
         console.log(`[Twilio] Auto-DNC: Lead ${lead.id} sent STOP keyword`)
+
+        // ── SMS Campaign STOP handling ──
+        try {
+          const activeCampaignLeads = await prisma.smsCampaignLead.findMany({
+            where: {
+              leadId: lead.id,
+              funnelStage: { notIn: ['OPTED_OUT', 'ARCHIVED', 'CLOSED'] },
+            },
+            select: { id: true, campaignId: true },
+          })
+
+          for (const cl of activeCampaignLeads) {
+            await prisma.smsCampaignLead.update({
+              where: { id: cl.id },
+              data: {
+                funnelStage: 'OPTED_OUT',
+                archivedAt: new Date(),
+                archiveReason: 'opted_out',
+              },
+            })
+            await prisma.smsCampaign.update({
+              where: { id: cl.campaignId },
+              data: { optOutCount: { increment: 1 } },
+            })
+          }
+
+          if (activeCampaignLeads.length > 0) {
+            await prisma.lead.update({
+              where: { id: lead.id },
+              data: { smsOptedOutAt: new Date() },
+            })
+
+            await prisma.leadEvent.create({
+              data: {
+                leadId: lead.id,
+                eventType: 'SMS_OPT_OUT',
+                metadata: {
+                  campaignIds: activeCampaignLeads.map(cl => cl.campaignId),
+                  keyword: body.trim().toUpperCase(),
+                },
+                actor: 'lead',
+              },
+            })
+          }
+        } catch (stopErr) {
+          console.error('[SMS-CAMPAIGN] Error handling STOP for campaign leads:', stopErr)
+        }
       }
       return new NextResponse(
         '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
@@ -353,6 +400,97 @@ export async function POST(request: NextRequest) {
         '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
         { headers: { 'Content-Type': 'text/xml' } }
       )
+    }
+
+    // ── SMS Campaign: Drip reply → HOT signal ──
+    if (lead) {
+      try {
+        const dripCampaignLead = await prisma.smsCampaignLead.findFirst({
+          where: {
+            leadId: lead.id,
+            funnelStage: { in: ['OPTED_IN', 'DRIP_ACTIVE'] },
+          },
+          include: { campaign: { select: { id: true, name: true } } },
+        })
+
+        if (dripCampaignLead) {
+          // Any reply during drip = HOT signal
+          await prisma.smsCampaignLead.update({
+            where: { id: dripCampaignLead.id },
+            data: { funnelStage: 'HOT' },
+          })
+
+          await prisma.lead.update({
+            where: { id: lead.id },
+            data: { smsFunnelStage: 'HOT', priority: 'HOT' },
+          })
+
+          // Create RepTask
+          const repId = dripCampaignLead.assignedRepId || lead.assignedToId
+          if (repId) {
+            await prisma.repTask.create({
+              data: {
+                leadId: lead.id,
+                repId,
+                taskType: 'DRIP_HOT_SIGNAL',
+                priority: 'URGENT',
+                status: 'PENDING',
+                dueAt: new Date(),
+                notes: `Lead replied during drip sequence (campaign: "${dripCampaignLead.campaign.name}"): "${body.slice(0, 200)}"`,
+              },
+            })
+
+            // SSE: push HOT_LEAD to rep
+            try {
+              const { pushToRep, pushToAllAdmins } = await import('@/lib/dialer-events')
+              const sseEvent = {
+                type: 'HOT_LEAD' as const,
+                data: {
+                  leadId: lead.id,
+                  companyName: lead.companyName,
+                  phone: lead.phone,
+                  campaignName: dripCampaignLead.campaign.name,
+                  replyText: body.slice(0, 200),
+                  repliedAt: new Date().toISOString(),
+                },
+                timestamp: new Date().toISOString(),
+              }
+              pushToRep(repId, sseEvent)
+              pushToAllAdmins(sseEvent)
+            } catch (sseErr) {
+              console.warn('[SMS-CAMPAIGN] SSE push failed:', sseErr)
+            }
+          }
+
+          // Create LeadEvent
+          await prisma.leadEvent.create({
+            data: {
+              leadId: lead.id,
+              eventType: 'SMS_DRIP_REPLY',
+              metadata: {
+                campaignId: dripCampaignLead.campaignId,
+                replyText: body.slice(0, 500),
+              },
+              actor: 'lead',
+            },
+          })
+
+          // Create SmsCampaignMessage for the inbound reply
+          await prisma.smsCampaignMessage.create({
+            data: {
+              campaignId: dripCampaignLead.campaignId,
+              campaignLeadId: dripCampaignLead.id,
+              leadId: lead.id,
+              messageType: 'INBOUND_REPLY',
+              content: body,
+              direction: 'INBOUND',
+              sentAt: new Date(),
+            },
+          })
+        }
+      } catch (dripErr) {
+        console.error('[SMS-CAMPAIGN] Error handling drip reply:', dripErr)
+      }
     }
 
     // ── CLOSE ENGINE HANDLER (with SmartChat message batching) ──

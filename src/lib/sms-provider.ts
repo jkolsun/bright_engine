@@ -24,6 +24,7 @@ export interface SMSSendOptions {
   aiDelaySeconds?: number
   conversationType?: string // 'pre_client' | 'post_client'
   aiDecisionLog?: Record<string, unknown>
+  statusCallback?: string
 }
 
 export interface SMSSendResult {

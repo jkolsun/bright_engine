@@ -58,6 +58,9 @@ interface DialerContextValue {
   isViewingRecentLead: boolean
   showRecentLeadBanner: boolean
   recentCallId: string | null
+  // Hot lead notification
+  hotLeadNotification: { leadId: string; companyName: string } | null
+  dismissHotLeadNotification: () => void
 }
 
 const DialerContext = createContext<DialerContextValue | null>(null)
@@ -107,6 +110,10 @@ export function DialerProvider({ children }: { children: ReactNode }) {
 
   const queueRef = useRef(queue)
   useEffect(() => { queueRef.current = queue }, [queue])
+
+  // HOT_LEAD notification state
+  const [hotLeadNotification, setHotLeadNotification] = useState<{ leadId: string; companyName: string } | null>(null)
+  const hotLeadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Recent-lead computed flags
   const isViewingRecentLead = useMemo(
@@ -310,6 +317,36 @@ export function DialerProvider({ children }: { children: ReactNode }) {
     })
     return unsub
   }, [])  // Empty deps — subscribe once on mount, use refs for state
+
+  const dismissHotLeadNotification = useCallback(() => {
+    setHotLeadNotification(null)
+    if (hotLeadTimerRef.current) {
+      clearTimeout(hotLeadTimerRef.current)
+      hotLeadTimerRef.current = null
+    }
+  }, [])
+
+  // SSE listener for HOT_LEAD events — show toast when SMS campaign lead clicks preview
+  useEffect(() => {
+    const unsub = sse.on('HOT_LEAD', (data: any) => {
+      console.log('[DialerProvider] HOT_LEAD received:', data.leadId, data.companyName)
+      setHotLeadNotification({ leadId: data.leadId, companyName: data.companyName || 'Unknown' })
+
+      // Auto-dismiss after 30 seconds
+      if (hotLeadTimerRef.current) clearTimeout(hotLeadTimerRef.current)
+      hotLeadTimerRef.current = setTimeout(() => {
+        setHotLeadNotification(null)
+      }, 30000)
+    })
+    return unsub
+  }, [])  // Empty deps — subscribe once on mount
+
+  // Cleanup hot lead timer on unmount
+  useEffect(() => {
+    return () => {
+      if (hotLeadTimerRef.current) clearTimeout(hotLeadTimerRef.current)
+    }
+  }, [])
 
   // Get next lead to dial from queue (Fresh first, then Retry)
   const getNextLeadToDial = useCallback(() => {
@@ -823,6 +860,7 @@ export function DialerProvider({ children }: { children: ReactNode }) {
       autoDialState, autoDialBanner, bannerUrgent, handleAutoDialNext, handleSwapToNewCall, endSessionFull, activeCallerId,
       manualDialState, startManualDial, linkManualDial, createLeadFromManualDialFn,
       isViewingRecentLead, showRecentLeadBanner, recentCallId,
+      hotLeadNotification, dismissHotLeadNotification,
     }}>
       {children}
     </DialerContext.Provider>

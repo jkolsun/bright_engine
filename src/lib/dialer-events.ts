@@ -15,6 +15,7 @@ export type DialerEventType =
   | 'SESSION_UPDATE'
   | 'VM_DROP_COMPLETE'
   | 'DISPOSITION_LOGGED'
+  | 'HOT_LEAD'
 
 export interface DialerEvent {
   type: DialerEventType

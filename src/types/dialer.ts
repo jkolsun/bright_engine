@@ -71,6 +71,17 @@ export interface QueueLead {
   previewId?: string
   previewUrl?: string
   _count?: { dialerCalls: number }
+  smsCampaignLead?: {
+    id: string
+    campaignId: string
+    campaignName?: string
+    funnelStage: string
+    coldTextSentAt?: string
+    previewClickedAt?: string
+    optedInAt?: string
+    dripCurrentStep: number
+    assignedRepId?: string
+  }
 }
 
 export interface CallbackItem {
@@ -98,7 +109,7 @@ export interface Recommendation {
 }
 
 export interface SSEEvent {
-  type: 'CALL_STATUS' | 'PREVIEW_SENT' | 'PREVIEW_OPENED' | 'CTA_CLICKED' | 'RECOMMENDATION_UPDATE' | 'QUEUE_UPDATE' | 'INBOUND_CALL' | 'SESSION_UPDATE' | 'VM_DROP_COMPLETE' | 'DISPOSITION_LOGGED'
+  type: 'CALL_STATUS' | 'PREVIEW_SENT' | 'PREVIEW_OPENED' | 'CTA_CLICKED' | 'RECOMMENDATION_UPDATE' | 'QUEUE_UPDATE' | 'INBOUND_CALL' | 'SESSION_UPDATE' | 'VM_DROP_COMPLETE' | 'DISPOSITION_LOGGED' | 'HOT_LEAD'
   data: Record<string, unknown>
   timestamp: string
 }

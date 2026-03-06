@@ -112,6 +112,83 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ── SMS Campaign CTA Click Tracking ──
+    // If this lead came from an SMS campaign, update funnel stage to CTA_CLICKED
+    try {
+      const smsCampaignLead = await prisma.smsCampaignLead.findFirst({
+        where: {
+          leadId: lead.id,
+          funnelStage: { in: ['TEXTED', 'CLICKED'] },
+        },
+        include: { campaign: { select: { id: true, name: true } } },
+      })
+
+      if (smsCampaignLead) {
+        // Update SmsCampaignLead — CTA click counts as a CLICKED event
+        await prisma.smsCampaignLead.update({
+          where: { id: smsCampaignLead.id },
+          data: {
+            funnelStage: 'CLICKED',
+            previewClickedAt: smsCampaignLead.funnelStage === 'TEXTED' ? new Date() : undefined,
+            previewClickCount: { increment: 1 },
+          },
+        })
+
+        // Update Lead funnel stage
+        await prisma.lead.update({
+          where: { id: lead.id },
+          data: { smsFunnelStage: 'CLICKED', priority: 'HOT' },
+        })
+
+        // Increment SmsCampaign click count
+        await prisma.smsCampaign.update({
+          where: { id: smsCampaignLead.campaignId },
+          data: { clickCount: { increment: 1 } },
+        })
+
+        // Create LeadEvent for CTA click from SMS campaign
+        await prisma.leadEvent.create({
+          data: {
+            leadId: lead.id,
+            eventType: 'SMS_CLICKED',
+            metadata: {
+              campaignId: smsCampaignLead.campaignId,
+              campaignName: smsCampaignLead.campaign.name,
+              source: 'sms_campaign',
+              selectedTemplate: selectedTemplate || null,
+            },
+            actor: 'system',
+          },
+        })
+
+        // SSE: notify rep and admins about CTA click escalation
+        if (smsCampaignLead.assignedRepId) {
+          try {
+            const sseEvent = {
+              type: 'HOT_LEAD' as const,
+              data: {
+                leadId: lead.id,
+                companyName: lead.companyName,
+                phone: lead.phone,
+                city: lead.city,
+                state: lead.state,
+                campaignName: smsCampaignLead.campaign.name,
+                action: 'CTA_CLICKED',
+                clickedAt: new Date().toISOString(),
+              },
+              timestamp: new Date().toISOString(),
+            }
+            pushToRep(smsCampaignLead.assignedRepId, sseEvent)
+            pushToAllAdmins(sseEvent)
+          } catch (sseErr) {
+            console.warn('[SMS-CTA] SSE push failed:', sseErr)
+          }
+        }
+      }
+    } catch (smsErr) {
+      console.error('[SMS-CTA] Error processing SMS campaign CTA click:', smsErr)
+    }
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('[Preview CTA] Error:', error)

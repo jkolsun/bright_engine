@@ -9,6 +9,7 @@ import {
   UserCircle,
   DollarSign,
   MessageSquare,
+  Send,
   Settings,
   LogOut,
   Upload,
@@ -127,6 +128,9 @@ function AdminLayoutInner({
           </NavLink>
           <NavLink href="/admin/messages" icon={<MessageSquare size={20} />}>
             Messages
+          </NavLink>
+          <NavLink href="/admin/campaigns" icon={<Send size={20} />}>
+            Campaigns
           </NavLink>
           <NavLink href="/admin/approvals" icon={<ShieldCheck size={20} />} badge={pendingApprovals}>
             Approvals

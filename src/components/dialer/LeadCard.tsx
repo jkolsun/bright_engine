@@ -232,6 +232,22 @@ function ManualCallPanel() {
   )
 }
 
+const getFunnelStageColor = (stage: string): string => {
+  switch (stage) {
+    case 'QUEUED': return 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'
+    case 'TEXTED': return 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400'
+    case 'CLICKED': return 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400'
+    case 'REP_CALLED': return 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400'
+    case 'OPTED_IN': return 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
+    case 'DRIP_ACTIVE': return 'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400'
+    case 'HOT': return 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'
+    case 'CLOSED': return 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400'
+    case 'OPTED_OUT': return 'bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400'
+    case 'ARCHIVED': return 'bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400'
+    default: return 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'
+  }
+}
+
 export function LeadCard() {
   const { queue, currentCall, manualDialState, isViewingRecentLead, recentCallId, showRecentLeadBanner } = useDialer()
   const lead = queue.selectedLead
@@ -284,6 +300,72 @@ export function LeadCard() {
         )}
         <LeadInfo lead={lead} />
         <QuickStats lead={lead} />
+
+        {/* SMS Campaign Timeline */}
+        {lead.smsCampaignLead && (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-200/80 dark:border-slate-700 shadow-sm p-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">SMS Funnel Timeline</p>
+              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getFunnelStageColor(lead.smsCampaignLead.funnelStage)}`}>
+                {lead.smsCampaignLead.funnelStage.replace(/_/g, ' ')}
+              </span>
+            </div>
+            <div className="space-y-1.5 text-sm text-gray-600 dark:text-gray-400">
+              {lead.smsCampaignLead.coldTextSentAt && (
+                <p>📤 Text sent: {new Date(lead.smsCampaignLead.coldTextSentAt).toLocaleString()}</p>
+              )}
+              {lead.smsCampaignLead.previewClickedAt && (
+                <p>👁️ Preview clicked: {new Date(lead.smsCampaignLead.previewClickedAt).toLocaleString()}</p>
+              )}
+              {lead.smsCampaignLead.optedInAt && (
+                <p>✅ Opted in: {new Date(lead.smsCampaignLead.optedInAt).toLocaleString()}</p>
+              )}
+              {lead.smsCampaignLead.dripCurrentStep > 0 && (
+                <p>📤 Drip step: {lead.smsCampaignLead.dripCurrentStep} / 5</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-slate-800">
+              {['CLICKED', 'REP_CALLED'].includes(lead.smsCampaignLead.funnelStage) && (
+                <button
+                  onClick={async () => {
+                    try {
+                      await fetch(`/api/campaigns/${lead.smsCampaignLead!.campaignId}/opt-in`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ campaignLeadId: lead.smsCampaignLead!.id, method: 'verbal_rep_call' }),
+                      })
+                      queue.refresh()
+                    } catch (err) {
+                      console.error('[LeadCard] Mark opted in failed:', err)
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  ✅ Mark Opted In
+                </button>
+              )}
+              {!['OPTED_OUT', 'ARCHIVED', 'CLOSED'].includes(lead.smsCampaignLead.funnelStage) && (
+                <button
+                  onClick={async () => {
+                    try {
+                      await fetch(`/api/campaigns/lead/${lead.smsCampaignLead!.id}/archive`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ funnelStage: 'ARCHIVED' }),
+                      })
+                      queue.refresh()
+                    } catch (err) {
+                      console.error('[LeadCard] Not interested failed:', err)
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-gray-500 text-white text-sm rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Not Interested
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Last Call summary — shows when lead has previous calls */}
         {lastCall && (

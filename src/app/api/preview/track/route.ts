@@ -7,7 +7,7 @@ import { pushToRep, pushToAllAdmins } from '@/lib/dialer-events'
 export const dynamic = 'force-dynamic'
 
 // BUG NEW-L8: Bot user-agent detection — filter out crawlers/bots from analytics
-const BOT_UA_REGEX = /bot|crawl|spider|slurp|mediapartners|facebookexternalhit|bingpreview|linkedinbot|twitterbot|whatsapp|telegram|preview|headless|phantom|puppeteer|lighthouse|pagespeed|gtmetrix|pingdom|uptimerobot/i
+const BOT_UA_REGEX = /bot|crawl|spider|slurp|mediapartners|facebookexternalhit|bingpreview|linkedinbot|twitterbot|whatsapp|telegram|preview|headless|phantom|puppeteer|lighthouse|pagespeed|gtmetrix|pingdom|uptimerobot|t-mobile|tmobile|verizon|att\.net|sprint|vodafone|linkpreview/i
 
 // In-memory rate limiter: max 100 events per IP per hour
 const ipCounts = new Map<string, { count: number; resetAt: number }>()
@@ -196,6 +196,138 @@ export async function POST(request: NextRequest) {
         ))
       } catch (hotLeadErr) {
         console.warn('[Preview Track] Hot lead promotion failed:', hotLeadErr)
+      }
+    }
+
+    // ── SMS Campaign Click Tracking ──
+    // If this lead has an active SMS campaign with funnelStage TEXTED,
+    // this click means they opened the preview link from the cold text
+    if (lead && event === 'page_view') {
+      try {
+        const smsCampaignLead = await prisma.smsCampaignLead.findFirst({
+          where: {
+            leadId: lead.id,
+            funnelStage: { in: ['TEXTED', 'CLICKED'] },
+          },
+          include: { campaign: { select: { id: true, name: true } } },
+        })
+
+        if (smsCampaignLead) {
+          if (smsCampaignLead.funnelStage === 'TEXTED') {
+            // First click — transition to CLICKED
+            await prisma.smsCampaignLead.update({
+              where: { id: smsCampaignLead.id },
+              data: {
+                funnelStage: 'CLICKED',
+                previewClickedAt: new Date(),
+                previewClickCount: { increment: 1 },
+              },
+            })
+
+            // Update Lead
+            await prisma.lead.update({
+              where: { id: lead.id },
+              data: { smsFunnelStage: 'CLICKED', priority: 'HOT' },
+            })
+
+            // Increment SmsCampaign click count
+            await prisma.smsCampaign.update({
+              where: { id: smsCampaignLead.campaignId },
+              data: { clickCount: { increment: 1 } },
+            })
+
+            // Create LeadEvent
+            await prisma.leadEvent.create({
+              data: {
+                leadId: lead.id,
+                eventType: 'SMS_CLICKED',
+                metadata: {
+                  campaignId: smsCampaignLead.campaignId,
+                  campaignName: smsCampaignLead.campaign.name,
+                  source: 'sms_campaign',
+                },
+                actor: 'system',
+              },
+            })
+
+            // Create RepTask — assign to campaign rep or round-robin
+            let repId = smsCampaignLead.assignedRepId
+            if (!repId) {
+              // Round-robin: find active rep with fewest tasks today
+              const todayStart = new Date()
+              todayStart.setHours(0, 0, 0, 0)
+              const reps = await prisma.user.findMany({
+                where: { role: 'REP', status: 'ACTIVE' },
+                select: {
+                  id: true,
+                  _count: {
+                    select: {
+                      repTasks: { where: { createdAt: { gte: todayStart } } },
+                    },
+                  },
+                },
+                orderBy: { repTasks: { _count: 'asc' } },
+                take: 1,
+              })
+              repId = reps[0]?.id || null
+
+              // Update campaign lead with assigned rep
+              if (repId) {
+                await prisma.smsCampaignLead.update({
+                  where: { id: smsCampaignLead.id },
+                  data: { assignedRepId: repId },
+                })
+                await prisma.lead.update({
+                  where: { id: lead.id },
+                  data: { assignedToId: repId },
+                })
+              }
+            }
+
+            if (repId) {
+              await prisma.repTask.create({
+                data: {
+                  leadId: lead.id,
+                  repId,
+                  taskType: 'SMS_CLICKER_CALL',
+                  priority: 'URGENT',
+                  status: 'PENDING',
+                  dueAt: new Date(),
+                  notes: `Lead clicked preview from cold text campaign "${smsCampaignLead.campaign.name}". Call within 1 hour. Opener: "Hey I sent you a text about the website I built for ${lead.companyName}, did you get a chance to look at it?"`,
+                },
+              })
+
+              // SSE: push HOT_LEAD event to rep
+              try {
+                const sseEvent = {
+                  type: 'HOT_LEAD' as const,
+                  data: {
+                    leadId: lead.id,
+                    companyName: lead.companyName,
+                    phone: lead.phone,
+                    city: lead.city,
+                    state: lead.state,
+                    campaignName: smsCampaignLead.campaign.name,
+                    clickedAt: new Date().toISOString(),
+                  },
+                  timestamp: new Date().toISOString(),
+                }
+                pushToRep(repId, sseEvent)
+                pushToAllAdmins(sseEvent)
+              } catch (sseErr) {
+                console.warn('[SMS-CLICK] SSE push failed:', sseErr)
+              }
+            }
+          } else {
+            // Subsequent click (already CLICKED) — just increment count
+            await prisma.smsCampaignLead.update({
+              where: { id: smsCampaignLead.id },
+              data: { previewClickCount: { increment: 1 } },
+            })
+          }
+        }
+      } catch (smsErr) {
+        console.error('[SMS-CLICK] Error processing SMS campaign click:', smsErr)
       }
     }
 

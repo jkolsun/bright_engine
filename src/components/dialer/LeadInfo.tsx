@@ -23,6 +23,22 @@ const formatPhoneDisplay = (phone: string): string => {
   return phone
 }
 
+const getFunnelStageColor = (stage: string): string => {
+  switch (stage) {
+    case 'QUEUED': return 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'
+    case 'TEXTED': return 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400'
+    case 'CLICKED': return 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400'
+    case 'REP_CALLED': return 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400'
+    case 'OPTED_IN': return 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
+    case 'DRIP_ACTIVE': return 'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400'
+    case 'HOT': return 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400'
+    case 'CLOSED': return 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400'
+    case 'OPTED_OUT': return 'bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400'
+    case 'ARCHIVED': return 'bg-gray-200 dark:bg-slate-700 text-gray-500 dark:text-gray-400'
+    default: return 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'
+  }
+}
+
 export function LeadInfo({ lead }: { lead: QueueLead }) {
   const { queue } = useDialer()
   const [editingField, setEditingField] = useState<'phone' | 'secondaryPhone' | 'email' | null>(null)
@@ -138,14 +154,26 @@ export function LeadInfo({ lead }: { lead: QueueLead }) {
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">{lead.companyName}</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{lead.firstName || lead.contactName || ''} {lead.lastName || ''}</p>
         </div>
-        <span className={`px-3 py-1 text-[11px] font-semibold rounded-full tracking-wide ${
-          lead.priority === 'HOT' ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400' :
-          lead.priority === 'WARM' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' :
-          lead.priority === 'COLD' ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600' :
-          'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'
-        }`}>
-          {lead.priority || 'NORMAL'}
-        </span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className={`px-3 py-1 text-[11px] font-semibold rounded-full tracking-wide ${
+            lead.priority === 'HOT' ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400' :
+            lead.priority === 'WARM' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' :
+            lead.priority === 'COLD' ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600' :
+            'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'
+          }`}>
+            {lead.priority || 'NORMAL'}
+          </span>
+          {lead.smsCampaignLead && (
+            <>
+              <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs font-medium rounded-full">
+                SMS Campaign
+              </span>
+              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getFunnelStageColor(lead.smsCampaignLead.funnelStage)}`}>
+                {lead.smsCampaignLead.funnelStage.replace(/_/g, ' ')}
+              </span>
+            </>
+          )}
+        </div>
       </div>
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
       <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 mt-4 text-sm">

@@ -177,7 +177,12 @@ model Lead {
   tierAtFirstDial        String?                  @map("tier_at_first_dial")
   firstConvertingTouch   String?                  @map("first_converting_touch")
   firstConvertingTouchAt DateTime?                @map("first_converting_touch_at")
+  smsFunnelStage         SmsFunnelStage?          @map("sms_funnel_stage")
+  smsOptedOutAt          DateTime?                @map("sms_opted_out_at")
+  lastSmsCampaignId      String?                  @map("last_sms_campaign_id")
   siteVersions           SiteVersion[]
+  smsCampaignLeads       SmsCampaignLead[]
+  smsCampaignMessages    SmsCampaignMessage[]
   icp                    ICP?                     @relation(fields: [icpId], references: [id], onDelete: SetNull)
   scraperRun             ScraperRun?              @relation(fields: [scraperRunId], references: [id], onDelete: SetNull)
 
@@ -200,6 +205,8 @@ model Lead {
   @@index([phoneType])
   @@index([firstConvertingTouch])
   @@index([emailEnrichmentSource])
+  @@index([smsFunnelStage])
+  @@index([lastSmsCampaignId])
   @@map("leads")
 }
 
@@ -1079,6 +1086,14 @@ enum EventType {
   REP_NOTE
   AUTO_SMS_SENT
   CALL_SUMMARY
+  SMS_COLD_SENT
+  SMS_DELIVERED
+  SMS_FAILED
+  SMS_CLICKED
+  SMS_OPT_IN
+  SMS_OPT_OUT
+  SMS_DRIP_SENT
+  SMS_DRIP_REPLY
 }
 
 enum HostingStatus {
@@ -1106,6 +1121,38 @@ enum ActivityType {
   NOTE
   STATUS_CHANGE
   PREVIEW_SENT
+}
+
+enum SmsCampaignStatus {
+  DRAFT
+  SENDING
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum SmsFunnelStage {
+  QUEUED
+  TEXTED
+  CLICKED
+  REP_CALLED
+  OPTED_IN
+  DRIP_ACTIVE
+  HOT
+  CLOSED
+  OPTED_OUT
+  ARCHIVED
+}
+
+enum SmsMessageType {
+  COLD_TEXT
+  DRIP_1
+  DRIP_2
+  DRIP_3
+  DRIP_4
+  DRIP_5
+  REP_MANUAL
+  INBOUND_REPLY
 }
 
 enum CallDisposition {
@@ -1487,4 +1534,96 @@ model CityList {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("city_lists")
+}
+
+// ============================================
+// SMS CAMPAIGN (Cold text + drip funnel)
+// ============================================
+model SmsCampaign {
+  id               String             @id @default(cuid())
+  name             String
+  status           SmsCampaignStatus  @default(DRAFT)
+  templateBody     String             @db.Text @map("template_body")
+  fromNumber       String             @map("from_number")
+  totalLeads       Int                @default(0) @map("total_leads")
+  sentCount        Int                @default(0) @map("sent_count")
+  deliveredCount   Int                @default(0) @map("delivered_count")
+  failedCount      Int                @default(0) @map("failed_count")
+  clickCount       Int                @default(0) @map("click_count")
+  optOutCount      Int                @default(0) @map("opt_out_count")
+  optInCount       Int                @default(0) @map("opt_in_count")
+  closeCount       Int                @default(0) @map("close_count")
+  sendStartedAt    DateTime?          @map("send_started_at")
+  sendCompletedAt  DateTime?          @map("send_completed_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  campaignLeads    SmsCampaignLead[]
+  campaignMessages SmsCampaignMessage[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("sms_campaigns")
+}
+
+model SmsCampaignLead {
+  id                   String          @id @default(cuid())
+  campaignId           String          @map("campaign_id")
+  leadId               String          @map("lead_id")
+  funnelStage          SmsFunnelStage  @default(QUEUED) @map("funnel_stage")
+  coldTextSentAt       DateTime?       @map("cold_text_sent_at")
+  coldTextDeliveredAt  DateTime?       @map("cold_text_delivered_at")
+  coldTextFailedAt     DateTime?       @map("cold_text_failed_at")
+  previewClickedAt     DateTime?       @map("preview_clicked_at")
+  previewClickCount    Int             @default(0) @map("preview_click_count")
+  repCalledAt          DateTime?       @map("rep_called_at")
+  repCallOutcome       String?         @map("rep_call_outcome")
+  optedInAt            DateTime?       @map("opted_in_at")
+  optedInMethod        String?         @map("opted_in_method")
+  dripStartedAt        DateTime?       @map("drip_started_at")
+  dripCurrentStep      Int             @default(0) @map("drip_current_step")
+  closedAt             DateTime?       @map("closed_at")
+  archivedAt           DateTime?       @map("archived_at")
+  archiveReason        String?         @map("archive_reason")
+  assignedRepId        String?         @map("assigned_rep_id")
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
+
+  campaign             SmsCampaign          @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead                 Lead                 @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  campaignMessages     SmsCampaignMessage[]
+
+  @@unique([campaignId, leadId])
+  @@index([campaignId, funnelStage])
+  @@index([leadId])
+  @@index([assignedRepId])
+  @@index([funnelStage])
+  @@map("sms_campaign_leads")
+}
+
+model SmsCampaignMessage {
+  id               String          @id @default(cuid())
+  campaignId       String          @map("campaign_id")
+  campaignLeadId   String          @map("campaign_lead_id")
+  leadId           String          @map("lead_id")
+  messageType      SmsMessageType  @map("message_type")
+  content          String          @db.Text
+  twilioSid        String?         @map("twilio_sid")
+  twilioStatus     String?         @map("twilio_status")
+  direction        String          @default("OUTBOUND")
+  sentAt           DateTime?       @map("sent_at")
+  deliveredAt      DateTime?       @map("delivered_at")
+  failedAt         DateTime?       @map("failed_at")
+  createdAt        DateTime        @default(now()) @map("created_at")
+
+  campaign         SmsCampaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignLead     SmsCampaignLead  @relation(fields: [campaignLeadId], references: [id], onDelete: Cascade)
+  lead             Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([campaignLeadId])
+  @@index([leadId])
+  @@index([twilioSid])
+  @@index([messageType])
+  @@map("sms_campaign_messages")
 }

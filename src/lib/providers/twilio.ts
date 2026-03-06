@@ -52,6 +52,7 @@ export class TwilioProvider implements SMSProvider {
         body: options.message,
         to: options.to,
         ...fromConfig,
+        ...(options.statusCallback ? { statusCallback: options.statusCallback } : {}),
       })
 
       return { success: true, sid: message.sid }

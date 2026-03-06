@@ -66,9 +66,18 @@ export default function TasksPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {tasks.map((task) => (
+          {tasks.map((task) => {
+            const isSmsClicker = task.taskType === 'SMS_CLICKER_CALL'
+            const isDripHot = task.taskType === 'DRIP_HOT_SIGNAL'
+            const isSmsFunnel = isSmsClicker || isDripHot
+
+            return (
             <Card key={task.id} className={`p-6 rounded-2xl border shadow-medium transition-all duration-200 hover:shadow-lg ${
-              task.priority === 'URGENT'
+              isSmsClicker
+                ? 'border-orange-300 dark:border-orange-700 bg-gradient-to-r from-orange-50 dark:from-orange-950/30 to-amber-50/50 dark:to-slate-900 ring-1 ring-orange-200 dark:ring-orange-800'
+                : isDripHot
+                ? 'border-red-300 dark:border-red-700 bg-gradient-to-r from-red-50 dark:from-red-950/30 to-orange-50/50 dark:to-slate-900 ring-1 ring-red-200 dark:ring-red-800'
+                : task.priority === 'URGENT'
                 ? 'border-red-200 dark:border-red-800 bg-gradient-to-r from-red-50 dark:from-red-950/30 to-white dark:to-slate-900'
                 : task.priority === 'HIGH'
                 ? 'border-amber-200 dark:border-amber-800 bg-gradient-to-r from-amber-50 dark:from-amber-950/30 to-white dark:to-slate-900'
@@ -77,14 +86,21 @@ export default function TasksPage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
+                    {isSmsFunnel && <span className="text-lg">🔥</span>}
                     <Badge className={`rounded-lg text-[10px] font-bold uppercase tracking-wider ${
+                      isSmsClicker ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-800' :
+                      isDripHot ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' :
                       task.priority === 'URGENT' ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800' :
                       task.priority === 'HIGH' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800' :
                       'bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-400 border-teal-200 dark:border-teal-800'
                     }`}>
-                      {task.priority}
+                      {isSmsClicker ? 'CALL ASAP' : isDripHot ? 'HOT REPLY' : task.priority}
                     </Badge>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-semibold bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider ${
+                      isSmsClicker ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400' :
+                      isDripHot ? 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400' :
+                      'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400'
+                    }`}>
                       {task.taskType.replace(/_/g, ' ')}
                     </span>
                   </div>
@@ -104,7 +120,8 @@ export default function TasksPage() {
                 </div>
               </div>
             </Card>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

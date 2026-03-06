@@ -983,6 +983,213 @@ async function startWorkers() {
       console.error(`Monitoring job ${job?.id} failed:`, err)
     })
 
+    // ============================================
+    // SMS Campaign Worker
+    // ============================================
+    const smsCampaignWorker = new Worker('sms-campaign', async (job) => {
+      const { name: jobType } = job
+
+      if (jobType === 'send-cold-texts') {
+        const { campaignId } = job.data
+        console.log(`[SMS-CAMPAIGN] Starting cold text send for campaign ${campaignId}`)
+
+        const { sendColdTextToLead, isInSendWindow } = await import('../lib/sms-campaign-service')
+
+        // Load campaign
+        const campaign = await prisma.smsCampaign.findUnique({
+          where: { id: campaignId },
+        })
+        if (!campaign || campaign.status !== 'SENDING') {
+          console.log(`[SMS-CAMPAIGN] Campaign ${campaignId} not in SENDING status, skipping`)
+          return
+        }
+
+        // Load QUEUED leads
+        const queuedLeads = await prisma.smsCampaignLead.findMany({
+          where: { campaignId, funnelStage: 'QUEUED' },
+          include: { lead: true },
+          orderBy: { createdAt: 'asc' },
+        })
+
+        if (queuedLeads.length === 0) {
+          // All leads sent
+          await prisma.smsCampaign.update({
+            where: { id: campaignId },
+            data: { status: 'COMPLETED', sendCompletedAt: new Date() },
+          })
+          console.log(`[SMS-CAMPAIGN] Campaign ${campaignId} completed — all leads sent`)
+          return
+        }
+
+        // Read throttle + daily limit from settings
+        const throttleSetting = await prisma.settings.findUnique({ where: { key: 'sms_throttle_per_minute' } })
+        const dailyLimitSetting = await prisma.settings.findUnique({ where: { key: 'sms_daily_limit' } })
+        const throttlePerMinute = (throttleSetting?.value as number) || 10
+        const dailyLimit = (dailyLimitSetting?.value as number) || parseInt(process.env.SMS_DAILY_LIMIT || '200', 10)
+        const delayBetweenSends = Math.ceil(60000 / throttlePerMinute) // ms between sends
+
+        // Count today's sends
+        const todayStart = new Date()
+        todayStart.setHours(0, 0, 0, 0)
+        const todaySendCount = await prisma.smsCampaignMessage.count({
+          where: {
+            messageType: 'COLD_TEXT',
+            sentAt: { gte: todayStart },
+          },
+        })
+
+        let sentThisRun = 0
+        for (const campaignLead of queuedLeads) {
+          // Check campaign still active
+          const currentCampaign = await prisma.smsCampaign.findUnique({
+            where: { id: campaignId },
+            select: { status: true },
+          })
+          if (currentCampaign?.status !== 'SENDING') {
+            console.log(`[SMS-CAMPAIGN] Campaign ${campaignId} paused/stopped, breaking`)
+            break
+          }
+
+          // Check daily limit
+          if (todaySendCount + sentThisRun >= dailyLimit) {
+            console.log(`[SMS-CAMPAIGN] Daily limit (${dailyLimit}) reached, stopping`)
+            break
+          }
+
+          // Check send window for this lead's timezone
+          const inWindow = await isInSendWindow(campaignLead.lead.timezone || undefined)
+          if (!inWindow) {
+            continue // Skip this lead, will be retried on next job run
+          }
+
+          // Check DNC + opted out
+          if (campaignLead.lead.dncAt || campaignLead.lead.smsOptedOutAt) {
+            await prisma.smsCampaignLead.update({
+              where: { id: campaignLead.id },
+              data: { funnelStage: 'ARCHIVED', archivedAt: new Date(), archiveReason: 'dnc' },
+            })
+            continue
+          }
+
+          // Check lead has preview URL (required for cold text)
+          if (!campaignLead.lead.previewUrl) {
+            await prisma.smsCampaignLead.update({
+              where: { id: campaignLead.id },
+              data: { funnelStage: 'ARCHIVED', archivedAt: new Date(), archiveReason: 'no_preview' },
+            })
+            continue
+          }
+
+          try {
+            const result = await sendColdTextToLead(campaignLead, campaign)
+            if (result && 'success' in result && result.success) {
+              sentThisRun++
+            }
+          } catch (err) {
+            console.error(`[SMS-CAMPAIGN] Error sending to lead ${campaignLead.leadId}:`, err)
+          }
+
+          // Throttle
+          if (delayBetweenSends > 0) {
+            await new Promise(resolve => setTimeout(resolve, delayBetweenSends))
+          }
+        }
+
+        // Check if more QUEUED leads remain
+        const remainingQueued = await prisma.smsCampaignLead.count({
+          where: { campaignId, funnelStage: 'QUEUED' },
+        })
+
+        if (remainingQueued > 0 && campaign.status === 'SENDING') {
+          // Reschedule for next send window (check every 30 minutes)
+          const { addSmsCampaignJob } = await import('./queue')
+          await addSmsCampaignJob('send-cold-texts', { campaignId }, { delay: 30 * 60 * 1000 })
+          console.log(`[SMS-CAMPAIGN] ${remainingQueued} leads remaining, rescheduled in 30 min`)
+        } else if (remainingQueued === 0) {
+          await prisma.smsCampaign.update({
+            where: { id: campaignId },
+            data: { status: 'COMPLETED', sendCompletedAt: new Date() },
+          })
+          console.log(`[SMS-CAMPAIGN] Campaign ${campaignId} completed`)
+        }
+      }
+
+      else if (jobType === 'drip-step') {
+        const { campaignLeadId, step } = job.data
+        console.log(`[SMS-CAMPAIGN] Processing drip step ${step} for campaign lead ${campaignLeadId}`)
+
+        const { processDripStep, getNextSendWindow, isInSendWindow } = await import('../lib/sms-campaign-service')
+
+        // Check send window first
+        const campaignLead = await prisma.smsCampaignLead.findUnique({
+          where: { id: campaignLeadId },
+          include: { lead: { select: { timezone: true } } },
+        })
+
+        if (!campaignLead) return
+
+        const inWindow = await isInSendWindow(campaignLead.lead.timezone || undefined)
+        if (!inWindow) {
+          // Reschedule to next window
+          const delayMs = await getNextSendWindow(campaignLead.lead.timezone || undefined)
+          const { addSmsCampaignJob } = await import('./queue')
+          await addSmsCampaignJob('drip-step', { campaignLeadId, step }, { delay: delayMs })
+          console.log(`[SMS-CAMPAIGN] Drip step ${step} outside window, rescheduled in ${Math.round(delayMs / 60000)} min`)
+          return
+        }
+
+        const result = await processDripStep(campaignLeadId, step)
+        if (result && 'delayed' in result && result.delayed) {
+          const { addSmsCampaignJob } = await import('./queue')
+          await addSmsCampaignJob('drip-step', { campaignLeadId, step }, { delay: result.delayMs })
+        }
+      }
+
+      else if (jobType === 'drip-check') {
+        console.log('[SMS-CAMPAIGN] Running drip completion check')
+
+        // Find leads who completed drip 5 and haven't responded in 48 hours
+        const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000)
+        const staleDripLeads = await prisma.smsCampaignLead.findMany({
+          where: {
+            funnelStage: 'DRIP_ACTIVE',
+            dripCurrentStep: { gte: 5 },
+            updatedAt: { lt: cutoff },
+          },
+        })
+
+        for (const cl of staleDripLeads) {
+          await prisma.smsCampaignLead.update({
+            where: { id: cl.id },
+            data: {
+              funnelStage: 'ARCHIVED',
+              archivedAt: new Date(),
+              archiveReason: 'drip_completed_no_response',
+            },
+          })
+          await prisma.lead.update({
+            where: { id: cl.leadId },
+            data: { smsFunnelStage: 'ARCHIVED' },
+          })
+        }
+
+        console.log(`[SMS-CAMPAIGN] Archived ${staleDripLeads.length} stale drip leads`)
+      }
+    }, {
+      // @ts-ignore bullmq ioredis type conflict
+      connection,
+      concurrency: 1,
+      lockDuration: 600_000, // 10 min lock (campaign sends can be slow)
+    })
+
+    smsCampaignWorker.on('failed', (job, err) => {
+      console.error(`[SMS-CAMPAIGN] Job ${job?.name} failed:`, err.message)
+    })
+
+    smsCampaignWorker.on('completed', (job) => {
+      console.log(`[SMS-CAMPAIGN] Job ${job.name} completed`)
+    })
+
     // BUG 9.6: Redis disconnect alert
     connection.on('error', async (err) => {
       console.error('[Worker] Redis connection error:', err)
@@ -997,12 +1204,13 @@ async function startWorkers() {
     })
 
     // Schedule recurring monitoring jobs
-    const { schedulePendingStateEscalation, scheduleNotificationCleanup, scheduleFailedWebhookRetry, scheduleUrgencyCheck, scheduleStaleEditReminder } = await import('./queue')
+    const { schedulePendingStateEscalation, scheduleNotificationCleanup, scheduleFailedWebhookRetry, scheduleUrgencyCheck, scheduleStaleEditReminder, scheduleDripCheck } = await import('./queue')
     await schedulePendingStateEscalation()
     await scheduleNotificationCleanup()
     await scheduleFailedWebhookRetry()
     await scheduleUrgencyCheck()
     await scheduleStaleEditReminder()
+    await scheduleDripCheck()
 
     // BUG 9.5: Worker health check endpoint
     const healthPort = parseInt(process.env.WORKER_HEALTH_PORT || '3001', 10)
@@ -1011,7 +1219,7 @@ async function startWorkers() {
         res.writeHead(200, { 'Content-Type': 'application/json' })
         res.end(JSON.stringify({
           status: 'ok',
-          workers: 7,
+          workers: 8,
           uptime: process.uptime(),
           redis: connection?.status || 'unknown',
         }))
@@ -1032,6 +1240,7 @@ async function startWorkers() {
     console.log('- Distribution worker')
     console.log('- Sequence worker')
     console.log('- Monitoring worker (+ pending state escalation every 2h, urgency check daily)')
+    console.log('- SMS Campaign worker (+ drip check every 6h)')
 
     // Graceful shutdown
     const gracefulShutdown = async () => {
@@ -1044,6 +1253,7 @@ async function startWorkers() {
       await distributionWorker.close()
       await sequenceWorker.close()
       await monitoringWorker.close()
+      await smsCampaignWorker.close()
       // Don't quit shared connection - other parts of system may use it
       // await connection?.quit()
       

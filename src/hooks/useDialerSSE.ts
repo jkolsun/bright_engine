@@ -29,6 +29,7 @@ export function useDialerSSE(enabled: boolean = true) {
       'CALL_STATUS', 'PREVIEW_SENT', 'PREVIEW_OPENED', 'CTA_CLICKED',
       'RECOMMENDATION_UPDATE', 'QUEUE_UPDATE', 'INBOUND_CALL',
       'SESSION_UPDATE', 'VM_DROP_COMPLETE', 'DISPOSITION_LOGGED',
+      'HOT_LEAD',
     ]
 
     eventTypes.forEach(type => {
