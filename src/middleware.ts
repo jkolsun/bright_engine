@@ -84,6 +84,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/onboard/') ||
     pathname.startsWith('/api/onboard/') ||
     pathname.startsWith('/api/preview/track') ||
+    pathname.startsWith('/api/preview/status') ||
     pathname.startsWith('/api/domain-lookup') ||
     pathname.startsWith('/api/health') ||
     pathname.startsWith('/api/bootstrap/') ||

@@ -4,6 +4,19 @@ import { generatePreviewId, getTimezoneFromState } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': process.env.MARKETING_SITE_ORIGIN || 'https://www.brightautomations.org',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+}
+
+/**
+ * OPTIONS /api/start — CORS preflight handler
+ */
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders })
+}
+
 /**
  * POST /api/start — Public lead intake form submission (no auth required)
  * Creates a new lead and optionally kicks off enrichment.
@@ -12,15 +25,17 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
 
+    const resolvedSourceDetail = data.sourceDetail?.trim() || 'public_start_form'
+
     // Validate required fields
     if (!data.companyName?.trim()) {
-      return NextResponse.json({ error: 'Business name is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Business name is required' }, { status: 400, headers: corsHeaders })
     }
     if (!data.firstName?.trim()) {
-      return NextResponse.json({ error: 'First name is required' }, { status: 400 })
+      return NextResponse.json({ error: 'First name is required' }, { status: 400, headers: corsHeaders })
     }
     if (!data.phone?.trim() && !data.email?.trim()) {
-      return NextResponse.json({ error: 'Phone or email is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Phone or email is required' }, { status: 400, headers: corsHeaders })
     }
 
     // Normalize phone
@@ -37,11 +52,11 @@ export async function POST(request: NextRequest) {
             ...(data.email ? [{ email: data.email.trim() }] : []),
           ],
         },
-        select: { id: true },
+        select: { id: true, previewId: true, previewUrl: true },
       })
       if (existing) {
         // Return existing lead so they can continue onboarding
-        return NextResponse.json({ lead: existing })
+        return NextResponse.json({ lead: existing }, { headers: corsHeaders })
       }
     }
 
@@ -52,7 +67,7 @@ export async function POST(request: NextRequest) {
         firstName: data.firstName.trim(),
         lastName: data.lastName?.trim() || undefined,
         email: data.email?.trim() || undefined,
-        phone: phone || undefined,
+        phone: phone || '',
         companyName: data.companyName.trim(),
         industry: (data.industry?.trim() || 'GENERAL_CONTRACTING') as any,
         city: data.city?.trim() || undefined,
@@ -60,7 +75,7 @@ export async function POST(request: NextRequest) {
         timezone: getTimezoneFromState(data.state) || 'America/New_York',
         website: data.website?.trim() || undefined,
         source: 'FORM' as any,
-        sourceDetail: 'public_start_form',
+        sourceDetail: resolvedSourceDetail,
         previewId,
         previewUrl: `${process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || 'https://preview.brightautomations.org'}/preview/${previewId}`,
         previewExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -74,7 +89,7 @@ export async function POST(request: NextRequest) {
         eventType: 'STAGE_CHANGE',
         toStage: 'NEW',
         actor: 'system',
-        metadata: { source: 'public_start_form' },
+        metadata: { source: resolvedSourceDetail },
       },
     })
 
@@ -84,7 +99,7 @@ export async function POST(request: NextRequest) {
         type: 'CLOSE_ENGINE',
         title: 'New Form Submission',
         message: `${data.firstName} from ${data.companyName} submitted the intake form.`,
-        metadata: { leadId: lead.id, source: 'FORM' },
+        metadata: { leadId: lead.id, source: 'FORM', sourceDetail: resolvedSourceDetail },
       },
     })
 
@@ -101,9 +116,9 @@ export async function POST(request: NextRequest) {
       console.warn('[Start] Enrichment queue failed (non-blocking):', err)
     }
 
-    return NextResponse.json({ lead: { id: lead.id } })
+    return NextResponse.json({ lead: { id: lead.id, previewId, previewUrl: lead.previewUrl } }, { headers: corsHeaders })
   } catch (error) {
     console.error('[Start] Form submission error:', error)
-    return NextResponse.json({ error: 'Failed to submit form' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to submit form' }, { status: 500, headers: corsHeaders })
   }
 }
