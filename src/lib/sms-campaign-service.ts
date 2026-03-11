@@ -67,10 +67,17 @@ export async function createCampaign(params: {
   const uniqueLeadIds = [...new Set(params.leadIds)]
   let fromNumber = params.fromNumber
 
-  // Resolve fromNumber from Settings or env if not provided
+  // Resolve fromNumber — prefer toll-free for campaigns (cheaper for mass sends)
   if (!fromNumber) {
-    const setting = await prisma.settings.findUnique({ where: { key: 'sms_from_number' } })
-    fromNumber = (setting?.value as string) || process.env.SMS_FROM_NUMBER || ''
+    // Priority: toll-free (verified, cheapest for bulk) → sms_from_number setting → SMS_FROM_NUMBER env
+    // If none set, leave empty so it falls through to Messaging Service in the provider
+    const tollFree = process.env.TWILIO_TOLL_FREE_NUMBER
+    if (tollFree) {
+      fromNumber = tollFree
+    } else {
+      const setting = await prisma.settings.findUnique({ where: { key: 'sms_from_number' } })
+      fromNumber = (setting?.value as string) || process.env.SMS_FROM_NUMBER || ''
+    }
   }
 
   const campaign = await prisma.smsCampaign.create({
@@ -637,10 +644,10 @@ export async function getCampaignMetrics(campaignId: string) {
     sentCount: campaign.sentCount,
     deliveredCount: campaign.deliveredCount,
     failedCount: campaign.failedCount,
-    clickCount: campaign.clickCount,
-    optOutCount: campaign.optOutCount,
-    optInCount: campaign.optInCount,
-    closeCount: campaign.closeCount,
+    clickedCount: campaign.clickCount,
+    optedOutCount: campaign.optOutCount,
+    optedInCount: campaign.optInCount,
+    closedCount: campaign.closeCount,
     deliveryRate: safeDiv(campaign.deliveredCount, campaign.sentCount),
     clickRate: safeDiv(campaign.clickCount, campaign.deliveredCount),
     optOutRate: safeDiv(campaign.optOutCount, campaign.sentCount),

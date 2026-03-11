@@ -27,6 +27,22 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const { from, body, sid, mediaUrls, mediaTypes } = await provider.parseInboundWebhook(formData)
 
+    // ── Idempotency: Twilio retries can cause duplicate processing ──
+    // Check if we already processed this exact MessageSid (prevents duplicate outbound sends)
+    if (sid) {
+      const existing = await prisma.message.findFirst({
+        where: { twilioSid: sid },
+        select: { id: true },
+      })
+      if (existing) {
+        console.log(`[Twilio] Duplicate webhook ignored (sid: ${sid})`)
+        return new NextResponse(
+          '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+          { headers: { 'Content-Type': 'text/xml' } }
+        )
+      }
+    }
+
     // Normalize phone number for flexible matching
     // Handles: E.164 (+15551234567), digits (5551234567), US formatted ((555) 123-4567, 555-123-4567)
     const digits = from.replace(/\D/g, '')
@@ -127,7 +143,7 @@ export async function POST(request: NextRequest) {
         const { sendSMSViaProvider } = await import('@/lib/sms-provider')
         await sendSMSViaProvider({
           to: from,
-          message: "Hey! Thanks for reaching out to Bright Automations. I want to make sure I connect you with the right person — what's your name and business name?",
+          message: "Hey! This is the Bright Automations team. What's your name and business name so I can pull up your info?",
           sender: 'clawdbot',
           trigger: 'unknown_inbound_identification',
           aiGenerated: true,

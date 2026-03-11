@@ -30,18 +30,22 @@ export class TwilioProvider implements SMSProvider {
       const client = this.getClient()
       const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID
 
-      // Determine the "from" source — 3-tier priority:
-      // 1. Explicit fromNumber (e.g., rep's personal Twilio number for manual texts)
-      // 2. Messaging Service (A2P compliant for automated/system messages)
-      // 3. System phone number (TWILIO_PHONE_NUMBER env var)
+      // Determine the "from" source — 4-tier priority:
+      // 1. Explicit fromNumber (rep's number, toll-free for campaigns, etc.)
+      // 2. Toll-free number (verified, cheaper for automated/bulk SMS)
+      // 3. Messaging Service (A2P compliant for automated/system messages)
+      // 4. System phone number (TWILIO_PHONE_NUMBER env var)
+      const tollFreeNumber = process.env.TWILIO_TOLL_FREE_NUMBER
       let fromConfig: { from: string } | { messagingServiceSid: string }
 
       if (options.fromNumber) {
-        // Rep or specific caller requested a specific from-number.
-        // Use it directly — bypasses Messaging Service intentionally.
+        // Explicit from-number (rep's number, or toll-free set by campaign service)
         fromConfig = { from: options.fromNumber }
+      } else if (tollFreeNumber) {
+        // No specific number requested — use verified toll-free (cheapest for bulk)
+        fromConfig = { from: tollFreeNumber }
       } else if (messagingServiceSid) {
-        // No specific number requested — use Messaging Service for A2P compliance
+        // No toll-free configured — use Messaging Service for A2P compliance
         fromConfig = { messagingServiceSid }
       } else {
         // No Messaging Service configured — use system number directly

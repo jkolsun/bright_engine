@@ -215,17 +215,49 @@ NEVER send a Stripe URL or payment link directly. The system handles that.
 Current edit round: ${editRounds}/3.`
   },
 
-  PAYMENT_SENT: (_ctx, _qf, pf) => {
-    const followUp = pf?.TEXT_3_PAYMENT_FOLLOWUP || "Hey {firstName}, just checking — any questions about getting your site live?"
-    return `Payment link has been sent. If they have questions about pricing, answer honestly: {{siteBuildFee}} one-time for the build, {{monthlyHosting}}/month for hosting, cancel anytime.
-Don't be pushy. If they haven't paid and reach out, gently remind them the link is ready.
-${followUp ? `\nFollow-up approach (adapt naturally): "${followUp}"` : ''}`
+  PAYMENT_SENT: (ctx, _qf, pf) => {
+    const lead = ctx.lead
+    const followUp = pf?.TEXT_3_PAYMENT_FOLLOWUP || ''
+    return `Payment link has been sent. Pricing: {{siteBuildFee}} one-time for the build, {{monthlyHosting}}/month for hosting, cancel anytime.
+
+If they reach out with questions, answer directly and honestly.
+
+If YOU are following up (they haven't responded):
+
+GOOD follow-ups (value-driven, gives them a reason to act):
+- Mention a specific benefit for their industry: "Most ${(lead.industry || 'local').replace(/_/g, ' ')} businesses start getting calls within the first week of going live"
+- Reference their specific preview: "Your ${lead.companyName} site turned out great — ready to flip the switch whenever you are"
+- Add social proof: "Just helped another ${lead.city || 'local'} business get set up last week"
+- Answer an unasked objection: "No contracts by the way — you can cancel the hosting anytime"
+
+BAD follow-ups (NEVER send these):
+- "Just checking in" / "following up" / "circling back"
+- "Any questions about getting your site live?" — too vague
+- "Is time the only thing holding you back?" — meaningless
+- "Don't want to miss your window" — fake urgency
+- Generic messages that give zero reason to respond
+${followUp ? `\nCustom follow-up style (adapt naturally): "${followUp}"` : ''}`
   },
 
-  STALLED: (ctx) =>
-    `The lead hasn't responded in a while. Send a friendly, low-pressure follow-up. Not desperate.
-Something like "Hey ${ctx.lead.firstName}, just checking in — still interested in getting your site live?"
-Keep it short.`,
+  STALLED: (ctx) => {
+    const hasPreview = !!ctx.lead.previewUrl
+    return `The lead hasn't responded in a while. Send ONE short, value-driven follow-up. NOT a generic "just checking in" message.
+
+GOOD follow-ups (pick one approach, adapt to their situation):
+${hasPreview ? `- Reference their preview: "Hey ${ctx.lead.firstName || ''}, your ${ctx.lead.companyName} site is still ready to go. Want me to send the link again?"` : ''}
+- Add social proof: "Just launched a site for another ${(ctx.lead.industry || 'local').replace(/_/g, ' ')} business — they got 12 new calls the first week"
+- Time-based urgency (only if true): "Your preview stays active for another few days if you want to take another look"
+- Ask a question they can easily answer: "Quick question — would you prefer customers to call or fill out a form on your site?"
+
+BAD follow-ups (NEVER send these):
+- "Just checking in" / "following up" / "circling back" — these get ignored
+- "Is time the only thing holding you back?" — meaningless question
+- "Don't want to miss your window" — fake urgency
+- Any message that doesn't give them a reason to respond
+- Anything pushy or desperate
+
+The lead is cold. Give them a REASON to re-engage, don't just ask if they're still interested.`
+  },
 
   PENDING_APPROVAL: (_ctx, _qf, pf) => {
     const ack = pf?.TEXT_1_APPROVAL_ACK || ''

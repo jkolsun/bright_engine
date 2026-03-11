@@ -51,32 +51,32 @@ export type AutomatedMessageKey = keyof AutomatedMessagesConfig
 export const DEFAULT_AUTOMATED_MESSAGES: AutomatedMessagesConfig = {
   // Pre-Client
   form_nudge: {
-    text: "Hey {firstName}, just following up — did you get a chance to fill out the form? Here's the link again: {formUrl}",
+    text: "Hey {firstName}, the form only takes about 5 min and we can start building your site right after. Here it is again: {formUrl}",
     enabled: true,
     delayHours: 24,
   },
   preview_followup: {
-    text: "Hey {firstName}, wanted to check in — did you get a chance to look at the preview? Let me know what you think: {previewUrl}",
+    text: "Hey {firstName}, your {companyName} site preview is still up. Take a look when you get a sec and let me know what you think: {previewUrl}",
     enabled: true,
     delayHours: 24,
   },
   payment_followup_4h: {
-    text: "Hey {firstName}, just checking — any questions about getting your site live?",
+    text: "Hey {firstName}, no contracts by the way. Monthly hosting and you can cancel anytime. Your {companyName} site is ready to go live whenever you are.",
     enabled: true,
     delayHours: 4,
   },
   payment_followup_24h: {
-    text: "Hey {firstName}, just wanted to make sure you got the payment link. Any questions about getting your site live?",
+    text: "Hey {firstName}, most businesses like {companyName} start getting calls within the first week of going live. Your site is built and ready. Want me to resend the link?",
     enabled: true,
     delayHours: 24,
   },
   payment_followup_48h: {
-    text: "Hey {firstName}, your preview is looking great. Payment link is ready when you are!",
+    text: "Hey {firstName}, just launched a site for another local business and they already got new leads the first week. Your {companyName} site is built and waiting. Want to take another look?",
     enabled: true,
     delayHours: 48,
   },
   payment_followup_72h: {
-    text: "Last check-in — want me to hold your spot or should I free it up for someone else, {firstName}?",
+    text: "Hey {firstName}, I'll keep your {companyName} site saved for a few more days then free it up. Just reply if you want the link again.",
     enabled: true,
     delayHours: 72,
   },
