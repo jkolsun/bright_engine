@@ -47,6 +47,8 @@ export default function ClientsPage() {
     siteUrl: '', location: '', industry: 'GENERAL_CONTRACTING',
     monthlyRevenue: 39, plan: 'base', siteBuildFee: 149,
     chargeSiteBuildFee: true, tags: [] as string[], notes: '',
+    clientTrack: 'COLD_SMS' as 'COLD_SMS' | 'MEETING_CLOSE',
+    repName: '',
   })
 
   useEffect(() => {
@@ -99,7 +101,11 @@ export default function ClientsPage() {
       const res = await fetch('/api/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, siteBuildFee: formData.chargeSiteBuildFee ? formData.siteBuildFee : 0 })
+        body: JSON.stringify({
+          ...formData,
+          siteBuildFee: formData.chargeSiteBuildFee ? formData.siteBuildFee : 0,
+          repName: formData.repName || undefined,
+        })
       })
       if (res.ok) {
         setDialogOpen(false)
@@ -108,6 +114,7 @@ export default function ClientsPage() {
           siteUrl: '', location: '', industry: 'GENERAL_CONTRACTING',
           monthlyRevenue: pricing.monthlyHosting, plan: 'base', siteBuildFee: pricing.siteBuildFee,
           chargeSiteBuildFee: true, tags: [], notes: '',
+          clientTrack: 'COLD_SMS', repName: '',
         })
         fetchClients()
         fetchOverviewStats()
@@ -273,6 +280,30 @@ export default function ClientsPage() {
                   <DialogDescription>Convert a lead to a paying client.</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                  {/* Client Track Selector */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Client Track</label>
+                      <select value={formData.clientTrack} onChange={(e) => {
+                        const track = e.target.value as 'COLD_SMS' | 'MEETING_CLOSE'
+                        setFormData(prev => ({
+                          ...prev,
+                          clientTrack: track,
+                          repName: track === 'COLD_SMS' ? '' : prev.repName,
+                          monthlyRevenue: track === 'MEETING_CLOSE' ? 99 : pricing.monthlyHosting,
+                        }))
+                      }} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-800 dark:text-gray-100">
+                        <option value="COLD_SMS">Cold SMS (Default)</option>
+                        <option value="MEETING_CLOSE">Meeting Close</option>
+                      </select>
+                    </div>
+                    {formData.clientTrack === 'MEETING_CLOSE' && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Rep Name (optional)</label>
+                        <Input value={formData.repName} onChange={(e) => setFormData(prev => ({ ...prev, repName: e.target.value }))} placeholder="e.g. Jake Smith" />
+                      </div>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Company Name *</label>
@@ -337,10 +368,15 @@ export default function ClientsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" id="setup" className="rounded" checked={formData.chargeSiteBuildFee} onChange={(e) => setFormData(prev => ({ ...prev, chargeSiteBuildFee: e.target.checked }))} />
-                    <label htmlFor="setup" className="text-sm">Charge ${formData.siteBuildFee} site build fee + ${formData.monthlyRevenue}/mo hosting</label>
-                  </div>
+                  {formData.clientTrack !== 'MEETING_CLOSE' && (
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" id="setup" className="rounded" checked={formData.chargeSiteBuildFee} onChange={(e) => setFormData(prev => ({ ...prev, chargeSiteBuildFee: e.target.checked }))} />
+                      <label htmlFor="setup" className="text-sm">Charge ${formData.siteBuildFee} site build fee + ${formData.monthlyRevenue}/mo hosting</label>
+                    </div>
+                  )}
+                  {formData.clientTrack === 'MEETING_CLOSE' && (
+                    <p className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded">Meeting close client — site will be created as &quot;Pending Launch&quot; (DEACTIVATED). Use Mark Live when ready.</p>
+                  )}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Notes</label>
                     <textarea value={formData.notes} onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} placeholder="Any notes about this client..." className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-800 dark:text-gray-100 min-h-[60px]" />

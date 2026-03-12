@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
             batchId: c.payoutBatchId || null,
             wiseTransferId: c.wiseTransferId || null,
             paidAt: c.paidAt,
-            repName: c.rep?.name || 'Unknown',
+            repName: c.rep?.name || c.repName || 'Unknown',
             repEmail: c.rep?.email || '',
             repId: c.repId,
             totalPaid: 0,
@@ -96,13 +96,14 @@ export async function GET(request: NextRequest) {
     const now = new Date()
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
-    // Group by rep
+    // Group by rep (FT reps by repId, PT reps by repName)
     const repMap: Record<string, any> = {}
     for (const c of commissions) {
-      if (!repMap[c.repId]) {
-        repMap[c.repId] = {
+      const groupKey = c.repId || `pt_${c.repName || 'unknown'}`
+      if (!repMap[groupKey]) {
+        repMap[groupKey] = {
           repId: c.repId,
-          repName: c.rep?.name || 'Unknown',
+          repName: c.rep?.name || c.repName || 'Unknown',
           repEmail: c.rep?.email || '',
           commissionRate: (c.rep as any)?.commissionRate ?? 0.5,
           payableTotal: 0,
@@ -119,14 +120,14 @@ export async function GET(request: NextRequest) {
       const isClawback = c.amount < 0
 
       if (isClawback) {
-        repMap[c.repId].clawbackTotal += c.amount
+        repMap[groupKey].clawbackTotal += c.amount
       } else if (isPayable) {
-        repMap[c.repId].payableTotal += c.amount
+        repMap[groupKey].payableTotal += c.amount
       } else {
-        repMap[c.repId].pendingTotal += c.amount
+        repMap[groupKey].pendingTotal += c.amount
       }
 
-      repMap[c.repId].commissions.push({
+      repMap[groupKey].commissions.push({
         id: c.id,
         clientName: c.client?.companyName || 'Unknown',
         type: c.type,

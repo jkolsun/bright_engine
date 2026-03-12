@@ -95,13 +95,33 @@ export async function PUT(
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
     }
 
+    // Check if this is a deactivation (need current status before update)
+    const isDeactivation = safeData.hostingStatus === 'CANCELLED' || safeData.hostingStatus === 'DEACTIVATED'
+    let previousStatus: string | null = null
+    if (isDeactivation) {
+      const current = await prisma.client.findUnique({ where: { id }, select: { hostingStatus: true } })
+      previousStatus = current?.hostingStatus || null
+    }
+
     const client = await prisma.client.update({
       where: { id },
       data: {
         ...safeData,
+        ...(isDeactivation ? { churnedDate: new Date() } : {}),
         updatedAt: new Date()
       }
     })
+
+    // Fix 8: Trigger win-back sequence on manual admin deactivation (same as Stripe webhook)
+    if (isDeactivation && previousStatus === 'ACTIVE') {
+      try {
+        const { triggerWinBackSequence } = await import('@/lib/resend')
+        await triggerWinBackSequence(client.id)
+        console.log(`[Client API] Win-back sequence triggered for ${client.companyName} (admin deactivation)`)
+      } catch (err) {
+        console.error('[Client API] Win-back sequence failed to queue:', err)
+      }
+    }
 
     return NextResponse.json({ client })
   } catch (error) {

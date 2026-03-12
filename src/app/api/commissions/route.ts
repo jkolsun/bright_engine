@@ -65,7 +65,8 @@ export async function POST(request: NextRequest) {
 
     const commission = await prisma.commission.create({
       data: {
-        repId: data.repId,
+        repId: data.repId || null,
+        repName: data.repName || null,
         clientId: data.clientId,
         type: data.type || 'SITE_BUILD',
         amount: data.amount,

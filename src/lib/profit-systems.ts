@@ -207,8 +207,9 @@ export async function recommendUpsells(clientId: string): Promise<{
     if (product.minClientAgeDays && clientAgeDays < product.minClientAgeDays) continue
 
     // Check industry eligibility (empty array = all industries eligible)
+    // Fix 15: Case-insensitive comparison
     if (product.eligibleIndustries.length > 0 &&
-        !product.eligibleIndustries.includes(clientIndustry)) continue
+        !product.eligibleIndustries.some(ind => ind.toLowerCase() === clientIndustry.toLowerCase())) continue
 
     // Check max pitch attempts
     const pitchCount = existingPitches.filter(p => p.productId === product.id).length

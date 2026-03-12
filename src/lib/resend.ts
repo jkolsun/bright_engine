@@ -525,4 +525,18 @@ export async function triggerReferralSequence(clientId: string) {
   await addSequenceJob('referral-day-45-email', { clientId }, 45 * DAY_MS)
   await addSequenceJob('referral-day-90-email', { clientId }, 90 * DAY_MS)
   await addSequenceJob('referral-day-180-email', { clientId }, 180 * DAY_MS)
+  // Fix 9: Queue referral SMS alongside email so clients without email still get a referral ask
+  await addSequenceJob('referral-day-45', { clientId }, 45 * DAY_MS)
+}
+
+export async function triggerMeetingCloseDripSequence(clientId: string) {
+  const MINUTE_MS = 60 * 1000
+  // Touch 1: 30 minutes after Mark Live
+  await addSequenceJob('meeting-close-touch-1', { clientId }, 30 * MINUTE_MS)
+  // Touch 2: 7 days
+  await addSequenceJob('meeting-close-touch-2', { clientId }, 7 * DAY_MS)
+  // Touch 3: 14 days
+  await addSequenceJob('meeting-close-touch-3', { clientId }, 14 * DAY_MS)
+  // Touch 4: 28 days (includes upsell notification)
+  await addSequenceJob('meeting-close-touch-4', { clientId }, 28 * DAY_MS)
 }

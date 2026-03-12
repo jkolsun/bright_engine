@@ -139,7 +139,7 @@ export async function updateOnboarding(
 export async function advanceOnboarding(clientId: string, toStep?: number) {
   const client = await prisma.client.findUnique({
     where: { id: clientId },
-    select: { onboardingStep: true, companyName: true, leadId: true },
+    select: { onboardingStep: true, companyName: true, leadId: true, clientTrack: true },
   })
   if (!client) throw new Error('Client not found')
 
@@ -189,11 +189,14 @@ export async function advanceOnboarding(clientId: string, toStep?: number) {
       data: { siteLiveDate: updated.siteLiveDate || (isActuallyLive ? new Date() : undefined) },
     })
 
-    try {
-      const { triggerPostLaunchSequence } = await import('./resend')
-      await triggerPostLaunchSequence(clientId)
-    } catch (err) {
-      console.error('[Onboarding] Failed to trigger post-launch sequences:', err)
+    // Guard: skip cold SMS post-launch drip for meeting-close clients (they use Mark Live drip)
+    if (client.clientTrack !== 'MEETING_CLOSE') {
+      try {
+        const { triggerPostLaunchSequence } = await import('./resend')
+        await triggerPostLaunchSequence(clientId)
+      } catch (err) {
+        console.error('[Onboarding] Failed to trigger post-launch sequences:', err)
+      }
     }
   }
 

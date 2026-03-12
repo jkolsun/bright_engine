@@ -804,6 +804,7 @@ async function startWorkers() {
           'post-launch-day-21-email', 'post-launch-day-28-email',
           'win-back-day-7-email', 'win-back-day-14-email', 'win-back-day-30-email',
           'referral-day-45-email', 'referral-day-90-email', 'referral-day-180-email',
+          'meeting-close-touch-1', 'meeting-close-touch-2', 'meeting-close-touch-3', 'meeting-close-touch-4',
         ])
         if (ONBOARDING_GATED_JOBS.has(job.name) && job.data.clientId) {
           try {
@@ -855,6 +856,20 @@ async function startWorkers() {
             
           case 'referral-day-45':
             await sendReferralDay45(job.data.clientId)
+            break
+
+          // ── Meeting Close Drip Sequence ───────────────
+          case 'meeting-close-touch-1':
+            await sendMeetingCloseSMS(job.data.clientId, 1, 'meeting_close_touch_1')
+            break
+          case 'meeting-close-touch-2':
+            await sendMeetingCloseSMS(job.data.clientId, 2, 'meeting_close_touch_2')
+            break
+          case 'meeting-close-touch-3':
+            await sendMeetingCloseSMS(job.data.clientId, 3, 'meeting_close_touch_3')
+            break
+          case 'meeting-close-touch-4':
+            await sendMeetingCloseSMS(job.data.clientId, 4, 'meeting_close_touch_4')
             break
 
           // ── Email Sequences ───────────────────────────
@@ -1365,6 +1380,12 @@ async function sendPostLaunchSMS(clientId: string, touchpointDay: number, settin
 
   if (!client || !client.lead) return
 
+  // Guard: skip cold SMS touchpoints for meeting-close clients (belt-and-suspenders)
+  if (client.clientTrack === 'MEETING_CLOSE') {
+    console.log(`[Sequence] Skipping cold SMS day ${touchpointDay} — client ${clientId} is MEETING_CLOSE track`)
+    return
+  }
+
   // Skip if site isn't actually live yet
   if (client.hostingStatus !== 'ACTIVE') {
     console.log(`[Sequence] Skipping day ${touchpointDay} SMS — client ${clientId} hostingStatus is ${client.hostingStatus}, not ACTIVE`)
@@ -1460,6 +1481,121 @@ async function sendPostLaunchSMS(clientId: string, touchpointDay: number, settin
 }
 
 /**
+ * Meeting-close SMS sender.
+ * Reads from automated_messages settings (meeting_close_touch_1/2/3/4).
+ * Same guards as sendPostLaunchSMS: hosting status, DNC, timezone, dedup.
+ * No AI fallback — template only. Touch 4 creates upsell notification.
+ */
+async function sendMeetingCloseSMS(clientId: string, touchNum: number, settingsKey: string) {
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    include: { lead: true },
+  })
+
+  if (!client || !client.lead) return
+
+  // Guard: lead must have a phone number
+  if (!client.lead.phone) {
+    console.log(`[Sequence] Skipping meeting-close touch ${touchNum} — lead ${client.lead.id} has no phone number`)
+    return
+  }
+
+  // Guard: must be a meeting-close client
+  if (client.clientTrack !== 'MEETING_CLOSE') {
+    console.log(`[Sequence] Skipping meeting-close touch ${touchNum} — client ${clientId} is not MEETING_CLOSE track`)
+    return
+  }
+
+  // Guard: hosting must be ACTIVE
+  if (client.hostingStatus !== 'ACTIVE') {
+    console.log(`[Sequence] Skipping meeting-close touch ${touchNum} — client ${clientId} hostingStatus is ${client.hostingStatus}, not ACTIVE`)
+    return
+  }
+
+  // Guard: DNC check
+  const freshLead = await prisma.lead.findUnique({ where: { id: client.lead.id }, select: { dncAt: true } })
+  if (freshLead?.dncAt) {
+    console.log(`[Sequence] Skipping meeting-close touch ${touchNum} — lead ${client.lead.id} is now DNC`)
+    return
+  }
+
+  // Guard: timezone window
+  if (!canSendMessage(client.lead.timezone || getTimezoneFromState(client.lead.state || '') || 'America/New_York')) return
+
+  const trigger = `meeting_close_touch_${touchNum}_sms`
+
+  // Guard: dedup
+  const alreadySent = await prisma.message.findFirst({
+    where: { leadId: client.lead.id, trigger },
+  })
+  if (alreadySent) return
+
+  // Touch 4: create upsell notification regardless of whether SMS sends
+  if (touchNum === 4) {
+    try {
+      const { recommendUpsells } = await import('../lib/profit-systems')
+      const upsells = await recommendUpsells(clientId)
+      await prisma.notification.create({
+        data: {
+          type: 'DAILY_AUDIT',
+          title: 'Meeting Close — Day 28 Upsell Ready',
+          message: `Client ${client.companyName} ready for upsell conversation. ${upsells.length} product${upsells.length !== 1 ? 's' : ''} eligible.`,
+          metadata: {
+            clientId,
+            upsellCount: upsells.length,
+            upsells: upsells.slice(0, 3).map(u => ({ name: u.name, price: u.price })),
+          },
+        },
+      })
+    } catch (err) {
+      console.error(`[Sequence] Meeting-close touch 4 upsell notification failed:`, err)
+    }
+  }
+
+  // Load template from automated_messages
+  let messageContent: string | null = null
+  try {
+    const { getAutomatedMessages, fillTemplate } = await import('../lib/automated-messages')
+    const msgs = await getAutomatedMessages()
+    const config = msgs[settingsKey as keyof typeof msgs]
+
+    if (config && !config.enabled) {
+      console.log(`[Sequence] Meeting-close ${settingsKey} is disabled in settings — skipping SMS`)
+      return
+    }
+
+    if (config?.text) {
+      messageContent = fillTemplate(config.text, {
+        firstName: client.lead.firstName || '',
+        companyName: client.companyName || '',
+        siteUrl: client.siteUrl || '',
+      })
+    }
+  } catch (err) {
+    console.warn(`[Sequence] Failed to load automated_messages for ${settingsKey}:`, err)
+  }
+
+  // No AI fallback for meeting-close touches — template only
+  if (!messageContent) {
+    console.log(`[Sequence] No template text for ${settingsKey} — skipping meeting-close SMS (no AI fallback)`)
+    return
+  }
+
+  try {
+    await routeAndSend({
+      clientId: client.id,
+      trigger,
+      messageContent,
+      to: client.lead.phone,
+      toEmail: client.lead.email || client.email || undefined,
+      sender: 'system',
+    })
+  } catch (error) {
+    console.error(`[Sequence] Meeting-close touch ${touchNum} SMS send failed:`, error)
+  }
+}
+
+/**
  * Unified win-back SMS sender.
  * Reads from automated_messages settings (winback_day_7/14/30).
  * Checks enabled toggle. Uses template text with fillTemplate().
@@ -1544,6 +1680,12 @@ async function sendReferralDay45(clientId: string) {
   })
 
   if (!client || !client.lead) return
+
+  // Fix 11: Skip referral SMS for churned clients
+  if (client.hostingStatus !== 'ACTIVE') {
+    console.log(`[Sequence] Skipping referral day 45 — ${client.companyName} hostingStatus is ${client.hostingStatus}`)
+    return
+  }
 
   // Dedup: skip if already sent referral day 45 SMS
   const alreadySent = await prisma.message.findFirst({
@@ -1845,6 +1987,15 @@ async function sendReferralDay45Email(clientId: string) {
   })
   if (!client || !client.lead || !client.lead.email) return
 
+  // Fix 10: Dedup guard — skip if already sent
+  const alreadySent = await prisma.message.findFirst({
+    where: { leadId: client.lead.id, trigger: 'referral_day_45_email' },
+  })
+  if (alreadySent) {
+    console.log(`[Sequence] Skipping referral day 45 email — already sent for ${client.companyName}`)
+    return
+  }
+
   const template = await getEmailTemplate('referral_day_45', {
     first_name: client.lead.firstName,
     company_name: client.companyName,
@@ -1866,6 +2017,15 @@ async function sendReferralDay90Email(clientId: string) {
     include: { lead: true },
   })
   if (!client || !client.lead || !client.lead.email) return
+
+  // Fix 10: Dedup guard — skip if already sent
+  const alreadySent = await prisma.message.findFirst({
+    where: { leadId: client.lead.id, trigger: 'referral_day_90_email' },
+  })
+  if (alreadySent) {
+    console.log(`[Sequence] Skipping referral day 90 email — already sent for ${client.companyName}`)
+    return
+  }
 
   const template = await getEmailTemplate('referral_day_90', {
     first_name: client.lead.firstName,
@@ -1889,6 +2049,15 @@ async function sendReferralDay180Email(clientId: string) {
     include: { lead: true, analytics: true },
   })
   if (!client || !client.lead || !client.lead.email) return
+
+  // Fix 10: Dedup guard — skip if already sent
+  const alreadySent = await prisma.message.findFirst({
+    where: { leadId: client.lead.id, trigger: 'referral_day_180_email' },
+  })
+  if (alreadySent) {
+    console.log(`[Sequence] Skipping referral day 180 email — already sent for ${client.companyName}`)
+    return
+  }
 
   const template = await getEmailTemplate('referral_day_180', {
     first_name: client.lead.firstName,

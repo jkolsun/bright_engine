@@ -32,6 +32,8 @@ export function getHealthBadge(score: number) {
 }
 
 export function getClientStage(client: any) {
+  // Meeting-close clients that haven't launched yet show as "Pending Launch" instead of "Deactivated"
+  if (client.clientTrack === 'MEETING_CLOSE' && client.hostingStatus === 'DEACTIVATED') return { label: 'Pending Launch', color: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400', icon: Clock }
   if (client.hostingStatus === 'DEACTIVATED') return { label: 'Deactivated', color: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400', icon: Clock }
   if (client.hostingStatus === 'CANCELLED') return { label: 'Cancelled', color: 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300', icon: XCircle }
   if (client.hostingStatus === 'FAILED_PAYMENT') return { label: 'Payment Failed', color: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400', icon: AlertTriangle }

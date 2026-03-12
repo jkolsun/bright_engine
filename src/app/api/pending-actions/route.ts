@@ -28,6 +28,12 @@ export async function GET(request: NextRequest) {
             stage: true,
           },
         },
+        client: {
+          select: {
+            companyName: true,
+            autonomyLevel: true,
+          },
+        },
       },
     })
 

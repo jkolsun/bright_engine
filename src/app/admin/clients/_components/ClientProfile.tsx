@@ -45,9 +45,59 @@ export default function ClientProfile({ client, onBack, onUpdate, onDelete, onDe
   const [tagInput, setTagInput] = useState('')
   const [aiToggle, setAiToggle] = useState(client.aiAutoRespond !== false)
   const [reportFreq, setReportFreq] = useState(client.statReportFrequency || 'monthly')
+  const [markingLive, setMarkingLive] = useState(false)
+  const [markLiveOpen, setMarkLiveOpen] = useState(false)
+  const [commissionInput, setCommissionInput] = useState('')
+  const [commissionError, setCommissionError] = useState('')
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  const repDisplayName = client.repName || client.rep?.name || null
+
+  const handleMarkLive = async () => {
+    // Validate commission amount if entered
+    if (commissionInput) {
+      const parsed = parseFloat(commissionInput)
+      if (isNaN(parsed) || parsed <= 0) {
+        setCommissionError('Amount must be greater than 0')
+        return
+      }
+    }
+    setCommissionError('')
+    setMarkingLive(true)
+    try {
+      const amount = commissionInput ? parseFloat(commissionInput) : null
+      const res = await fetch(`/api/clients/${client.id}/mark-live`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commissionAmount: amount && amount > 0 ? amount : null }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setToast({ message: `${client.companyName} is now live!`, type: 'success' })
+        setTimeout(() => setToast(null), 4000)
+        setMarkLiveOpen(false)
+        setCommissionInput('')
+        await onRefresh()
+      } else {
+        setToast({ message: data.error || 'Failed to mark live', type: 'error' })
+        setTimeout(() => setToast(null), 4000)
+      }
+    } catch {
+      setToast({ message: 'Network error — please try again', type: 'error' })
+      setTimeout(() => setToast(null), 4000)
+    } finally {
+      setMarkingLive(false)
+    }
+  }
 
   return (
     <div className="p-8 space-y-6">
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+          {toast.message}
+        </div>
+      )}
       <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
         <ArrowLeft size={16} /> Back to Clients
       </button>
@@ -77,7 +127,12 @@ export default function ClientProfile({ client, onBack, onUpdate, onDelete, onDe
             </div>
           )}
         </div>
-        <Badge variant={client.hostingStatus === 'ACTIVE' ? 'default' : 'destructive'}>{client.hostingStatus}</Badge>
+        <div className="flex items-center gap-2">
+          {client.clientTrack === 'MEETING_CLOSE' && (
+            <Badge variant="outline" className="border-blue-300 text-blue-700 dark:border-blue-600 dark:text-blue-400">Meeting Close</Badge>
+          )}
+          <Badge variant={client.hostingStatus === 'ACTIVE' ? 'default' : 'destructive'}>{client.hostingStatus}</Badge>
+        </div>
       </div>
 
       {/* Quick Stats */}
@@ -120,7 +175,7 @@ export default function ClientProfile({ client, onBack, onUpdate, onDelete, onDe
           <Card className="p-6">
             <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Details</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-              <div><span className="text-gray-500 dark:text-gray-400">Closed by:</span><span className="ml-2 font-medium">{client.rep?.name || '—'}</span></div>
+              <div><span className="text-gray-500 dark:text-gray-400">{client.clientTrack === 'MEETING_CLOSE' ? 'Sourced by:' : 'Closed by:'}</span><span className="ml-2 font-medium">{client.repName || client.rep?.name || '—'}</span></div>
               <div><span className="text-gray-500 dark:text-gray-400">Stripe:</span><span className={`ml-2 font-medium ${client.stripeCustomerId ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>{client.stripeCustomerId ? 'Connected' : 'Not linked'}</span></div>
               <div><span className="text-gray-500 dark:text-gray-400">Referral:</span><span className="ml-2 font-mono text-xs bg-gray-100 dark:bg-slate-800 px-2 py-0.5 rounded">{client.referralCode || '—'}</span></div>
             </div>
@@ -253,13 +308,76 @@ export default function ClientProfile({ client, onBack, onUpdate, onDelete, onDe
             </pre>
           </Card>
 
+          {/* Meeting Close — Mark Live / Live Status */}
+          {client.clientTrack === 'MEETING_CLOSE' && (
+            <Card className="p-6 border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-900/10">
+              <h3 className="font-semibold text-blue-700 dark:text-blue-400 mb-2">Meeting Close Track</h3>
+              {repDisplayName && (
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Sourced by: <span className="font-medium text-gray-900 dark:text-gray-100">{repDisplayName}</span></p>
+              )}
+              {client.hostingStatus !== 'ACTIVE' ? (
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Site is pending launch. Click below to activate hosting and trigger the 4-touch drip sequence.</p>
+                  <Button
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => setMarkLiveOpen(true)}
+                  >
+                    Mark Site Live
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Site went live: <span className="font-medium">{client.siteLiveDate ? new Date(client.siteLiveDate).toLocaleDateString() : 'Unknown'}</span>
+                </p>
+              )}
+            </Card>
+          )}
+
+          {/* Mark Live Modal */}
+          {markLiveOpen && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => !markingLive && setMarkLiveOpen(false)}>
+              <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Mark {client.companyName} Live</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">This will activate hosting and trigger the 4-touch meeting-close drip sequence.</p>
+
+                {repDisplayName && (
+                  <div className="mb-4 text-sm">
+                    <span className="text-gray-500 dark:text-gray-400">Sourced by:</span>
+                    <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{repDisplayName}</span>
+                  </div>
+                )}
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Commission Amount ($)</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={commissionInput}
+                    onChange={(e) => { setCommissionInput(e.target.value); setCommissionError('') }}
+                    placeholder="Leave blank for no commission"
+                  />
+                  {commissionError && <p className="text-xs text-red-500 mt-1">{commissionError}</p>}
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Optional — leave blank if no commission applies</p>
+                </div>
+
+                <div className="flex gap-3 justify-end">
+                  <Button variant="outline" onClick={() => { setMarkLiveOpen(false); setCommissionInput(''); setCommissionError('') }} disabled={markingLive}>Cancel</Button>
+                  <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={handleMarkLive} disabled={markingLive}>
+                    {markingLive ? 'Marking Live...' : 'Confirm — Mark Live'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Danger Zone */}
           <Card className="p-6 border-red-200 dark:border-red-800">
             <h3 className="font-semibold text-red-600 dark:text-red-400 mb-2">Danger Zone</h3>
             <div className="space-y-4">
-              {/* Deactivate / Reactivate */}
+              {/* Deactivate / Reactivate (hidden for meeting-close clients — Mark Live handles activation) */}
               <div>
-                {client.hostingStatus === 'DEACTIVATED' ? (
+                {client.hostingStatus === 'DEACTIVATED' && client.clientTrack !== 'MEETING_CLOSE' ? (
                   <>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Reactivate this client. They will be set back to ACTIVE.</p>
                     <Button

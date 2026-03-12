@@ -187,6 +187,7 @@ export default function PayoutsTab() {
   const getDealType = (type: string) => {
     if (type === 'SITE_BUILD') return 'Site Build'
     if (type === 'MONTHLY_RESIDUAL') return 'Monthly Hosting'
+    if (type === 'MONTHLY_RETAINER') return 'Monthly Retainer'
     if (type === 'BONUS') return 'Bonus'
     return type
   }
@@ -286,18 +287,21 @@ export default function PayoutsTab() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {reps.map(rep => (
-                <RepCard
-                  key={rep.repId}
-                  rep={rep}
-                  expanded={expandedReps.has(rep.repId)}
-                  onToggle={() => toggleRep(rep.repId)}
-                  onMarkAllPaid={() => openMarkPaidModal(rep)}
-                  onMarkSinglePaid={(c) => openMarkPaidModal(rep, [c])}
-                  getDealType={getDealType}
-                  formatDate={formatDate}
-                />
-              ))}
+              {reps.map(rep => {
+                const repKey = rep.repId || `pt_${rep.repName}`
+                return (
+                  <RepCard
+                    key={repKey}
+                    rep={rep}
+                    expanded={expandedReps.has(repKey)}
+                    onToggle={() => toggleRep(repKey)}
+                    onMarkAllPaid={() => openMarkPaidModal(rep)}
+                    onMarkSinglePaid={(c) => openMarkPaidModal(rep, [c])}
+                    getDealType={getDealType}
+                    formatDate={formatDate}
+                  />
+                )
+              })}
             </div>
           )}
         </>

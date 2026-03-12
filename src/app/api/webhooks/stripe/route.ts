@@ -196,6 +196,23 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         })
         await processRevenueCommission(upsellRevenue.id)
         console.log(`[Stripe Webhook] Upsell revenue ${upsellRevenue.id} created — $${amountDollars}`)
+
+        // Fix 3: Mark most recent pitched UpsellPitch as paid
+        try {
+          const pitchedUpsell = await prisma.upsellPitch.findFirst({
+            where: { clientId: existingClient.id, status: 'pitched' },
+            orderBy: { pitchedAt: 'desc' },
+          })
+          if (pitchedUpsell) {
+            await prisma.upsellPitch.update({
+              where: { id: pitchedUpsell.id },
+              data: { status: 'paid', paidAt: new Date() },
+            })
+            console.log(`[Stripe Webhook] UpsellPitch ${pitchedUpsell.id} marked paid`)
+          }
+        } catch (pitchErr) {
+          console.error('[Stripe Webhook] UpsellPitch paid update failed:', pitchErr)
+        }
       } catch (err: any) {
         if (err?.code === 'P2002') {
           console.log(`[Stripe Webhook] Duplicate upsell webhook — Revenue already exists for session ${session.id}`)
@@ -374,10 +391,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   // ── Step 10: Queue onboarding email sequence ──
-  try {
-    await triggerOnboardingSequence(client.id)
-  } catch (err) {
-    console.error('[Stripe Webhook] Onboarding email sequence failed:', err)
+  // Guard: skip onboarding for meeting-close clients (they have their own drip triggered by Mark Live)
+  if (client.clientTrack !== 'MEETING_CLOSE') {
+    try {
+      await triggerOnboardingSequence(client.id)
+    } catch (err) {
+      console.error('[Stripe Webhook] Onboarding email sequence failed:', err)
+    }
   }
 
   // ── Step 11: Send confirmation SMS (uses Post-AQ onboarding flow settings) ──
@@ -661,6 +681,7 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
     await prisma.commission.create({
       data: {
         repId: commission.repId,
+        repName: (commission as any).repName || null,
         clientId: commission.clientId,
         type: commission.type,
         amount: -commission.amount,
@@ -691,4 +712,23 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
       },
     },
   })
+
+  // Fix 4: Reset UpsellPitch status to 'refunded' if one was marked paid
+  if (revenue.clientId) {
+    try {
+      const paidPitch = await prisma.upsellPitch.findFirst({
+        where: { clientId: revenue.clientId, status: 'paid' },
+        orderBy: { paidAt: 'desc' },
+      })
+      if (paidPitch) {
+        await prisma.upsellPitch.update({
+          where: { id: paidPitch.id },
+          data: { status: 'refunded' },
+        })
+        console.log(`[Stripe Webhook] UpsellPitch ${paidPitch.id} marked refunded`)
+      }
+    } catch (pitchErr) {
+      console.error('[Stripe Webhook] UpsellPitch refund update failed:', pitchErr)
+    }
+  }
 }

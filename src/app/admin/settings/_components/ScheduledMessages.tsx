@@ -21,7 +21,7 @@ export interface ScheduledMessagesProps {}
 export default function ScheduledMessages(_props: ScheduledMessagesProps) {
   const { rawSettings, settingsLoaded, saveSetting, savingKey, savedKey } = useSettingsContext()
 
-  const [scheduledSubTab, setScheduledSubTab] = useState<'system' | 'pre_client' | 'post_client'>('system')
+  const [scheduledSubTab, setScheduledSubTab] = useState<'system' | 'pre_client' | 'post_client' | 'meeting_close'>('system')
   const [systemMessages, setSystemMessages] = useState(DEFAULT_SYSTEM_MSGS)
   const [automatedMessages, setAutomatedMessages] = useState(DEFAULT_AUTO_MSGS)
   const [sequences, setSequences] = useState(DEFAULT_SEQUENCES)
@@ -170,6 +170,7 @@ export default function ScheduledMessages(_props: ScheduledMessagesProps) {
           { key: 'system' as const, label: 'System Messages' },
           { key: 'pre_client' as const, label: 'Pre-Client Messages' },
           { key: 'post_client' as const, label: 'Post-Client Messages' },
+          { key: 'meeting_close' as const, label: 'Meeting Close Drip' },
         ].map(({ key, label }) => (
           <button
             key={key}
@@ -575,6 +576,57 @@ export default function ScheduledMessages(_props: ScheduledMessagesProps) {
               onClick={() => { saveSetting('automated_messages', automatedMessages); saveSetting('client_sequences', clientSequences) }}
               saving={savingKey === 'client_sequences' || savingKey === 'automated_messages'}
               saved={savedKey === 'client_sequences' || savedKey === 'automated_messages'}
+            />
+          </div>
+        </>
+      )}
+
+      {/* ── Meeting Close Drip ── */}
+      {scheduledSubTab === 'meeting_close' && (
+        <>
+          <Card className="p-6">
+            <SectionHeader title="Meeting Close Drip" description="4-touch SMS sequence for clients acquired via rep-sourced meetings. Triggered when a meeting-close client is marked live." />
+            <div className="p-3 bg-blue-50 rounded-lg mb-4">
+              <p className="text-sm text-blue-800">
+                These messages are <strong>template-based only</strong> (no AI fallback). They fire at fixed intervals after Mark Live: 30 min, 7 days, 14 days, 28 days.
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                Touch 4 (Day 28) also creates an admin notification with upsell recommendations.
+              </p>
+            </div>
+            <div className="space-y-4">
+              {AUTO_MSG_META.filter(m => m.cat === 'meeting_close').map(m => {
+                const msg = automatedMessages[m.key]
+                return (
+                  <div key={m.key} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <span className="font-medium text-sm text-gray-900">{m.label}</span>
+                        <span className="text-xs text-gray-500 ml-2">{m.desc}</span>
+                      </div>
+                      <button
+                        onClick={() => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], enabled: !prev[m.key].enabled } }))}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${msg?.enabled ? 'bg-blue-600' : 'bg-gray-300'}`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${msg?.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </div>
+                    <textarea
+                      className="w-full p-3 border rounded-md text-sm resize-y min-h-[60px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      value={msg?.text || ''}
+                      onChange={(e) => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], text: e.target.value } }))}
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Variables: {m.vars.map(v => `{${v}}`).join(' ')}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </Card>
+          <div className="flex justify-end">
+            <SaveButton
+              onClick={() => saveSetting('automated_messages', automatedMessages)}
+              saving={savingKey === 'automated_messages'}
+              saved={savedKey === 'automated_messages'}
             />
           </div>
         </>

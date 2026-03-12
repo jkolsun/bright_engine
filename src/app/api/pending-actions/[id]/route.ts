@@ -33,6 +33,7 @@ export async function PUT(
       where: { id },
       include: {
         lead: true,
+        client: true,
       },
     })
 
@@ -66,14 +67,22 @@ export async function PUT(
     // ── APPROVE ──
     const messageToSend = editedMessage !== undefined ? editedMessage : pendingAction.draftMessage
 
-    // Send SMS
+    // Send SMS — for post-client actions, client phone may differ but lead phone is reliable fallback
+    const isPostClient = !!pendingAction.clientId
+    const recipientPhone = isPostClient
+      ? (pendingAction.client?.phone || pendingAction.lead.phone)
+      : pendingAction.lead.phone
+
     await sendSMSViaProvider({
-      to: pendingAction.lead.phone,
+      to: recipientPhone,
       message: messageToSend,
       leadId: pendingAction.leadId,
-      trigger: `close_engine_${pendingAction.type.toLowerCase()}`,
+      clientId: pendingAction.clientId || undefined,
+      trigger: isPostClient
+        ? `post_client_${pendingAction.type.toLowerCase()}`
+        : `close_engine_${pendingAction.type.toLowerCase()}`,
       aiGenerated: true,
-      conversationType: 'pre_client',
+      conversationType: isPostClient ? 'post_client' : 'pre_client',
       sender: 'clawdbot',
     })
 
@@ -87,8 +96,8 @@ export async function PUT(
       },
     })
 
-    // If payment link, transition stage to PAYMENT_SENT
-    if (pendingAction.type === 'SEND_PAYMENT_LINK') {
+    // If payment link, transition stage to PAYMENT_SENT (pre-client only)
+    if (pendingAction.type === 'SEND_PAYMENT_LINK' && pendingAction.conversationId) {
       await transitionStage(pendingAction.conversationId, CONVERSATION_STAGES.PAYMENT_SENT)
     }
 

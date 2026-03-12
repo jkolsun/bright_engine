@@ -40,6 +40,12 @@ export interface AutomatedMessagesConfig {
   winback_day_7: AutomatedMessageTemplate
   winback_day_14: AutomatedMessageTemplate
   winback_day_30: AutomatedMessageTemplate
+
+  // Meeting Close touchpoints
+  meeting_close_touch_1: AutomatedMessageTemplate
+  meeting_close_touch_2: AutomatedMessageTemplate
+  meeting_close_touch_3: AutomatedMessageTemplate
+  meeting_close_touch_4: AutomatedMessageTemplate
 }
 
 export type AutomatedMessageKey = keyof AutomatedMessagesConfig
@@ -124,6 +130,28 @@ export const DEFAULT_AUTOMATED_MESSAGES: AutomatedMessagesConfig = {
     enabled: true,
     delayHours: 720,
   },
+
+  // Meeting Close touchpoints
+  meeting_close_touch_1: {
+    text: "Hey {firstName}, your {companyName} website is officially live! Take a look and let me know if you want any tweaks: {siteUrl}",
+    enabled: true,
+    delayHours: 0.5,
+  },
+  meeting_close_touch_2: {
+    text: "Hey {firstName}, your {companyName} site has been live for a week now. How's everything looking? Any changes you'd like?",
+    enabled: true,
+    delayHours: 168,
+  },
+  meeting_close_touch_3: {
+    text: "Hey {firstName}, two weeks in with {companyName}'s new site. Getting any leads from it? Let me know if you need anything.",
+    enabled: true,
+    delayHours: 336,
+  },
+  meeting_close_touch_4: {
+    text: "Hey {firstName}, it's been a month since {companyName} went live. I've got some ideas that could help you get even more out of it — want to chat?",
+    enabled: true,
+    delayHours: 672,
+  },
 }
 
 // ============================================
@@ -135,7 +163,7 @@ export interface AutomatedMessageMeta {
   label: string
   description: string
   variables: string[]
-  category: 'pre_client' | 'post_client' | 'winback'
+  category: 'pre_client' | 'post_client' | 'winback' | 'meeting_close'
 }
 
 export const AUTOMATED_MESSAGE_META: AutomatedMessageMeta[] = [
@@ -241,6 +269,36 @@ export const AUTOMATED_MESSAGE_META: AutomatedMessageMeta[] = [
     description: 'Final notice 30 days after cancellation.',
     variables: ['companyName'],
     category: 'winback',
+  },
+
+  // Meeting Close
+  {
+    key: 'meeting_close_touch_1',
+    label: 'Touch 1 — Site Live (30min)',
+    description: '30 minutes after site is marked live.',
+    variables: ['firstName', 'companyName', 'siteUrl'],
+    category: 'meeting_close',
+  },
+  {
+    key: 'meeting_close_touch_2',
+    label: 'Touch 2 — Week Check-in (7d)',
+    description: '7 days after site is marked live.',
+    variables: ['firstName', 'companyName', 'siteUrl'],
+    category: 'meeting_close',
+  },
+  {
+    key: 'meeting_close_touch_3',
+    label: 'Touch 3 — Two Week Check-in (14d)',
+    description: '14 days after site is marked live.',
+    variables: ['firstName', 'companyName', 'siteUrl'],
+    category: 'meeting_close',
+  },
+  {
+    key: 'meeting_close_touch_4',
+    label: 'Touch 4 — Month Review + Upsell (28d)',
+    description: '28 days after site is marked live. Also creates upsell notification.',
+    variables: ['firstName', 'companyName', 'siteUrl'],
+    category: 'meeting_close',
   },
 ]
 

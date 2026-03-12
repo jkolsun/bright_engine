@@ -113,6 +113,10 @@ export const DEFAULT_AUTO_MSGS: Record<string, { text: string; enabled: boolean;
   winback_day_7: { text: 'Your hosting was cancelled. {companyName}\'s site goes offline in 7 days. Reply "keep it" to reactivate.', enabled: true, delayHours: 168 },
   winback_day_14: { text: "Hey, just wanted to let you know {companyName}'s site will be taken down soon. If you change your mind, just reply and we'll keep it live.", enabled: true, delayHours: 336 },
   winback_day_30: { text: "Last chance \u2014 {companyName}'s site data will be deleted in 48 hours. Reply to save it.", enabled: true, delayHours: 720 },
+  meeting_close_touch_1: { text: "Hey {firstName}, your {companyName} website is officially live! Take a look and let me know if you want any tweaks: {siteUrl}", enabled: true, delayHours: 0.5 },
+  meeting_close_touch_2: { text: "Hey {firstName}, your {companyName} site has been live for a week now. How's everything looking? Any changes you'd like?", enabled: true, delayHours: 168 },
+  meeting_close_touch_3: { text: "Hey {firstName}, two weeks in with {companyName}'s new site. Getting any leads from it? Let me know if you need anything.", enabled: true, delayHours: 336 },
+  meeting_close_touch_4: { text: "Hey {firstName}, it's been a month since {companyName} went live. I've got some ideas that could help you get even more out of it \u2014 want to chat?", enabled: true, delayHours: 672 },
 }
 
 export const AUTO_MSG_META = [
@@ -130,6 +134,10 @@ export const AUTO_MSG_META = [
   { key: 'winback_day_7', label: 'Win-Back Day 7', desc: '7 days after hosting cancellation.', vars: ['companyName'], cat: 'winback' as const },
   { key: 'winback_day_14', label: 'Win-Back Day 14', desc: '14 days after hosting cancellation.', vars: ['companyName'], cat: 'winback' as const },
   { key: 'winback_day_30', label: 'Win-Back Day 30', desc: 'Final notice 30 days after cancellation.', vars: ['companyName'], cat: 'winback' as const },
+  { key: 'meeting_close_touch_1', label: 'Touch 1 — Site Live (30min)', desc: '30 minutes after site is marked live.', vars: ['firstName', 'companyName', 'siteUrl'], cat: 'meeting_close' as const },
+  { key: 'meeting_close_touch_2', label: 'Touch 2 — Week Check-in (7d)', desc: '7 days after site is marked live.', vars: ['firstName', 'companyName', 'siteUrl'], cat: 'meeting_close' as const },
+  { key: 'meeting_close_touch_3', label: 'Touch 3 — Two Week Check-in (14d)', desc: '14 days after site is marked live.', vars: ['firstName', 'companyName', 'siteUrl'], cat: 'meeting_close' as const },
+  { key: 'meeting_close_touch_4', label: 'Touch 4 — Month Review + Upsell (28d)', desc: '28 days after site marked live. Also creates upsell notification.', vars: ['firstName', 'companyName', 'siteUrl'], cat: 'meeting_close' as const },
 ]
 
 export const DEFAULT_AI_CONTROLS = {

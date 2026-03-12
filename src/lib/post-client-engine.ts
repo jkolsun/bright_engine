@@ -146,7 +146,7 @@ export async function processPostClientInbound(
       const cleaned = rawText.replace(/```json\s?/g, '').replace(/```/g, '').trim()
       parsed = JSON.parse(cleaned)
     } catch {
-      parsed = { replyText: rawText.substring(0, 300), intent: 'GENERAL', escalate: false }
+      parsed = { replyText: "Got your message — our team will follow up with you shortly.", intent: 'GENERAL', escalate: false }
     }
 
     // ── Guard: intercept payment URLs — AI must NEVER send these directly ──
@@ -286,6 +286,14 @@ export async function processPostClientInbound(
         instruction: parsed.editRequest.description || message,
         complexity: (parsed.editRequest.complexity || 'medium') as 'simple' | 'medium' | 'complex',
       }).catch(err => console.error('[PostClient] Edit handler failed:', err))
+
+      // SMS alert to Andrew's phone so edit requests don't sit unnoticed
+      try {
+        const { notifyAdmin } = await import('@/lib/notifications')
+        await notifyAdmin('escalation', 'Site Edit Request', `${client.companyName}: "${message.substring(0, 80)}"`)
+      } catch (err) {
+        console.error('[PostClient] Edit request notifyAdmin failed:', err)
+      }
     }
 
     // Cancel signal or escalation → notify immediately
@@ -300,6 +308,15 @@ export async function processPostClientInbound(
           metadata: { clientId, intent: parsed.intent, reason: parsed.escalateReason || null },
         },
       })
+
+      // SMS alert to Andrew's phone for cancel signals and escalations
+      try {
+        const { notifyAdmin } = await import('@/lib/notifications')
+        const alertType = parsed.intent === 'CANCEL_SIGNAL' ? 'Churn Risk' : 'Client Escalation'
+        await notifyAdmin('escalation', alertType, `${client.companyName}: "${message.substring(0, 80)}"`)
+      } catch (err) {
+        console.error('[PostClient] Cancel/escalation notifyAdmin failed:', err)
+      }
     }
 
     // Positive feedback → log for referral timing
@@ -373,16 +390,51 @@ export async function processPostClientInbound(
     }
 
     // ── Check autonomy and send ──
-    if (client.autonomyLevel === 'MANUAL') {
-      // Notify admin with draft instead of sending
-      await prisma.notification.create({
+    // Fix 2: Cancel signals NEVER auto-send — force into approval queue regardless of autonomy
+    // Fix 5: MANUAL creates PendingAction (not Notification) so admin can approve/reject
+    // Fix 7: SEMI_AUTO also gates messages for approval in post-client context
+    const needsApproval =
+      parsed.intent === 'CANCEL_SIGNAL' ||
+      client.autonomyLevel === 'MANUAL' ||
+      client.autonomyLevel === 'SEMI_AUTO'
+
+    if (needsApproval) {
+      await prisma.pendingAction.create({
         data: {
-          type: 'CLIENT_TEXT',
-          title: 'Post-Client Draft — Manual Approval',
-          message: `Draft for ${client.companyName}: "${parsed.replyText.substring(0, 150)}"`,
-          metadata: { clientId, draftMessage: parsed.replyText, intent: parsed.intent },
+          leadId: client.leadId!,
+          clientId,
+          type: 'SEND_MESSAGE',
+          draftMessage: parsed.replyText,
+          status: 'PENDING',
+          metadata: {
+            intent: parsed.intent,
+            autonomyLevel: client.autonomyLevel,
+            companyName: client.companyName,
+            forcedHold: parsed.intent === 'CANCEL_SIGNAL' ? true : undefined,
+          },
         },
       })
+
+      // Send a safe acknowledgment so the client knows their message was received
+      if (parsed.intent === 'CANCEL_SIGNAL') {
+        const ackMessage = "Got your message — our team will follow up with you shortly."
+        const ackDelay = calculateDelay(ackMessage.length, 'standard')
+        const { addDelayedMessageJob: addAckJob } = await import('@/worker/queue')
+        await addAckJob({
+          type: 'sms-message',
+          options: {
+            to: client.lead!.phone,
+            message: ackMessage,
+            clientId,
+            trigger: 'post_client_cancel_ack',
+            aiGenerated: false,
+            aiDelaySeconds: ackDelay,
+            conversationType: 'post_client',
+            sender: 'clawdbot',
+          },
+        }, ackDelay * 1000)
+      }
+
       return
     }
 
@@ -413,14 +465,22 @@ export async function processPostClientInbound(
     }).catch(err => console.error('[PostClient] API cost write failed:', err))
   } catch (apiError) {
     console.error('[PostClient] Haiku API failed:', apiError)
+    // Fix 13: ESCALATION (not DAILY_AUDIT) so it surfaces immediately
     await prisma.notification.create({
       data: {
-        type: 'DAILY_AUDIT',
-        title: 'Post-Client AI Error',
-        message: `Haiku failed for ${client.companyName}. Manual response needed.`,
+        type: 'ESCALATION',
+        title: 'Post-Client AI Error — Immediate',
+        message: `Haiku failed for ${client.companyName}. Client message went unhandled. Manual response needed.`,
         metadata: { clientId, error: String(apiError) },
       },
     })
+    // SMS alert to Andrew's phone
+    try {
+      const { notifyAdmin } = await import('@/lib/notifications')
+      await notifyAdmin('escalation', 'AI Down — Client Unhandled', `${client.companyName}: Haiku API failed. Client needs manual response.`)
+    } catch (err) {
+      console.error('[PostClient] API failure notifyAdmin failed:', err)
+    }
   }
 }
 
@@ -447,7 +507,7 @@ export async function generateTouchpointMessage(
     'post_launch_day_3': `Generate a helpful Day 3 tip for ${client.lead.firstName} at ${client.companyName}. Focus on Google Business Profile optimization. Keep under 250 chars. SMS tone.`,
     'post_launch_day_7': `Generate a Week 1 stats update for ${client.lead.firstName} at ${client.companyName}. Mention their site is live and performing. Keep under 250 chars. SMS tone. Be encouraging.`,
     'post_launch_day_14': `Generate a 2-week check-in for ${client.lead.firstName}. Ask how the site is working for them and if they need any changes. Keep under 200 chars. SMS tone.`,
-    'post_launch_day_21': `Generate a subtle upsell seed for ${client.lead.firstName} at ${client.companyName} (industry: ${client.lead.industry}). Mention ONE feature that could help their business without being pushy. Under 250 chars. SMS.`,
+    'post_launch_day_21': `Generate a subtle upsell seed for ${client.lead.firstName} at ${client.companyName} (industry: ${client.lead.industry || 'local service business'}). Mention ONE feature that could help their business without being pushy. Under 250 chars. SMS.`,
     'post_launch_day_28': `Generate a 1-month review for ${client.lead.firstName}. Congratulate them, mention the site has been live for a month. Subtly pitch a value-add. Under 250 chars. SMS.`,
     'referral_day_45': `Generate a referral ask for ${client.lead.firstName}. Offer: "Know a business owner who needs a site? You both get a free month." Keep casual and under 200 chars. SMS.`,
     'referral_day_90': `Generate a second referral ask for ${client.lead.firstName}. Different angle than first ask. Mention how many businesses you've helped. Under 200 chars. SMS.`,

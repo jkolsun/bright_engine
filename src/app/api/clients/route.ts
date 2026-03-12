@@ -19,6 +19,8 @@ export async function POST(request: NextRequest) {
     // Generate referral code
     const referralCode = `BA-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
 
+    const isMeetingClose = data.clientTrack === 'MEETING_CLOSE'
+
     const client = await prisma.client.create({
       data: {
         companyName: data.companyName,
@@ -28,15 +30,18 @@ export async function POST(request: NextRequest) {
         siteUrl: data.websiteUrl || data.siteUrl,
         industry: data.industry || 'GENERAL_CONTRACTING',
         location: data.location,
-        hostingStatus: 'ACTIVE',
+        hostingStatus: isMeetingClose ? 'DEACTIVATED' : 'ACTIVE',
         monthlyRevenue: data.monthlyRevenue || config.monthlyHosting,
         plan: data.plan || 'base',
         leadId: data.leadId,
         repId: data.repId,
+        repName: data.repName || null,
         referralCode,
         tags: data.tags || [],
         notes: data.notes,
         closedDate: new Date(),
+        clientTrack: isMeetingClose ? 'MEETING_CLOSE' : 'COLD_SMS',
+        onboardingStep: isMeetingClose ? 7 : 0,
       }
     })
 
