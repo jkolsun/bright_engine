@@ -436,9 +436,14 @@ export async function processCloseEngineInbound(
     }
 
     // Post-process: replace any literal {formUrl} the AI may have output
+    // Use SmartChat settings formBaseUrl (same source as close-engine-prompts) for consistency
     if (claudeResponse.replyText && claudeResponse.replyText.includes('{formUrl}')) {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'
-      const actualFormUrl = `${baseUrl}/onboard/${lead.id}`
+      let formBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'
+      try {
+        const smartChatSettings = await getSmartChatSettings()
+        if (smartChatSettings.formBaseUrl) formBaseUrl = smartChatSettings.formBaseUrl
+      } catch { /* non-critical — fall back to env */ }
+      const actualFormUrl = `${formBaseUrl}/onboard/${lead.id}`
       claudeResponse.replyText = claudeResponse.replyText.replace(/\{formUrl\}/g, actualFormUrl)
     }
 

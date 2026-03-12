@@ -158,7 +158,7 @@ export async function endSession(sessionId: string) {
     where: { id: sessionId },
     include: {
       calls: {
-        select: { id: true, status: true, duration: true, connectedAt: true, dispositionResult: true },
+        select: { id: true, leadId: true, repId: true, status: true, duration: true, connectedAt: true, dispositionResult: true },
       },
     },
   })
@@ -209,6 +209,28 @@ export async function endSession(sessionId: string) {
     }
 
     await Promise.all(updates)
+
+    // Create LeadEvents for orphaned calls so they have an audit trail
+    const eventPromises = orphanedCalls.map(c =>
+      prisma.leadEvent.create({
+        data: {
+          leadId: c.leadId,
+          eventType: 'CALL_MADE',
+          actor: `system:session-end-sweep`,
+          metadata: {
+            source: 'dialer',
+            disposition: c.status === 'VOICEMAIL' ? 'VOICEMAIL' : 'NO_ANSWER',
+            callId: c.id,
+            repId: c.repId,
+            connected: false,
+            autoDispositioned: true,
+            sessionEndSweep: true,
+          },
+        },
+      }).catch(err => console.error(`[SessionEnd] LeadEvent creation failed for call ${c.id}:`, err))
+    )
+    await Promise.all(eventPromises)
+
     console.log(`[SessionEnd] Fallback-dispositioned ${orphanedCalls.length} orphaned calls (${vmIds.length} VM, ${otherIds.length} other)`)
   }
 
@@ -559,14 +581,20 @@ export async function logDisposition(params: {
 
   if (!call || !call.lead) throw new Error('Call not found')
 
+  // Idempotency guard — skip if already dispositioned (prevents double stat increments from race conditions)
+  if (call.dispositionResult) {
+    console.log(`[DialerService] logDisposition skipped — call ${callId} already dispositioned as ${call.dispositionResult}`)
+    return { success: true, skipped: true }
+  }
+
   const isConnected = !!call.connectedAt
   const isConversation = CONVERSATION_DISPOSITIONS.includes(result)
   const isClose = CLOSE_DISPOSITIONS.includes(result)
   const isInterested = INTERESTED_DISPOSITIONS.includes(result)
 
-  // 1. Update DialerCall
-  await prisma.dialerCall.update({
-    where: { id: callId },
+  // 1. Update DialerCall (atomic — only if not yet dispositioned)
+  const claimResult = await prisma.dialerCall.updateMany({
+    where: { id: callId, dispositionResult: null },
     data: {
       dispositionResult: result,
       dispositionPath: path ? (path as any) : undefined,
@@ -574,6 +602,12 @@ export async function logDisposition(params: {
       notes: notes || undefined,
     },
   })
+
+  // If another request already dispositioned this call, bail out
+  if (claimResult.count === 0) {
+    console.log(`[DialerService] logDisposition race lost — call ${callId} dispositioned by concurrent request`)
+    return { success: true, skipped: true }
+  }
 
   // 2. Update Lead.status based on disposition
   const newLeadStatus = DISPOSITION_STATUS_MAP[result]

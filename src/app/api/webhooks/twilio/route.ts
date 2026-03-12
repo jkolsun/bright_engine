@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getSMSProvider, logInboundSMSViaProvider } from '@/lib/sms-provider'
+import { getSMSProvider } from '@/lib/sms-provider'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,19 +27,33 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const { from, body, sid, mediaUrls, mediaTypes } = await provider.parseInboundWebhook(formData)
 
-    // ── Idempotency: Twilio retries can cause duplicate processing ──
-    // Check if we already processed this exact MessageSid (prevents duplicate outbound sends)
+    // ── Idempotency: Atomic claim via unique constraint on twilioSid ──
+    // Instead of read-then-check (race-prone), immediately CREATE a placeholder record
+    // to claim this SID. The @unique constraint on twilioSid rejects concurrent duplicates.
+    // The placeholder is updated later with full data (leadId, clientId, mediaUrls, etc.).
     if (sid) {
-      const existing = await prisma.message.findFirst({
-        where: { twilioSid: sid },
-        select: { id: true },
-      })
-      if (existing) {
-        console.log(`[Twilio] Duplicate webhook ignored (sid: ${sid})`)
-        return new NextResponse(
-          '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
-          { headers: { 'Content-Type': 'text/xml' } }
-        )
+      try {
+        await prisma.message.create({
+          data: {
+            direction: 'INBOUND',
+            channel: 'SMS',
+            senderType: 'LEAD',
+            senderName: 'contact',
+            content: body || '',
+            twilioSid: sid,
+            twilioStatus: 'processing',
+          },
+        })
+      } catch (claimErr: any) {
+        if (claimErr?.code === 'P2002') {
+          // Unique constraint violation — this SID is already being processed
+          console.log(`[Twilio] Duplicate webhook ignored (sid: ${sid})`)
+          return new NextResponse(
+            '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+            { headers: { 'Content-Type': 'text/xml' } }
+          )
+        }
+        throw claimErr
       }
     }
 
@@ -129,14 +143,18 @@ export async function POST(request: NextRequest) {
     if (!lead && !client) {
       console.log(`[Twilio] Unknown inbound from ${from}: "${body.substring(0, 50)}"`)
 
-      // Log the message with no lead/client for admin visibility
-      await logInboundSMSViaProvider({
-        from,
-        body,
-        sid,
-        mediaUrls,
-        mediaTypes,
-      })
+      // Update the claimed placeholder with full data (no lead/client for unknown inbound)
+      if (sid) {
+        await prisma.message.update({
+          where: { twilioSid: sid },
+          data: {
+            content: body || '',
+            twilioStatus: 'received',
+            mediaUrls: mediaUrls && mediaUrls.length > 0 ? mediaUrls : undefined,
+            mediaTypes: mediaTypes && mediaTypes.length > 0 ? mediaTypes : undefined,
+          },
+        })
+      }
 
       // Send AI identification response
       try {
@@ -201,16 +219,21 @@ export async function POST(request: NextRequest) {
         originalMessageId = originalMsg?.id
       }
 
-      // Log the reaction as a message with reaction metadata
-      await logInboundSMSViaProvider({
-        from,
-        body,
-        sid,
-        leadId: targetLeadId,
-        clientId: targetClientId,
-        mediaUrls,
-        mediaTypes,
-      })
+      // Update the claimed placeholder with reaction data
+      if (sid) {
+        await prisma.message.update({
+          where: { twilioSid: sid },
+          data: {
+            leadId: targetLeadId || null,
+            clientId: targetClientId || null,
+            senderType: targetClientId ? 'CLIENT' : 'LEAD',
+            content: body || '',
+            twilioStatus: 'received',
+            mediaUrls: mediaUrls && mediaUrls.length > 0 ? mediaUrls : undefined,
+            mediaTypes: mediaTypes && mediaTypes.length > 0 ? mediaTypes : undefined,
+          },
+        })
+      }
 
       // Update the logged message with reaction fields
       if (sid) {
@@ -227,7 +250,7 @@ export async function POST(request: NextRequest) {
       // Route reaction to AI with translated context
       const reactionContext = translateReactionForAI(reaction, body)
 
-      if (reactionContext.shouldRoute && lead) {
+      if (reactionContext.shouldRoute && lead && !client) {
         const { processCloseEngineInbound } = await import('@/lib/close-engine')
         const activeConversation = await prisma.closeEngineConversation.findUnique({
           where: { leadId: lead.id },
@@ -239,9 +262,7 @@ export async function POST(request: NextRequest) {
             console.error('[Twilio] Close Engine reaction processing failed:', err)
           }
         }
-      }
-
-      if (reactionContext.shouldRoute && client) {
+      } else if (reactionContext.shouldRoute && client) {
         try {
           const { processPostClientInbound } = await import('@/lib/post-client-engine')
           await processPostClientInbound(client.id, reactionContext.aiMessage)
@@ -281,16 +302,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Log inbound message (with Cloudinary URLs if processed)
-    await logInboundSMSViaProvider({
-      from,
-      body,
-      sid,
-      leadId: lead?.id || client?.leadId || undefined,
-      clientId: client?.id,
-      mediaUrls: publicMediaUrls,
-      mediaTypes,
-    })
+    // Update the claimed placeholder with full data (lead/client match, processed media URLs)
+    if (sid) {
+      const inboundContent = body || (publicMediaUrls && publicMediaUrls.length > 0
+        ? `[${publicMediaUrls.length} image${publicMediaUrls.length > 1 ? 's' : ''} sent]`
+        : '')
+      await prisma.message.update({
+        where: { twilioSid: sid },
+        data: {
+          leadId: lead?.id || client?.leadId || null,
+          clientId: client?.id || null,
+          senderType: client?.id ? 'CLIENT' : 'LEAD',
+          content: inboundContent,
+          twilioStatus: 'received',
+          mediaUrls: publicMediaUrls && publicMediaUrls.length > 0 ? publicMediaUrls : undefined,
+          mediaTypes: mediaTypes && mediaTypes.length > 0 ? mediaTypes : undefined,
+        },
+      })
+    }
 
     // Auto-DNC on STOP keywords
     const stopKeywords = ['STOP', 'UNSUBSCRIBE', 'CANCEL', 'QUIT', 'OPTOUT', 'OPT OUT']
@@ -511,7 +540,9 @@ export async function POST(request: NextRequest) {
     }
 
     // ── CLOSE ENGINE HANDLER (with SmartChat message batching) ──
-    if (lead) {
+    // Only run Close Engine if there's NO client record — if they've paid, Post-Client handles them.
+    // This prevents both AI engines from firing on the same inbound message.
+    if (lead && !client) {
       const { processCloseEngineInbound, triggerCloseEngine } = await import('@/lib/close-engine')
       const { addToBatch } = await import('@/lib/message-batcher')
 
@@ -572,18 +603,11 @@ export async function POST(request: NextRequest) {
           } else {
             console.log(`[Twilio] Lead inbound from ${from} (${lead.companyName}), triggering pre-acquisition flow`)
 
-            // Reset dedup flag if previously set (allows re-engagement after CLOSED_LOST)
-            if (lead.closeEngineTriggeredAt) {
-              await prisma.lead.update({
-                where: { id: lead.id },
-                data: { closeEngineTriggeredAt: null },
-              })
-            }
-
             try {
               await triggerCloseEngine({
                 leadId: lead.id,
                 entryPoint: 'SMS_REPLY',
+                reEngagement: isClosedLost,
               })
             } catch (err) {
               console.error('[Twilio] Close Engine trigger failed:', err)

@@ -33,8 +33,15 @@ export async function POST(request: NextRequest) {
     const clientsToDelete = await prisma.client.findMany({ where, select: { id: true } })
     const idsToDelete = clientsToDelete.map(c => c.id)
 
+    if (idsToDelete.length === 0) {
+      return NextResponse.json({
+        message: 'No clients matched for deletion',
+        deletedCount: 0,
+      })
+    }
+
     // Transaction: clean up non-FK orphan tables, then delete clients (cascades the rest)
-    const orphanWhere = idsToDelete.length > 0 ? { clientId: { in: idsToDelete } } : {}
+    const orphanWhere = { clientId: { in: idsToDelete } }
     const [,,, result] = await prisma.$transaction([
       prisma.approval.deleteMany({ where: orphanWhere }),
       prisma.channelDecision.deleteMany({ where: orphanWhere }),

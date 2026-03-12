@@ -123,6 +123,7 @@ export default async function PreviewPage({ params }: { params: { id: string } }
             enrichedPhotos: photos,
             logo: lead.logo || undefined,
             colorPrefs: lead.colorPrefs ? (lead.colorPrefs as any) : undefined,
+            stockPhotos: lead.stockPhotos ? (lead.stockPhotos as any) : undefined,
           }}
           websiteCopy={personalization?.websiteCopy || undefined}
         />

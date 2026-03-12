@@ -94,6 +94,7 @@ let importQueue: Queue | null = null
 let scraperQueue: Queue | null = null
 let monitoringQueue: Queue | null = null
 let smsCampaignQueue: Queue | null = null
+let stockPhotosQueue: Queue | null = null
 
 let enrichmentEvents: QueueEvents | null = null
 let previewEvents: QueueEvents | null = null
@@ -172,6 +173,10 @@ async function getQueues() {
     // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
     smsCampaignQueue = new Queue('sms-campaign', { connection })
   }
+  if (!stockPhotosQueue && connection) {
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    stockPhotosQueue = new Queue('stock-photos', { connection })
+  }
 }
 
 // Export getters instead of direct references
@@ -223,6 +228,11 @@ export async function getMonitoringQueue() {
 export async function getSmsCampaignQueue() {
   await getQueues()
   return smsCampaignQueue
+}
+
+export async function getStockPhotosQueue() {
+  await getQueues()
+  return stockPhotosQueue
 }
 
 export async function getEnrichmentEvents() {
@@ -386,6 +396,31 @@ export async function addEnrichmentJob(data: {
     return job
   } catch (err) {
     console.error(`❌ Failed to queue enrichment job for lead ${data.leadId}:`, err)
+    return null
+  }
+}
+
+export async function addStockPhotosJob(data: { leadId: string }) {
+  const queue = await getStockPhotosQueue()
+  if (!queue || !isRedisAvailable) {
+    console.warn('Stock photos queue unavailable, skipping job for lead:', data.leadId)
+    return null
+  }
+
+  try {
+    return await queue.add(
+      'fetch-stock-photos',
+      data,
+      {
+        attempts: 2,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+      }
+    )
+  } catch (err) {
+    console.warn('Failed to add stock photos job:', err)
     return null
   }
 }

@@ -10,6 +10,8 @@ import { Phone, MapPin, Star, CheckCircle, ArrowRight, Mail, Camera, MessageCirc
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
 import PhotoPlaceholder from '../shared/PhotoPlaceholder'
+import ServicePageContent from '../shared/ServiceSections'
+import { resolveServiceImage } from '../shared/photoUtils'
 
 function fmt(phone: string): string {
   const d = phone.replace(/\D/g, '')
@@ -125,7 +127,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
   const hasR = lead.enrichedRating && lead.enrichedRating > 0
   const A = getAccent(config)
 
-  const svcData = svc.map((n,i) => ({ name:n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services built on quality and trust.`, img: photos.length > 0 ? photos[i % photos.length] : undefined }))
+  const svcData = svc.map((n,i) => ({ name:n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services built on quality and trust.`, img: resolveServiceImage(n, i, photos, lead.stockPhotos) }))
   const testis = [
     { text: wc?.testimonialQuote || `${lead.companyName} did outstanding work. The craftsmanship speaks for itself. Couldn't be happier.`, name: wc?.testimonialAuthor || 'Robert M.', loc: lead.city||'Local' },
     ...(wc?.additionalTestimonials?.map(t=>({text:t.quote,name:t.author,loc:lead.city||'Local'})) || [
@@ -318,66 +320,29 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
 
       {/* =============== SERVICES PAGE =============== */}
       <div data-page="services" style={{display:page==='services'?'block':'none'}}>
-        {/* Header */}
-        <section style={{padding:'clamp(120px,16vh,180px) clamp(16px,4vw,48px) 60px'}}><div style={{maxWidth:900,margin:'0 auto'}}>
-          <Reveal><p style={{fontFamily:label,fontSize:12,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:6}}>Services</p></Reveal>
-          <Reveal delay={80}><h1 style={{fontFamily:serif,fontSize:'clamp(36px,5vw,56px)',fontWeight:700,marginBottom:16}}>Our services</h1></Reveal>
-          <Reveal delay={160}><p style={{color:'#8a8078',fontStyle:'italic',maxWidth:500}}>Quality {indLabel}{loc?` across ${loc}`:''} and beyond.</p></Reveal>
-        </div></section>
-        <Ornament color={A}/>
-
-        {/* Editorial layout — large photo + numbered text */}
-        <section style={{padding:'0 clamp(16px,4vw,48px) clamp(60px,8vw,100px)'}}>
-          <div style={{maxWidth:1100,margin:'0 auto'}}>
-            {svcData.map((s,i)=>(
-              <Reveal key={i} delay={i*60}>
-                <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 items-center py-10 ${i<svcData.length-1?'':''}`.trim()} style={{borderBottom:i<svcData.length-1?'1px solid #e8e2d8':'none'}}>
-                  <div className={`cs-photo-hover ${i%2===1?'lg:order-2':''}`} style={{aspectRatio:'4/3'}}>
-                    {s.img ? (
-                      <img src={s.img} alt={s.name} className="w-full h-full object-cover" style={{display:'block'}} onError={e=>{(e.target as HTMLImageElement).parentElement!.style.display='none'}}/>
-                    ) : (
-                      <PhotoPlaceholder accent={A} style={{width:'100%',height:'100%'}} />
-                    )}
-                  </div>
-                  <div className={i%2===1?'lg:order-1':''}>
-                    <span style={{fontFamily:serif,fontSize:48,fontWeight:700,color:`${A}25`,lineHeight:1,display:'block',marginBottom:8}}>{String(i+1).padStart(2,'0')}</span>
-                    <h3 style={{fontFamily:serif,fontSize:'clamp(22px,3vw,32px)',fontWeight:700,marginBottom:12}}>{s.name}</h3>
-                    <p className="leading-relaxed mb-5" style={{color:'#8a8078',fontSize:15}}>{s.desc}</p>
-                    <button onClick={()=>{onCTAClick();go('contact')}} className="inline-flex items-center gap-2 text-sm font-semibold" style={{fontFamily:label,color:A,textTransform:'uppercase',letterSpacing:'0.04em',background:'none',border:'none',cursor:'pointer'}}>Get estimate <ArrowRight size={14}/></button>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-
-        <Ornament color={A}/>
-
-        {/* Process steps */}
-        <section style={{background:'#EDE8DF',padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)'}}>
-          <div style={{maxWidth:900,margin:'0 auto'}}>
-            <Reveal><p style={{fontFamily:label,fontSize:12,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:6}}>Our Process</p>
-            <h2 style={{fontFamily:serif,fontSize:'clamp(28px,3.5vw,42px)',fontWeight:700,marginBottom:48}}>How we work</h2></Reveal>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {steps.map((s,i)=>(
-                <Reveal key={i} delay={i*100}><div className="flex gap-5">
-                  <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center text-white font-bold" style={{background:A,fontFamily:label,fontSize:14}}>{i+1}</div>
-                  <div><h4 className="font-bold mb-1" style={{fontFamily:serif,fontSize:18}}>{s.title}</h4>
-                  <p className="text-sm leading-relaxed" style={{color:'#8a8078'}}>{s.description}</p></div>
-                </div></Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* CTA band */}
-        <section style={{padding:'clamp(48px,6vw,80px) clamp(16px,4vw,48px)'}}>
-          <Reveal><div className="text-center" style={{maxWidth:500,margin:'0 auto'}}>
-            <h3 style={{fontFamily:serif,fontSize:'clamp(24px,3vw,36px)',fontWeight:700,marginBottom:12}}>Ready to get started?</h3>
-            <p className="mb-6" style={{color:'#8a8078',fontStyle:'italic'}}>Free estimates, no obligation.</p>
-            <button onClick={()=>{onCTAClick();go('contact')}} className="cs-btn">Request Estimate <ArrowRight size={15}/></button>
-          </div></Reveal>
-        </section>
+        <ServicePageContent
+          services={svcData}
+          steps={steps}
+          whyUs={whyUs}
+          lead={lead}
+          config={config}
+          theme={{
+            accent: A,
+            fonts: { heading: serif, body: bodySerif, mono: label },
+            bgPrimary: '#FDFBF7',
+            bgSecondary: '#EDE8DF',
+            textPrimary: '#2C2520',
+            textSecondary: '#5C534A',
+            textMuted: '#8a8078',
+            cardBg: '#fff',
+            cardBorder: 'rgba(0,0,0,0.06)',
+            isDark: false,
+            borderRadius: '0px',
+          }}
+          onCTAClick={onCTAClick}
+          onCallClick={onCallClick}
+          goToContact={() => go('contact')}
+        />
       </div>
 
       {/* =============== ABOUT PAGE =============== */}

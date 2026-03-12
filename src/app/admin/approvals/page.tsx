@@ -17,15 +17,15 @@ const GATE_CONFIG: Record<string, { label: string; icon: any; color: string; bad
   REFUND: { label: 'Refund', icon: CreditCard, color: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400', badgeColor: 'bg-red-500 text-white' },
   SEND_MESSAGE: { label: 'Send Message', icon: MessageSquare, color: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400', badgeColor: 'bg-purple-500 text-white' },
   SEND_PREVIEW: { label: 'Site Approval', icon: Eye, color: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400', badgeColor: 'bg-blue-500 text-white' },
-  STATUS_CHANGE: { label: 'Status Change', icon: RefreshCw, color: 'bg-teal-100 text-teal-700 dark:text-teal-400', badgeColor: 'bg-teal-500 text-white' },
+  STATUS_CHANGE: { label: 'Status Change', icon: RefreshCw, color: 'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400', badgeColor: 'bg-teal-500 text-white' },
   DELETE_LEAD: { label: 'Delete Lead', icon: Trash2, color: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400', badgeColor: 'bg-red-500 text-white' },
   BULK_ACTION: { label: 'Bulk Action', icon: Users, color: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400', badgeColor: 'bg-orange-500 text-white' },
   AI_RESPONSE: { label: 'AI Response', icon: Bot, color: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400', badgeColor: 'bg-indigo-500 text-white' },
   SUBSCRIPTION_CANCEL: { label: 'Cancel Sub', icon: XCircle, color: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400', badgeColor: 'bg-red-500 text-white' },
   HIGH_VALUE_SEND: { label: 'High Value', icon: AlertTriangle, color: 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400', badgeColor: 'bg-yellow-500 text-white' },
-  UPSELL_SEND: { label: 'Upsell', icon: Package, color: 'bg-violet-100 text-violet-700', badgeColor: 'bg-violet-500 text-white' },
-  DOMAIN_SETUP: { label: 'Domain Setup', icon: Globe, color: 'bg-cyan-100 text-cyan-700', badgeColor: 'bg-cyan-500 text-white' },
-  DOMAIN_REGISTRATION: { label: 'Domain Register', icon: Globe, color: 'bg-cyan-100 text-cyan-700', badgeColor: 'bg-cyan-600 text-white' },
+  UPSELL_SEND: { label: 'Upsell', icon: Package, color: 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400', badgeColor: 'bg-violet-500 text-white' },
+  DOMAIN_SETUP: { label: 'Domain Setup', icon: Globe, color: 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-400', badgeColor: 'bg-cyan-500 text-white' },
+  DOMAIN_REGISTRATION: { label: 'Domain Register', icon: Globe, color: 'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-400', badgeColor: 'bg-cyan-600 text-white' },
   SITE_EDIT: { label: 'Site Edit', icon: Eye, color: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400', badgeColor: 'bg-amber-500 text-white' },
   SITE_PUBLICATION: { label: 'Site Publish', icon: Globe, color: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400', badgeColor: 'bg-emerald-500 text-white' },
 }
@@ -208,7 +208,10 @@ export default function ApprovalsPage() {
 
       <div className="p-6 space-y-4">
         {loading && (
-          <Card className="p-8 text-center text-gray-500 dark:text-gray-400">Loading approvals...</Card>
+          <Card className="p-12 text-center">
+            <ShieldCheck size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4 animate-pulse" />
+            <p className="text-gray-600 dark:text-gray-400">Loading approvals...</p>
+          </Card>
         )}
 
         {!loading && approvals.length === 0 && (
@@ -316,19 +319,19 @@ export default function ApprovalsPage() {
 
                   {/* Upsell details */}
                   {approval.gate === 'UPSELL_SEND' && meta && (
-                    <div className="mt-2 p-3 bg-violet-50 rounded-lg border border-violet-200">
+                    <div className="mt-2 p-3 bg-violet-50 dark:bg-violet-950/30 rounded-lg border border-violet-200 dark:border-violet-800">
                       <div className="flex items-center gap-3 text-sm">
-                        <span className="font-medium text-violet-700">{String(meta.productName || 'Upsell Product')}</span>
+                        <span className="font-medium text-violet-700 dark:text-violet-400">{String(meta.productName || 'Upsell Product')}</span>
                         {!!meta.productPrice && (
-                          <span className="text-violet-600 font-semibold">${String(meta.productPrice)}</span>
+                          <span className="text-violet-600 dark:text-violet-400 font-semibold">${String(meta.productPrice)}</span>
                         )}
                       </div>
                       {!!meta.repName && (
-                        <p className="text-xs text-violet-600 mt-1">Pitched by {String(meta.repName)}</p>
+                        <p className="text-xs text-violet-600 dark:text-violet-400 mt-1">Pitched by {String(meta.repName)}</p>
                       )}
                       {!!meta.paymentUrl && (
                         <a href={String(meta.paymentUrl)} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-violet-700 underline mt-1 hover:text-violet-900">
+                          className="inline-flex items-center gap-1 text-xs text-violet-700 dark:text-violet-400 underline mt-1 hover:text-violet-900 dark:hover:text-violet-300">
                           Payment Link <ExternalLink size={10} />
                         </a>
                       )}

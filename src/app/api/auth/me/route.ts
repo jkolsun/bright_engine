@@ -60,6 +60,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Invalidate session if user has been suspended or deactivated
+    if (user.status && user.status !== 'ACTIVE') {
+      const response = NextResponse.json(
+        { error: 'Account is suspended' },
+        { status: 403 }
+      )
+      response.cookies.delete('session')
+      return response
+    }
+
     return NextResponse.json({
       user,
       repOnboardingEnabled: onboardingSetting?.value !== false,

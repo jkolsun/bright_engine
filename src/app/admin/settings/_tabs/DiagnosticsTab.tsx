@@ -89,7 +89,7 @@ export default function DiagnosticsTab() {
               type="checkbox"
               checked={autoRefresh}
               onChange={(e) => setAutoRefresh(e.target.checked)}
-              className="rounded border-gray-300"
+              className="rounded border-gray-300 dark:border-slate-600"
             />
             Auto-refresh
           </label>

@@ -24,7 +24,7 @@ const DISPOSITION_BADGE: Record<string, { label: string; className: string }> = 
   WRONG_NUMBER: { label: 'Wrong Number', className: 'bg-red-100 dark:bg-red-900/40 text-red-600' },
   DISCONNECTED: { label: 'Disconnected', className: 'bg-red-100 dark:bg-red-900/40 text-red-600' },
   NO_ANSWER: { label: 'No Answer', className: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' },
-  VOICEMAIL: { label: 'Voicemail', className: 'bg-purple-100 text-purple-700' },
+  VOICEMAIL: { label: 'Voicemail', className: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400' },
 }
 
 const DISPOSITION_OPTIONS = [

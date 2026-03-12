@@ -49,6 +49,9 @@ export async function POST(request: NextRequest) {
       }
 
       case 'status': {
+        if (!payload?.status) {
+          return NextResponse.json({ error: 'payload.status required for status action' }, { status: 400 })
+        }
         const updateData: any = { status: payload.status, priority: payload.priority }
         if (payload.status === 'DO_NOT_CONTACT') {
           updateData.dncAt = new Date()
@@ -71,6 +74,27 @@ export async function POST(request: NextRequest) {
           }),
         ])
         updated = updateResult.count
+
+        // Sync DoNotCall table for DNC consistency (dnc-check.ts does dual-table lookup)
+        if (payload.status === 'DO_NOT_CONTACT') {
+          const leads = await prisma.lead.findMany({
+            where: { id: { in: leadIds } },
+            select: { phone: true },
+          })
+          for (const lead of leads) {
+            if (lead.phone) {
+              await prisma.doNotCall.upsert({
+                where: { phone: lead.phone },
+                create: {
+                  phone: lead.phone,
+                  reason: 'Admin bulk action from LeadBank',
+                  addedBy: 'admin',
+                },
+                update: {},
+              })
+            }
+          }
+        }
         break
       }
 

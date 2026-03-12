@@ -145,6 +145,10 @@ export async function POST(
       'classic-b': { query: 'family=Oswald:wght@400;500;600;700&family=Work+Sans:wght@300;400;500;600&family=Roboto+Mono:wght@400;500', head: "'Oswald',system-ui,sans-serif", body: "'Work Sans',system-ui,sans-serif" },
       'bold':      { query: 'family=Playfair+Display:wght@400;500;600;700;800;900&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500', head: "'Playfair Display',Georgia,serif", body: "'Syne',system-ui,sans-serif" },
       'bold-b':    { query: 'family=Bebas+Neue&family=Barlow:wght@400;500;600;700;800&family=Share+Tech+Mono', head: "'Bebas Neue',system-ui,sans-serif", body: "'Barlow',system-ui,sans-serif" },
+      'apex':      { query: 'family=Playfair+Display:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500', head: "'Playfair Display',Georgia,serif", body: "'Inter',system-ui,sans-serif" },
+      'flux':      { query: 'family=Sora:wght@400;500;600;700;800&family=Nunito+Sans:wght@400;500;600;700&family=Fira+Code:wght@400;500', head: "'Sora',system-ui,sans-serif", body: "'Nunito Sans',system-ui,sans-serif" },
+      'summit':    { query: 'family=Cormorant+Garamond:wght@300;400;500;600;700&family=Lato:wght@300;400;700&family=Space+Mono:wght@400;700', head: "'Cormorant Garamond',Georgia,serif", body: "'Lato',system-ui,sans-serif" },
+      'forge':     { query: 'family=Oswald:wght@400;500;600;700;800;900&family=Barlow:wght@400;500;600;700&family=Share+Tech+Mono', head: "'Oswald',Impact,sans-serif", body: "'Barlow',system-ui,sans-serif" },
     }
     const defaultFonts = { query: 'family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700;800', head: "'DM Serif Display',Georgia,serif", body: "'Plus Jakarta Sans',system-ui,-apple-system,sans-serif" }
     const templateKey = lead.selectedTemplate || ''
@@ -154,11 +158,41 @@ export async function POST(
     const tailwindConfig = `<script>tailwind.config={theme:{extend:{fontFamily:{display:[${fonts.head.split(',').map(f => `'${f.trim()}'`).join(',')}]}}}}</script>`
     const baseFontCss = `<style>body,.preview-template{font-family:${fonts.body}}h1,h2,h3,h4,.preview-template h1,.preview-template h2,.preview-template h3,.preview-template h4,.font-display{font-family:${fonts.head}}</style>`
 
+    // CDN scripts for premium libraries (Swiper, Vanilla Tilt, Lenis)
+    const premiumCdnHead = [
+      '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">',
+      '<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js" defer></script>',
+      '<script src="https://cdn.jsdelivr.net/npm/vanilla-tilt@1.8.1/dist/vanilla-tilt.min.js" defer></script>',
+    ].join('\n  ')
+
+    // Auto-initialize Swiper and Vanilla Tilt on static HTML after page load
+    const premiumInitScript = `<script>
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('.swiper').forEach(function(el){
+    var spv=parseInt(el.dataset.swiperSlidesPerView)||3;
+    var sb=parseInt(el.dataset.swiperSpaceBetween)||24;
+    new Swiper(el,{modules:[],slidesPerView:1,spaceBetween:sb,loop:el.dataset.swiperLoop==='true',
+      autoplay:el.dataset.swiperAutoplay==='true'?{delay:4000,disableOnInteraction:false}:false,
+      pagination:{el:el.querySelector('.swiper-pagination'),clickable:true},
+      navigation:{nextEl:el.querySelector('.swiper-button-next'),prevEl:el.querySelector('.swiper-button-prev')},
+      breakpoints:{640:{slidesPerView:Math.min(2,spv)},1024:{slidesPerView:spv}}});
+  });
+  document.querySelectorAll('[data-tilt]').forEach(function(el){
+    VanillaTilt.init(el,{max:parseInt(el.dataset.tiltMax)||8,speed:parseInt(el.dataset.tiltSpeed)||400,
+      glare:el.dataset.tiltGlare==='true','max-glare':parseFloat(el.dataset.tiltMaxGlare)||0.1,
+      scale:parseFloat(el.dataset.tiltScale)||1});
+  });
+});
+</script>`
+
     // Inject into <head>
     html = html.replace(
       /<head[^>]*>/i,
-      `<head>\n  ${metaCharset}\n  ${tailwindCdn}\n  ${tailwindConfig}\n  ${googleFonts}\n  ${baseFontCss}`
+      `<head>\n  ${metaCharset}\n  ${tailwindCdn}\n  ${premiumCdnHead}\n  ${tailwindConfig}\n  ${googleFonts}\n  ${baseFontCss}`
     )
+
+    // Inject init script before </body>
+    html = html.replace(/<\/body>/i, `${premiumInitScript}\n</body>`)
 
     // Strip Next.js scripts (/_next/ references, __NEXT_DATA__, hydration scripts)
     html = html.replace(/<script[^>]*src="\/_next\/[^"]*"[^>]*><\/script>/g, '')

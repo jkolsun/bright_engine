@@ -8,6 +8,13 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Auth check
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || !['ADMIN', 'REP'].includes(session.role)) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
     const { id } = await context.params
     const lead = await prisma.lead.findUnique({
       where: { id },
@@ -191,6 +198,13 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Admin-only — hard delete is destructive
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const { id } = await context.params
     const lead = await prisma.lead.findUnique({
       where: { id }

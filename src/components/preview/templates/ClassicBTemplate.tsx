@@ -11,6 +11,8 @@ import { Phone, MapPin, Star, CheckCircle, ArrowRight, Mail, Camera, MessageCirc
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
 import PhotoPlaceholder from '../shared/PhotoPlaceholder'
+import ServicePageContent from '../shared/ServiceSections'
+import { resolveServiceImage } from '../shared/photoUtils'
 
 function fmt(phone: string): string {
   const d = phone.replace(/\D/g, '')
@@ -96,7 +98,7 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
   const aboutText = wc?.aboutParagraph1 || `${name} delivers dependable ${indLabel} services with precision, transparency, and a relentless focus on quality. We show up on time, do the job right, and stand behind every project.`
   const aboutText2 = wc?.aboutParagraph2 || `From day one our mission has been simple: do honest work at fair prices. Every crew member is trained, every job is inspected, and every client gets our direct number.`
 
-  const svcData = svc.map((n, i) => ({ name: n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services.`, img: photos.length > 0 ? photos[i % photos.length] : undefined }))
+  const svcData = svc.map((n, i) => ({ name: n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services.`, img: resolveServiceImage(n, i, photos, lead.stockPhotos) }))
   const testis = [
     { text: wc?.testimonialQuote || `${name} exceeded our expectations. Professional, on time, and the quality speaks for itself.`, author: wc?.testimonialAuthor || 'Verified Customer' },
     ...(wc?.additionalTestimonials?.map(t => ({ text: t.quote, author: t.author })) || [
@@ -375,63 +377,30 @@ export default function ClassicBTemplate({ lead, config, onCTAClick, onCallClick
         </div>
 
         {/* ══════════════ SERVICES ══════════════ */}
-        <div data-page="services" style={{ display: page === 'services' ? 'block' : 'none' }}>
-          <section style={{ padding: 'clamp(48px,8vw,96px) clamp(16px,4vw,32px)' }}>
-            <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-              <Reveal>
-                <p style={{ fontFamily: mono, fontSize: 12, color: A, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>Full Service List</p>
-                <h1 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(32px,6vw,56px)', textTransform: 'uppercase', color: '#fff', marginBottom: 48 }}>Our Services</h1>
-              </Reveal>
-
-              {/* Table-row services with thumbnail */}
-              <div style={{ borderTop: `3px solid ${A}` }}>
-                {svcData.map((s, i) => (
-                  <Reveal key={i}>
-                    <div className="ic-table-row" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(16px,3vw,24px)', padding: 'clamp(16px,3vw,24px) clamp(12px,2vw,20px)', borderBottom: '1px solid rgba(255,255,255,0.06)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
-                      {s.img ? <img src={s.img} alt={s.name} style={{ width: 'clamp(56px,8vw,80px)', height: 'clamp(56px,8vw,80px)', objectFit: 'cover', flexShrink: 0 }} /> : <PhotoPlaceholder accent={A} variant="dark" style={{ width: 'clamp(56px,8vw,80px)', height: 'clamp(56px,8vw,80px)', flexShrink: 0 }} iconSize={20} />}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-                          <span style={{ fontFamily: mono, fontSize: 'clamp(10px,1.1vw,12px)', color: A, flexShrink: 0 }}>{String(i + 1).padStart(2, '0')}</span>
-                          <span style={{ fontFamily: head, fontWeight: 600, fontSize: 'clamp(16px,2.2vw,22px)', textTransform: 'uppercase', letterSpacing: 1, color: '#E8E6E1' }}>{s.name}</span>
-                        </div>
-                        <p style={{ fontSize: 'clamp(13px,1.4vw,15px)', color: '#9CA3AF', lineHeight: 1.6, fontWeight: 300 }}>{s.desc}</p>
-                      </div>
-                      <CheckCircle size={18} color={A} style={{ flexShrink: 0 }} />
-                    </div>
-                  </Reveal>
-                ))}
-              </div>
-
-              {/* Process Steps */}
-              <div style={{ marginTop: 64 }}>
-                <Reveal>
-                  <p style={{ fontFamily: mono, fontSize: 12, color: A, textTransform: 'uppercase', letterSpacing: 4, marginBottom: 12 }}>How It Works</p>
-                  <h2 style={{ fontFamily: head, fontWeight: 700, fontSize: 'clamp(24px,4vw,40px)', textTransform: 'uppercase', color: '#fff', marginBottom: 40 }}>Our Process</h2>
-                </Reveal>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'clamp(16px,3vw,24px)' }}>
-                  {steps.map((s, i) => (
-                    <Reveal key={i}>
-                      <div style={{ padding: 'clamp(20px,3vw,32px)', background: '#252830', borderTop: `3px solid ${A}`, position: 'relative' }}>
-                        <span style={{ fontFamily: mono, fontSize: 32, color: `${A}20`, fontWeight: 500, position: 'absolute', top: 12, right: 16 }}>{String(i + 1).padStart(2, '0')}</span>
-                        <h3 style={{ fontFamily: head, fontWeight: 600, fontSize: 'clamp(16px,2vw,20px)', textTransform: 'uppercase', color: '#fff', marginBottom: 8 }}>{s.title}</h3>
-                        <p style={{ fontSize: 'clamp(13px,1.4vw,15px)', color: '#9CA3AF', lineHeight: 1.6, fontWeight: 300 }}>{s.description}</p>
-                      </div>
-                    </Reveal>
-                  ))}
-                </div>
-              </div>
-
-              {/* CTA */}
-              <Reveal>
-                <div style={{ marginTop: 48, padding: 'clamp(24px,4vw,40px)', background: '#252830', borderLeft: `4px solid ${A}`, display: 'flex', flexDirection: 'column', gap: 16, position: 'relative' }}>
-                  <h3 style={{ fontFamily: head, fontWeight: 600, fontSize: 'clamp(20px,3vw,28px)', textTransform: 'uppercase', color: '#fff' }}>Need a Custom Solution?</h3>
-                  <p style={{ fontSize: 'clamp(14px,1.5vw,16px)', color: '#9CA3AF', lineHeight: 1.7 }}>Every job is different. Contact us to discuss your specific needs and we&rsquo;ll build a plan that fits.</p>
-                  <button onClick={onCTAClick} className="ic-press" style={{ fontFamily: head, fontWeight: 600, fontSize: 14, background: A, color: '#1C1F26', padding: '14px 32px', border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 2, alignSelf: 'flex-start' }}>Get Free Estimate</button>
-                  <Bolts />
-                </div>
-              </Reveal>
-            </div>
-          </section>
+        <div data-page="services" style={{display:page==='services'?'block':'none'}}>
+          <ServicePageContent
+            services={svcData}
+            steps={steps}
+            whyUs={whyUs}
+            lead={lead}
+            config={config}
+            theme={{
+              accent: A,
+              fonts: { heading: head, body: body, mono: mono },
+              bgPrimary: '#111',
+              bgSecondary: '#0a0a0a',
+              textPrimary: '#fff',
+              textSecondary: 'rgba(255,255,255,0.7)',
+              textMuted: 'rgba(255,255,255,0.45)',
+              cardBg: '#1a1a1a',
+              cardBorder: 'rgba(255,255,255,0.06)',
+              isDark: true,
+              borderRadius: '0px',
+            }}
+            onCTAClick={onCTAClick}
+            onCallClick={onCallClick}
+            goToContact={() => nav('contact')}
+          />
         </div>
 
         {/* ══════════════ ABOUT ══════════════ */}

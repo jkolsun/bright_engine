@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { timingSafeEqual } from 'crypto'
 import { verifySession, signSession } from '@/lib/session'
 
 // Platform domains — requests to these are handled as the admin app.
@@ -68,7 +69,9 @@ export async function middleware(request: NextRequest) {
 
   if (pathname.startsWith('/api/clawdbot/')) {
     const apiKey = request.headers.get('x-clawdbot-key')
-    if (!apiKey || apiKey !== process.env.CLAWDBOT_API_KEY) {
+    const expected = process.env.CLAWDBOT_API_KEY
+    if (!apiKey || !expected || apiKey.length !== expected.length ||
+        !timingSafeEqual(Buffer.from(apiKey), Buffer.from(expected))) {
       return NextResponse.json({ error: 'Invalid API key' }, { status: 401 })
     }
     return NextResponse.next()
@@ -92,7 +95,6 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/start') ||
     pathname.startsWith('/api/webhooks/') ||
     pathname.startsWith('/api/worker-init') ||
-    pathname.startsWith('/api/admin/diagnostics') ||
     pathname === '/api/webhook-trigger' ||
     pathname === '/api/webhook-trigger-simple' ||
     pathname === '/api/health-simple'

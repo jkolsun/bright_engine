@@ -74,10 +74,31 @@ export async function PUT(
 
     const data = await request.json()
 
+    // Allowlist — only permit safe fields to prevent mass assignment attacks.
+    // Dangerous fields (leadId, stripeCustomerId, stripeSubscriptionId, monthlyRevenue,
+    // referralCode, customDomain, vercelDomainId, deletedAt, onboardingStep, onboardingData,
+    // enrichedData) must be changed via dedicated endpoints only.
+    const ALLOWED_FIELDS = [
+      'companyName', 'contactName', 'email', 'phone', 'location',
+      'siteUrl', 'stagingUrl', 'domainStatus', 'hostingStatus',
+      'plan', 'industry', 'notes', 'tags',
+      'aiAutoRespond', 'channelPreference', 'autonomyLevel', 'statReportFrequency',
+      'nextTouchpoint', 'nextTouchpointDate', 'churnRiskScore', 'healthScore',
+      'upsells', 'source', 'repId',
+    ]
+    const safeData: Record<string, unknown> = {}
+    for (const key of ALLOWED_FIELDS) {
+      if (data[key] !== undefined) safeData[key] = data[key]
+    }
+
+    if (Object.keys(safeData).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+    }
+
     const client = await prisma.client.update({
       where: { id },
       data: {
-        ...data,
+        ...safeData,
         updatedAt: new Date()
       }
     })

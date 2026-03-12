@@ -1,8 +1,17 @@
 import { getRecentActivity, getTodayStats, getQueueStatus } from '@/lib/logging'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { verifySession } from '@/lib/session'
 
-export async function GET() {
+export const dynamic = 'force-dynamic'
+
+export async function GET(request: NextRequest) {
   try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const [activity, stats, queues] = await Promise.all([
       getRecentActivity(50),
       getTodayStats(),

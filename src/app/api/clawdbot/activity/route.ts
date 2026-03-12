@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/clawdbot/activity - Get activity feed for Clawdbot monitoring
 export async function GET(request: NextRequest) {
+  const sessionCookie = request.cookies.get('session')?.value
+  const session = sessionCookie ? await verifySession(sessionCookie) : null
+  if (!session || session.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+  }
+
   const searchParams = request.nextUrl.searchParams
   const leadId = searchParams.get('leadId')
   const eventType = searchParams.get('eventType')
@@ -105,6 +112,12 @@ export async function GET(request: NextRequest) {
 // POST /api/clawdbot/activity - Log activity from Clawdbot
 export async function POST(request: NextRequest) {
   try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const data = await request.json()
 
     const activity = await prisma.clawdbotActivity.create({

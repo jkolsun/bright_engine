@@ -42,7 +42,39 @@ export async function GET(request: NextRequest) {
 
     const users = await prisma.user.findMany({
       where,
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        phone: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        commissionRate: true,
+        dailyLeadCap: true,
+        portalType: true,
+        totalCloses: true,
+        lastSeenAt: true,
+        autoDialDelay: true,
+        dialerMode: true,
+        voicemailUrl: true,
+        agreedToTermsAt: true,
+        availableHours: true,
+        onboardingComplete: true,
+        personalPhone: true,
+        assignedDialerPhone: true,
+        stripeConnectId: true,
+        stripeConnectStatus: true,
+        timezone: true,
+        twilioNumber1: true,
+        twilioNumber2: true,
+        vmRecordingUrl: true,
+        vmRecordingSid: true,
+        autoDialEnabled: true,
+        // passwordHash intentionally excluded
+      },
     })
 
     return NextResponse.json({ users })
@@ -83,7 +115,9 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({ user })
+    // Strip passwordHash before sending to client
+    const { passwordHash: _ph, ...safeUser } = user
+    return NextResponse.json({ user: safeUser })
   } catch (error) {
     console.error('Error creating user:', error)
     return NextResponse.json(

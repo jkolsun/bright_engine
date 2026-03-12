@@ -12,6 +12,10 @@ import ClassicBTemplate from './templates/ClassicBTemplate'
 import PremiumTemplate from './templates/PremiumTemplate'
 import PremiumBTemplate from './templates/PremiumBTemplate'
 import PremiumCTemplate from './templates/PremiumCTemplate'
+import ApexTemplate from './templates/ApexTemplate'
+import FluxTemplate from './templates/FluxTemplate'
+import SummitTemplate from './templates/SummitTemplate'
+import ForgeTemplate from './templates/ForgeTemplate'
 import PreviewQAChecker from './shared/PreviewQAChecker'
 import TemplateSwitcher from './shared/TemplateSwitcher'
 
@@ -95,6 +99,7 @@ export default function PreviewTemplate({ lead, websiteCopy }: { lead: any; webs
     enrichedPhotos: lead.enrichedPhotos || lead.photos || [],
     logo: lead.logo,
     colorPrefs: lead.colorPrefs || undefined,
+    stockPhotos: lead.stockPhotos || undefined,
   }
 
   // Get ALL variants for this industry
@@ -183,6 +188,10 @@ export default function PreviewTemplate({ lead, websiteCopy }: { lead: any; webs
     case 'premium':   template = <PremiumTemplate {...props} />; break
     case 'premium-b': template = <PremiumBTemplate {...props} />; break
     case 'premium-c': template = <PremiumCTemplate {...props} />; break
+    case 'apex':      template = <ApexTemplate {...props} />; break
+    case 'flux':      template = <FluxTemplate {...props} />; break
+    case 'summit':    template = <SummitTemplate {...props} />; break
+    case 'forge':     template = <ForgeTemplate {...props} />; break
     case 'classic':
     default:          template = <ClassicTemplate {...props} />; break
   }

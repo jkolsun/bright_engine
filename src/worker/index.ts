@@ -2,6 +2,7 @@ import { Worker } from 'bullmq'
 import Redis from 'ioredis'
 import http from 'http'
 import { enrichLead } from '../lib/serpapi'
+import { fetchServicePhotos } from '../lib/pexels'
 import { fetchSerperResearch } from '../lib/serper'
 import { generatePersonalization } from '../lib/personalization'
 import { generatePreview } from '../lib/preview-generator'
@@ -10,11 +11,10 @@ import { distributeLead } from '../lib/distribution'
 import { calculateEngagementScore } from '../lib/engagement-scoring'
 import { generateRetentionMessage } from '../lib/retention-messages'
 import { prisma } from '../lib/db'
-import { sendSMS } from '../lib/twilio'
 import { sendEmail, getEmailTemplate, triggerReferralSequence } from '../lib/resend'
 import { routeAndSend } from '../lib/channel-router'
 import { canSendMessage, getTimezoneFromState } from '../lib/utils'
-import { addPreviewGenerationJob, addPersonalizationJob, addScriptGenerationJob, addDistributionJob, getSharedConnection, type DelayedMessageJobData } from './queue'
+import { addPreviewGenerationJob, addPersonalizationJob, addScriptGenerationJob, addDistributionJob, addStockPhotosJob, getSharedConnection, type DelayedMessageJobData } from './queue'
 
 // ── Delayed Message Handler (fixes BUG 8.1, NEW-C1, NEW-C9) ──
 async function handleDelayedMessage(data: DelayedMessageJobData) {
@@ -136,6 +136,51 @@ async function startWorkers() {
       console.log(`🏃 [ENRICHMENT] Job ${job.id} started processing`)
     })
 
+    // Stock photos worker — fetches Pexels images for service pages
+    const stockPhotosWorker = new Worker(
+      'stock-photos',
+      async (job) => {
+        console.log(`📸 [STOCK_PHOTOS] Processing job ${job.id} for lead ${job.data.leadId}`)
+        const { leadId } = job.data
+        const stepStart = Date.now()
+        await prisma.lead.update({ where: { id: leadId }, data: { buildStep: 'STOCK_PHOTOS' } }).catch(err => console.error('[Worker] Build step update failed:', err))
+
+        const lead = await prisma.lead.findUnique({
+          where: { id: leadId },
+          select: { industry: true, city: true, enrichedServices: true, stockPhotos: true },
+        })
+
+        // Skip if already has stock photos or no services to fetch for
+        if (lead?.stockPhotos || !lead?.enrichedServices) {
+          console.log(`[STOCK_PHOTOS] Lead ${leadId} — skipping (already has photos or no services)`)
+          return { success: true, skipped: true }
+        }
+
+        const services = Array.isArray(lead.enrichedServices) ? (lead.enrichedServices as string[]) : []
+        if (services.length === 0) {
+          console.log(`[STOCK_PHOTOS] Lead ${leadId} — no services, skipping`)
+          return { success: true, skipped: true }
+        }
+
+        try {
+          const result = await fetchServicePhotos(lead.industry || 'GENERAL_CONTRACTING', services, lead.city || undefined)
+          await prisma.lead.update({
+            where: { id: leadId },
+            data: { stockPhotos: result as any },
+          })
+          console.log(`✅ [STOCK_PHOTOS] Fetched photos for ${Object.keys(result.servicePhotos).length} services`)
+        } catch (err) {
+          // Non-fatal — site will use gradient placeholders instead
+          console.warn(`[STOCK_PHOTOS] Failed for lead ${leadId}, continuing:`, err)
+        }
+
+        await prisma.lead.update({ where: { id: leadId }, data: { buildStockPhotosMs: Date.now() - stepStart } as any }).catch(() => {})
+        return { success: true }
+      },
+      // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+      { connection, concurrency: 2 }
+    )
+
     // Preview worker
     const previewWorker = new Worker(
       'preview',
@@ -203,8 +248,12 @@ async function startWorkers() {
       { connection }
     )
 
-    // Chain: enrichment → preview → personalization → scripts → distribution
+    // Chain: enrichment → stock_photos → preview → personalization → scripts → distribution
     enrichmentWorker.on('completed', async (job) => {
+      if (job?.data?.leadId) await addStockPhotosJob({ leadId: job.data.leadId })
+    })
+
+    stockPhotosWorker.on('completed', async (job) => {
       if (job?.data?.leadId) await addPreviewGenerationJob({ leadId: job.data.leadId })
     })
 
@@ -944,6 +993,16 @@ async function startWorkers() {
       console.error(`Enrichment job ${job?.id} failed:`, err)
       if (job?.data?.leadId) {
         await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `ENRICHMENT: ${err.message}` } }).catch(e => console.error('[Worker] Build error write failed:', e))
+        // Non-fatal: continue pipeline even if enrichment fails (preview can still generate)
+        await addStockPhotosJob({ leadId: job.data.leadId })
+      }
+    })
+
+    stockPhotosWorker.on('failed', async (job, err) => {
+      console.warn(`Stock photos job ${job?.id} failed (non-fatal):`, err)
+      // Non-fatal: if stock photos fail, still continue to preview
+      if (job?.data?.leadId) {
+        await addPreviewGenerationJob({ leadId: job.data.leadId })
       }
     })
 
@@ -951,6 +1010,8 @@ async function startWorkers() {
       console.error(`Preview job ${job?.id} failed:`, err)
       if (job?.data?.leadId) {
         await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `PREVIEW: ${err.message}` } }).catch(e => console.error('[Worker] Build error write failed:', e))
+        // Non-fatal: continue pipeline (personalization uses lead data, not preview output)
+        await addPersonalizationJob({ leadId: job.data.leadId })
       }
     })
 
@@ -958,6 +1019,8 @@ async function startWorkers() {
       console.error(`Personalization job ${job?.id} failed:`, err)
       if (job?.data?.leadId) {
         await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `PERSONALIZATION: ${err.message}` } }).catch(e => console.error('[Worker] Build error write failed:', e))
+        // Non-fatal: continue pipeline (scripts use lead data, not personalization output)
+        await addScriptGenerationJob({ leadId: job.data.leadId })
       }
     })
 
@@ -965,6 +1028,8 @@ async function startWorkers() {
       console.error(`Script job ${job?.id} failed:`, err)
       if (job?.data?.leadId) {
         await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `SCRIPTS: ${err.message}` } }).catch(e => console.error('[Worker] Build error write failed:', e))
+        // Non-fatal: continue pipeline (lead is distributable even without scripts)
+        await addDistributionJob({ leadId: job.data.leadId, channel: 'REP_QUEUE' })
       }
     })
 
@@ -972,6 +1037,11 @@ async function startWorkers() {
       console.error(`Distribution job ${job?.id} failed:`, err)
       if (job?.data?.leadId) {
         await prisma.lead.update({ where: { id: job.data.leadId }, data: { buildError: `DISTRIBUTION: ${err.message}` } }).catch(e => console.error('[Worker] Build error write failed:', e))
+        // Terminal step failed — still mark build as complete so lead isn't stuck
+        await prisma.lead.update({
+          where: { id: job.data.leadId },
+          data: { buildStep: 'COMPLETE', buildCompletedAt: new Date() },
+        }).catch(e => console.error('[Worker] Build complete update failed:', e))
       }
     })
 
@@ -1474,6 +1544,21 @@ async function sendReferralDay45(clientId: string) {
   })
 
   if (!client || !client.lead) return
+
+  // Dedup: skip if already sent referral day 45 SMS
+  const alreadySent = await prisma.message.findFirst({
+    where: { leadId: client.lead.id, trigger: 'referral_day_45' },
+  })
+  if (alreadySent) return
+
+  // Re-check DNC status (may have changed since job was queued)
+  const freshLead = await prisma.lead.findUnique({ where: { id: client.lead.id }, select: { dncAt: true } })
+  if (freshLead?.dncAt) {
+    console.log(`[Sequence] Skipping referral day 45 — lead ${client.lead.id} is now DNC`)
+    return
+  }
+
+  if (!canSendMessage(client.lead.timezone || getTimezoneFromState(client.lead.state || '') || 'America/New_York')) return
 
   let messageContent = `Know a business owner who needs a site? Refer them, you both get a free month of hosting.`
 
@@ -2031,11 +2116,9 @@ async function closeEngineStallCheck() {
     if (!canSendMessage(conv.lead.timezone || getTimezoneFromState(conv.lead.state || '') || 'America/New_York')) continue
 
     if (lastInbound.createdAt < seventyTwoHoursAgo) {
-      // 72+ hours — mark STALLED
-      await prisma.closeEngineConversation.update({
-        where: { id: conv.id },
-        data: { stage: 'STALLED', stalledAt: new Date() },
-      })
+      // 72+ hours — mark STALLED (use transitionStage for validation + event logging)
+      const { transitionStage } = await import('../lib/close-engine')
+      await transitionStage(conv.id, 'STALLED')
       await prisma.notification.create({
         data: {
           type: 'CLOSE_ENGINE',
@@ -2160,12 +2243,10 @@ async function closeEnginePaymentFollowUp() {
       continue
     }
 
-    // At 72h+, also mark STALLED
+    // At 72h+, also mark STALLED (use transitionStage for validation + event logging)
     if (hoursSinceSent >= 72) {
-      await prisma.closeEngineConversation.update({
-        where: { id: conv.id },
-        data: { stage: 'STALLED', stalledAt: new Date() },
-      })
+      const { transitionStage } = await import('../lib/close-engine')
+      await transitionStage(conv.id, 'STALLED')
     }
   }
 }
@@ -2182,13 +2263,13 @@ async function closeEngineExpireStalled() {
   })
 
   for (const conv of stalled) {
+    // Use transitionStage for validation + timestamps + event logging
+    const { transitionStage } = await import('../lib/close-engine')
+    await transitionStage(conv.id, 'CLOSED_LOST')
+    // Also set the reason (transitionStage doesn't handle custom reason field)
     await prisma.closeEngineConversation.update({
       where: { id: conv.id },
-      data: {
-        stage: 'CLOSED_LOST',
-        closedLostAt: new Date(),
-        closedLostReason: 'No response after 7 days',
-      },
+      data: { closedLostReason: 'No response after 7 days' },
     })
     await prisma.lead.update({
       where: { id: conv.leadId },

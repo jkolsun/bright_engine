@@ -744,7 +744,7 @@ export default function CompanyTab() {
 
         {/* Env Var Cross-Check */}
         {Object.keys(envLinks).length > 0 && (
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="mt-4 p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
             <div className="flex items-center gap-2 mb-2">
               <AlertCircle size={14} className="text-gray-500" />
               <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Railway Env Var Cross-Check</span>

@@ -1326,13 +1326,13 @@ function LeadsPageInner() {
                                 {personalizationData.hook && (
                                   <div>
                                     <div className="text-[10px] font-semibold text-purple-600 uppercase tracking-wider mb-0.5">Hook</div>
-                                    <p className="text-xs text-gray-700">{safeRender(personalizationData.hook)}</p>
+                                    <p className="text-xs text-gray-700 dark:text-gray-300">{safeRender(personalizationData.hook)}</p>
                                   </div>
                                 )}
                                 {personalizationData.angle && (
                                   <div>
                                     <div className="text-[10px] font-semibold text-purple-600 uppercase tracking-wider mb-0.5">Angle</div>
-                                    <p className="text-xs text-gray-700">{safeRender(personalizationData.angle)}</p>
+                                    <p className="text-xs text-gray-700 dark:text-gray-300">{safeRender(personalizationData.angle)}</p>
                                   </div>
                                 )}
                                 {personalizationData.websiteCopy && (
@@ -1498,7 +1498,7 @@ function LeadsPageInner() {
                                 <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-4 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
                                     <div className="w-7 h-7 rounded-md bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
-                                      <Eye size={15} className="text-gray-600" />
+                                      <Eye size={15} className="text-gray-600 dark:text-gray-400" />
                                     </div>
                                     <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Lead Info</h4>
                                   </div>
@@ -1538,26 +1538,26 @@ function LeadsPageInner() {
                                 <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 p-4 shadow-sm">
                                   <div className="flex items-center gap-2 mb-3">
                                     <div className="w-7 h-7 rounded-md bg-gray-100 dark:bg-slate-800 flex items-center justify-center">
-                                      <Users size={15} className="text-gray-600" />
+                                      <Users size={15} className="text-gray-600 dark:text-gray-400" />
                                     </div>
                                     <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Alt Contacts</h4>
                                   </div>
                                   <div className="space-y-2 text-sm">
                                     {lead.phone && (
-                                      <div className="flex items-center gap-2 text-gray-700">
+                                      <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                                         <Phone size={13} className="text-gray-400" />
                                         <span>{lead.phone}</span>
                                         <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">Primary</span>
                                       </div>
                                     )}
                                     {lead.email && (
-                                      <div className="flex items-center gap-2 text-gray-700">
+                                      <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                                         <Mail size={13} className="text-gray-400" />
                                         <span className="truncate">{lead.email}</span>
                                       </div>
                                     )}
                                     {(expandedLeadData[lead.id]?.alternateContacts || []).map((c: any) => (
-                                      <div key={c.id} className="flex items-center gap-2 text-gray-700">
+                                      <div key={c.id} className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                                         {c.type === 'PHONE' ? <Phone size={13} className="text-gray-400" /> : <Mail size={13} className="text-gray-400" />}
                                         <span className="truncate">{c.value}</span>
                                         {c.label && <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{c.label}</span>}
@@ -1593,13 +1593,13 @@ function LeadsPageInner() {
                                       {personalizationData.hook && (
                                         <div>
                                           <div className="text-xs font-medium text-purple-600 uppercase tracking-wider mb-1">Hook</div>
-                                          <p className="text-sm text-gray-700">{safeRender(personalizationData.hook)}</p>
+                                          <p className="text-sm text-gray-700 dark:text-gray-300">{safeRender(personalizationData.hook)}</p>
                                         </div>
                                       )}
                                       {personalizationData.angle && (
                                         <div>
                                           <div className="text-xs font-medium text-purple-600 uppercase tracking-wider mb-1">Angle</div>
-                                          <p className="text-sm text-gray-700">{safeRender(personalizationData.angle)}</p>
+                                          <p className="text-sm text-gray-700 dark:text-gray-300">{safeRender(personalizationData.angle)}</p>
                                         </div>
                                       )}
                                       {personalizationData.websiteCopy && (
@@ -1671,7 +1671,7 @@ function LeadsPageInner() {
                                       {lead.enrichedAddress && (
                                         <div className="flex items-start gap-2">
                                           <MapPin size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                                          <span className="text-sm text-gray-700">{safeRender(lead.enrichedAddress)}</span>
+                                          <span className="text-sm text-gray-700 dark:text-gray-300">{safeRender(lead.enrichedAddress)}</span>
                                         </div>
                                       )}
                                       {lead.enrichedServices && Array.isArray(lead.enrichedServices) && lead.enrichedServices.length > 0 && (
@@ -1733,7 +1733,7 @@ function LeadsPageInner() {
                                             {calls.slice(0, 5).map((call: any) => (
                                               <div key={call.id} className="flex items-center flex-wrap gap-2 text-xs text-gray-600 py-1 border-b border-gray-50 last:border-0">
                                                 <span className="text-gray-400">{new Date(call.startedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                                                <span className="font-medium text-gray-700">{call.rep?.name || '—'}</span>
+                                                <span className="font-medium text-gray-700 dark:text-gray-300">{call.rep?.name || '—'}</span>
                                                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${call.connectedAt ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                                                   {call.connectedAt ? 'Conn' : 'No Ans'}
                                                 </span>
@@ -1793,7 +1793,7 @@ function LeadsPageInner() {
                                           <div key={event.id} className="flex items-start gap-2 text-sm py-1.5 border-b border-gray-50">
                                             <span className="text-base flex-shrink-0">{getIcon(event.eventType)}</span>
                                             <div className="flex-1 min-w-0">
-                                              <span className="font-medium text-gray-700">{event.eventType.replace(/_/g, ' ')}</span>
+                                              <span className="font-medium text-gray-700 dark:text-gray-300">{event.eventType.replace(/_/g, ' ')}</span>
                                               {event.actor && event.actor !== 'system' && (
                                                 <span className="text-gray-400 ml-1">by {event.actor}</span>
                                               )}

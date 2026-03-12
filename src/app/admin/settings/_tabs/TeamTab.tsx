@@ -226,7 +226,7 @@ function RepsSection() {
     <AccordionSection title="Reps" description="Add, edit, and manage your sales reps" defaultOpen>
       <div className="space-y-6 pt-4">
         {/* Onboarding Toggle */}
-        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
           <div>
             <h4 className="text-sm font-semibold text-gray-900">Rep Onboarding Wizard</h4>
             <p className="text-xs text-gray-500 mt-0.5">
@@ -256,7 +256,7 @@ function RepsSection() {
         {/* Header with Add Rep button */}
         <div className="flex items-center justify-between">
           <div>
-            <h4 className="text-sm font-medium text-gray-700">Team Members</h4>
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Team Members</h4>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -386,14 +386,14 @@ function RepsSection() {
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500 w-20">Email:</span>
                     <span className="font-medium">{createdCreds.email}</span>
-                    <button onClick={() => copyToClipboard(createdCreds.email)} className="text-gray-400 hover:text-gray-600">
+                    <button onClick={() => copyToClipboard(createdCreds.email)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-400">
                       <Copy size={14} />
                     </button>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500 w-20">Password:</span>
                     <span className="font-medium">{createdCreds.password}</span>
-                    <button onClick={() => copyToClipboard(createdCreds.password)} className="text-gray-400 hover:text-gray-600">
+                    <button onClick={() => copyToClipboard(createdCreds.password)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-400">
                       <Copy size={14} />
                     </button>
                   </div>
@@ -454,13 +454,13 @@ function RepsSection() {
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="w-8 p-4"></th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Name</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Email</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Type</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Status</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Onboarding</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Stripe</th>
-                    <th className="text-right p-4 text-sm font-semibold text-gray-700">Actions</th>
+                    <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Name</th>
+                    <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Email</th>
+                    <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Type</th>
+                    <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                    <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Onboarding</th>
+                    <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Stripe</th>
+                    <th className="text-right p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -489,7 +489,7 @@ function RepsSection() {
                             )}
                           </td>
                           <td className="p-4 font-medium text-gray-900">{rep.name}</td>
-                          <td className="p-4 text-gray-700">{rep.email}</td>
+                          <td className="p-4 text-gray-700 dark:text-gray-300">{rep.email}</td>
                           <td className="p-4">
                             {rep.role === 'REP' ? (
                               <Badge variant={rep.portalType === 'PART_TIME' ? 'outline' : 'secondary'}>
@@ -581,7 +581,7 @@ function RepsSection() {
                               </div>
                               {/* Voicemail Recordings */}
                               {(rep.outboundVmUrl || rep.inboundVmUrl) && (
-                                <div className="mt-4 pt-3 border-t border-gray-200">
+                                <div className="mt-4 pt-3 border-t border-gray-200 dark:border-slate-700">
                                   <p className="text-gray-500 font-medium mb-2">Voicemail Recordings</p>
                                   <div className="space-y-3">
                                     {rep.outboundVmUrl && (
@@ -696,11 +696,11 @@ function RepsSection() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Name</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Email (Login)</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Type</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Password</th>
-                    <th className="text-right p-4 text-sm font-semibold text-gray-700">Actions</th>
+                    <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Name</th>
+                    <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Email (Login)</th>
+                    <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Type</th>
+                    <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Password</th>
+                    <th className="text-right p-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -709,8 +709,8 @@ function RepsSection() {
                       <td className="p-4 font-medium text-gray-900">{rep.name}</td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-700 font-mono text-sm">{rep.email}</span>
-                          <button onClick={() => copyToClipboard(rep.email)} className="text-gray-400 hover:text-gray-600">
+                          <span className="text-gray-700 dark:text-gray-300 font-mono text-sm">{rep.email}</span>
+                          <button onClick={() => copyToClipboard(rep.email)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-400">
                             <Copy size={14} />
                           </button>
                         </div>
@@ -726,7 +726,7 @@ function RepsSection() {
                             <span className="font-mono text-sm text-gray-900 bg-gray-100 px-2 py-1 rounded">
                               {visiblePasswords[rep.id]}
                             </span>
-                            <button onClick={() => copyToClipboard(visiblePasswords[rep.id])} className="text-gray-400 hover:text-gray-600">
+                            <button onClick={() => copyToClipboard(visiblePasswords[rep.id])} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-400">
                               <Copy size={14} />
                             </button>
                             <button
@@ -737,7 +737,7 @@ function RepsSection() {
                                   return n
                                 })
                               }
-                              className="text-gray-400 hover:text-gray-600"
+                              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-400"
                             >
                               {/* EyeOff inline SVG to avoid extra import */}
                               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/></svg>

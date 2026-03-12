@@ -11,6 +11,9 @@ import { Phone, MapPin, Star, CheckCircle, ArrowRight, Mail, Camera, MessageCirc
 import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
 import PhotoPlaceholder from '../shared/PhotoPlaceholder'
+import ServicePageContent from '../shared/ServiceSections'
+import type { ServicePageTheme } from '../shared/ServiceSections'
+import { resolveServiceImage } from '../shared/photoUtils'
 
 /* ── Helpers ─────────────────────────────────────────── */
 
@@ -126,7 +129,7 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
   const hasR = lead.enrichedRating && lead.enrichedRating > 0
   const A = getAccent(config)
 
-  const svcData = svc.map((n,i) => ({ name:n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services tailored to your needs.`, img: photos.length > 0 ? photos[i % photos.length] : undefined }))
+  const svcData = svc.map((n,i) => ({ name:n, desc: wc?.serviceDescriptions?.[n] || `Professional ${n.toLowerCase()} services tailored to your needs.`, img: resolveServiceImage(n, i, photos, lead.stockPhotos) }))
   const testis = [
     { text: wc?.testimonialQuote || `${lead.companyName} exceeded expectations. On time, clean work, great communication throughout.`, name: wc?.testimonialAuthor || 'Rachel M.', loc:lead.city||'Local' },
     ...(wc?.additionalTestimonials?.map(t=>({text:t.quote,name:t.author,loc:lead.city||'Local'})) || [
@@ -351,72 +354,29 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
       {/* ═══ SERVICES PAGE ═══ */}
       {/* ================================================================ */}
       <div data-page="services" style={{display:page==='services'?'block':'none'}}>
-        {/* Header */}
-        <section style={{padding:'clamp(100px,14vh,160px) clamp(16px,4vw,48px) 60px'}}><div style={{maxWidth:1200,margin:'0 auto'}}>
-          <Reveal><p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:8}}>Services</p></Reveal>
-          <Reveal delay={80}><h1 style={{fontFamily:sans,fontSize:'clamp(36px,5vw,60px)',fontWeight:700,letterSpacing:'-0.03em',marginBottom:16}}>What we offer.</h1></Reveal>
-          <Reveal delay={160}><p className="text-lg" style={{color:'#888',maxWidth:540}}>Comprehensive {indLabel} services{loc?` in ${loc}`:''} -- backed by {lead.enrichedReviews||'hundreds of'} five-star reviews.</p></Reveal>
-        </div></section>
-
-        {/* Service cards with photos -- alternating layout */}
-        <section style={{padding:'0 clamp(16px,4vw,48px) clamp(60px,8vw,100px)'}}>
-          <div style={{maxWidth:1200,margin:'0 auto'}}>{svcData.map((s,i)=>(
-            <Reveal key={i} delay={i*60}>
-              <div className={`grid grid-cols-1 md:grid-cols-2 gap-0 mb-5 hz-lift overflow-hidden bg-white rounded-xl`} style={{borderLeft:`4px solid ${A}`}}>
-                {i%2===0 && <div className="relative overflow-hidden" style={{minHeight:240}}>
-                  {s.img ? (
-                    <img src={s.img} alt={s.name} className="w-full h-full object-cover hz-img-zoom" style={{display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
-                  ) : (
-                    <PhotoPlaceholder accent={A} style={{width:'100%',height:'100%',minHeight:240}} />
-                  )}
-                  <div className="absolute top-4 left-4"><span style={{fontFamily:mono,fontSize:11,color:'#fff',background:'rgba(0,0,0,0.5)',padding:'6px 12px',borderRadius:999,letterSpacing:'0.1em',backdropFilter:'blur(4px)'}}>{String(i+1).padStart(2,'0')}</span></div>
-                </div>}
-                <div className="flex flex-col justify-center p-8 md:p-10">
-                  <h3 className="text-xl font-bold mb-3" style={{fontFamily:sans}}>{s.name}</h3>
-                  <p className="text-[15px] leading-relaxed mb-5" style={{color:'#888'}}>{s.desc}</p>
-                  <button onClick={()=>{onCTAClick();go('contact')}} className="flex items-center gap-2 text-sm font-semibold p-0" style={{background:'none',border:'none',color:A,cursor:'pointer'}}>Get estimate <ArrowRight size={14}/></button>
-                </div>
-                {i%2!==0 && <div className="relative overflow-hidden hidden md:block" style={{minHeight:240}}>
-                  {s.img ? (
-                    <img src={s.img} alt={s.name} className="w-full h-full object-cover hz-img-zoom" style={{display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
-                  ) : (
-                    <PhotoPlaceholder accent={A} style={{width:'100%',height:'100%',minHeight:240}} />
-                  )}
-                  <div className="absolute top-4 right-4"><span style={{fontFamily:mono,fontSize:11,color:'#fff',background:'rgba(0,0,0,0.5)',padding:'6px 12px',borderRadius:999,letterSpacing:'0.1em',backdropFilter:'blur(4px)'}}>{String(i+1).padStart(2,'0')}</span></div>
-                </div>}
-              </div>
-            </Reveal>
-          ))}</div>
-        </section>
-
-        {/* Process Steps */}
-        <section style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)',background:'#F5F3EF'}}>
-          <div style={{maxWidth:1000,margin:'0 auto'}}>
-            <Reveal><p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.12em',textTransform:'uppercase',marginBottom:8}}>Our Process</p>
-            <h2 style={{fontFamily:sans,fontSize:'clamp(28px,4vw,44px)',fontWeight:700,letterSpacing:'-0.02em',marginBottom:56}}>How it works.</h2></Reveal>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">{steps.slice(0,4).map((s,i)=>(
-              <Reveal key={i} delay={i*100}>
-                <div className="text-center">
-                  <div className="w-14 h-14 rounded-full mx-auto mb-5 flex items-center justify-center text-lg font-bold text-white" style={{background:A}}>{String(i+1).padStart(2,'0')}</div>
-                  <h4 className="text-lg font-bold mb-2" style={{fontFamily:sans}}>{s.title}</h4>
-                  <p className="text-sm leading-relaxed" style={{color:'#999'}}>{s.description}</p>
-                </div>
-              </Reveal>
-            ))}</div>
-          </div>
-        </section>
-
-        {/* Services CTA */}
-        <section className="text-center" style={{padding:'clamp(60px,8vw,100px) clamp(16px,4vw,48px)'}}>
-          <Reveal><div style={{maxWidth:540,margin:'0 auto'}}>
-            <h2 style={{fontFamily:sans,fontSize:'clamp(24px,3vw,36px)',fontWeight:700,letterSpacing:'-0.02em',marginBottom:12}}>Need help choosing?</h2>
-            <p className="text-base mb-8" style={{color:'#999'}}>Contact us for a personalized recommendation.</p>
-            <div className="flex flex-wrap justify-center gap-3">
-              <button onClick={()=>{onCTAClick();go('contact')}} className="hz-pill-btn">Contact Us <ArrowRight size={16}/></button>
-              {lead.phone&&<a href={`tel:${lead.phone}`} onClick={onCallClick} className="hz-pill-o"><Phone size={16}/>{fmt(lead.phone)}</a>}
-            </div>
-          </div></Reveal>
-        </section>
+        <ServicePageContent
+          services={svcData}
+          steps={steps}
+          whyUs={whyUs}
+          lead={lead}
+          config={config}
+          theme={{
+            accent: A,
+            fonts: { heading: sans, body: sans, mono },
+            bgPrimary: '#FAFAF9',
+            bgSecondary: '#F5F3EF',
+            textPrimary: '#1a1a1a',
+            textSecondary: '#444',
+            textMuted: '#888',
+            cardBg: '#fff',
+            cardBorder: 'rgba(0,0,0,0.06)',
+            isDark: false,
+            borderRadius: '12px',
+          }}
+          onCTAClick={onCTAClick}
+          onCallClick={onCallClick}
+          goToContact={() => go('contact')}
+        />
       </div>
 
       {/* ================================================================ */}

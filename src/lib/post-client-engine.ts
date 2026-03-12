@@ -303,10 +303,10 @@ export async function processPostClientInbound(
     }
 
     // Positive feedback → log for referral timing
-    if (parsed.intent === 'POSITIVE_FEEDBACK') {
+    if (parsed.intent === 'POSITIVE_FEEDBACK' && client.leadId) {
       await prisma.leadEvent.create({
         data: {
-          leadId: client.leadId || '',
+          leadId: client.leadId,
           eventType: 'POSITIVE_FEEDBACK',
           metadata: { clientId, message: message.substring(0, 200) },
         },

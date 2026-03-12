@@ -18,29 +18,50 @@ export async function POST(request: NextRequest) {
     console.log('🤖 Clawdbot webhook received:', event.type, event.data)
 
     // Process the event based on type
+    // Each handler is wrapped in try-catch so a failure in one doesn't crash the webhook
+    let handlerError: string | null = null
+
     switch (event.type) {
       case 'lead.hot_engagement':
-        await handleHotEngagement(event.data)
+        try { await handleHotEngagement(event.data) } catch (e) {
+          console.error(`[Clawdbot Webhook] handleHotEngagement failed:`, e)
+          handlerError = (e as Error).message
+        }
         break
-        
+
       case 'lead.imported':
-        await handleLeadImported(event.data)
+        try { await handleLeadImported(event.data) } catch (e) {
+          console.error(`[Clawdbot Webhook] handleLeadImported failed:`, e)
+          handlerError = (e as Error).message
+        }
         break
-        
+
       case 'payment.received':
-        await handlePaymentReceived(event.data)
+        try { await handlePaymentReceived(event.data) } catch (e) {
+          console.error(`[Clawdbot Webhook] handlePaymentReceived failed:`, e)
+          handlerError = (e as Error).message
+        }
         break
-        
+
       case 'client.question':
-        await handleClientQuestion(event.data)
+        try { await handleClientQuestion(event.data) } catch (e) {
+          console.error(`[Clawdbot Webhook] handleClientQuestion failed:`, e)
+          handlerError = (e as Error).message
+        }
         break
-        
+
       case 'lead.stalled':
-        await handleStalledLead(event.data)
+        try { await handleStalledLead(event.data) } catch (e) {
+          console.error(`[Clawdbot Webhook] handleStalledLead failed:`, e)
+          handlerError = (e as Error).message
+        }
         break
-        
+
       case 'daily.digest_requested':
-        await handleDailyDigest(event.data)
+        try { await handleDailyDigest(event.data) } catch (e) {
+          console.error(`[Clawdbot Webhook] handleDailyDigest failed:`, e)
+          handlerError = (e as Error).message
+        }
         break
 
       case 'dialer.call_completed':
@@ -49,19 +70,21 @@ export async function POST(request: NextRequest) {
         break
 
       default:
-        console.log('🤖 Unknown webhook event type:', event.type)
+        console.log('[Clawdbot Webhook] Unknown event type:', event.type)
     }
 
-    // Log the webhook event
+    // Log the webhook event (always runs, even if handler failed)
     await prisma.clawdbotActivity.create({
       data: {
         actionType: 'ALERT',
-        description: `Processed webhook: ${event.type}`,
+        description: handlerError
+          ? `Webhook handler failed: ${event.type} — ${handlerError}`
+          : `Processed webhook: ${event.type}`,
         metadata: event.data,
       }
     })
 
-    return NextResponse.json({ success: true, processed: event.type })
+    return NextResponse.json({ success: !handlerError, processed: event.type, ...(handlerError ? { warning: 'Handler error logged' } : {}) })
   } catch (error) {
     console.error('🤖 Webhook processing error:', error)
     return NextResponse.json({ error: 'Processing failed' }, { status: 500 })

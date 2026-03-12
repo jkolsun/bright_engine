@@ -80,40 +80,40 @@ export async function createCampaign(params: {
     }
   }
 
-  const campaign = await prisma.smsCampaign.create({
-    data: {
-      name: params.name,
-      templateBody: params.templateBody,
-      fromNumber,
-      status: 'DRAFT',
-      totalLeads: uniqueLeadIds.length,
-    },
-  })
+  // Atomic transaction: create campaign + campaign leads + update lead records
+  // If any step fails, everything rolls back (no orphan campaigns or partial lead state)
+  // Uses createMany + batch updateMany for O(1) queries instead of O(n) sequential inserts
+  const campaign = await prisma.$transaction(async (tx) => {
+    const created = await tx.smsCampaign.create({
+      data: {
+        name: params.name,
+        templateBody: params.templateBody,
+        fromNumber,
+        status: 'DRAFT',
+        totalLeads: uniqueLeadIds.length,
+      },
+    })
 
-  // Create SmsCampaignLead records and update leads in a transaction
-  await prisma.$transaction(
-    uniqueLeadIds.map((leadId) =>
-      prisma.smsCampaignLead.create({
-        data: {
-          campaignId: campaign.id,
-          leadId,
-          funnelStage: 'QUEUED',
-        },
-      })
-    )
-  )
+    // Bulk-create SmsCampaignLead records (single INSERT instead of N individual creates)
+    await tx.smsCampaignLead.createMany({
+      data: uniqueLeadIds.map(leadId => ({
+        campaignId: created.id,
+        leadId,
+        funnelStage: 'QUEUED' as const,
+      })),
+    })
 
-  await prisma.$transaction(
-    uniqueLeadIds.map((leadId) =>
-      prisma.lead.update({
-        where: { id: leadId },
-        data: {
-          lastSmsCampaignId: campaign.id,
-          smsFunnelStage: 'QUEUED',
-        },
-      })
-    )
-  )
+    // Bulk-update lead records with campaign reference (single UPDATE instead of N individual updates)
+    await tx.lead.updateMany({
+      where: { id: { in: uniqueLeadIds } },
+      data: {
+        lastSmsCampaignId: created.id,
+        smsFunnelStage: 'QUEUED',
+      },
+    })
+
+    return created
+  }, { timeout: 15000 }) // 15s — bulk ops are fast even for large campaigns
 
   return campaign
 }
@@ -268,55 +268,53 @@ export async function sendColdTextToLead(
     },
   })
 
-  // Handle send failure — increment failedCount, set coldTextFailedAt, do NOT mark TEXTED
+  // Handle send failure — atomic state update
   if (!result.success) {
-    await prisma.smsCampaignLead.update({
-      where: { id: campaignLead.id },
-      data: { coldTextFailedAt: new Date() },
-    })
-    await prisma.smsCampaign.update({
-      where: { id: campaign.id },
-      data: { failedCount: { increment: 1 } },
-    })
-    await prisma.leadEvent.create({
-      data: {
-        leadId: lead.id,
-        eventType: 'SMS_FAILED',
-        metadata: { campaignId: campaign.id, error: result.error },
-      },
-    })
+    await prisma.$transaction([
+      prisma.smsCampaignLead.update({
+        where: { id: campaignLead.id },
+        data: { coldTextFailedAt: new Date() },
+      }),
+      prisma.smsCampaign.update({
+        where: { id: campaign.id },
+        data: { failedCount: { increment: 1 } },
+      }),
+      prisma.leadEvent.create({
+        data: {
+          leadId: lead.id,
+          eventType: 'SMS_FAILED',
+          metadata: { campaignId: campaign.id, error: result.error },
+        },
+      }),
+    ])
     return { success: false, error: result.error }
   }
 
-  // Update campaign lead stage
-  await prisma.smsCampaignLead.update({
-    where: { id: campaignLead.id },
-    data: {
-      funnelStage: 'TEXTED',
-      coldTextSentAt: new Date(),
-    },
-  })
-
-  // Update lead's SMS funnel stage
-  await prisma.lead.update({
-    where: { id: lead.id },
-    data: { smsFunnelStage: 'TEXTED' },
-  })
-
-  // Increment sent count
-  await prisma.smsCampaign.update({
-    where: { id: campaign.id },
-    data: { sentCount: { increment: 1 } },
-  })
-
-  // Create lead event
-  await prisma.leadEvent.create({
-    data: {
-      leadId: lead.id,
-      eventType: 'SMS_COLD_SENT',
-      metadata: { campaignId: campaign.id },
-    },
-  })
+  // Atomic state transition: campaign lead → TEXTED, lead funnel sync, campaign count, event log
+  await prisma.$transaction([
+    prisma.smsCampaignLead.update({
+      where: { id: campaignLead.id },
+      data: {
+        funnelStage: 'TEXTED',
+        coldTextSentAt: new Date(),
+      },
+    }),
+    prisma.lead.update({
+      where: { id: lead.id },
+      data: { smsFunnelStage: 'TEXTED' },
+    }),
+    prisma.smsCampaign.update({
+      where: { id: campaign.id },
+      data: { sentCount: { increment: 1 } },
+    }),
+    prisma.leadEvent.create({
+      data: {
+        leadId: lead.id,
+        eventType: 'SMS_COLD_SENT',
+        metadata: { campaignId: campaign.id },
+      },
+    }),
+  ])
 
   return { success: true, sid: result.sid }
 }
@@ -581,39 +579,35 @@ export async function markOptedIn(campaignLeadId: string, method: string): Promi
     return
   }
 
-  // Update SmsCampaignLead
-  await prisma.smsCampaignLead.update({
-    where: { id: campaignLeadId },
-    data: {
-      funnelStage: 'OPTED_IN',
-      optedInAt: new Date(),
-      optedInMethod: method,
-    },
-  })
-
-  // Update Lead
-  await prisma.lead.update({
-    where: { id: campaignLead.leadId },
-    data: { smsFunnelStage: 'OPTED_IN' },
-  })
-
-  // Increment campaign opt-in count
-  await prisma.smsCampaign.update({
-    where: { id: campaignLead.campaignId },
-    data: { optInCount: { increment: 1 } },
-  })
-
-  // Create lead event
-  await prisma.leadEvent.create({
-    data: {
-      leadId: campaignLead.leadId,
-      eventType: 'SMS_OPT_IN',
-      metadata: {
-        campaignId: campaignLead.campaignId,
-        method,
+  // Atomic: all state updates succeed or none do (prevents partial opt-in state)
+  await prisma.$transaction([
+    prisma.smsCampaignLead.update({
+      where: { id: campaignLeadId },
+      data: {
+        funnelStage: 'OPTED_IN',
+        optedInAt: new Date(),
+        optedInMethod: method,
       },
-    },
-  })
+    }),
+    prisma.lead.update({
+      where: { id: campaignLead.leadId },
+      data: { smsFunnelStage: 'OPTED_IN' },
+    }),
+    prisma.smsCampaign.update({
+      where: { id: campaignLead.campaignId },
+      data: { optInCount: { increment: 1 } },
+    }),
+    prisma.leadEvent.create({
+      data: {
+        leadId: campaignLead.leadId,
+        eventType: 'SMS_OPT_IN',
+        metadata: {
+          campaignId: campaignLead.campaignId,
+          method,
+        },
+      },
+    }),
+  ])
 
   // Queue first drip step
   const { addSmsCampaignJob } = await import('@/worker/queue')

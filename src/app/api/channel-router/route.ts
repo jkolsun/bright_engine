@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
 import { routeMessage } from '@/lib/channel-router'
 
 export const dynamic = 'force-dynamic'
@@ -7,6 +8,12 @@ export const dynamic = 'force-dynamic'
 // GET /api/channel-router - Get recent routing decisions + stats
 export async function GET(request: NextRequest) {
   try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '50')
     const clientId = searchParams.get('clientId')
@@ -63,6 +70,12 @@ export async function GET(request: NextRequest) {
 // POST /api/channel-router - Test routing for a client/lead (dry run)
 export async function POST(request: NextRequest) {
   try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const { clientId, leadId, trigger, messageContent, urgency } = await request.json()
 
     if (!trigger || !messageContent) {

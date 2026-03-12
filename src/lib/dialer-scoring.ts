@@ -47,14 +47,27 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
 
   // --- Calculate each metric ---
 
+  // Disposition values stored by dialer-service are UPPERCASE enum values:
+  // WANTS_TO_MOVE_FORWARD, NOT_INTERESTED, CALLBACK, DNC, INTERESTED_VERBAL,
+  // WANTS_CHANGES, WILL_LOOK_LATER, VOICEMAIL, NO_ANSWER, WRONG_NUMBER, DISCONNECTED
+
   // 1. Connect-to-Interest Rate (/15)
+  // "Conversations" = any disposition where the rep actually talked to someone
+  const CONVERSATION_RESULTS = [
+    'WANTS_TO_MOVE_FORWARD', 'NOT_INTERESTED', 'CALLBACK',
+    'INTERESTED_VERBAL', 'WANTS_CHANGES', 'WILL_LOOK_LATER', 'DNC',
+  ]
+  const INTERESTED_RESULTS = [
+    'WANTS_TO_MOVE_FORWARD', 'CALLBACK', 'INTERESTED_VERBAL', 'WANTS_CHANGES',
+  ]
+
   const totalConversations = calls.filter(c =>
-    ['interested', 'not_interested', 'callback'].includes(c.dispositionResult || '')
+    CONVERSATION_RESULTS.includes(c.dispositionResult || '')
   ).length + activities.filter(a =>
     ['INTERESTED', 'NOT_INTERESTED', 'CALLBACK', 'CONNECTED'].includes(a.callDisposition || '')
   ).length
 
-  const interested = calls.filter(c => c.dispositionResult === 'interested').length +
+  const interested = calls.filter(c => INTERESTED_RESULTS.includes(c.dispositionResult || '')).length +
     activities.filter(a => a.callDisposition === 'INTERESTED').length
 
   const connectToInterestRate = totalConversations > 0 ? interested / totalConversations : 0
@@ -62,7 +75,7 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
 
   // 2. Interest-to-Close Rate (/15) — check if interested leads became clients
   const interestedLeadIds = [
-    ...calls.filter(c => c.dispositionResult === 'interested').map(c => c.leadId),
+    ...calls.filter(c => INTERESTED_RESULTS.includes(c.dispositionResult || '')).map(c => c.leadId),
     ...activities.filter(a => a.callDisposition === 'INTERESTED').map(a => a.leadId),
   ]
 
@@ -106,7 +119,7 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
   }
 
   // 5. Callback Show Rate (/5)
-  const callbackCalls = calls.filter(c => c.dispositionResult === 'callback')
+  const callbackCalls = calls.filter(c => c.dispositionResult === 'CALLBACK')
   let callbackShowRate = 0
   let callbackShowScore = 3 // Neutral default
   if (callbackCalls.length > 0) {
@@ -116,7 +129,7 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
         leadId: { in: callbackLeadIds },
         repId,
         startedAt: { gt: start },
-        dispositionResult: { in: ['interested', 'not_interested', 'callback'] },
+        dispositionResult: { in: CONVERSATION_RESULTS },
       },
     })
     callbackShowRate = followUps / callbackCalls.length
@@ -124,7 +137,7 @@ export async function calculateWeeklyScore(repId: string, weekStart?: Date): Pro
   }
 
   // 6. DNC Rate (/5 — lower is better)
-  const dncCount = calls.filter(c => c.dispositionResult === 'dnc').length
+  const dncCount = calls.filter(c => c.dispositionResult === 'DNC').length
   const dncRate = totalDials > 0 ? dncCount / totalDials : 0
   const dncScore = dncRate === 0 ? 5 : dncRate < 0.02 ? 4 : dncRate < 0.05 ? 3 : dncRate < 0.1 ? 1 : 0
 

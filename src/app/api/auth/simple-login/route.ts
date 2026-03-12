@@ -63,6 +63,14 @@ async function handleLogin(request: NextRequest): Promise<Response> {
       )
     }
 
+    // Block suspended/inactive users from logging in
+    if (user.status && user.status !== 'ACTIVE') {
+      return NextResponse.json(
+        { success: false, error: 'Account is suspended. Contact your administrator.' },
+        { status: 403 }
+      )
+    }
+
     // Validate password (with bcrypt if hash exists, else default password + auto-migrate)
     const defaultPassword = process.env.DEFAULT_LOGIN_PASSWORD || '123456'
     if (user.passwordHash) {

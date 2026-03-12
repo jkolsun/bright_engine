@@ -39,10 +39,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find lead by phone (primary or secondary)
+    // Find lead by phone (primary or secondary) — most recent first to avoid stale matches
     const lead = await prisma.lead.findFirst({
       where: { OR: [{ phone: from }, { secondaryPhone: from }] },
       select: { id: true, companyName: true, dncAt: true, firstName: true },
+      orderBy: { createdAt: 'desc' },
     })
 
     // DNC check

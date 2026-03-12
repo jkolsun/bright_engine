@@ -202,7 +202,14 @@ export default function SalesRepTrackerPage() {
   }
 
   if (loading) {
-    return <div className="p-8 text-center">Loading sales rep tracker...</div>
+    return (
+      <div className="p-8 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Users size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4 animate-pulse" />
+          <p className="text-gray-600 dark:text-gray-400">Loading sales rep tracker...</p>
+        </div>
+      </div>
+    )
   }
 
   if (loadError && leads.length === 0) {
@@ -369,7 +376,7 @@ export default function SalesRepTrackerPage() {
             <span className="text-sm text-gray-600 dark:text-gray-400">Hot Leads</span>
             <Phone size={20} className="text-red-600" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">
+          <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             {leads.filter(l => l.priority === 'HOT').length}
           </div>
           <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">Needs attention</div>

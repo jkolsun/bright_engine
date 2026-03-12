@@ -84,7 +84,17 @@ export function getSMSProvider(): SMSProvider {
  * provider.send() directly. Sends via the configured provider AND logs to the database.
  */
 export async function sendSMSViaProvider(options: SMSSendOptions): Promise<SMSSendResult> {
-  // Bug 1: DNC check — block ALL outbound SMS to DNC numbers
+  // Phone number validation + E.164 normalization
+  // Twilio requires E.164 format (+1XXXXXXXXXX) — DB stores various formats
+  const normalized = normalizeToE164(options.to)
+  if (!normalized) {
+    console.error(`[SMS] Invalid phone number, cannot normalize: "${options.to}" (trigger: ${options.trigger})`)
+    return { success: false, error: `Invalid phone number: ${options.to}` }
+  }
+  options = { ...options, to: normalized }
+
+  // DNC check — block ALL outbound SMS to DNC numbers
+  // Fails CLOSED: if DNC check errors, block the send (compliance requirement)
   try {
     const { isDNC } = await import('./dnc-check')
     const blocked = await isDNC(options.to, options.leadId)
@@ -93,7 +103,8 @@ export async function sendSMSViaProvider(options: SMSSendOptions): Promise<SMSSe
       return { success: false, error: 'Number is on Do Not Call list' }
     }
   } catch (dncErr) {
-    console.error('[SMS] DNC check failed, allowing send:', dncErr)
+    console.error('[SMS] DNC check failed — blocking send for compliance:', dncErr)
+    return { success: false, error: 'DNC check unavailable — send blocked for compliance' }
   }
 
   const provider = getSMSProvider()
@@ -179,4 +190,38 @@ export async function logInboundSMSViaProvider(options: {
       mediaTypes: options.mediaTypes && options.mediaTypes.length > 0 ? options.mediaTypes : undefined,
     },
   })
+}
+
+// ============================================
+// Phone Number Normalization
+// ============================================
+
+/**
+ * Normalizes a US phone number to E.164 format (+1XXXXXXXXXX).
+ * Handles: (555) 123-4567, 555-123-4567, 5551234567, 15551234567, +15551234567
+ * Returns null if the number can't be normalized to a valid 10-digit US number.
+ */
+function normalizeToE164(phone: string): string | null {
+  if (!phone) return null
+
+  // Strip all non-digit characters
+  const digits = phone.replace(/\D/g, '')
+
+  // Already E.164 with + prefix
+  if (phone.startsWith('+1') && digits.length === 11) {
+    return `+${digits}`
+  }
+
+  // 11 digits starting with 1 (US country code without +)
+  if (digits.length === 11 && digits.startsWith('1')) {
+    return `+${digits}`
+  }
+
+  // 10 digits (US number without country code)
+  if (digits.length === 10) {
+    return `+1${digits}`
+  }
+
+  // Can't normalize — invalid digit count
+  return null
 }

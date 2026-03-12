@@ -1,4 +1,4 @@
-export type TemplateVariant = 'modern' | 'bold' | 'classic' | 'premium' | 'modern-b' | 'bold-b' | 'classic-b' | 'premium-b' | 'premium-c'
+export type TemplateVariant = 'modern' | 'bold' | 'classic' | 'premium' | 'modern-b' | 'bold-b' | 'classic-b' | 'premium-b' | 'premium-c' | 'apex' | 'flux' | 'summit' | 'forge'
 
 export interface WebsiteCopy {
   heroHeadline: string
@@ -43,6 +43,10 @@ export interface PreviewLead {
     accent?: string
     extra?: Array<{ label: string; hex: string }>
   }
+  stockPhotos?: {
+    servicePhotos?: Record<string, string[]>
+    heroPhoto?: string
+  }
 }
 
 export interface IndustryConfig {
@@ -75,8 +79,10 @@ export const TEMPLATE_DISPLAY_NAMES: Record<TemplateVariant, string> = {
   'premium': 'Sovereign',
   'premium-b': 'Meridian',
   'premium-c': 'Atelier',
+  'apex': 'Apex',
+  'flux': 'Flux',
+  'summit': 'Summit',
+  'forge': 'Forge',
 }
 
-export const COMING_SOON_TEMPLATES: Set<TemplateVariant> = new Set([
-  'premium', 'premium-b', 'premium-c',
-])
+export const COMING_SOON_TEMPLATES: Set<TemplateVariant> = new Set([])

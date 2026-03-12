@@ -43,44 +43,52 @@ export async function POST(request: NextRequest) {
     if (phone && !phone.startsWith('1')) phone = '1' + phone
     if (phone) phone = '+' + phone
 
-    // Check for duplicate by phone or email
-    if (phone || data.email) {
-      const existing = await prisma.lead.findFirst({
-        where: {
-          OR: [
-            ...(phone ? [{ phone }] : []),
-            ...(data.email ? [{ email: data.email.trim() }] : []),
-          ],
-        },
-        select: { id: true, previewId: true, previewUrl: true },
-      })
-      if (existing) {
-        // Return existing lead so they can continue onboarding
-        return NextResponse.json({ lead: existing }, { headers: corsHeaders })
-      }
-    }
-
+    // Check for duplicate by phone or email — use a transaction to prevent TOCTOU race
+    // where two simultaneous submissions both pass the check and create duplicate leads
     const previewId = generatePreviewId()
 
-    const lead = await prisma.lead.create({
-      data: {
-        firstName: data.firstName.trim(),
-        lastName: data.lastName?.trim() || undefined,
-        email: data.email?.trim() || undefined,
-        phone: phone || '',
-        companyName: data.companyName.trim(),
-        industry: (data.industry?.trim() || 'GENERAL_CONTRACTING') as any,
-        city: data.city?.trim() || undefined,
-        state: data.state?.trim().toUpperCase() || undefined,
-        timezone: getTimezoneFromState(data.state) || 'America/New_York',
-        website: data.website?.trim() || undefined,
-        source: 'FORM' as any,
-        sourceDetail: resolvedSourceDetail,
-        previewId,
-        previewUrl: `${process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || 'https://preview.brightautomations.org'}/preview/${previewId}`,
-        previewExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      },
+    const { lead, isExisting } = await prisma.$transaction(async (tx) => {
+      if (phone || data.email) {
+        const existing = await tx.lead.findFirst({
+          where: {
+            OR: [
+              ...(phone ? [{ phone }] : []),
+              ...(data.email ? [{ email: data.email.trim() }] : []),
+            ],
+          },
+          select: { id: true, previewId: true, previewUrl: true, companyName: true, city: true, state: true },
+        })
+        if (existing) {
+          return { lead: existing, isExisting: true }
+        }
+      }
+
+      const created = await tx.lead.create({
+        data: {
+          firstName: data.firstName.trim(),
+          lastName: data.lastName?.trim() || undefined,
+          email: data.email?.trim() || undefined,
+          phone: phone || '',
+          companyName: data.companyName.trim(),
+          industry: (data.industry?.trim() || 'GENERAL_CONTRACTING') as any,
+          city: data.city?.trim() || undefined,
+          state: data.state?.trim().toUpperCase() || undefined,
+          timezone: getTimezoneFromState(data.state) || 'America/New_York',
+          website: data.website?.trim() || undefined,
+          source: 'FORM' as any,
+          sourceDetail: resolvedSourceDetail,
+          previewId,
+          previewUrl: `${process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || 'https://preview.brightautomations.org'}/preview/${previewId}`,
+          previewExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      })
+
+      return { lead: created, isExisting: false }
     })
+
+    if (isExisting) {
+      return NextResponse.json({ lead }, { headers: corsHeaders })
+    }
 
     // Log event
     await prisma.leadEvent.create({

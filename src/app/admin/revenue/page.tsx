@@ -37,7 +37,14 @@ export default function RevenuePage() {
   }
 
   if (loading) {
-    return <div className="p-8 text-center">Loading revenue...</div>
+    return (
+      <div className="p-8 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <DollarSign size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4 animate-pulse" />
+          <p className="text-gray-600 dark:text-gray-400">Loading revenue...</p>
+        </div>
+      </div>
+    )
   }
 
   const mrr = stats?.mrr || 0

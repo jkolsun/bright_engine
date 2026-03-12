@@ -95,9 +95,9 @@ export async function POST(request: NextRequest) {
       data: { resendStatus: mapping.resendStatus },
     })
 
-    // Update OutboundEvent record
+    // Update OutboundEvent record (messageId references Message.id, not the Resend email ID)
     const outboundEvent = await prisma.outboundEvent.findFirst({
-      where: { messageId: resendId },
+      where: { messageId: message.id },
     })
 
     if (outboundEvent) {

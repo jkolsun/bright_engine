@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
 import { generatePreviewId, getTimezoneFromState } from '@/lib/utils'
 import { addEnrichmentJob, addPersonalizationJob } from '@/worker/queue'
 
@@ -7,6 +8,12 @@ export const dynamic = 'force-dynamic'
 
 // GET /api/clawdbot/leads - List leads for Clawdbot
 export async function GET(request: NextRequest) {
+  const sessionCookie = request.cookies.get('session')?.value
+  const session = sessionCookie ? await verifySession(sessionCookie) : null
+  if (!session || session.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+  }
+
   const searchParams = request.nextUrl.searchParams
   const status = searchParams.get('status')
   const limit = parseInt(searchParams.get('limit') || '50')
@@ -58,6 +65,12 @@ export async function GET(request: NextRequest) {
 // POST /api/clawdbot/leads - Create lead via Clawdbot
 export async function POST(request: NextRequest) {
   try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const data = await request.json()
 
     const previewId = generatePreviewId()
@@ -121,6 +134,12 @@ export async function POST(request: NextRequest) {
 // PUT /api/clawdbot/leads/[id] - Update lead status/priority
 export async function PUT(request: NextRequest) {
   try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const data = await request.json()
     const leadId = data.leadId
 

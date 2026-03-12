@@ -106,35 +106,56 @@ export async function PUT(
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     }
 
+    const currentVersion = lead.siteEditVersion
+    const newVersion = currentVersion + 1
+
     // Optimistic locking: if caller sends expectedVersion, reject if it doesn't match
-    if (typeof expectedVersion === 'number' && expectedVersion !== lead.siteEditVersion) {
+    if (typeof expectedVersion === 'number' && expectedVersion !== currentVersion) {
       return NextResponse.json({
         error: 'Version conflict — someone else saved while you were editing. Please reload.',
-        currentVersion: lead.siteEditVersion,
+        currentVersion,
         expectedVersion,
       }, { status: 409 })
     }
-
-    const newVersion = lead.siteEditVersion + 1
 
     // Auto-advance buildStep based on current state
     let nextBuildStep = lead.buildStep
     if (lead.buildStep === 'QA_REVIEW') nextBuildStep = 'EDITING'
     else if (lead.buildStep === 'BUILDING' && html.length > 500) nextBuildStep = 'QA_REVIEW'
 
-    const updated = await prisma.lead.update({
-      where: { id },
+    // Atomic version claim: only succeeds if version hasn't changed since we read it.
+    // This prevents TOCTOU race where two concurrent saves both read the same version,
+    // both pass the check, and the second silently overwrites the first.
+    const claimResult = await prisma.lead.updateMany({
+      where: { id, siteEditVersion: currentVersion },
       data: {
         siteHtml: html,
         siteEditVersion: newVersion,
         buildStep: nextBuildStep,
       },
-      select: { id: true, siteHtml: true, siteEditVersion: true },
     })
 
-    // Verify the save actually committed — strict length check
-    if (!updated.siteHtml || (html.length > 0 && updated.siteHtml.length !== html.length)) {
-      console.error(`[Save] Verification failed: sent ${html.length} chars, got back ${updated.siteHtml?.length ?? 0} chars`)
+    if (claimResult.count === 0) {
+      // Another save completed between our read and write
+      const freshLead = await prisma.lead.findUnique({
+        where: { id },
+        select: { siteEditVersion: true },
+      })
+      return NextResponse.json({
+        error: 'Version conflict — someone else saved while you were editing. Please reload.',
+        currentVersion: freshLead?.siteEditVersion ?? currentVersion,
+        expectedVersion: currentVersion,
+      }, { status: 409 })
+    }
+
+    // Verify the save actually committed — re-read to confirm
+    const updated = await prisma.lead.findUnique({
+      where: { id },
+      select: { siteHtml: true, siteEditVersion: true },
+    })
+
+    if (!updated?.siteHtml || (html.length > 0 && updated.siteHtml.length !== html.length)) {
+      console.error(`[Save] Verification failed: sent ${html.length} chars, got back ${updated?.siteHtml?.length ?? 0} chars`)
       return NextResponse.json({ error: 'Save verification failed — please try again' }, { status: 500 })
     }
 

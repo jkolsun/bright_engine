@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/clawdbot/notifications - Get notifications for Clawdbot
 export async function GET(request: NextRequest) {
+  const sessionCookie = request.cookies.get('session')?.value
+  const session = sessionCookie ? await verifySession(sessionCookie) : null
+  if (!session || session.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+  }
+
   const searchParams = request.nextUrl.searchParams
   const type = searchParams.get('type')
   const unreadOnly = searchParams.get('unread') === 'true'
@@ -41,6 +48,12 @@ export async function GET(request: NextRequest) {
 // POST /api/clawdbot/notifications - Create notification via Clawdbot
 export async function POST(request: NextRequest) {
   try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const data = await request.json()
 
     const notification = await prisma.notification.create({
@@ -74,6 +87,12 @@ export async function POST(request: NextRequest) {
 // PUT /api/clawdbot/notifications/[id] - Mark notification as read
 export async function PUT(request: NextRequest) {
   try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const data = await request.json()
     const notificationId = data.notificationId
 

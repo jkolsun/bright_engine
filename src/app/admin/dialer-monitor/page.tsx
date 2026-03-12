@@ -295,7 +295,14 @@ export default function DialerMonitorPage() {
   const onCallReps = liveReps.filter(r => r.status === 'on_call')
 
   if (loading) {
-    return <div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading live monitor...</div>
+    return (
+      <div className="p-8 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Radio size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4 animate-pulse" />
+          <p className="text-gray-600 dark:text-gray-400">Loading live monitor...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -612,7 +619,7 @@ export default function DialerMonitorPage() {
                 value={filters.search}
                 onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
                 onKeyDown={e => e.key === 'Enter' && handleSearchSubmit()}
-                className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 w-48"
+                className="text-sm border border-gray-200 dark:border-slate-700 rounded-lg px-3 py-1.5 w-48 dark:bg-slate-900 dark:text-gray-100"
               />
               <Button variant="outline" size="sm" onClick={handleSearchSubmit}>
                 <Search size={14} />

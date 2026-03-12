@@ -169,8 +169,8 @@ export async function processRevenueCommission(revenueId: string) {
     const lead = revenue.client?.lead
     const repUserId = lead?.ownerRepId || lead?.assignedToId || null
 
-    // Handle unassigned leads — cannot create Commission with null repId
-    if (!repUserId) {
+    // Handle unassigned leads or missing client — cannot create Commission without both
+    if (!revenue.clientId || !repUserId) {
       const companyName = revenue.client?.companyName || 'Unknown Company'
       console.warn(`[Commission] No rep assigned for revenue ${revenueId} (${companyName}) — skipping commission`)
 
@@ -209,7 +209,7 @@ export async function processRevenueCommission(revenueId: string) {
     const repId = repUserId
     const calculation = await calculateCommission({
       repId,
-      clientId: revenue.clientId!,
+      clientId: revenue.clientId,
       revenueType: revenue.type,
       amount: revenue.amount
     })

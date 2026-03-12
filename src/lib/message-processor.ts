@@ -12,10 +12,12 @@ export async function processIncomingMessage(
   channel: MessageChannel = 'SMS'
 ): Promise<void> {
   try {
-    // Find client by phone number
+    // Find most recent lead by phone number (orderBy prevents picking a stale/old lead
+    // when multiple leads share the same phone, e.g. resubmissions)
     const lead = await prisma.lead.findFirst({
       where: { phone },
-      include: { client: true }
+      include: { client: true },
+      orderBy: { createdAt: 'desc' },
     })
 
     if (!lead) {

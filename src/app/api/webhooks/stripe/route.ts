@@ -167,9 +167,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   console.log(`[Stripe Webhook] Matched lead: ${lead.id} (${lead.companyName})`)
 
-  // ── Step 2: Check for duplicate vs upsell ──
-  if (lead.status === 'PAID') {
-    // Lead already paid — this is an upsell payment, not a duplicate
+  // ── Step 2: Atomic dedup — claim lead by setting status to PAID ──
+  // Use updateMany with WHERE to atomically prevent duplicate client creation.
+  // If two webhook retries arrive simultaneously, only one wins this race.
+  const claimed = await prisma.lead.updateMany({
+    where: { id: lead.id, status: { not: 'PAID' } },
+    data: { status: 'PAID' },
+  })
+
+  if (claimed.count === 0) {
+    // Lead is already PAID — either a duplicate webhook or an upsell payment
     const existingClient = await prisma.client.findFirst({
       where: { leadId: lead.id },
     })
@@ -201,6 +208,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
     return
   }
+
+  // We won the atomic claim — this is the only webhook instance that will create the client.
 
   // ── Step 3: Create Client from Lead ──
   const webhookConfig = await getPricingConfig()
@@ -248,13 +257,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     },
   })
 
-  // ── Step 4: Update Lead status to PAID ──
-  await prisma.lead.update({
-    where: { id: lead.id },
-    data: { status: 'PAID' },
-  })
-
-  // ── Step 5: Log PAYMENT_RECEIVED event ──
+  // ── Step 4: Log PAYMENT_RECEIVED event ──
+  // (Lead status already set to PAID by the atomic claim above)
   await prisma.leadEvent.create({
     data: {
       leadId: lead.id,

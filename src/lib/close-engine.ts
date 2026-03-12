@@ -64,19 +64,44 @@ export async function triggerCloseEngine(options: {
   leadId: string
   entryPoint: string
   repId?: string
+  reEngagement?: boolean
 }): Promise<{ success: boolean; conversationId?: string; error?: string }> {
-  const { leadId, entryPoint, repId } = options
+  const { leadId, entryPoint, repId, reEngagement } = options
 
   try {
     // 0. Atomic dedup: only one entry point can win the race
-    // updateMany with WHERE null is atomic — prevents double-fire
-    const dedup = await prisma.lead.updateMany({
-      where: { id: leadId, closeEngineTriggeredAt: null },
-      data: { closeEngineTriggeredAt: new Date() },
-    })
-    if (dedup.count === 0) {
-      console.log(`[CloseEngine] Dedup: already triggered for lead ${leadId}, skipping`)
-      return { success: true, conversationId: undefined }
+    // For re-engagement (CLOSED_LOST), reset the flag atomically within a transaction
+    // to prevent the window where two rapid messages both reset and both win.
+    if (reEngagement) {
+      // Atomic re-engagement: reset dedup flag + re-acquire in one transaction
+      const reEngagementResult = await prisma.$transaction(async (tx) => {
+        // Reset the flag
+        await tx.lead.update({
+          where: { id: leadId },
+          data: { closeEngineTriggeredAt: null },
+        })
+        // Immediately re-acquire the dedup lock
+        const dedup = await tx.lead.updateMany({
+          where: { id: leadId, closeEngineTriggeredAt: null },
+          data: { closeEngineTriggeredAt: new Date() },
+        })
+        return dedup.count
+      })
+
+      if (reEngagementResult === 0) {
+        console.log(`[CloseEngine] Dedup: re-engagement race lost for lead ${leadId}, skipping`)
+        return { success: true, conversationId: undefined }
+      }
+    } else {
+      // Normal dedup: updateMany with WHERE null is atomic — prevents double-fire
+      const dedup = await prisma.lead.updateMany({
+        where: { id: leadId, closeEngineTriggeredAt: null },
+        data: { closeEngineTriggeredAt: new Date() },
+      })
+      if (dedup.count === 0) {
+        console.log(`[CloseEngine] Dedup: already triggered for lead ${leadId}, skipping`)
+        return { success: true, conversationId: undefined }
+      }
     }
 
     // 1. Check for existing active conversation
@@ -124,21 +149,37 @@ export async function triggerCloseEngine(options: {
       await calculateEngagementScore(leadId)
     } catch (e) { console.warn('[CloseEngine] Score calc failed:', e) }
 
-    // 4. Create CloseEngineConversation (delete old terminal one if exists)
-    if (existing && TERMINAL_STAGES.includes(existing.stage)) {
-      await prisma.closeEngineConversation.delete({
-        where: { id: existing.id },
-      })
-    }
+    // 4. Create CloseEngineConversation atomically (delete old terminal + create new in transaction)
+    // This prevents the TOCTOU gap where two callers both see the old conversation,
+    // both delete it, and both try to create — the unique constraint on leadId catches this,
+    // but we handle it gracefully instead of crashing.
+    let conversation
+    try {
+      conversation = await prisma.$transaction(async (tx) => {
+        if (existing && TERMINAL_STAGES.includes(existing.stage)) {
+          await tx.closeEngineConversation.delete({
+            where: { id: existing.id },
+          }).catch(() => { /* already deleted by a concurrent caller */ })
+        }
 
-    const conversation = await prisma.closeEngineConversation.create({
-      data: {
-        leadId,
-        entryPoint,
-        repId: repId || null,
-        autonomyLevel: lead.autonomyLevel || AUTONOMY_LEVELS.FULL_AUTO,
-      },
-    })
+        return tx.closeEngineConversation.create({
+          data: {
+            leadId,
+            entryPoint,
+            repId: repId || null,
+            autonomyLevel: lead.autonomyLevel || AUTONOMY_LEVELS.FULL_AUTO,
+          },
+        })
+      })
+    } catch (createErr: any) {
+      // Unique constraint violation — another caller already created the conversation
+      if (createErr?.code === 'P2002') {
+        const existingConv = await prisma.closeEngineConversation.findUnique({ where: { leadId } })
+        console.log(`[CloseEngine] Dedup: conversation race resolved — using existing ${existingConv?.id}`)
+        return { success: true, conversationId: existingConv?.id }
+      }
+      throw createErr
+    }
 
     // 5. Create notification
     await prisma.notification.create({

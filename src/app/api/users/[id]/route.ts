@@ -55,7 +55,9 @@ export async function GET(
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ user })
+    // Strip passwordHash before sending to client
+    const { passwordHash: _ph, ...safeUser } = user
+    return NextResponse.json({ user: safeUser })
   } catch (error) {
     console.error('Error fetching user:', error)
     return NextResponse.json({ error: 'Failed to fetch user' }, { status: 500 })
@@ -121,7 +123,9 @@ export async function PATCH(
       },
     })
 
-    return NextResponse.json({ user })
+    // Strip passwordHash before sending to client
+    const { passwordHash: _pw, ...safeUser } = user
+    return NextResponse.json({ user: safeUser })
   } catch (error) {
     console.error('Error updating user:', error)
     return NextResponse.json(
@@ -201,10 +205,12 @@ export async function DELETE(
       },
     })
 
+    // Strip passwordHash before sending to client
+    const { passwordHash: _pwDel, ...safeUpdated } = updated
     return NextResponse.json({
       success: true,
       message: `User deactivated. ${totalReassigned} leads returned to unassigned pool.`,
-      user: updated,
+      user: safeUpdated,
       leadsReassigned: totalReassigned,
     })
   } catch (error) {

@@ -235,7 +235,7 @@ export default function ApiKeysTab() {
                                   setEditingKeyField({ service: svc.id, keyName: keyDef.name })
                                   setKeyInputValue('')
                                 }}
-                                className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100"
+                                className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 dark:hover:bg-slate-800"
                                 title="Edit key"
                               >
                                 <Pencil size={14} />
@@ -297,7 +297,7 @@ export default function ApiKeysTab() {
                               setEditingKeyField(null)
                               setKeyInputValue('')
                             }}
-                            className="px-2 py-1.5 text-sm text-gray-500 hover:text-gray-700 rounded hover:bg-gray-100"
+                            className="px-2 py-1.5 text-sm text-gray-500 hover:text-gray-700 rounded hover:bg-gray-100 dark:hover:bg-slate-800"
                           >
                             <X size={14} />
                           </button>

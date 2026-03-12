@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { verifySession } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/lead-events - Get lead events (audit log)
 export async function GET(request: NextRequest) {
+  const sessionCookie = request.cookies.get('session')?.value
+  const session = sessionCookie ? await verifySession(sessionCookie) : null
+  if (!session || session.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+  }
+
   const searchParams = request.nextUrl.searchParams
   const limit = parseInt(searchParams.get('limit') || '50')
   const leadId = searchParams.get('leadId')

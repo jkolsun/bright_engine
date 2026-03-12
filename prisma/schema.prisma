@@ -169,6 +169,7 @@ model Lead {
   callbackSchedules      CallbackSchedule[]       @relation("LeadCallbacks")
   siteEditVersion        Int                      @default(0) @map("site_edit_version")
   selectedTemplate       String?                  @map("selected_template")
+  stockPhotos            Json?                    @map("stock_photos")
   importBatchId           String?                  @map("import_batch_id")
   icpId                  String?                  @map("icp_id")
   scraperRunId           String?                  @map("scraper_run_id")
@@ -207,6 +208,7 @@ model Lead {
   @@index([emailEnrichmentSource])
   @@index([smsFunnelStage])
   @@index([lastSmsCampaignId])
+  @@index([secondaryPhone])
   @@map("leads")
 }
 
@@ -1608,7 +1610,7 @@ model SmsCampaignMessage {
   leadId           String          @map("lead_id")
   messageType      SmsMessageType  @map("message_type")
   content          String          @db.Text
-  twilioSid        String?         @map("twilio_sid")
+  twilioSid        String?         @unique @map("twilio_sid")
   twilioStatus     String?         @map("twilio_status")
   direction        String          @default("OUTBOUND")
   sentAt           DateTime?       @map("sent_at")
@@ -1623,7 +1625,6 @@ model SmsCampaignMessage {
   @@index([campaignId])
   @@index([campaignLeadId])
   @@index([leadId])
-  @@index([twilioSid])
   @@index([messageType])
   @@map("sms_campaign_messages")
 }

@@ -58,6 +58,12 @@ export async function GET(request: NextRequest) {
 // POST /api/notifications - Create notification (with BUG P.1 deduplication)
 export async function POST(request: NextRequest) {
   try {
+    const sessionCookie = request.cookies.get('session')?.value
+    const session = sessionCookie ? await verifySession(sessionCookie) : null
+    if (!session || session.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Admin required' }, { status: 403 })
+    }
+
     const { type, title, message, metadata, dedupKey } = await request.json()
 
     if (!type || !title || !message) {

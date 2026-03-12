@@ -169,6 +169,8 @@ export function fillTemplate(
   for (const [key, value] of Object.entries(vars)) {
     result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), value || '')
   }
+  // Strip any unreplaced {varName} placeholders so clients never see raw template syntax
+  result = result.replace(/\{[a-zA-Z_]+\}/g, '')
   // Clean up artifacts from empty variable substitution (e.g. empty firstName)
   result = result
     .replace(/\s+/g, ' ')           // collapse multiple spaces
