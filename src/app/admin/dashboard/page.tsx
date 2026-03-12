@@ -30,7 +30,7 @@ export default function DashboardPage() {
 
     refreshIntervalRef.current = setInterval(() => {
       loadDashboard()
-    }, 30000)
+    }, 60000)
 
     return () => {
       if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current)
@@ -125,7 +125,7 @@ export default function DashboardPage() {
           label="MRR"
           value={formatCurrency(data.mrr)}
           change={`+${formatCurrency(data.todayRevenue)} today`}
-          href="/admin/revenue"
+          href="/admin/finance?tab=revenue"
         />
       </div>
 
@@ -169,7 +169,7 @@ export default function DashboardPage() {
                 View All Leads
               </Button>
             </Link>
-            <Link href="/admin/import">
+            <Link href="/admin/leads?tab=import">
               <Button variant="outline" className="w-full justify-start">
                 <TrendingUp size={18} className="mr-2" />
                 Import CSV

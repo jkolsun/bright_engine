@@ -46,8 +46,8 @@ export default function RepDetailPage({ params }: RepDetailPageProps) {
     return (
       <div className="p-8 text-center">
         <p className="text-red-600 mb-4">{error || 'Rep not found'}</p>
-        <Link href="/admin/reps/performance" className="text-blue-600 hover:text-blue-800">
-          Back to Rep Performance
+        <Link href="/admin/reps" className="text-blue-600 hover:text-blue-800">
+          Back to Sales Team
         </Link>
       </div>
     )
@@ -84,9 +84,9 @@ export default function RepDetailPage({ params }: RepDetailPageProps) {
     <div className="p-8 space-y-6">
       {/* Header */}
       <div>
-        <Link href="/admin/reps/performance" className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-4">
+        <Link href="/admin/reps" className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-4">
           <ArrowLeft size={16} />
-          Back to Rep Performance
+          Back to Sales Team
         </Link>
 
         <div className="flex items-start justify-between">

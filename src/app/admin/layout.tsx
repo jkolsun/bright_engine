@@ -12,15 +12,7 @@ import {
   Send,
   Settings,
   LogOut,
-  Upload,
-  Target,
-  Radio,
-  ShieldCheck,
-  Hammer,
-  Wallet,
-  Activity,
-  Clock,
-  Search,
+  GitBranch,
 } from 'lucide-react'
 import { BriefingModal } from '@/components/admin/BriefingModal'
 import { ThemeProvider, useTheme } from '@/components/theme/ThemeProvider'
@@ -95,29 +87,23 @@ function AdminLayoutInner({
 
   const isDark = resolvedTheme === 'dark'
 
+  const pipelineBadge = pendingApprovals + buildQueueBadge
+
   const navItems = [
     { href: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/admin/leads', icon: Users, label: 'Leads' },
     { href: '/admin/clients', icon: UserCircle, label: 'Clients' },
-    { href: '/admin/revenue', icon: DollarSign, label: 'Revenue' },
-    { href: '/admin/payouts', icon: Wallet, label: 'Payouts' },
+    { href: '/admin/finance', icon: DollarSign, label: 'Finance' },
     { href: '/admin/messages', icon: MessageSquare, label: 'Messages' },
     { href: '/admin/campaigns', icon: Send, label: 'Campaigns' },
-    { href: '/admin/approvals', icon: ShieldCheck, label: 'Approvals', badge: pendingApprovals },
-    { href: '/admin/build-queue', icon: Hammer, label: 'Build Queue', badge: buildQueueBadge },
-    { href: '/admin/queue-status', icon: Activity, label: 'Queue Status' },
-    { href: '/admin/outbound', icon: Target, label: 'Sales Rep Tracker' },
-    { href: '/admin/lead-bank', icon: Clock, label: 'Lead Bank' },
-    { href: '/admin/dialer-monitor', icon: Radio, label: 'Live Dialer' },
-    { href: '/admin/scraper', icon: Search, label: 'Lead Scraper' },
-    { href: '/admin/import', icon: Upload, label: 'Lead Import' },
+    { href: '/admin/pipeline', icon: GitBranch, label: 'Pipeline', badge: pipelineBadge },
     { href: '/admin/settings', icon: Settings, label: 'Settings' },
   ]
 
   const mobileNavItems = [
     { href: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', exact: true },
     { href: '/admin/leads', icon: Users, label: 'Leads' },
-    { href: '/admin/messages', icon: MessageSquare, label: 'Messages' },
+    { href: '/admin/pipeline', icon: GitBranch, label: 'Pipeline' },
     { href: '/admin/campaigns', icon: Send, label: 'Campaigns' },
     { href: '/admin/settings', icon: Settings, label: 'Settings' },
   ]

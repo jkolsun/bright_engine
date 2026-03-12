@@ -52,7 +52,7 @@ export default function EditorToolbar(props: EditorToolbarProps) {
       {/* Left: Back + Company info */}
       <div className="flex items-center gap-3">
         <Link
-          href="/admin/build-queue"
+          href="/admin/pipeline?tab=builds"
           className="p-1.5 rounded hover:bg-gray-600 text-gray-400 hover:text-white transition-colors"
           title="Back to Build Queue"
         >

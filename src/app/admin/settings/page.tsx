@@ -3,8 +3,10 @@
 import { Card } from '@/components/ui/card'
 import {
   Building, MessageSquare, Target, Users, Key, Activity, Loader2,
+  Radio, Bot,
 } from 'lucide-react'
-import { useState, useEffect, Suspense } from 'react'
+import dynamic from 'next/dynamic'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { SettingsProvider, useSettingsContext } from './_lib/context'
 
@@ -14,6 +16,33 @@ import TargetsTab from './_tabs/TargetsTab'
 import TeamTab from './_tabs/TeamTab'
 import ApiKeysTab from './_tabs/ApiKeysTab'
 import DiagnosticsTab from './_tabs/DiagnosticsTab'
+
+const DialerTab = dynamic(() => import('./_tabs/DialerTab'), {
+  loading: () => (
+    <div className="flex items-center justify-center py-20 text-gray-500 dark:text-gray-400 gap-2">
+      <Loader2 size={20} className="animate-spin" />
+      <span>Loading dialer monitor…</span>
+    </div>
+  ),
+})
+
+const QueuesTab = dynamic(() => import('./_tabs/QueuesTab'), {
+  loading: () => (
+    <div className="flex items-center justify-center py-20 text-gray-500 dark:text-gray-400 gap-2">
+      <Loader2 size={20} className="animate-spin" />
+      <span>Loading queue status…</span>
+    </div>
+  ),
+})
+
+const ClawdBotTab = dynamic(() => import('./_tabs/ClawdBotTab'), {
+  loading: () => (
+    <div className="flex items-center justify-center py-20 text-gray-500 dark:text-gray-400 gap-2">
+      <Loader2 size={20} className="animate-spin" />
+      <span>Loading ClawdBot monitor…</span>
+    </div>
+  ),
+})
 
 // ── Settings Table Key Registry (BUG 15.1 audit) ──
 // All Settings keys stored in the `settings` table (key → value Json):
@@ -52,15 +81,20 @@ import DiagnosticsTab from './_tabs/DiagnosticsTab'
 // Each key is unique to its purpose and only stored in the Settings table.
 
 // ── Types ──
-type TabId = 'company' | 'communication' | 'targets' | 'team' | 'api' | 'diagnostics'
+type TabId = 'company' | 'communication' | 'targets' | 'team' | 'api' | 'diagnostics' | 'dialer' | 'queues' | 'clawdbot'
 
-const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
+const TABS: { id: TabId; label: string; icon: React.ReactNode; separator?: boolean }[] = [
+  // ── Configuration ──
   { id: 'company', label: 'Company', icon: <Building size={16} /> },
   { id: 'communication', label: 'Communication', icon: <MessageSquare size={16} /> },
   { id: 'targets', label: 'Targets', icon: <Target size={16} /> },
   { id: 'team', label: 'Team', icon: <Users size={16} /> },
   { id: 'api', label: 'API Keys', icon: <Key size={16} /> },
   { id: 'diagnostics', label: 'Diagnostics', icon: <Activity size={16} /> },
+  // ── Monitoring ──
+  { id: 'dialer', label: 'Dialer', icon: <Radio size={16} />, separator: true },
+  { id: 'queues', label: 'Queues', icon: <Activity size={16} /> },
+  { id: 'clawdbot', label: 'ClawdBot', icon: <Bot size={16} /> },
 ]
 
 const VALID_TAB_IDS = new Set<string>(TABS.map(t => t.id))
@@ -107,18 +141,22 @@ function SettingsInner() {
       <Card className="p-1">
         <div className="flex gap-1 flex-wrap">
           {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
+            <React.Fragment key={tab.id}>
+              {tab.separator && (
+                <div className="w-px bg-gray-200 dark:bg-slate-700 mx-1 self-stretch" />
+              )}
+              <button
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            </React.Fragment>
           ))}
         </div>
       </Card>
@@ -130,6 +168,9 @@ function SettingsInner() {
       {activeTab === 'team' && <TeamTab />}
       {activeTab === 'api' && <ApiKeysTab />}
       {activeTab === 'diagnostics' && <DiagnosticsTab />}
+      {activeTab === 'dialer' && <DialerTab />}
+      {activeTab === 'queues' && <QueuesTab />}
+      {activeTab === 'clawdbot' && <ClawdBotTab />}
     </div>
   )
 }
