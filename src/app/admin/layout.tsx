@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   Users,
@@ -46,6 +46,7 @@ function AdminLayoutInner({
   children: React.ReactNode
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const { resolvedTheme } = useTheme()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [pendingApprovals, setPendingApprovals] = useState(0)
@@ -94,11 +95,38 @@ function AdminLayoutInner({
 
   const isDark = resolvedTheme === 'dark'
 
+  const navItems = [
+    { href: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { href: '/admin/leads', icon: Users, label: 'Leads' },
+    { href: '/admin/clients', icon: UserCircle, label: 'Clients' },
+    { href: '/admin/revenue', icon: DollarSign, label: 'Revenue' },
+    { href: '/admin/payouts', icon: Wallet, label: 'Payouts' },
+    { href: '/admin/messages', icon: MessageSquare, label: 'Messages' },
+    { href: '/admin/campaigns', icon: Send, label: 'Campaigns' },
+    { href: '/admin/approvals', icon: ShieldCheck, label: 'Approvals', badge: pendingApprovals },
+    { href: '/admin/build-queue', icon: Hammer, label: 'Build Queue', badge: buildQueueBadge },
+    { href: '/admin/queue-status', icon: Activity, label: 'Queue Status' },
+    { href: '/admin/outbound', icon: Target, label: 'Sales Rep Tracker' },
+    { href: '/admin/lead-bank', icon: Clock, label: 'Lead Bank' },
+    { href: '/admin/dialer-monitor', icon: Radio, label: 'Live Dialer' },
+    { href: '/admin/scraper', icon: Search, label: 'Lead Scraper' },
+    { href: '/admin/import', icon: Upload, label: 'Lead Import' },
+    { href: '/admin/settings', icon: Settings, label: 'Settings' },
+  ]
+
+  const mobileNavItems = [
+    { href: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+    { href: '/admin/leads', icon: Users, label: 'Leads' },
+    { href: '/admin/messages', icon: MessageSquare, label: 'Messages' },
+    { href: '/admin/campaigns', icon: Send, label: 'Campaigns' },
+    { href: '/admin/settings', icon: Settings, label: 'Settings' },
+  ]
+
   return (
     <div className={`flex h-screen ${isDark ? 'dark bg-background' : 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50'}`}>
       {/* Sidebar - Hidden on mobile */}
-      <aside className="w-72 gradient-dark text-white flex-col shadow-large border-r border-slate-700/50 hidden md:flex">
-        <div className="p-6 border-b border-white/10">
+      <aside className="w-72 gradient-dark text-white flex-col shadow-large border-r border-slate-700/50 hidden md:flex overflow-hidden">
+        <div className="p-6 border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-3 mb-1">
             <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center shadow-medium">
               <span className="text-white font-bold text-lg">B</span>
@@ -110,62 +138,26 @@ function AdminLayoutInner({
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1">
-          <NavLink href="/admin/dashboard" icon={<LayoutDashboard size={20} />}>
-            Dashboard
-          </NavLink>
-          <NavLink href="/admin/leads" icon={<Users size={20} />}>
-            Leads
-          </NavLink>
-          <NavLink href="/admin/clients" icon={<UserCircle size={20} />}>
-            Clients
-          </NavLink>
-          <NavLink href="/admin/revenue" icon={<DollarSign size={20} />}>
-            Revenue
-          </NavLink>
-          <NavLink href="/admin/payouts" icon={<Wallet size={20} />}>
-            Payouts
-          </NavLink>
-          <NavLink href="/admin/messages" icon={<MessageSquare size={20} />}>
-            Messages
-          </NavLink>
-          <NavLink href="/admin/campaigns" icon={<Send size={20} />}>
-            Campaigns
-          </NavLink>
-          <NavLink href="/admin/approvals" icon={<ShieldCheck size={20} />} badge={pendingApprovals}>
-            Approvals
-          </NavLink>
-          <NavLink href="/admin/build-queue" icon={<Hammer size={20} />} badge={buildQueueBadge}>
-            Build Queue
-          </NavLink>
-          <NavLink href="/admin/queue-status" icon={<Activity size={20} />}>
-            Queue Status
-          </NavLink>
-          <NavLink href="/admin/outbound" icon={<Target size={20} />}>
-            Sales Rep Tracker
-          </NavLink>
-          <NavLink href="/admin/lead-bank" icon={<Clock size={20} />}>
-            Lead Bank
-          </NavLink>
-          <NavLink href="/admin/dialer-monitor" icon={<Radio size={20} />}>
-            Live Dialer
-          </NavLink>
-          <NavLink href="/admin/scraper" icon={<Search size={20} />}>
-            Lead Scraper
-          </NavLink>
-          <NavLink href="/admin/import" icon={<Upload size={20} />}>
-            Lead Import
-          </NavLink>
-          <NavLink href="/admin/settings" icon={<Settings size={20} />}>
-            Settings
-          </NavLink>
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-thin">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(item.href))
+            return (
+              <NavLink key={item.href} href={item.href} icon={<item.icon size={20} />} badge={item.badge} active={isActive}>
+                {item.label}
+              </NavLink>
+            )
+          })}
         </nav>
 
-        <div className="p-4 border-t border-slate-700 space-y-2">
+        <div className="p-4 border-t border-slate-700 space-y-2 flex-shrink-0">
           <ThemeToggle />
           <Link
             href="/admin/reps"
-            className="flex items-center gap-2 text-sm text-slate-300 hover:text-white w-full transition-colors px-3 py-2 rounded-lg hover:bg-slate-700/50"
+            className={`flex items-center gap-2 text-sm w-full transition-colors px-3 py-2 rounded-lg ${
+              pathname.startsWith('/admin/reps')
+                ? 'bg-slate-700/60 text-white'
+                : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+            }`}
           >
             <Users size={18} />
             Sales Team
@@ -182,9 +174,32 @@ function AdminLayoutInner({
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto pb-16 md:pb-0">
         {children}
       </main>
+
+      {/* Mobile Bottom Nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-700 shadow-lg">
+        <div className="flex items-center justify-around h-16">
+          {mobileNavItems.map((item) => {
+            const isActive = item.exact
+              ? pathname === item.href
+              : pathname.startsWith(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors ${
+                  isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'
+                }`}
+              >
+                <item.icon size={20} />
+                <span className="text-[10px] font-semibold">{item.label}</span>
+              </Link>
+            )
+          })}
+        </div>
+      </nav>
 
       <BriefingModal />
     </div>
@@ -196,16 +211,22 @@ function NavLink({
   icon,
   children,
   badge,
+  active,
 }: {
   href: string
   icon: React.ReactNode
   children: React.ReactNode
   badge?: number
+  active?: boolean
 }) {
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-300 rounded-lg hover:bg-slate-700/50 hover:text-white transition-all duration-200"
+      className={`flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+        active
+          ? 'bg-slate-700/60 text-white'
+          : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'
+      }`}
     >
       {icon}
       <span className="flex-1">{children}</span>

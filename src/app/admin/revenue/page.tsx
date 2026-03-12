@@ -51,7 +51,7 @@ export default function RevenuePage() {
   const arr = mrr * 12
   const activeClients = stats?.activeClients || 0
   // BUG K.3: Use paying clients count (excludes $0) for avg revenue calculation
-  const payingClients = stats?.payingClients || activeClients
+  const payingClients = stats?.payingClients ?? activeClients
 
   return (
     <div className="p-8 space-y-6">
