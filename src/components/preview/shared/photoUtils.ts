@@ -1,4 +1,18 @@
 /**
+ * onError handler for preview images: fades the image out and shows
+ * a subtle gradient on the parent container instead of a blank hole.
+ */
+export function handleImgError(e: React.SyntheticEvent<HTMLImageElement>) {
+  const img = e.currentTarget
+  img.style.opacity = '0'
+  img.style.position = 'absolute'
+  const parent = img.parentElement
+  if (parent) {
+    parent.style.background = 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%)'
+  }
+}
+
+/**
  * Distributes enrichedPhotos across template pages for visual variety.
  * Photos are assigned to maximize coverage without duplicating on the same page.
  * portfolioPhotos always gets ALL photos (portfolio page is the full gallery).

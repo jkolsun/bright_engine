@@ -14,7 +14,7 @@ import DisclaimerBanner from '../shared/DisclaimerBanner'
 import PhotoPlaceholder from '../shared/PhotoPlaceholder'
 import ServicePageContent from '../shared/ServiceSections'
 import type { ServicePageTheme } from '../shared/ServiceSections'
-import { resolveServiceImage } from '../shared/photoUtils'
+import { resolveServiceImage, handleImgError } from '../shared/photoUtils'
 
 /* ── Helpers ─────────────────────────────────────────── */
 
@@ -365,7 +365,7 @@ export default function SummitTemplate({ lead, config, onCTAClick, onCallClick, 
         {/* ── FULL-WIDTH IMAGE BAND ── */}
         <section style={{ position: 'relative', height: 'clamp(300px,50vh,600px)', overflow: 'hidden' }}>
           {photos[0] ? (
-            <img src={photos[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+            <img src={photos[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={handleImgError} />
           ) : (
             <PhotoPlaceholder accent={A} style={{ width: '100%', height: '100%' }} />
           )}
@@ -481,7 +481,7 @@ export default function SummitTemplate({ lead, config, onCTAClick, onCallClick, 
         {photos[1] && (
           <>
             <section style={{ position: 'relative', height: 'clamp(280px,45vh,500px)', overflow: 'hidden' }}>
-              <img src={photos[1]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+              <img src={photos[1]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={handleImgError} />
             </section>
             <div className="sm-hairline" />
           </>

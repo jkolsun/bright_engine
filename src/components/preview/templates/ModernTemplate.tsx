@@ -13,7 +13,7 @@ import DisclaimerBanner from '../shared/DisclaimerBanner'
 import PhotoPlaceholder from '../shared/PhotoPlaceholder'
 import ServicePageContent from '../shared/ServiceSections'
 import type { ServicePageTheme } from '../shared/ServiceSections'
-import { resolveServiceImage } from '../shared/photoUtils'
+import { resolveServiceImage, handleImgError } from '../shared/photoUtils'
 
 /* ── Helpers ─────────────────────────────────────────── */
 
@@ -250,7 +250,7 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
             </div>
             <Reveal delay={200} y={30}><div className="relative">
               {photos[0] ? (
-                <img src={photos[0]} alt="" className="w-full object-cover" style={{borderRadius:16,aspectRatio:'4/3',display:'block',boxShadow:'0 20px 60px rgba(0,0,0,0.08)'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                <img src={photos[0]} alt="" className="w-full object-cover" style={{borderRadius:16,aspectRatio:'4/3',display:'block',boxShadow:'0 20px 60px rgba(0,0,0,0.08)'}} onError={handleImgError}/>
               ) : (
                 <PhotoPlaceholder accent={A} aspectRatio="4/3" style={{borderRadius:16,boxShadow:'0 20px 60px rgba(0,0,0,0.08)'}} />
               )}
@@ -285,7 +285,7 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
         {/* PHOTO + QUOTE band */}
         <Reveal><section className="relative overflow-hidden" style={{height:'50vh',minHeight:340}}>
           {photos[1] ? (
-            <div className="absolute inset-0"><img src={photos[1]} alt="" className="w-full h-full object-cover" onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div>
+            <div className="absolute inset-0"><img src={photos[1]} alt="" className="w-full h-full object-cover" onError={handleImgError}/></div>
           ) : (
             <div className="absolute inset-0" style={{background:`linear-gradient(135deg, ${A}18 0%, ${A}35 100%)`}} />
           )}
@@ -332,7 +332,7 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
               <button onClick={()=>go('work')} className="hz-pill-o" style={{padding:'10px 24px',fontSize:13}}>View all <ArrowRight size={14}/></button>
             </div></Reveal>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {photos.length > 0 ? photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*80}><div className="overflow-hidden rounded-xl cursor-pointer hz-lift" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover" style={{aspectRatio:'4/3',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>)) : Array.from({length:3},(_,i)=>(<Reveal key={i} delay={i*80}><PhotoPlaceholder accent={A} aspectRatio="4/3" style={{borderRadius:12}} /></Reveal>))}
+              {photos.length > 0 ? photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*80}><div className="overflow-hidden rounded-xl cursor-pointer hz-lift" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover" style={{aspectRatio:'4/3',display:'block'}} onError={handleImgError}/></div></Reveal>)) : Array.from({length:3},(_,i)=>(<Reveal key={i} delay={i*80}><PhotoPlaceholder accent={A} aspectRatio="4/3" style={{borderRadius:12}} /></Reveal>))}
             </div>
           </div>
         </section>
@@ -394,7 +394,7 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
 
         {/* Photo + second paragraph */}
         <section style={{padding:'0 clamp(16px,4vw,48px) clamp(60px,8vw,80px)'}}><div style={{maxWidth:1200,margin:'0 auto'}}>
-          <Reveal><div className="overflow-hidden rounded-xl mb-10">{photos[3] ? <img src={photos[3]} alt="" className="w-full object-cover" style={{height:400,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/> : <PhotoPlaceholder accent={A} height={400} style={{borderRadius:12}} />}</div></Reveal>
+          <Reveal><div className="overflow-hidden rounded-xl mb-10">{photos[3] ? <img src={photos[3]} alt="" className="w-full object-cover" style={{height:400,display:'block'}} onError={handleImgError}/> : <PhotoPlaceholder accent={A} height={400} style={{borderRadius:12}} />}</div></Reveal>
           {wc?.aboutParagraph2&&<Reveal><p className="text-base leading-relaxed mb-10" style={{color:'#777',maxWidth:700}}>{wc.aboutParagraph2}</p></Reveal>}
         </div></section>
 
@@ -481,7 +481,7 @@ export default function ModernTemplate({ lead, config, onCTAClick, onCallClick, 
             {photos.length>0?(
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {photos.slice(0,9).map((p,i)=>(<Reveal key={i} delay={i*60}><div className="overflow-hidden rounded-xl cursor-pointer relative group" onClick={()=>setLb(i)}>
-                  <img src={p} alt="" className="w-full object-cover hz-img-zoom" style={{aspectRatio:i===0?'16/10':'4/3',display:'block'}} loading={i>2?'lazy':undefined} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                  <img src={p} alt="" className="w-full object-cover hz-img-zoom" style={{aspectRatio:i===0?'16/10':'4/3',display:'block'}} loading={i>2?'lazy':undefined} onError={handleImgError}/>
                   <div className="absolute inset-0 flex items-end p-5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{background:'linear-gradient(to top,rgba(0,0,0,.6),transparent)'}}>
                     <p style={{fontFamily:mono,fontSize:11,color:'#fff',letterSpacing:'0.12em'}}>PROJECT {String(i+1).padStart(2,'0')}</p>
                   </div>

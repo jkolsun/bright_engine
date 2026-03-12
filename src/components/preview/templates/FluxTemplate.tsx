@@ -13,7 +13,7 @@ import DisclaimerBanner from '../shared/DisclaimerBanner'
 import PhotoPlaceholder from '../shared/PhotoPlaceholder'
 import ServicePageContent from '../shared/ServiceSections'
 import type { ServicePageTheme } from '../shared/ServiceSections'
-import { resolveServiceImage } from '../shared/photoUtils'
+import { resolveServiceImage, handleImgError } from '../shared/photoUtils'
 
 /* ── Helpers ─────────────────────────────────────────── */
 
@@ -289,7 +289,7 @@ export default function FluxTemplate({ lead, config, onCTAClick, onCallClick, we
                   style={{borderRadius:R,minHeight:i===0?280:220,display:'flex',flexDirection:'column'}}
                 >
                   {s.img ? (
-                    <img src={s.img} alt={s.name} className="absolute inset-0 w-full h-full object-cover" style={{borderRadius:R}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}} />
+                    <img src={s.img} alt={s.name} className="absolute inset-0 w-full h-full object-cover" style={{borderRadius:R}} onError={handleImgError} />
                   ) : (
                     <PhotoPlaceholder accent={A} style={{position:'absolute',inset:0,borderRadius:R}} />
                   )}
@@ -402,7 +402,7 @@ export default function FluxTemplate({ lead, config, onCTAClick, onCallClick, we
         <section style={{padding:'0 clamp(16px,4vw,48px) clamp(48px,6vw,72px)'}}>
           <div style={{maxWidth:1200,margin:'0 auto'}}>
             <Reveal><div style={{overflow:'hidden',borderRadius:R}}>
-              {photos[0] ? <img src={photos[0]} alt="" className="w-full object-cover" style={{height:'clamp(240px,30vw,420px)',display:'block',borderRadius:R}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/> : <PhotoPlaceholder accent={A} height={360} style={{borderRadius:R}} />}
+              {photos[0] ? <img src={photos[0]} alt="" className="w-full object-cover" style={{height:'clamp(240px,30vw,420px)',display:'block',borderRadius:R}} onError={handleImgError}/> : <PhotoPlaceholder accent={A} height={360} style={{borderRadius:R}} />}
             </div></Reveal>
             {wc?.aboutParagraph2&&<Reveal delay={100}><p style={{fontSize:16,lineHeight:1.8,color:'#777',maxWidth:720,marginTop:32}}>{wc.aboutParagraph2}</p></Reveal>}
           </div>

@@ -11,7 +11,7 @@ import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
 import PhotoPlaceholder from '../shared/PhotoPlaceholder'
 import ServicePageContent from '../shared/ServiceSections'
-import { resolveServiceImage } from '../shared/photoUtils'
+import { resolveServiceImage, handleImgError } from '../shared/photoUtils'
 
 function fmt(phone: string): string {
   const d = phone.replace(/\D/g, '')
@@ -307,7 +307,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
             </div></Reveal>
             <Reveal delay={100}><div className="overflow-hidden relative" style={{minHeight:260}}>
               {photos[2] ? (
-                <img src={photos[2]} alt="" className="w-full h-full object-cover obsidian-zoom" style={{display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                <img src={photos[2]} alt="" className="w-full h-full object-cover obsidian-zoom" style={{display:'block'}} onError={handleImgError}/>
               ) : (
                 <PhotoPlaceholder accent={A} variant="dark" style={{width:'100%',height:'100%',minHeight:260}} />
               )}
@@ -346,7 +346,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
               <h2 style={{fontFamily:serif,fontSize:'clamp(32px,4vw,56px)',fontWeight:800,letterSpacing:'-0.02em'}}>Our work<span style={{color:A}}>.</span></h2>
             </div><button onClick={()=>go('work')} className="obsidian-bo" style={{padding:'12px 28px',fontSize:12}}>View All <ArrowRight size={14}/></button></div></Reveal>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" style={{gridTemplateColumns:'2fr 1fr 1fr'}}>
-              {photos.length > 0 ? photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*100}><div className="overflow-hidden cursor-pointer" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover obsidian-zoom" style={{aspectRatio:i===0?'16/10':'1',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>)) : Array.from({length:3},(_,i)=>(<Reveal key={i} delay={i*100}><PhotoPlaceholder accent={A} variant="dark" aspectRatio={i===0?'16/10':'1'} /></Reveal>))}
+              {photos.length > 0 ? photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*100}><div className="overflow-hidden cursor-pointer" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover obsidian-zoom" style={{aspectRatio:i===0?'16/10':'1',display:'block'}} onError={handleImgError}/></div></Reveal>)) : Array.from({length:3},(_,i)=>(<Reveal key={i} delay={i*100}><PhotoPlaceholder accent={A} variant="dark" aspectRatio={i===0?'16/10':'1'} /></Reveal>))}
             </div>
           </div>
         </section>
@@ -401,7 +401,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
 
         {/* Photo + second paragraph */}
         <section style={{padding:'0 clamp(16px,4vw,48px) clamp(60px,8vw,80px)'}}><div style={{maxWidth:1200,margin:'0 auto'}}>
-          <Reveal><div className="overflow-hidden mb-10">{photos[3] ? <img src={photos[3]} alt="" className="w-full object-cover" style={{height:400,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/> : <PhotoPlaceholder accent={A} variant="dark" height={400} />}</div></Reveal>
+          <Reveal><div className="overflow-hidden mb-10">{photos[3] ? <img src={photos[3]} alt="" className="w-full object-cover" style={{height:400,display:'block'}} onError={handleImgError}/> : <PhotoPlaceholder accent={A} variant="dark" height={400} />}</div></Reveal>
           {wc?.aboutParagraph2&&<Reveal><p className="text-base leading-relaxed mb-10" style={{color:'rgba(255,255,255,0.4)',maxWidth:700}}>{wc.aboutParagraph2}</p></Reveal>}
         </div></section>
 
@@ -478,7 +478,7 @@ export default function BoldTemplate({ lead, config, onCTAClick, onCallClick, we
             {photos.length>0?(
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {photos.slice(0,8).map((p,i)=>(<Reveal key={i} delay={i*80}><div className="overflow-hidden cursor-pointer relative group" onClick={()=>setLb(i)}>
-                  <img src={p} alt="" className="w-full object-cover obsidian-zoom" style={{aspectRatio:i===0?'16/10':'4/3',display:'block'}} loading={i>1?'lazy':undefined} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                  <img src={p} alt="" className="w-full object-cover obsidian-zoom" style={{aspectRatio:i===0?'16/10':'4/3',display:'block'}} loading={i>1?'lazy':undefined} onError={handleImgError}/>
                   <div className="absolute inset-0 flex items-end p-5 opacity-0 group-hover:opacity-100 transition-opacity" style={{background:'linear-gradient(to top,rgba(0,0,0,.7),transparent)'}}>
                     <p style={{fontFamily:mono,fontSize:11,color:A,letterSpacing:'0.15em'}}>PROJECT {String(i+1).padStart(2,'0')}</p>
                   </div>

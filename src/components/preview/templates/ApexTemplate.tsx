@@ -14,7 +14,7 @@ import DisclaimerBanner from '../shared/DisclaimerBanner'
 import PhotoPlaceholder from '../shared/PhotoPlaceholder'
 import ServicePageContent from '../shared/ServiceSections'
 import type { ServicePageTheme } from '../shared/ServiceSections'
-import { resolveServiceImage } from '../shared/photoUtils'
+import { resolveServiceImage, handleImgError } from '../shared/photoUtils'
 
 /* ── Helpers ─────────────────────────────────────────── */
 
@@ -277,7 +277,7 @@ export default function ApexTemplate({ lead, config, onCTAClick, onCallClick, we
               <Reveal delay={320} y={30}>
                 <div style={{ position: 'relative' }}>
                   {photos[0] ? (
-                    <img src={photos[0]} alt="" style={{ width: '100%', aspectRatio: '5/4', objectFit: 'cover', display: 'block', boxShadow: '0 24px 64px rgba(0,0,0,0.1)' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                    <img src={photos[0]} alt="" style={{ width: '100%', aspectRatio: '5/4', objectFit: 'cover', display: 'block', boxShadow: '0 24px 64px rgba(0,0,0,0.1)' }} onError={handleImgError} />
                   ) : (
                     <PhotoPlaceholder accent={A} aspectRatio="5/4" style={{ boxShadow: '0 24px 64px rgba(0,0,0,0.1)' }} />
                   )}
@@ -355,7 +355,7 @@ export default function ApexTemplate({ lead, config, onCTAClick, onCallClick, we
                     <div onClick={() => go('services')} className="ax-lift cursor-pointer" style={{ background: '#fff', border: '1px solid #e8e9ec', overflow: 'hidden' }}>
                       <div style={{ height: 180, overflow: 'hidden', position: 'relative' }}>
                         {s.img ? (
-                          <img src={s.img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform .5s' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                          <img src={s.img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform .5s' }} onError={handleImgError} />
                         ) : (
                           <PhotoPlaceholder accent={A} height={180} />
                         )}
@@ -395,7 +395,7 @@ export default function ApexTemplate({ lead, config, onCTAClick, onCallClick, we
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ maxWidth: 1400, margin: '0 auto' }}>
               {photos.slice(0, 3).map((p, i) => (
                 <div key={i} className="overflow-hidden cursor-pointer" style={{ position: 'relative' }} onClick={() => setLb(i)}>
-                  <img src={p} alt="" style={{ width: '100%', aspectRatio: i === 1 ? '3/4' : '4/3', objectFit: 'cover', display: 'block', transition: 'transform .5s' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                  <img src={p} alt="" style={{ width: '100%', aspectRatio: i === 1 ? '3/4' : '4/3', objectFit: 'cover', display: 'block', transition: 'transform .5s' }} onError={handleImgError} />
                 </div>
               ))}
             </div>
@@ -468,7 +468,7 @@ export default function ApexTemplate({ lead, config, onCTAClick, onCallClick, we
             <Reveal delay={150}>
               <div style={{ position: 'relative' }}>
                 {photos[2] ? (
-                  <img src={photos[2]} alt="" style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', display: 'block' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                  <img src={photos[2]} alt="" style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', display: 'block' }} onError={handleImgError} />
                 ) : (
                   <PhotoPlaceholder accent={A} aspectRatio="4/3" />
                 )}

@@ -11,7 +11,7 @@ import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
 import PhotoPlaceholder from '../shared/PhotoPlaceholder'
 import ServicePageContent from '../shared/ServiceSections'
-import { resolveServiceImage } from '../shared/photoUtils'
+import { resolveServiceImage, handleImgError } from '../shared/photoUtils'
 
 function fmt(phone: string): string {
   const d = phone.replace(/\D/g, '')
@@ -226,7 +226,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
             </div>
             <Reveal delay={200}><div className="relative">
               {photos[0] ? (
-                <img src={photos[0]} alt="" className="w-full object-cover" style={{borderRadius:20,aspectRatio:'4/3',display:'block',boxShadow:'0 24px 64px rgba(0,0,0,.08)'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                <img src={photos[0]} alt="" className="w-full object-cover" style={{borderRadius:20,aspectRatio:'4/3',display:'block',boxShadow:'0 24px 64px rgba(0,0,0,.08)'}} onError={handleImgError}/>
               ) : (
                 <PhotoPlaceholder accent={A} aspectRatio="4/3" style={{borderRadius:20,boxShadow:'0 24px 64px rgba(0,0,0,.08)'}} />
               )}
@@ -270,7 +270,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
         {/* PHOTO BREAK */}
         <Reveal><section className="relative overflow-hidden" style={{margin:'0 clamp(16px,4vw,48px)',borderRadius:20,height:'50vh',minHeight:320}}>
           {photos[1] ? (
-            <div className="absolute inset-0"><img src={photos[1]} alt="" className="w-full h-full object-cover" onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div>
+            <div className="absolute inset-0"><img src={photos[1]} alt="" className="w-full h-full object-cover" onError={handleImgError}/></div>
           ) : (
             <div className="absolute inset-0" style={{background:`linear-gradient(135deg, ${A}18 0%, ${A}35 100%)`}} />
           )}
@@ -347,7 +347,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
 
         {/* Photo + second paragraph */}
         <section style={{padding:'0 clamp(16px,4vw,48px) clamp(60px,8vw,80px)'}}><div style={{maxWidth:1200,margin:'0 auto'}}>
-          <Reveal><div className="overflow-hidden mb-10" style={{borderRadius:20}}>{photos[3] ? <img src={photos[3]} alt="" className="w-full object-cover" style={{height:380,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/> : <PhotoPlaceholder accent={A} height={380} style={{borderRadius:20}} />}</div></Reveal>
+          <Reveal><div className="overflow-hidden mb-10" style={{borderRadius:20}}>{photos[3] ? <img src={photos[3]} alt="" className="w-full object-cover" style={{height:380,display:'block'}} onError={handleImgError}/> : <PhotoPlaceholder accent={A} height={380} style={{borderRadius:20}} />}</div></Reveal>
           {wc?.aboutParagraph2&&<Reveal><p className="text-base leading-relaxed mb-10" style={{color:'#777',maxWidth:680}}>{wc.aboutParagraph2}</p></Reveal>}
         </div></section>
 
@@ -425,7 +425,7 @@ export default function ModernBTemplate({ lead, config, onCTAClick, onCallClick,
             {photos.length>0?(
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {photos.slice(0,8).map((p,i)=>(<Reveal key={i} delay={i*60}><div className="overflow-hidden cursor-pointer zephyr-lift relative group" style={{borderRadius:16}} onClick={()=>setLb(i)}>
-                  <img src={p} alt="" className="w-full object-cover zephyr-img-zoom" style={{aspectRatio:i%3===0?'16/10':'4/3',display:'block'}} loading={i>1?'lazy':undefined} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                  <img src={p} alt="" className="w-full object-cover zephyr-img-zoom" style={{aspectRatio:i%3===0?'16/10':'4/3',display:'block'}} loading={i>1?'lazy':undefined} onError={handleImgError}/>
                   <div className="absolute inset-0 flex items-end p-5 opacity-0 group-hover:opacity-100 transition-opacity" style={{background:'linear-gradient(to top,rgba(0,0,0,.5),transparent)',borderRadius:16}}>
                     <p className="text-white text-sm font-semibold" style={{fontFamily:accent_font}}>View larger</p>
                   </div>

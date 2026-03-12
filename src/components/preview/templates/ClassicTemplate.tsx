@@ -11,7 +11,7 @@ import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
 import PhotoPlaceholder from '../shared/PhotoPlaceholder'
 import ServicePageContent from '../shared/ServiceSections'
-import { resolveServiceImage } from '../shared/photoUtils'
+import { resolveServiceImage, handleImgError } from '../shared/photoUtils'
 
 function fmt(phone: string): string {
   const d = phone.replace(/\D/g, '')
@@ -224,7 +224,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
           <div style={{padding:'clamp(12px,2vw,24px)'}}>
             <div className="relative overflow-hidden" style={{maxWidth:1340,margin:'0 auto',border:'6px solid #fff',boxShadow:'0 4px 40px rgba(44,37,32,0.08)'}}>
               {photos[0] ? (
-                <img src={photos[0]} alt="" className="w-full object-cover" style={{height:'clamp(400px,60vh,640px)',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                <img src={photos[0]} alt="" className="w-full object-cover" style={{height:'clamp(400px,60vh,640px)',display:'block'}} onError={handleImgError}/>
               ) : (
                 <PhotoPlaceholder accent={A} height="clamp(400px,60vh,640px)" iconSize={56} />
               )}
@@ -298,7 +298,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
               <button onClick={()=>go('work')} className="cs-btn-o" style={{padding:'10px 20px',fontSize:12}}>View all <ArrowRight size={14}/></button>
             </div></Reveal>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {photos.length > 0 ? photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*80}><div className="cs-photo-hover" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover" style={{aspectRatio:'4/3',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>)) : Array.from({length:3},(_,i)=>(<Reveal key={i} delay={i*80}><PhotoPlaceholder accent={A} aspectRatio="4/3" /></Reveal>))}
+              {photos.length > 0 ? photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*80}><div className="cs-photo-hover" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover" style={{aspectRatio:'4/3',display:'block'}} onError={handleImgError}/></div></Reveal>)) : Array.from({length:3},(_,i)=>(<Reveal key={i} delay={i*80}><PhotoPlaceholder accent={A} aspectRatio="4/3" /></Reveal>))}
             </div>
           </div>
         </section>
@@ -357,7 +357,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
         {/* Story + photos */}
         <section style={{padding:'0 clamp(16px,4vw,48px) clamp(60px,8vw,100px)'}}><div style={{maxWidth:1100,margin:'0 auto'}}>
           <Reveal><div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-            {photos.length >= 2 ? photos.slice(0,2).map((p,i)=><div key={i} className="overflow-hidden"><img src={p} alt="" className="w-full object-cover" style={{height:320,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div>) : Array.from({length:2},(_,i)=>(<div key={i} className="overflow-hidden"><PhotoPlaceholder accent={A} height={320} /></div>))}
+            {photos.length >= 2 ? photos.slice(0,2).map((p,i)=><div key={i} className="overflow-hidden"><img src={p} alt="" className="w-full object-cover" style={{height:320,display:'block'}} onError={handleImgError}/></div>) : Array.from({length:2},(_,i)=>(<div key={i} className="overflow-hidden"><PhotoPlaceholder accent={A} height={320} /></div>))}
           </div></Reveal>
           {wc?.aboutParagraph2&&<Reveal><p className="leading-relaxed mb-10" style={{color:'#8a8078',maxWidth:700}}>{wc.aboutParagraph2}</p></Reveal>}
         </div></section>
@@ -448,7 +448,7 @@ export default function ClassicTemplate({ lead, config, onCTAClick, onCallClick,
             {photos.length>0?(
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {photos.slice(0,9).map((p,i)=>(<Reveal key={i} delay={i*60}><div className="cs-photo-hover" onClick={()=>setLb(i)} style={{aspectRatio:i===0||i===4?'16/10':'4/3'}}>
-                  <img src={p} alt="" className="w-full h-full object-cover" style={{display:'block'}} loading={i>2?'lazy':undefined} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                  <img src={p} alt="" className="w-full h-full object-cover" style={{display:'block'}} loading={i>2?'lazy':undefined} onError={handleImgError}/>
                   <div className="absolute bottom-3 left-3 px-2 py-1 text-[11px]" style={{background:'rgba(250,248,244,0.9)',fontFamily:label,color:'#5C5650',letterSpacing:'0.04em'}}>Project {i+1}</div>
                 </div></Reveal>))}
               </div>

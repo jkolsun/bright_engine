@@ -11,7 +11,7 @@ import type { TemplateProps } from '../config/template-types'
 import DisclaimerBanner from '../shared/DisclaimerBanner'
 import PhotoPlaceholder from '../shared/PhotoPlaceholder'
 import ServicePageContent from '../shared/ServiceSections'
-import { resolveServiceImage } from '../shared/photoUtils'
+import { resolveServiceImage, handleImgError } from '../shared/photoUtils'
 
 function fmt(phone: string): string {
   const d = phone.replace(/\D/g, '')
@@ -289,7 +289,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
             </div></Reveal>
             <Reveal delay={150} x={40}><div className="overflow-hidden relative carbon-clip-img" style={{minHeight:300}}>
               {photos[2] ? (
-                <img src={photos[2]} alt="" className="w-full h-full object-cover" style={{display:'block',clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                <img src={photos[2]} alt="" className="w-full h-full object-cover" style={{display:'block',clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}} onError={handleImgError}/>
               ) : (
                 <PhotoPlaceholder accent={A} variant="dark" style={{width:'100%',height:'100%',minHeight:300,clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}} />
               )}
@@ -322,7 +322,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
               <button onClick={()=>go('work')} className="carbon-btn-o" style={{padding:'10px 24px',fontSize:11}}>View All <ArrowRight size={14}/></button>
             </div></Reveal>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {photos.length > 0 ? photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*80} x={-20}><div className="overflow-hidden cursor-pointer carbon-glow" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover transition-transform duration-500 hover:scale-105" style={{aspectRatio:i===0?'16/10':'1',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/></div></Reveal>)) : Array.from({length:3},(_,i)=>(<Reveal key={i} delay={i*80} x={-20}><PhotoPlaceholder accent={A} variant="dark" aspectRatio={i===0?'16/10':'1'} /></Reveal>))}
+              {photos.length > 0 ? photos.slice(0,3).map((p,i)=>(<Reveal key={i} delay={i*80} x={-20}><div className="overflow-hidden cursor-pointer carbon-glow" onClick={()=>setLb(i)}><img src={p} alt="" className="w-full object-cover transition-transform duration-500 hover:scale-105" style={{aspectRatio:i===0?'16/10':'1',display:'block'}} onError={handleImgError}/></div></Reveal>)) : Array.from({length:3},(_,i)=>(<Reveal key={i} delay={i*80} x={-20}><PhotoPlaceholder accent={A} variant="dark" aspectRatio={i===0?'16/10':'1'} /></Reveal>))}
             </div>
           </div>
         </section>
@@ -381,10 +381,10 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
         <section style={{padding:'clamp(48px,6vw,80px) clamp(16px,4vw,48px)',background:'#050505'}}><div style={{maxWidth:1200,margin:'0 auto'}}>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
             <div>
-              <Reveal><div className="overflow-hidden mb-8 carbon-clip-img" style={{clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}}>{photos[3] ? <img src={photos[3]} alt="" className="w-full object-cover" style={{height:340,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/> : <PhotoPlaceholder accent={A} variant="dark" height={340} />}</div></Reveal>
+              <Reveal><div className="overflow-hidden mb-8 carbon-clip-img" style={{clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}}>{photos[3] ? <img src={photos[3]} alt="" className="w-full object-cover" style={{height:340,display:'block'}} onError={handleImgError}/> : <PhotoPlaceholder accent={A} variant="dark" height={340} />}</div></Reveal>
               {wc?.aboutParagraph2&&<Reveal delay={80}><p className="text-base leading-relaxed" style={{color:'rgba(255,255,255,0.4)'}}>{wc.aboutParagraph2}</p></Reveal>}
             </div>
-            <Reveal delay={120} x={40}><div className="overflow-hidden carbon-clip-img" style={{clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}}>{photos[4] ? <img src={photos[4]} alt="" className="w-full object-cover" style={{height:'100%',minHeight:300,display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/> : <PhotoPlaceholder accent={A} variant="dark" style={{minHeight:300,height:'100%'}} />}</div></Reveal>
+            <Reveal delay={120} x={40}><div className="overflow-hidden carbon-clip-img" style={{clipPath:'polygon(0 0,100% 0,100% 85%,92% 100%,0 100%)'}}>{photos[4] ? <img src={photos[4]} alt="" className="w-full object-cover" style={{height:'100%',minHeight:300,display:'block'}} onError={handleImgError}/> : <PhotoPlaceholder accent={A} variant="dark" style={{minHeight:300,height:'100%'}} />}</div></Reveal>
           </div>
 
           {/* Why Choose Us */}
@@ -450,7 +450,7 @@ export default function BoldBTemplate({ lead, config, onCTAClick, onCallClick, w
             {photos.length>0?(
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {photos.slice(0,9).map((p,i)=>(<Reveal key={i} delay={i*50} x={-20}><div className="overflow-hidden cursor-pointer carbon-glow" style={{clipPath:'polygon(0 0,100% 0,100% 92%,92% 100%,0 100%)'}} onClick={()=>setLb(i)}>
-                  <img src={p} alt="" className="w-full object-cover transition-transform duration-500 hover:scale-105" style={{aspectRatio:i%5===0?'16/10':'4/3',display:'block'}} loading={i>2?'lazy':undefined} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                  <img src={p} alt="" className="w-full object-cover transition-transform duration-500 hover:scale-105" style={{aspectRatio:i%5===0?'16/10':'4/3',display:'block'}} loading={i>2?'lazy':undefined} onError={handleImgError}/>
                 </div></Reveal>))}
               </div>
             ):(

@@ -13,7 +13,7 @@ import DisclaimerBanner from '../shared/DisclaimerBanner'
 import PhotoPlaceholder from '../shared/PhotoPlaceholder'
 import ServicePageContent from '../shared/ServiceSections'
 import type { ServicePageTheme } from '../shared/ServiceSections'
-import { resolveServiceImage } from '../shared/photoUtils'
+import { resolveServiceImage, handleImgError } from '../shared/photoUtils'
 
 /* ── Helpers ─────────────────────────────────────────── */
 
@@ -295,7 +295,7 @@ export default function ForgeTemplate({ lead, config, onCTAClick, onCallClick, w
             </div></Reveal>
             <Reveal delay={150}><div className="relative">
               {photos[0] ? (
-                <img src={photos[0]} alt="" className="w-full object-cover" style={{aspectRatio:'4/3',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/>
+                <img src={photos[0]} alt="" className="w-full object-cover" style={{aspectRatio:'4/3',display:'block'}} onError={handleImgError}/>
               ) : (
                 <PhotoPlaceholder accent={A} aspectRatio="4/3" style={{borderRadius:0}} />
               )}
@@ -407,7 +407,7 @@ export default function ForgeTemplate({ lead, config, onCTAClick, onCallClick, w
 
         {/* Photo + second paragraph */}
         <section style={{padding:'0 clamp(20px,5vw,64px) clamp(60px,8vw,80px)',background:'#111111'}}><div style={{maxWidth:1200,margin:'0 auto'}}>
-          <Reveal><div className="overflow-hidden mb-10">{photos[3] ? <img src={photos[3]} alt="" className="w-full object-cover" style={{height:'clamp(250px,40vw,400px)',display:'block'}} onError={e=>{(e.target as HTMLImageElement).style.display='none'}}/> : <PhotoPlaceholder accent={A} height={400} style={{borderRadius:0,height:'clamp(250px,40vw,400px)'}} />}</div></Reveal>
+          <Reveal><div className="overflow-hidden mb-10">{photos[3] ? <img src={photos[3]} alt="" className="w-full object-cover" style={{height:'clamp(250px,40vw,400px)',display:'block'}} onError={handleImgError}/> : <PhotoPlaceholder accent={A} height={400} style={{borderRadius:0,height:'clamp(250px,40vw,400px)'}} />}</div></Reveal>
           {wc?.aboutParagraph2&&<Reveal><p className="text-base leading-relaxed mb-10" style={{color:'#999',maxWidth:700}}>{wc.aboutParagraph2}</p></Reveal>}
         </div></section>
 
