@@ -42,6 +42,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ connected: true })
     }
 
+    // Mark as disconnected on failure
+    if (config) {
+      const updated = { ...config, instagram: { ...config.instagram, connected: false } }
+      await prisma.settings.update({ where: { key: SETTINGS_KEY }, data: { value: updated } }).catch(() => {})
+    }
     return NextResponse.json({ connected: false, error: `PhantomBuster returned ${res.status}` })
   } catch (error) {
     console.error('Instagram test connection error:', error)

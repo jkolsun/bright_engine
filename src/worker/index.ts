@@ -3126,7 +3126,7 @@ async function handleSendSocialFollowup(data: {
   })
 
   if (!campaignLead) return
-  if (['CLOSED', 'OPTED_OUT', 'BOOKED'].includes(campaignLead.funnelStage)) return
+  if (['CLOSED', 'OPTED_OUT', 'BOOKED', 'BOOKING_SENT', 'RE_ENGAGED'].includes(campaignLead.funnelStage)) return
 
   const { campaign, lead } = campaignLead
 

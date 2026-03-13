@@ -28,6 +28,11 @@ export async function POST(
   const counterField = action === 'close' ? 'closedCount' : 'bookedCount'
   const dateField = action === 'close' ? 'closedAt' : 'bookedAt'
 
+  // Guard: don't double-increment if already in target stage
+  if (campaignLead.funnelStage === stage) {
+    return NextResponse.json({ success: true, note: `Already ${stage}` })
+  }
+
   await prisma.socialCampaignLead.update({
     where: { id: campaignLead.id },
     data: { funnelStage: stage, [dateField]: new Date() },

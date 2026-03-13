@@ -35,13 +35,18 @@ export async function POST(request: NextRequest) {
 
     // Update message status
     if (event.status === 'DELIVERED') {
+      // Guard: only process if message hasn't already been marked delivered
+      if (message.status === 'DELIVERED') {
+        return NextResponse.json({ ok: true, note: 'Already processed' })
+      }
+
       await prisma.socialCampaignMessage.update({
         where: { id: message.id },
         data: { status: 'DELIVERED', deliveredAt: new Date() },
       })
 
-      // Update campaign lead to SENT if still QUEUED
-      await prisma.socialCampaignLead.updateMany({
+      // Update campaign lead to SENT if still QUEUED — updateMany is idempotent (0 rows if not QUEUED)
+      const updated = await prisma.socialCampaignLead.updateMany({
         where: {
           campaignId: message.campaignId,
           leadId: message.leadId,
@@ -50,10 +55,13 @@ export async function POST(request: NextRequest) {
         data: { funnelStage: 'SENT', dm1SentAt: new Date() },
       })
 
-      await prisma.socialCampaign.update({
-        where: { id: message.campaignId },
-        data: { sentCount: { increment: 1 } },
-      })
+      // Only increment sentCount if we actually transitioned a lead
+      if (updated.count > 0) {
+        await prisma.socialCampaign.update({
+          where: { id: message.campaignId },
+          data: { sentCount: { increment: 1 } },
+        })
+      }
     }
 
     if (event.status === 'REPLIED' && event.replyContent) {
