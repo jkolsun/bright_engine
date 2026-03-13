@@ -175,6 +175,11 @@ model Lead {
   scraperRunId           String?                  @map("scraper_run_id")
   phoneType              String?                  @map("phone_type")
   emailEnrichmentSource  String?                  @map("email_enrichment_source")
+  // Social outreach enrichment
+  instagramHandle        String?                  @map("instagram_handle")
+  linkedinUrl            String?                  @map("linkedin_url")
+  socialEnrichedAt       DateTime?                @map("social_enriched_at")
+  socialEnrichSource     String?                  @map("social_enrich_source")
   tierAtFirstDial        String?                  @map("tier_at_first_dial")
   firstConvertingTouch   String?                  @map("first_converting_touch")
   firstConvertingTouchAt DateTime?                @map("first_converting_touch_at")
@@ -184,6 +189,7 @@ model Lead {
   siteVersions           SiteVersion[]
   smsCampaignLeads       SmsCampaignLead[]
   smsCampaignMessages    SmsCampaignMessage[]
+  socialCampaignLeads    SocialCampaignLead[]
   icp                    ICP?                     @relation(fields: [icpId], references: [id], onDelete: SetNull)
   scraperRun             ScraperRun?              @relation(fields: [scraperRunId], references: [id], onDelete: SetNull)
 
@@ -1170,6 +1176,22 @@ enum SmsMessageType {
   INBOUND_REPLY
 }
 
+enum SocialChannel {
+  INSTAGRAM
+  LINKEDIN
+}
+
+enum SocialFunnelStage {
+  QUEUED
+  SENT
+  CLICKED
+  BOOKING_SENT
+  RE_ENGAGED
+  BOOKED
+  CLOSED
+  OPTED_OUT
+}
+
 enum CallDisposition {
   CONNECTED
   NO_ANSWER
@@ -1641,4 +1663,93 @@ model SmsCampaignMessage {
   @@index([leadId])
   @@index([messageType])
   @@map("sms_campaign_messages")
+}
+
+// ── Social Outreach Campaign System ──
+
+model SocialCampaign {
+  id                 String         @id @default(cuid())
+  name               String
+  channel            SocialChannel
+  status             String         @default("DRAFT") // DRAFT | SENDING | PAUSED | COMPLETED
+  templateDm1        String         @db.Text @map("template_dm1")
+  templateDm2Click   String         @db.Text @map("template_dm2_click")
+  templateDm2NoClick String         @db.Text @map("template_dm2_no_click")
+  templateDm3        String?        @db.Text @map("template_dm3")
+  bookingLink        String?        @map("booking_link")
+
+  dm2ClickDelay      Int            @default(2)  @map("dm2_click_delay")
+  dm2NoClickDelay    Int            @default(3)  @map("dm2_no_click_delay")
+  dm3Delay           Int            @default(5)  @map("dm3_delay")
+
+  totalLeads         Int            @default(0)  @map("total_leads")
+  sentCount          Int            @default(0)  @map("sent_count")
+  clickCount         Int            @default(0)  @map("click_count")
+  bookingSentCount   Int            @default(0)  @map("booking_sent_count")
+  bookedCount        Int            @default(0)  @map("booked_count")
+  closedCount        Int            @default(0)  @map("closed_count")
+  optOutCount        Int            @default(0)  @map("opt_out_count")
+
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt      @map("updated_at")
+  startedAt          DateTime?      @map("started_at")
+  completedAt        DateTime?      @map("completed_at")
+
+  leads              SocialCampaignLead[]
+  messages           SocialCampaignMessage[]
+
+  @@map("social_campaigns")
+}
+
+model SocialCampaignLead {
+  id                String            @id @default(cuid())
+  campaignId        String            @map("campaign_id")
+  leadId            String            @map("lead_id")
+  channel           SocialChannel
+  socialHandle      String            @map("social_handle")
+
+  funnelStage       SocialFunnelStage @default(QUEUED) @map("funnel_stage")
+
+  dm1SentAt         DateTime?         @map("dm1_sent_at")
+  clickedAt         DateTime?         @map("clicked_at")
+  dm2SentAt         DateTime?         @map("dm2_sent_at")
+  bookedAt          DateTime?         @map("booked_at")
+  closedAt          DateTime?         @map("closed_at")
+  optedOutAt        DateTime?         @map("opted_out_at")
+
+  externalMessageId String?           @map("external_message_id")
+
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt      @map("updated_at")
+
+  campaign          SocialCampaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead              Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, leadId])
+  @@index([campaignId, funnelStage])
+  @@index([leadId])
+  @@map("social_campaign_leads")
+}
+
+model SocialCampaignMessage {
+  id                String            @id @default(cuid())
+  campaignId        String            @map("campaign_id")
+  leadId            String            @map("lead_id")
+  channel           SocialChannel
+  messageType       String            @map("message_type") // dm1 | dm2_click | dm2_no_click | dm3 | inbound_reply
+  direction         String            @default("OUTBOUND") // OUTBOUND | INBOUND
+  content           String            @db.Text
+  status            String            @default("PENDING_SEND") // PENDING_SEND | SENT | DELIVERED | FAILED
+  externalId        String?           @map("external_id")
+
+  sentAt            DateTime?         @map("sent_at")
+  deliveredAt       DateTime?         @map("delivered_at")
+  createdAt         DateTime          @default(now()) @map("created_at")
+
+  campaign          SocialCampaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([leadId])
+  @@index([externalId])
+  @@map("social_campaign_messages")
 }

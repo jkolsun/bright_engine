@@ -58,6 +58,13 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Social enrichment filter
+  const socialFilter = searchParams.get('socialFilter')
+  if (socialFilter === 'instagram') where.instagramHandle = { not: null }
+  if (socialFilter === 'linkedin') where.linkedinUrl = { not: null }
+  if (socialFilter === 'both') { where.instagramHandle = { not: null }; where.linkedinUrl = { not: null } }
+  if (socialFilter === 'none') { where.instagramHandle = null; where.linkedinUrl = null }
+
     const [leads, total] = await Promise.all([
       prisma.lead.findMany({
         where,
@@ -102,6 +109,10 @@ export async function GET(request: NextRequest) {
           lastContactedAt: true,
           lastSmsCampaignId: true,
           smsFunnelStage: true,
+          instagramHandle: true,
+          linkedinUrl: true,
+          socialEnrichedAt: true,
+          socialEnrichSource: true,
           createdAt: true,
           updatedAt: true,
         },

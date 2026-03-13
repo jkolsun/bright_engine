@@ -35,6 +35,11 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
   const [reps, setReps] = useState<any[]>([])
   const [reassignRepId, setReassignRepId] = useState('')
   const [reassignReason, setReassignReason] = useState('')
+  // Social handles
+  const [editingSocial, setEditingSocial] = useState(false)
+  const [instagramHandle, setInstagramHandle] = useState('')
+  const [linkedinUrl, setLinkedinUrl] = useState('')
+  const [savingSocial, setSavingSocial] = useState(false)
   // Commissions
   const [commissions, setCommissions] = useState<any[]>([])
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -45,6 +50,10 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
       if (!response.ok) throw new Error('Failed to fetch lead')
       const data = await response.json()
       setLead(data.lead)
+      if (!editingSocial) {
+        setInstagramHandle(data.lead.instagramHandle || '')
+        setLinkedinUrl(data.lead.linkedinUrl || '')
+      }
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load lead')
@@ -456,6 +465,106 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
                     <p className="text-gray-600 dark:text-gray-400">Estimated Value</p>
                     <p className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(lead.estimatedValue)}</p>
                   </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Social Handles */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Social</h3>
+                {!editingSocial && (
+                  <button
+                    onClick={() => setEditingSocial(true)}
+                    className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
+              <div className="space-y-3 text-sm">
+                <div>
+                  <p className="text-gray-600 dark:text-gray-400 mb-1">Instagram</p>
+                  {editingSocial ? (
+                    <input
+                      className="w-full text-sm border dark:border-slate-600 rounded-lg px-3 py-2 dark:bg-slate-800 dark:text-gray-100"
+                      value={instagramHandle}
+                      onChange={e => setInstagramHandle(e.target.value)}
+                      placeholder="@handle or profile URL"
+                    />
+                  ) : (
+                    <p className="font-medium text-gray-900 dark:text-gray-100">
+                      {lead.instagramHandle ? (
+                        <a href={`https://instagram.com/${lead.instagramHandle}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          @{lead.instagramHandle}
+                        </a>
+                      ) : (
+                        <span className="text-gray-400 dark:text-gray-500 italic">Not set</span>
+                      )}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-gray-600 dark:text-gray-400 mb-1">LinkedIn</p>
+                  {editingSocial ? (
+                    <input
+                      className="w-full text-sm border dark:border-slate-600 rounded-lg px-3 py-2 dark:bg-slate-800 dark:text-gray-100"
+                      value={linkedinUrl}
+                      onChange={e => setLinkedinUrl(e.target.value)}
+                      placeholder="https://linkedin.com/in/..."
+                    />
+                  ) : (
+                    <p className="font-medium text-gray-900 dark:text-gray-100">
+                      {lead.linkedinUrl ? (
+                        <a href={lead.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          View Profile
+                        </a>
+                      ) : (
+                        <span className="text-gray-400 dark:text-gray-500 italic">Not set</span>
+                      )}
+                    </p>
+                  )}
+                </div>
+                {editingSocial && (
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={async () => {
+                        setSavingSocial(true)
+                        try {
+                          const res = await fetch(`/api/leads/${id}/social`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ instagramHandle, linkedinUrl, source: 'manual' }),
+                          })
+                          if (res.ok) {
+                            setEditingSocial(false)
+                            fetchLead()
+                          }
+                        } finally {
+                          setSavingSocial(false)
+                        }
+                      }}
+                      disabled={savingSocial}
+                      className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {savingSocial ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingSocial(false)
+                        setInstagramHandle(lead.instagramHandle || '')
+                        setLinkedinUrl(lead.linkedinUrl || '')
+                      }}
+                      className="text-xs text-gray-500 px-3 py-1.5 rounded-lg border dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-800"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+                {lead.socialEnrichedAt && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 pt-1">
+                    Enriched via {lead.socialEnrichSource || 'manual'} &middot; {new Date(lead.socialEnrichedAt).toLocaleDateString()}
+                  </p>
                 )}
               </div>
             </Card>

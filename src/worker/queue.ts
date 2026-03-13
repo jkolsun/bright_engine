@@ -94,6 +94,7 @@ let importQueue: Queue | null = null
 let scraperQueue: Queue | null = null
 let monitoringQueue: Queue | null = null
 let smsCampaignQueue: Queue | null = null
+let socialCampaignQueue: Queue | null = null
 let stockPhotosQueue: Queue | null = null
 
 let enrichmentEvents: QueueEvents | null = null
@@ -173,6 +174,10 @@ async function getQueues() {
     // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
     smsCampaignQueue = new Queue('sms-campaign', { connection })
   }
+  if (!socialCampaignQueue && connection) {
+    // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+    socialCampaignQueue = new Queue('social-campaign', { connection })
+  }
   if (!stockPhotosQueue && connection) {
     // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
     stockPhotosQueue = new Queue('stock-photos', { connection })
@@ -228,6 +233,39 @@ export async function getMonitoringQueue() {
 export async function getSmsCampaignQueue() {
   await getQueues()
   return smsCampaignQueue
+}
+
+export async function getSocialCampaignQueue() {
+  await getQueues()
+  return socialCampaignQueue
+}
+
+export async function addSocialCampaignJob(
+  type: string,
+  data: Record<string, any>,
+  delay?: number
+) {
+  const queue = await getSocialCampaignQueue()
+  if (!queue) {
+    console.warn('[QUEUE] Social campaign queue unavailable, skipping job:', type)
+    return null
+  }
+
+  try {
+    return await queue.add(
+      type,
+      data,
+      {
+        delay: delay || undefined,
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: true,
+      }
+    )
+  } catch (err) {
+    console.warn('[QUEUE] Failed to add social campaign job:', err)
+    return null
+  }
 }
 
 export async function getStockPhotosQueue() {

@@ -13,6 +13,8 @@ import {
   Settings,
   LogOut,
   GitBranch,
+  Users2,
+  Share2,
 } from 'lucide-react'
 import { BriefingModal } from '@/components/admin/BriefingModal'
 import { ThemeProvider, useTheme } from '@/components/theme/ThemeProvider'
@@ -96,6 +98,8 @@ function AdminLayoutInner({
     { href: '/admin/finance', icon: DollarSign, label: 'Finance' },
     { href: '/admin/messages', icon: MessageSquare, label: 'Messages' },
     { href: '/admin/campaigns', icon: Send, label: 'Campaigns' },
+    { href: '/admin/social-enrichment', icon: Users2, label: 'Social Enrichment' },
+    { href: '/admin/social', icon: Share2, label: 'Social Outreach' },
     { href: '/admin/pipeline', icon: GitBranch, label: 'Pipeline', badge: pipelineBadge },
     { href: '/admin/settings', icon: Settings, label: 'Settings' },
   ]

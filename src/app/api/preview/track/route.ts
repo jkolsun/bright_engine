@@ -331,6 +331,50 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ── Social campaign click tracking ──
+    if (lead && event === 'page_view') {
+      try {
+        const socialCampaignLead = await prisma.socialCampaignLead.findFirst({
+          where: {
+            leadId: lead.id,
+            funnelStage: { in: ['SENT', 'QUEUED'] },
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+
+        if (socialCampaignLead) {
+          await prisma.socialCampaignLead.update({
+            where: { id: socialCampaignLead.id },
+            data: {
+              funnelStage: 'CLICKED',
+              clickedAt: new Date(),
+            },
+          })
+
+          await prisma.socialCampaign.update({
+            where: { id: socialCampaignLead.campaignId },
+            data: { clickCount: { increment: 1 } },
+          })
+
+          // Queue DM 2a follow-up with click delay
+          const campaign = await prisma.socialCampaign.findUnique({
+            where: { id: socialCampaignLead.campaignId },
+          })
+          if (campaign) {
+            const { addSocialCampaignJob } = await import('@/worker/queue')
+            const delayMs = campaign.dm2ClickDelay * 24 * 60 * 60 * 1000
+            await addSocialCampaignJob('send-social-followup', {
+              campaignId: socialCampaignLead.campaignId,
+              leadId: lead.id,
+              campaignLeadId: socialCampaignLead.id,
+            }, delayMs)
+          }
+        }
+      } catch (socialErr) {
+        console.error('[SOCIAL-CLICK] Error processing social campaign click:', socialErr)
+      }
+    }
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error tracking preview event:', error)

@@ -1281,6 +1281,35 @@ async function startWorkers() {
       console.log(`[SMS-CAMPAIGN] Job ${job.name} completed`)
     })
 
+    // ── Social Campaign Worker ──
+    const socialCampaignWorker = new Worker(
+      'social-campaign',
+      async (job) => {
+        console.log(`[Social] Processing job: ${job.name} - ${job.id}`)
+
+        switch (job.name) {
+          case 'send-social-dms':
+            await handleSendSocialDMs(job.data)
+            break
+          case 'send-social-followup':
+            await handleSendSocialFollowup(job.data)
+            break
+          default:
+            console.warn(`[Social] Unknown job: ${job.name}`)
+        }
+      },
+      // @ts-ignore bullmq has vendored ioredis that conflicts with root ioredis - compatible at runtime
+      { connection, concurrency: 1 }
+    )
+
+    socialCampaignWorker.on('failed', (job, err) => {
+      console.error(`[Social] Job ${job?.name} failed:`, err.message)
+    })
+
+    socialCampaignWorker.on('completed', (job) => {
+      console.log(`[Social] Job ${job.name} completed`)
+    })
+
     // BUG 9.6: Redis disconnect alert
     connection.on('error', async (err) => {
       console.error('[Worker] Redis connection error:', err)
@@ -1345,6 +1374,7 @@ async function startWorkers() {
       await sequenceWorker.close()
       await monitoringWorker.close()
       await smsCampaignWorker.close()
+      await socialCampaignWorker.close()
       // Don't quit shared connection - other parts of system may use it
       // await connection?.quit()
       
@@ -2997,6 +3027,171 @@ async function cleanupOldNotifications() {
   if (total > 0) {
     console.log(`[NotificationCleanup] Deleted ${deletedRead.count} read (30d+) and ${deletedUnread.count} unread (90d+) notifications`)
   }
+}
+
+// ── Social Campaign Handlers ──
+
+async function handleSendSocialDMs(data: {
+  campaignId: string
+  channel: string
+  isConnected: boolean
+}) {
+  const { campaignId, channel, isConnected } = data
+
+  const campaignLeads = await prisma.socialCampaignLead.findMany({
+    where: { campaignId, funnelStage: 'QUEUED' },
+    include: {
+      lead: { select: { id: true, firstName: true, companyName: true, previewUrl: true } },
+      campaign: true,
+    },
+    take: 50,
+  })
+
+  if (campaignLeads.length === 0) {
+    const remaining = await prisma.socialCampaignLead.count({
+      where: { campaignId, funnelStage: { in: ['QUEUED', 'SENT'] } },
+    })
+    if (remaining === 0) {
+      await prisma.socialCampaign.update({
+        where: { id: campaignId },
+        data: { status: 'COMPLETED', completedAt: new Date() },
+      })
+    }
+    return
+  }
+
+  for (const campaignLead of campaignLeads) {
+    try {
+      const { campaign, lead } = campaignLead
+
+      const message = personalizeTemplate(campaign.templateDm1, {
+        firstName: lead.firstName || '',
+        companyName: lead.companyName || '',
+        previewUrl: lead.previewUrl || '',
+      })
+
+      await prisma.socialCampaignMessage.create({
+        data: {
+          campaignId,
+          leadId: lead.id,
+          channel: channel as 'INSTAGRAM' | 'LINKEDIN',
+          messageType: 'dm1',
+          direction: 'OUTBOUND',
+          content: message,
+          status: 'PENDING_SEND',
+        },
+      })
+
+      if (isConnected) {
+        // TODO: Call PhantomBuster or Expandi API here
+        console.log(`[Social] Would send DM to ${campaignLead.socialHandle} via ${channel}: "${message.substring(0, 60)}..."`)
+      }
+
+      // Queue the follow-up check
+      const { addSocialCampaignJob } = await import('./queue')
+      const followupDelayMs = campaign.dm2NoClickDelay * 24 * 60 * 60 * 1000
+      await addSocialCampaignJob('send-social-followup', {
+        campaignId,
+        leadId: lead.id,
+        campaignLeadId: campaignLead.id,
+      }, followupDelayMs)
+    } catch (err) {
+      console.error(`[Social] Failed to process lead ${campaignLead.leadId}:`, err)
+    }
+  }
+
+  // If more QUEUED leads remain, reschedule
+  const remaining = await prisma.socialCampaignLead.count({
+    where: { campaignId, funnelStage: 'QUEUED' },
+  })
+  if (remaining > 0) {
+    const { addSocialCampaignJob } = await import('./queue')
+    await addSocialCampaignJob('send-social-dms', data, 5 * 60 * 1000)
+  }
+}
+
+async function handleSendSocialFollowup(data: {
+  campaignId: string
+  leadId: string
+  campaignLeadId: string
+}) {
+  const { campaignId, leadId, campaignLeadId } = data
+
+  const campaignLead = await prisma.socialCampaignLead.findUnique({
+    where: { id: campaignLeadId },
+    include: {
+      campaign: true,
+      lead: { select: { id: true, firstName: true, companyName: true, previewUrl: true } },
+    },
+  })
+
+  if (!campaignLead) return
+  if (['CLOSED', 'OPTED_OUT', 'BOOKED'].includes(campaignLead.funnelStage)) return
+
+  const { campaign, lead } = campaignLead
+
+  if (campaignLead.funnelStage === 'CLICKED') {
+    // Send DM 2a — booking link
+    const message = personalizeTemplate(campaign.templateDm2Click, {
+      firstName: lead.firstName || '',
+      companyName: lead.companyName || '',
+      bookingLink: campaign.bookingLink || '[booking link]',
+    })
+
+    await prisma.socialCampaignMessage.create({
+      data: {
+        campaignId,
+        leadId,
+        channel: campaignLead.channel,
+        messageType: 'dm2_click',
+        direction: 'OUTBOUND',
+        content: message,
+        status: 'PENDING_SEND',
+      },
+    })
+
+    await prisma.socialCampaignLead.update({
+      where: { id: campaignLeadId },
+      data: { funnelStage: 'BOOKING_SENT', dm2SentAt: new Date() },
+    })
+
+    await prisma.socialCampaign.update({
+      where: { id: campaignId },
+      data: { bookingSentCount: { increment: 1 } },
+    })
+  } else if (['SENT', 'QUEUED'].includes(campaignLead.funnelStage)) {
+    // No click — send DM 2b soft re-engage
+    const message = personalizeTemplate(campaign.templateDm2NoClick, {
+      firstName: lead.firstName || '',
+      companyName: lead.companyName || '',
+      previewUrl: lead.previewUrl || '',
+    })
+
+    await prisma.socialCampaignMessage.create({
+      data: {
+        campaignId,
+        leadId,
+        channel: campaignLead.channel,
+        messageType: 'dm2_no_click',
+        direction: 'OUTBOUND',
+        content: message,
+        status: 'PENDING_SEND',
+      },
+    })
+
+    await prisma.socialCampaignLead.update({
+      where: { id: campaignLeadId },
+      data: { funnelStage: 'RE_ENGAGED', dm2SentAt: new Date() },
+    })
+  }
+}
+
+function personalizeTemplate(template: string, vars: Record<string, string>): string {
+  return template
+    .replace(/\{firstName\}/g, vars.firstName || '')
+    .replace(/\{companyName\}/g, vars.companyName || '')
+    .replace(/\{previewUrl\}/g, vars.previewUrl || '')
+    .replace(/\{bookingLink\}/g, vars.bookingLink || '')
 }
 
 export { startWorkers }
