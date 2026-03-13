@@ -865,7 +865,7 @@ function CommissionsSection() {
   const [reps, setReps] = useState<any[]>([])
   const [rates, setRates] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
-  const [buildFee, setBuildFee] = useState(149)
+  const [buildFee, setBuildFee] = useState(0)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 

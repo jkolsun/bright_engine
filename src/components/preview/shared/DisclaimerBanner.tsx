@@ -6,7 +6,7 @@ import type { TemplateVariant } from '../config/template-types'
 
 export default function DisclaimerBanner({ variant, companyName }: { variant: TemplateVariant; companyName: string }) {
   const [visible, setVisible] = useState(true)
-  const [bannerText, setBannerText] = useState('$188 to get started')
+  const [bannerText, setBannerText] = useState('$99/mo — free install')
 
   useEffect(() => {
     fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => {

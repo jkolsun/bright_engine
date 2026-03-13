@@ -231,6 +231,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // ── Step 3: Create Client from Lead ──
   const webhookConfig = await getPricingConfig()
   const stripeCustomerId = session.customer ? String(session.customer) : null
+  const stripeSubscriptionId = session.subscription ? String(session.subscription) : null
 
   // Build enrichment snapshot from lead data (BUG N.1)
   const enrichedData: Record<string, unknown> = {}
@@ -252,6 +253,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       hostingStatus: 'ACTIVE',
       monthlyRevenue: webhookConfig.monthlyHosting,
       stripeCustomerId,
+      stripeSubscriptionId,
       leadId: lead.id,
       repId: lead.ownerRepId || lead.assignedToId,
       enrichedData: Object.keys(enrichedData).length > 0 ? enrichedData as any : undefined,
@@ -315,10 +317,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   // ── Step 6: Create Revenue records (idempotent via stripePaymentId unique constraint) ──
+  // Free install model: no site build fee, just monthly hosting subscription
   let revenue
   try {
-    if (amountDollars >= webhookConfig.firstMonthTotal * 0.9) {
-      // First month combined — split into site build + first hosting
+    if (webhookConfig.siteBuildFee > 0 && amountDollars >= webhookConfig.firstMonthTotal * 0.9) {
+      // Legacy: split into site build + first hosting (only if build fee is non-zero)
       await prisma.revenue.create({
         data: { clientId: client.id, type: 'SITE_BUILD', amount: webhookConfig.siteBuildFee, status: 'PAID', recurring: false, product: 'Website Setup', stripePaymentId: `${session.id}_setup` },
       })
@@ -326,8 +329,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         data: { clientId: client.id, type: 'HOSTING_MONTHLY', amount: webhookConfig.monthlyHosting, status: 'PAID', recurring: true, product: 'Monthly Hosting', stripePaymentId: session.id },
       })
     } else {
+      // Free install: just record the first month of hosting
       revenue = await prisma.revenue.create({
-        data: { clientId: client.id, type: 'HOSTING_MONTHLY', amount: amountDollars, status: 'PAID', recurring: true, product: 'Monthly Hosting', stripePaymentId: session.id },
+        data: { clientId: client.id, type: 'HOSTING_MONTHLY', amount: amountDollars || webhookConfig.monthlyHosting, status: 'PAID', recurring: true, product: 'Monthly Hosting', stripePaymentId: session.id },
       })
     }
   } catch (err: any) {

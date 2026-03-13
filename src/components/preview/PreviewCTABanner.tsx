@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 export default function PreviewCTABanner({ previewId }: { previewId: string }) {
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [bannerPrice, setBannerPrice] = useState<number>(188)
+  const [bannerPrice, setBannerPrice] = useState<number>(99)
 
   useEffect(() => {
     fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => { if (d?.firstMonthTotal) setBannerPrice(d.firstMonthTotal) }).catch(err => console.warn('[PreviewCTA] Pricing fetch failed:', err))

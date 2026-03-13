@@ -20,17 +20,17 @@ export interface PricingConfig {
 const DEFAULT_PRICING: PricingConfig = {
   coreProductId: '',
   name: 'Website + Hosting',
-  month1Price: 188,
-  recurringPrice: 39,
+  month1Price: 99,
+  recurringPrice: 99,
   annualPrice: null,
   stripeLink: '',
   stripeLinkAnnual: null,
-  pitchOneLiner: '$188 to go live, $39/mo after that',
-  previewBannerText: '$188 to get started',
-  repCloseScript: "It's $188 for the first month \u2014 that covers the full site build plus your first month of hosting. After that it's just $39/month to keep everything running.",
-  siteBuildFee: 149,
-  monthlyHosting: 39,
-  firstMonthTotal: 188,
+  pitchOneLiner: 'Free install, $99/mo hosting',
+  previewBannerText: '$99/mo — free install',
+  repCloseScript: "The install is free \u2014 we build your site, get it on your own domain, everything. It's just $99/month for hosting, security updates, and support. No contracts, cancel anytime.",
+  siteBuildFee: 0,
+  monthlyHosting: 99,
+  firstMonthTotal: 99,
 }
 
 let cachedConfig: PricingConfig | null = null
@@ -93,8 +93,8 @@ export async function buildPricingContextForAI(): Promise<string> {
 
   let context = '## Pricing Information\n\n'
   context += `### Core Product: ${config.name}\n`
-  context += `- First month: $${config.month1Price} (includes site build + first month hosting)\n`
-  context += `- Month 2+: $${config.recurringPrice}/mo (hosting & maintenance)\n`
+  context += `- Install: FREE (site build included at no cost)\n`
+  context += `- Monthly: $${config.recurringPrice}/mo (hosting, security & maintenance)\n`
   if (config.annualPrice) {
     context += `- Annual option: $${config.annualPrice}/yr (save $${(config.recurringPrice * 12) - config.annualPrice})\n`
   }
@@ -102,8 +102,8 @@ export async function buildPricingContextForAI(): Promise<string> {
   context += `- Payment link: ${config.stripeLink || '(not configured)'}\n`
   if (config.stripeLinkAnnual) context += `- Annual payment link: ${config.stripeLinkAnnual}\n`
   context += '\n'
-  context += 'IMPORTANT: When discussing pricing, present it as the first month covers everything including the build. '
-  context += `Do NOT split it into "$${config.siteBuildFee} build" and "$${config.monthlyHosting}/mo hosting" separately. `
+  context += 'IMPORTANT: When discussing pricing, lead with FREE install then the monthly cost. '
+  context += `Do NOT mention any setup fee or build fee — the install is free. Just say: $${config.monthlyHosting}/mo, no contracts. `
   context += `Say: "${config.pitchOneLiner}"\n`
 
   return context

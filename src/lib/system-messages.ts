@@ -43,7 +43,7 @@ export const DEFAULT_SYSTEM_MESSAGES: SystemMessagesConfig = {
     enabled: true,
   },
   payment_link: {
-    text: "Here's your payment link to go live: {paymentLink}\n\n{firstMonthTotal} gets your site built and launched, plus monthly hosting at {monthlyHosting}/month. You can cancel anytime.\n\nOnce you pay, we'll have your site live within 48 hours!",
+    text: "Here's your payment link to go live: {paymentLink}\n\nThe install is free — {monthlyHosting}/month for hosting, security, and support. No contracts, cancel anytime.\n\nOnce you pay, we'll have your site live within 48 hours!",
     enabled: true,
   },
   welcome_after_payment: {

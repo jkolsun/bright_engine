@@ -67,7 +67,7 @@ HOOK — No Website (20 sec):
 "I searched for {{industry}} in {{location}} and couldn't find a site for {{companyName}}. Are you getting most business from referrals?"
 
 PITCH (30 sec):
-"Here's why I'm calling. We build professional sites specifically for {{industry}} businesses. Clean, works on phones, shows up on Google. $188, live in 48 hours. And actually — I already mocked up what a site for {{companyName}} would look like. Want me to text you the link so you can see it?"
+"Here's why I'm calling. We build professional sites specifically for {{industry}} businesses. Clean, works on phones, shows up on Google. Free install, $99/month, live in 48 hours. And actually — I already mocked up what a site for {{companyName}} would look like. Want me to text you the link so you can see it?"
 
 CLOSE — If Interested:
 "Awesome. I'm texting you the preview right now. Take a look, and if you like it, just text us back and we'll make it live. You don't pay until you're happy with it. What's the best number to text?"`,
@@ -193,7 +193,7 @@ export const DEFAULT_STAGE_PLAYBOOK: Record<string, { instructions_override: str
     enabled: true,
   },
   COLLECTING_INFO: {
-    instructions_override: "The form has been sent. If the client says they completed it, confirm and let them know the team is on it. If they text info instead of using the form, collect it through chat. If they ask questions about pricing, answer honestly: $149 one time to go live, $39/month after the first month, no contracts. Remind them they won't pay until they see and approve the final product.",
+    instructions_override: "The form has been sent. If the client says they completed it, confirm and let them know the team is on it. If they text info instead of using the form, collect it through chat. If they ask questions about pricing, answer honestly: free install, $99/month for hosting, no contracts. Remind them they won't pay until they see and approve the final product.",
     enabled: true,
   },
   BUILDING: {
@@ -201,7 +201,7 @@ export const DEFAULT_STAGE_PLAYBOOK: Record<string, { instructions_override: str
     enabled: true,
   },
   PREVIEW_SENT: {
-    instructions_override: "The client received their preview link. Wait for their reaction. If they approve (looks good, love it, yes, thumbs up), confirm their excitement and tell them you're getting the payment link ready. The system will create a PAYMENT_LINK approval for Andrew to review. Do NOT send the payment link yourself. If they want changes, acknowledge the request and let them know the team will update it. If they ask about pricing: $149 one time, $39/month, no contracts. If they go quiet for 24+ hours send one follow up.",
+    instructions_override: "The client received their preview link. Wait for their reaction. If they approve (looks good, love it, yes, thumbs up), confirm their excitement and tell them you're getting the payment link ready. The system will create a PAYMENT_LINK approval for Andrew to review. Do NOT send the payment link yourself. If they want changes, acknowledge the request and let them know the team will update it. If they ask about pricing: free install, $99/month, no contracts. If they go quiet for 24+ hours send one follow up.",
     enabled: true,
   },
   EDIT_LOOP: {
@@ -209,7 +209,7 @@ export const DEFAULT_STAGE_PLAYBOOK: Record<string, { instructions_override: str
     enabled: true,
   },
   PAYMENT_SENT: {
-    instructions_override: "The payment link has been sent. If they ask what's included: $149 gets the site live on their own domain, hosting, SSL, mobile optimization. $39/month after the first month for hosting, security, and support. No contracts cancel anytime. If they say it's too expensive: it's less than one service call and their site starts generating leads day one. If they ask what happens after payment: site goes live on their custom domain within 48 hours.",
+    instructions_override: "The payment link has been sent. If they ask what's included: $99/month gets the site live on their own domain, hosting, SSL, mobile optimization, security, and support. The install is completely free. No contracts cancel anytime. If they say it's too expensive: it's less than one service call and their site starts generating leads day one. If they ask what happens after payment: site goes live on their custom domain within 48 hours.",
     enabled: true,
   },
   STALLED: {

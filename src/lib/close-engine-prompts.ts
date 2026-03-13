@@ -218,7 +218,7 @@ Current edit round: ${editRounds}/3.`
   PAYMENT_SENT: (ctx, _qf, pf) => {
     const lead = ctx.lead
     const followUp = pf?.TEXT_3_PAYMENT_FOLLOWUP || ''
-    return `Payment link has been sent. Pricing: {{siteBuildFee}} one-time for the build, {{monthlyHosting}}/month for hosting, cancel anytime.
+    return `Payment link has been sent. Pricing: free install, {{monthlyHosting}}/month for hosting, no contracts, cancel anytime.
 
 If they reach out with questions, answer directly and honestly.
 
@@ -548,7 +548,7 @@ export function buildPostClientSystemPrompt(context: {
   const {
     companyName,
     plan = 'Standard',
-    monthlyRevenue = 39,
+    monthlyRevenue = 99,
     siteUrl = 'N/A',
     healthScore = 100,
     daysSinceLaunch = 0,

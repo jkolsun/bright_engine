@@ -254,7 +254,7 @@ model Client {
   hostingStatus        HostingStatus      @default(ACTIVE)
   stripeCustomerId     String?            @unique @map("stripe_customer_id")
   stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
-  monthlyRevenue       Float              @default(39) @map("monthly_revenue")
+  monthlyRevenue       Float              @default(99) @map("monthly_revenue")
   upsells              Json?
   siteLiveDate         DateTime?          @map("site_live_date")
   lastInteraction      DateTime?          @map("last_interaction")
@@ -794,7 +794,7 @@ model Referral {
   referredCompany  String?  @map("referred_company")
   leadId           String?  @map("lead_id")
   status           String   @default("pending")
-  creditAmount     Float    @default(39) @map("credit_amount")
+  creditAmount     Float    @default(99) @map("credit_amount")
   creditApplied    Boolean  @default(false) @map("credit_applied")
   createdAt        DateTime @default(now()) @map("created_at")
   referrerClient   Client   @relation("ReferrerClient", fields: [referrerClientId], references: [id], onDelete: Cascade)

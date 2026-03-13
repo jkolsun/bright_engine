@@ -1168,7 +1168,7 @@ export default function DialerCore({ portalType, basePath }: DialerCoreProps) {
   const [leadHistory, setLeadHistory] = useState<HistoryItem[]>([])
   const [callScript, setCallScript] = useState<Record<string, string>>(DEFAULT_SCRIPT)
   const [scriptExpanded, setScriptExpanded] = useState(false)
-  const [dialerPricing, setDialerPricing] = useState<{ firstMonthTotal: number; monthlyHosting: number }>({ firstMonthTotal: 188, monthlyHosting: 39 })
+  const [dialerPricing, setDialerPricing] = useState<{ firstMonthTotal: number; monthlyHosting: number }>({ firstMonthTotal: 99, monthlyHosting: 99 })
 
   // ----- Preview Status -----
   const [previewStatus, setPreviewStatus] = useState<PreviewStatus>({ sent: false, opened: false, viewDuration: 0, ctaClicked: false })

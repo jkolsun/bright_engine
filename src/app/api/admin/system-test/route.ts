@@ -271,8 +271,8 @@ export async function POST(request: NextRequest) {
           results.push({
             name: 'Core Product Pricing',
             category: 'Configuration',
-            status: price == 188 ? 'pass' : 'fail',
-            detail: price == 188 ? 'Core product: $188 first month' : `Core product shows $${price} — should be $188`,
+            status: price == 99 ? 'pass' : 'fail',
+            detail: price == 99 ? 'Core product: $99/mo (free install)' : `Core product shows $${price} — should be $99`,
             ms: Date.now() - t,
           })
         } else {

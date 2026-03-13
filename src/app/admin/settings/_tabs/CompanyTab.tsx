@@ -73,17 +73,16 @@ export default function CompanyTab() {
           return
         }
 
-        // One-time fix: if core product pitch still says $149, update to use actual prices
+        // One-time fix: if core product pitch still says old pricing, update to use actual prices
         const core = loadedProducts.find((p: any) => p.isCore)
-        if (core?.pitchOneLiner?.includes('$149')) {
-          const m1 = core.month1Price || 188
-          const rec = core.recurringPrice || 39
+        if (core?.pitchOneLiner?.includes('$149') || core?.pitchOneLiner?.includes('$188')) {
+          const rec = core.recurringPrice || 99
           await fetch(`/api/upsell-products/${core.id}`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              pitchOneLiner: `$${m1} to go live, $${rec}/mo after that`,
-              repCloseScript: `It's $${m1} for the first month \u2014 that covers the full site build plus your first month of hosting. After that it's just $${rec}/month to keep everything running.`,
-              previewBannerText: `$${m1} to get started`,
+              pitchOneLiner: `Free install, $${rec}/mo hosting`,
+              repCloseScript: `The install is free — we build your site, get it on your own domain, everything. It's just $${rec}/month for hosting, security updates, and support. No contracts, cancel anytime.`,
+              previewBannerText: `$${rec}/mo — free install`,
             }),
           })
           await fetch('/api/settings/pricing', { method: 'POST' })
@@ -150,13 +149,13 @@ export default function CompanyTab() {
     await fetch('/api/upsell-products', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        name: 'Website + Hosting', price: 188, recurring: true, isCore: true,
-        month1Price: 188, recurringPrice: 39,
+        name: 'Website + Hosting', price: 99, recurring: true, isCore: true,
+        month1Price: 99, recurringPrice: 99,
         stripeLink: 'https://buy.stripe.com/28E28k7uG0Wsaxu7IM7wA06',
-        pitchOneLiner: '$188 to go live, $39/mo after that',
-        previewBannerText: '$188 to get started',
-        repCloseScript: "It's $188 for the first month \u2014 that covers the full site build plus your first month of hosting. After that it's just $39/month to keep everything running.",
-        aiProductSummary: 'Professional website + monthly hosting for service businesses',
+        pitchOneLiner: 'Free install, $99/mo hosting',
+        previewBannerText: '$99/mo — free install',
+        repCloseScript: "The install is free \u2014 we build your site, get it on your own domain, everything. It's just $99/month for hosting, security updates, and support. No contracts, cancel anytime.",
+        aiProductSummary: 'Professional website + monthly hosting — free install, $99/mo',
         sortOrder: 0,
       })
     })
@@ -432,11 +431,11 @@ export default function CompanyTab() {
                 </div>
                 <div>
                   <FieldLabel>Preview Banner Text</FieldLabel>
-                  <Input placeholder='e.g., $188 to get started' value={newProduct.previewBannerText} onChange={(e) => setNewProduct({ ...newProduct, previewBannerText: e.target.value })} />
+                  <Input placeholder='e.g., $99/mo — free install' value={newProduct.previewBannerText} onChange={(e) => setNewProduct({ ...newProduct, previewBannerText: e.target.value })} />
                 </div>
                 <div>
                   <FieldLabel>Pitch One-Liner (used everywhere)</FieldLabel>
-                  <Input placeholder='e.g., $188 to go live, $39/mo after that' value={newProduct.pitchOneLiner} onChange={(e) => setNewProduct({ ...newProduct, pitchOneLiner: e.target.value })} />
+                  <Input placeholder='e.g., Free install, $99/mo hosting' value={newProduct.pitchOneLiner} onChange={(e) => setNewProduct({ ...newProduct, pitchOneLiner: e.target.value })} />
                 </div>
                 <div>
                   <FieldLabel>Rep Close Script</FieldLabel>

@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 /**
  * Production site renderer for client custom domains.
  * Serves the same HTML as the preview engine but without preview UI
- * (no CTA banner, no "$149" text, no BA branding).
+ * (no CTA banner, no pricing text, no BA branding).
  */
 
 export async function generateMetadata(

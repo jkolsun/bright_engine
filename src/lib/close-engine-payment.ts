@@ -36,13 +36,14 @@ export async function generatePaymentLink(leadId: string): Promise<string> {
         currency: 'usd',
         product_data: {
           name: `Website for ${lead.companyName}`,
-          description: 'Professional website build + monthly hosting',
+          description: 'Professional website — free install + monthly hosting',
         },
-        unit_amount: Math.round(pricingConfig.firstMonthTotal * 100),
+        unit_amount: Math.round(pricingConfig.monthlyHosting * 100),
+        recurring: { interval: 'month' },
       },
       quantity: 1,
     }],
-    mode: 'payment',
+    mode: 'subscription',
     client_reference_id: lead.id, // CRITICAL — Stripe webhook uses this
     success_url: `${process.env.BASE_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: lead.previewId
@@ -53,6 +54,13 @@ export async function generatePaymentLink(leadId: string): Promise<string> {
       leadId: lead.id,
       repId: conversation?.repId || '',
       source: 'close_engine',
+    },
+    subscription_data: {
+      metadata: {
+        leadId: lead.id,
+        repId: conversation?.repId || '',
+        source: 'close_engine',
+      },
     },
   })
 
