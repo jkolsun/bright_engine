@@ -60,7 +60,7 @@ export async function generatePreview(
       })
     }
     try {
-      await prisma.clawdbotActivity.create({
+      await prisma.activityLog.create({
         data: {
           actionType: 'PREVIEW_GENERATED',
           description: `Preview already exists for ${existingLead.companyName}`,
@@ -105,7 +105,7 @@ export async function generatePreview(
 
   // Log activity (simple logging without circular imports)
   try {
-    await prisma.clawdbotActivity.create({
+    await prisma.activityLog.create({
       data: {
         actionType: 'PREVIEW_GENERATED',
         description: `Generated preview for ${lead.companyName}`,

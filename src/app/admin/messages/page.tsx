@@ -396,7 +396,7 @@ function MessagesPageInner() {
       conv.messages.push(msg)
       conv.channels.add(msg.channel || 'SMS')
       if (msg.escalated) conv.escalated = true
-      if (msg.aiGenerated || msg.senderType === 'AI' || msg.senderType === 'CLAWDBOT') conv.aiHandling = true
+      if (msg.aiGenerated || msg.senderType === 'AI' || msg.senderType === 'AI') conv.aiHandling = true
       if (new Date(msg.createdAt) > new Date(conv.lastMessage.createdAt)) {
         conv.lastMessage = msg
       }
@@ -464,7 +464,7 @@ function MessagesPageInner() {
     if (sourceFilter === 'all') return true
     const msgs = conv.messages || conv.recentMessages || []
     if (sourceFilter === 'rep') return msgs.some((m: any) => m.senderType === 'REP')
-    if (sourceFilter === 'ai') return msgs.some((m: any) => m.aiGenerated || m.senderType === 'AI' || m.senderType === 'CLAWDBOT')
+    if (sourceFilter === 'ai') return msgs.some((m: any) => m.aiGenerated || m.senderType === 'AI' || m.senderType === 'AI')
     if (sourceFilter === 'admin') return msgs.some((m: any) => m.senderType === 'ADMIN')
     return true
   }

@@ -97,7 +97,7 @@ export async function processCloseEngineFirstMessage(conversationId: string): Pr
         aiGenerated: true,
         aiDelaySeconds: delay,
         conversationType: 'pre_client',
-        sender: 'clawdbot',
+        sender: 'system',
       });
       
       // Transition stage
@@ -287,7 +287,7 @@ export async function processCloseEngineInbound(
         aiGenerated: true,
         aiDelaySeconds: delay,
         conversationType: 'pre_client',
-        sender: 'clawdbot',
+        sender: 'system',
       });
     } catch (err) {
       console.error('[CloseEngine] Failed to send reply:', err);

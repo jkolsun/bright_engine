@@ -1,5 +1,6 @@
 /**
- * Webhook Dispatcher - Sends events to Clawdbot for immediate processing
+ * Webhook Dispatcher - No-op (removed)
+ * Kept as a stub so existing callers don't break.
  */
 
 export interface WebhookEvent {
@@ -9,54 +10,8 @@ export interface WebhookEvent {
   source?: string
 }
 
-export async function dispatchWebhook(event: WebhookEvent): Promise<boolean> {
-  try {
-    // Add timestamp if not provided
-    if (!event.timestamp) {
-      event.timestamp = Date.now()
-    }
-
-    // Add source if not provided
-    if (!event.source) {
-      event.source = 'bright-engine'
-    }
-
-    console.log('🚀 Dispatching webhook:', event.type)
-
-    // Always log events for debugging
-    console.log('🤖 [WEBHOOK]', JSON.stringify(event, null, 2))
-    
-    // In development, just log the event and return success
-    if (process.env.NODE_ENV === 'development') {
-      return true
-    }
-
-    // In production, send to the actual webhook endpoint
-    const webhookUrl = process.env.CLAWDBOT_WEBHOOK_URL || 'http://localhost:3000/api/webhooks/clawdbot'
-    
-    const response = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.CLAWDBOT_WEBHOOK_SECRET || 'dev-secret'}`,
-        'User-Agent': 'BrightEngine/1.0'
-      },
-      body: JSON.stringify(event)
-    })
-
-    if (!response.ok) {
-      console.error('❌ Webhook dispatch failed:', response.status, await response.text())
-      return false
-    }
-
-    const result = await response.json()
-    console.log('✅ Webhook dispatched successfully:', result)
-    return true
-
-  } catch (error) {
-    console.error('❌ Webhook dispatch error:', error)
-    return false
-  }
+export async function dispatchWebhook(_event: WebhookEvent): Promise<boolean> {
+  return true
 }
 
 // Event Type Helpers

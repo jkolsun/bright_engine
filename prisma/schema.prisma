@@ -48,7 +48,7 @@ model User {
   activities               Activity[]
   callScorings             CallScoring[]             @relation("RepScoring")
   channelPerformance       ChannelPerformance[]
-  clawdbotActivities       ClawdbotActivity[]
+  activityLogs             ActivityLog[]
   clientsAsRep             Client[]                  @relation("ClientRep")
   closeEngineConversations CloseEngineConversation[] @relation("CloseEngineRep")
   commissions              Commission[]
@@ -149,7 +149,7 @@ model Lead {
   ownerRepId             String?                  @map("owner_rep_id")
   activities             Activity[]
   buildStatus            BuildStatus?
-  clawdbotActivities     ClawdbotActivity[]
+  activityLogs           ActivityLog[]
   client                 Client?
   closeConversation      CloseEngineConversation?
   conversationOutcomes   ConversationOutcome[]
@@ -295,7 +295,7 @@ model Client {
   enrichedData         Json?              @map("enriched_data")
   source               String?
   clientTrack          ClientTrack        @default(COLD_SMS) @map("client_track")
-  clawdbotActivities   ClawdbotActivity[]
+  activityLogs         ActivityLog[]
   analytics            ClientAnalytics?
   lead                 Lead?              @relation(fields: [leadId], references: [id], onDelete: Cascade)
   rep                  User?              @relation("ClientRep", fields: [repId], references: [id])
@@ -354,7 +354,7 @@ model Message {
   twilioStatus     String?          @map("twilio_status")
   createdAt        DateTime         @default(now()) @map("created_at")
   senderId         String?          @map("sender_id")
-  senderName       String           @default("clawdbot") @map("sender_name")
+  senderName       String           @default("system") @map("sender_name")
   senderType       String           @default("SYSTEM") @map("sender_type")
   aiDelaySeconds   Int?             @map("ai_delay_seconds")
   aiGenerated      Boolean          @default(false) @map("ai_generated")
@@ -520,19 +520,19 @@ model Settings {
   @@map("settings")
 }
 
-model ClawdbotActivity {
-  id          String             @id @default(cuid())
-  actionType  ClawdbotActionType
+model ActivityLog {
+  id          String     @id @default(cuid())
+  actionType  ActionType
   description String
-  leadId      String?            @map("lead_id")
-  clientId    String?            @map("client_id")
-  repId       String?            @map("rep_id")
+  leadId      String?    @map("lead_id")
+  clientId    String?    @map("client_id")
+  repId       String?    @map("rep_id")
   metadata    Json?
-  tokenCost   Float?             @map("token_cost")
-  createdAt   DateTime           @default(now()) @map("created_at")
-  client      Client?            @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  lead        Lead?              @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  rep         User?              @relation(fields: [repId], references: [id])
+  tokenCost   Float?     @map("token_cost")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  client      Client?    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  lead        Lead?      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  rep         User?      @relation(fields: [repId], references: [id])
 
   @@index([actionType])
   @@index([createdAt])
@@ -1242,10 +1242,10 @@ enum NotificationType {
   DAILY_AUDIT
   SITE_QA_READY
   CLOSE_ENGINE
-  SYSTEM_ALERT       // BUG P.3: Used by Clawdbot notifications route
+  SYSTEM_ALERT
 }
 
-enum ClawdbotActionType {
+enum ActionType {
   TEXT_SENT
   TEXT_RECEIVED
   ALERT

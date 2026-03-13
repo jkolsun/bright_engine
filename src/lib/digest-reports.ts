@@ -36,7 +36,7 @@ async function getTodayDigestData(): Promise<DigestData> {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const activities = await prisma.clawdbotActivity.findMany({
+  const activities = await prisma.activityLog.findMany({
     where: {
       createdAt: { gte: today },
     },
@@ -233,7 +233,7 @@ export async function sendWeeklyReport(toPhoneNumber: string) {
     const lastWeek = new Date()
     lastWeek.setDate(lastWeek.getDate() - 7)
 
-    const activities = await prisma.clawdbotActivity.findMany({
+    const activities = await prisma.activityLog.findMany({
       where: {
         createdAt: { gte: lastWeek },
       },

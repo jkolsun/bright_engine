@@ -113,7 +113,7 @@ export async function handleEditRequest(params: {
         trigger: 'edit_rate_limited',
         aiGenerated: true,
         conversationType: 'post_client',
-        sender: 'clawdbot',
+        sender: 'system',
       })
     }
     await notifyAdmin(
@@ -265,7 +265,7 @@ async function handleSimpleEdit(
     trigger: 'edit_simple_auto_applied',
     aiGenerated: true,
     conversationType: 'post_client',
-    sender: 'clawdbot',
+    sender: 'system',
   })
 
   // Dashboard notification (info only — no admin action needed)
@@ -337,7 +337,7 @@ async function handleMediumEdit(
     trigger: 'edit_medium_awaiting_approval',
     aiGenerated: true,
     conversationType: 'post_client',
-    sender: 'clawdbot',
+    sender: 'system',
   })
 
   console.log(`[EditHandler] Medium edit applied, awaiting approval for ${client.companyName}: ${result.summary}`)
@@ -447,7 +447,7 @@ async function escalateAsFailed(
     trigger: 'edit_auto_failed_fallback',
     aiGenerated: true,
     conversationType: 'post_client',
-    sender: 'clawdbot',
+    sender: 'system',
   })
 
   // Create notification for admin
@@ -509,7 +509,7 @@ export async function pushEditToBuildQueue(editRequestId: string): Promise<void>
       trigger: 'edit_approved_pushed',
       aiGenerated: true,
       conversationType: 'post_client',
-      sender: 'clawdbot',
+      sender: 'system',
     })
   }
 

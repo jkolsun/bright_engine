@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
         await sendSMSViaProvider({
           to: from,
           message: "Hey! This is the Bright Automations team. What's your name and business name so I can pull up your info?",
-          sender: 'clawdbot',
+          sender: 'system',
           trigger: 'unknown_inbound_identification',
           aiGenerated: true,
         })

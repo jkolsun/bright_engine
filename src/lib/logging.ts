@@ -1,12 +1,12 @@
 import { prisma } from './db'
-import { ClawdbotActionType } from '@prisma/client'
+import { ActionType } from '@prisma/client'
 
 /**
- * Log any action Clawdbot takes to the activity feed
+ * Log any action system takes to the activity feed
  * This is the core audit trail for governance + learning
  */
 export async function logActivity(
-  actionType: ClawdbotActionType,
+  actionType: ActionType,
   description: string,
   options?: {
     leadId?: string
@@ -17,7 +17,7 @@ export async function logActivity(
   }
 ) {
   try {
-    await prisma.clawdbotActivity.create({
+    await prisma.activityLog.create({
       data: {
         actionType,
         description,
@@ -43,7 +43,7 @@ export async function logActivity(
  */
 export async function getRecentActivity(limit = 50) {
   try {
-    return await prisma.clawdbotActivity.findMany({
+    return await prisma.activityLog.findMany({
       take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
@@ -81,7 +81,7 @@ export async function getTodayStats() {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    const activities = await prisma.clawdbotActivity.findMany({
+    const activities = await prisma.activityLog.findMany({
       where: {
         createdAt: {
           gte: today,

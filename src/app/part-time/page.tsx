@@ -541,7 +541,7 @@ export default function PartTimeDashboard() {
               <MessageSquare size={18} className="text-white" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-teal-900">Coaching from ClawdBot</h3>
+              <h3 className="text-sm font-bold text-teal-900">Coaching Tip</h3>
               <p className="text-sm text-teal-800 mt-1 leading-relaxed">{coachingTip}</p>
             </div>
           </div>

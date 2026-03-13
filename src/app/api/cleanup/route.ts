@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       })
       
       // Clear activity log
-      const activityResult = await prisma.clawdbotActivity.deleteMany({})
+      const activityResult = await prisma.activityLog.deleteMany({})
       
       return NextResponse.json({
         status: 'ok',

@@ -220,7 +220,7 @@ async function executeApprovedAction(approval: any) {
             message: approval.draftContent,
             leadId: approval.leadId || undefined,
             clientId: approval.clientId || undefined,
-            sender: 'clawdbot',
+            sender: 'system',
             trigger: 'approved_message',
             aiGenerated: true,
           })
@@ -391,7 +391,7 @@ async function executeApprovedAction(approval: any) {
                 to: lead.phone,
                 message,
                 leadId: lead.id,
-                sender: 'clawdbot',
+                sender: 'system',
                 trigger: 'approved_preview_send',
                 aiGenerated: true,
               })

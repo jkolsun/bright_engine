@@ -2259,7 +2259,7 @@ async function runUrgencyCheck() {
         trigger,
         aiGenerated: false,
         conversationType: 'pre_client',
-        sender: 'clawdbot',
+        sender: 'system',
       })
       sent++
     } catch (err) {
@@ -2370,7 +2370,7 @@ async function closeEngineStallCheck() {
                   trigger: triggerName,
                   aiGenerated: false,
                   conversationType: 'pre_client',
-                  sender: 'clawdbot',
+                  sender: 'system',
                 })
                 sentTemplate = true
               }
@@ -2435,7 +2435,7 @@ async function closeEnginePaymentFollowUp() {
         trigger: `close_engine_payment_followup_${threshold}`,
         aiGenerated: true,
         conversationType: 'pre_client',
-        sender: 'clawdbot',
+        sender: 'system',
       })
     } catch (smsErr) {
       console.error(`[Worker] Payment follow-up SMS failed for ${conv.id}:`, smsErr)
@@ -2671,7 +2671,7 @@ async function handleOnboardingAdvanceToDomain(clientId: string) {
     to: client.lead.phone,
     message: domainMessage,
     clientId,
-    sender: 'clawdbot',
+    sender: 'system',
     trigger: 'onboarding_domain_question',
     conversationType: 'post_client',
   })
@@ -2725,7 +2725,7 @@ async function handleOnboardingGbpPrompt(clientId: string) {
     to: client.lead.phone,
     message: gbpMessage,
     clientId,
-    sender: 'clawdbot',
+    sender: 'system',
     trigger: 'onboarding_gbp_prompt',
     conversationType: 'post_client',
   })
@@ -2809,7 +2809,7 @@ async function handleOnboardingDnsCheck(clientId: string) {
           to: client.lead.phone,
           message: `Your site is live! 🚀\n\nCheck it out: https://${onboarding.customDomain}\n\nEverything is set up — SSL security, mobile optimization, and SEO basics. How does it look?`,
           clientId,
-          sender: 'clawdbot',
+          sender: 'system',
           trigger: 'site_go_live',
           conversationType: 'post_client',
         })
@@ -2846,7 +2846,7 @@ async function handleOnboardingDnsCheck(clientId: string) {
         to: client.lead.phone,
         message: `Hey${client.lead.firstName ? ` ${client.lead.firstName}` : ''}, just checking in — have you had a chance to update your DNS settings for ${onboarding.customDomain}? If you need help, just text me the name of your domain registrar (like GoDaddy or Namecheap) and I'll walk you through it.`,
         clientId,
-        sender: 'clawdbot',
+        sender: 'system',
         trigger: 'dns_nudge',
         conversationType: 'post_client',
       })
@@ -2859,7 +2859,7 @@ async function handleOnboardingDnsCheck(clientId: string) {
         to: client.lead.phone,
         message: `Hey${client.lead.firstName ? ` ${client.lead.firstName}` : ''}, your site for ${onboarding.companyName} is ready to go live — we just need your DNS updated. Want us to hop on a quick call and walk you through it? Takes about 5 minutes.`,
         clientId,
-        sender: 'clawdbot',
+        sender: 'system',
         trigger: 'dns_nudge_2',
         conversationType: 'post_client',
       })

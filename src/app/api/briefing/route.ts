@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       // 4. AI auto-responses sent while away
       prisma.message.findMany({
         where: {
-          senderType: 'CLAWDBOT',
+          senderType: 'AI',
           direction: 'OUTBOUND',
           createdAt: { gt: since },
         },

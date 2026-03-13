@@ -53,12 +53,12 @@ export async function POST(request: NextRequest) {
 
     // Update the most recent IMPORT activity log to include the batch name
     try {
-      const recentActivity = await prisma.clawdbotActivity.findFirst({
+      const recentActivity = await prisma.activityLog.findFirst({
         where: { actionType: 'IMPORT' },
         orderBy: { createdAt: 'desc' },
       })
       if (recentActivity) {
-        await prisma.clawdbotActivity.update({
+        await prisma.activityLog.update({
           where: { id: recentActivity.id },
           data: {
             description: `${batchName.trim()} — ${recentActivity.description}`,

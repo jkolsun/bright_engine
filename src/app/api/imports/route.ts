@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Admin required' }, { status: 403 })
     }
 
-    const imports = await prisma.clawdbotActivity.findMany({
+    const imports = await prisma.activityLog.findMany({
       where: { actionType: 'IMPORT' },
       orderBy: { createdAt: 'desc' },
       take: 50,

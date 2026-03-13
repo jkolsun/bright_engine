@@ -132,7 +132,7 @@ export default function ConversationView(props: ConversationViewProps) {
             ) : (
               detailMessages.map((msg: any) => {
                 const isOutbound = msg.direction === 'OUTBOUND'
-                const isAi = msg.aiGenerated || msg.senderType === 'AI' || msg.senderType === 'CLAWDBOT'
+                const isAi = msg.aiGenerated || msg.senderType === 'AI' || msg.senderType === 'AI'
                 const isSystem = msg.senderType === 'SYSTEM'
                 const isReaction = !!msg.reactionType
 
@@ -421,7 +421,7 @@ export default function ConversationView(props: ConversationViewProps) {
             ) : (
               convMessages.map((msg) => {
                 const isOutbound = msg.direction === 'OUTBOUND'
-                const isAi = msg.aiGenerated || msg.senderType === 'AI' || msg.senderType === 'CLAWDBOT'
+                const isAi = msg.aiGenerated || msg.senderType === 'AI' || msg.senderType === 'AI'
                 const isSystem = msg.senderType === 'SYSTEM'
                 const isReaction = !!msg.reactionType
 

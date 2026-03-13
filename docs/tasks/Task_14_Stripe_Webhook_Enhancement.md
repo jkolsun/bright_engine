@@ -60,7 +60,7 @@ try {
           aiGenerated: true,
           aiDelaySeconds: 150,
           conversationType: 'post_client',
-          sender: 'clawdbot',
+          sender: 'system',
         });
       } catch (smsErr) {
         console.error('[Stripe Webhook] Welcome SMS failed:', smsErr);

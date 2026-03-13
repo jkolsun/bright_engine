@@ -21,7 +21,7 @@ export async function GET(
 
     const { id } = await params
 
-    const activity = await prisma.clawdbotActivity.findUnique({
+    const activity = await prisma.activityLog.findUnique({
       where: { id },
     })
 

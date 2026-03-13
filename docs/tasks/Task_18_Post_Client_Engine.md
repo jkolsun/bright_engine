@@ -143,7 +143,7 @@ export async function processPostClientInbound(
           aiGenerated: true,
           aiDelaySeconds: delay,
           conversationType: 'post_client',
-          sender: 'clawdbot',
+          sender: 'system',
         });
       } catch (err) {
         console.error('[PostClient] Send failed:', err);

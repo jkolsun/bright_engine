@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       where: { createdAt: { gte: oneDayAgo } },
     })
 
-    const clawdbotErrors = await prisma.clawdbotActivity.count({
+    const systemErrors = await prisma.activityLog.count({
       where: {
         actionType: 'ERROR',
         createdAt: { gte: oneDayAgo },
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
     if (recentFailedMessages > 10) issues.push(`${recentFailedMessages} failed messages in last 24h`)
     if (failedWebhooks24h > 5) issues.push(`${failedWebhooks24h} failed webhooks in last 24h`)
     if (failedPayments > 0) issues.push(`${failedPayments} failed payments in last 24h`)
-    if (clawdbotErrors > 10) issues.push(`${clawdbotErrors} ClawdBot errors in last 24h`)
+    if (systemErrors > 10) issues.push(`${systemErrors} System errors in last 24h`)
     if (dbCheck.status !== 'connected') issues.push('Database not connected')
 
     const healthStatus = issues.length > 2 ? 'critical' : issues.length > 0 ? 'warning' : 'healthy'
@@ -139,8 +139,8 @@ export async function GET(request: NextRequest) {
         failedMessagesLast24h: recentFailedMessages,
         failedWebhooksLast24h: failedWebhooks24h,
       },
-      clawdbot: {
-        errorsLast24h: clawdbotErrors,
+      system: {
+        errorsLast24h: systemErrors,
       },
       health: {
         status: healthStatus,

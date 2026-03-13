@@ -237,7 +237,7 @@ export async function POST(
           to: updated.phone,
           message: thankYouMsg,
           leadId: id,
-          sender: 'clawdbot',
+          sender: 'system',
           trigger: 'form_submission_thank_you',
           aiGenerated: false,
         })

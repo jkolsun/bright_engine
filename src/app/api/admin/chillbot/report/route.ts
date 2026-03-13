@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const activity = await prisma.clawdbotActivity.create({
+    const activity = await prisma.activityLog.create({
       data: {
         actionType: actionType as any,
         description: description.substring(0, 500),

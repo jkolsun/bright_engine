@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       const clientResult = await tx.client.deleteMany({})
 
       // Delete all activities
-      const activityResult = await tx.clawdbotActivity.deleteMany({})
+      const activityResult = await tx.activityLog.deleteMany({})
 
       // Delete all lead events
       const eventResult = await tx.leadEvent.deleteMany({})

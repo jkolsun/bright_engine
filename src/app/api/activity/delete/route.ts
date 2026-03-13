@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       where = {}
     }
 
-    const result = await prisma.clawdbotActivity.deleteMany({
+    const result = await prisma.activityLog.deleteMany({
       where
     })
 
@@ -76,7 +76,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    await prisma.clawdbotActivity.delete({
+    await prisma.activityLog.delete({
       where: { id: activityId }
     })
 

@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const [
       failedMessages,
       failedWebhooks,
-      clawdbotErrors,
+      systemErrors,
       failedPayments,
     ] = await Promise.all([
       prisma.message.findMany({
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
         take: 50,
       }),
 
-      prisma.clawdbotActivity.findMany({
+      prisma.activityLog.findMany({
         where: {
           actionType: 'ERROR',
           createdAt: { gte: since },
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
     const totalErrors =
       failedMessages.length +
       failedWebhooks.length +
-      clawdbotErrors.length +
+      systemErrors.length +
       failedPayments.length
 
     return NextResponse.json({
@@ -102,13 +102,13 @@ export async function GET(request: NextRequest) {
       hours,
       failedMessages: maskedMessages,
       failedWebhooks,
-      clawdbotErrors,
+      systemErrors,
       failedPayments,
       summary: {
         totalErrors,
         failedMessages: failedMessages.length,
         failedWebhooks: failedWebhooks.length,
-        clawdbotErrors: clawdbotErrors.length,
+        systemErrors: systemErrors.length,
         failedPayments: failedPayments.length,
       },
     })

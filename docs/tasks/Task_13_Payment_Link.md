@@ -131,7 +131,7 @@ export async function sendPaymentLink(conversationId: string): Promise<{ success
         aiGenerated: true,
         aiDelaySeconds: delay,
         conversationType: 'pre_client',
-        sender: 'clawdbot',
+        sender: 'system',
       });
       await transitionStage(conversationId, CONVERSATION_STAGES.PAYMENT_SENT);
     } catch (err) {

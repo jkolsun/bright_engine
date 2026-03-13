@@ -403,8 +403,7 @@ railway up --service worker
 2. Configure settings (Settings page in admin portal)
 3. Add reps (Reps page in admin portal)
 4. Start importing real leads
-5. Configure Clawdbot API access
-6. Set up monitoring/alerting
+5. Set up monitoring/alerting
 7. Configure backups
 8. Set up SSL certificate (production)
 
@@ -429,6 +428,5 @@ Questions? Check:
 - README.md - Full feature list
 - BUILD_STATUS.md - What's implemented
 - Master Knowledge Base - Business processes
-- SOUL.md - Clawdbot behavior rules
 
-Built by Jared + Clawdbot for Bright Automations.
+Built by Jared for Bright Automations.

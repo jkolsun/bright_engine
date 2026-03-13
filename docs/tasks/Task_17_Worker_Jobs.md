@@ -131,7 +131,7 @@ async function closeEnginePaymentFollowUp() {
       trigger: `close_engine_payment_followup_${threshold}`,
       aiGenerated: true,
       conversationType: 'pre_client',
-      sender: 'clawdbot',
+      sender: 'system',
     });
     
     // At 72h+, also mark STALLED

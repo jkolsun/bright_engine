@@ -66,7 +66,7 @@ export async function processPostClientInbound(
           aiGenerated: true,
           aiDelaySeconds: delay,
           conversationType: 'post_client',
-          sender: 'clawdbot',
+          sender: 'system',
         },
       }, delay * 1000)
       return
@@ -430,7 +430,7 @@ export async function processPostClientInbound(
             aiGenerated: false,
             aiDelaySeconds: ackDelay,
             conversationType: 'post_client',
-            sender: 'clawdbot',
+            sender: 'system',
           },
         }, ackDelay * 1000)
       }
@@ -451,7 +451,7 @@ export async function processPostClientInbound(
         aiGenerated: true,
         aiDelaySeconds: delay,
         conversationType: 'post_client',
-        sender: 'clawdbot',
+        sender: 'system',
       },
     }, delay * 1000)
 

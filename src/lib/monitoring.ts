@@ -88,7 +88,7 @@ export async function checkSystemHealth() {
 
     // Check 3: Error rate (check last hour)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
-    const recentErrors = await prisma.clawdbotActivity.count({
+    const recentErrors = await prisma.activityLog.count({
       where: {
         actionType: 'ERROR',
         createdAt: { gte: oneHourAgo },

@@ -33,7 +33,7 @@ export interface SMSSendOptions {
   message: string;
   leadId?: string;
   clientId?: string;
-  sender?: string;       // 'clawdbot', 'andrew', etc.
+  sender?: string;       // 'system', 'andrew', etc.
   trigger?: string;      // What caused this message: 'close_engine_first_message', 'nudge', etc.
   aiGenerated?: boolean;
   aiDelaySeconds?: number;

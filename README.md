@@ -29,7 +29,7 @@ Complete operations platform for Bright Automations website business.
 - **Callbacks**: Overdue and scheduled management
 - **Earnings**: Commission tracking and leaderboard
 
-### Automation (Clawdbot Integration)
+### Automation
 - **Lead qualification**: 3-question conversational flow via SMS
 - **Info collection**: Automated nudges for logo/photos/services
 - **Site build pipeline**: From template selection to QA to live
@@ -174,7 +174,7 @@ Use credentials from .env:
 
 ### Messages
 - `GET /api/messages/[leadId]` - Message history
-- `POST /api/messages/send` - Send SMS (Clawdbot or manual)
+- `POST /api/messages/send` - Send SMS
 
 ### Webhooks
 - `POST /api/webhooks/twilio` - Inbound SMS
@@ -183,23 +183,6 @@ Use credentials from .env:
 ### Enrichment
 - `POST /api/enrichment/serpapi` - Enrich lead data
 - `POST /api/enrichment/serper` - Generate personalization
-
-## Clawdbot Integration
-
-Clawdbot (OpenClaw AI assistant) connects via API:
-
-**Authentication**: API key in request header
-**Base URL**: `https://your-domain.com/api`
-
-**Key operations**:
-1. Poll hot leads: `GET /api/leads/hot`
-2. Send qualification SMS: `POST /api/messages/send`
-3. Update lead stage: `PUT /api/leads/[id]`
-4. Create notifications: `POST /api/notifications`
-
-**Heartbeat schedule**:
-- Every 15 min: Check hot leads (preview engagement)
-- Daily 9 PM: Audit report (summarize day's activity)
 
 ## Deployment
 
@@ -231,5 +214,5 @@ Clawdbot (OpenClaw AI assistant) connects via API:
 
 ## Support
 
-Built for Bright Automations by Jared + Clawdbot
+Built for Bright Automations by Jared
 Questions: Contact Jared or Andrew

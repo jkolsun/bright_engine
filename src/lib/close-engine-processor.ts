@@ -58,7 +58,7 @@ interface CloseEngineMessageResult {
 export async function sendCloseEngineMessage(options: CloseEngineMessageOptions): Promise<CloseEngineMessageResult> {
   const {
     to, toEmail, message, leadId, trigger, aiGenerated = true,
-    aiDelaySeconds, conversationType = 'pre_client', sender = 'clawdbot',
+    aiDelaySeconds, conversationType = 'pre_client', sender = 'system',
     aiDecisionLog, emailSubject,
   } = options
 

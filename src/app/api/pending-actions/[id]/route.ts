@@ -83,7 +83,7 @@ export async function PUT(
         : `close_engine_${pendingAction.type.toLowerCase()}`,
       aiGenerated: true,
       conversationType: isPostClient ? 'post_client' : 'pre_client',
-      sender: 'clawdbot',
+      sender: 'system',
     })
 
     // Update pending action

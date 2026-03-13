@@ -46,7 +46,7 @@ export interface SendEmailResult {
 // ── Send Email ─────────────────────────────────────────
 
 export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
-  const { to, subject, html, text, leadId, clientId, sender = 'clawdbot', trigger, tags, aiGenerated, aiDelaySeconds, aiDecisionLog } = options
+  const { to, subject, html, text, leadId, clientId, sender = 'system', trigger, tags, aiGenerated, aiDelaySeconds, aiDecisionLog } = options
 
   // Resolve leadId from client if only clientId provided
   let resolvedLeadId = leadId
@@ -98,7 +98,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
           clientId,
           direction: 'OUTBOUND',
           channel: 'EMAIL',
-          senderType: 'CLAWDBOT',
+          senderType: 'AI',
           senderName: sender,
           recipient: to,
           content: html,
@@ -121,7 +121,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
         clientId,
         direction: 'OUTBOUND',
         channel: 'EMAIL',
-        senderType: aiGenerated ? 'CLAWDBOT' : 'CLAWDBOT',
+        senderType: aiGenerated ? 'AI' : 'AI',
         senderName: sender,
         recipient: to,
         content: html,
@@ -161,7 +161,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
         clientId,
         direction: 'OUTBOUND',
         channel: 'EMAIL',
-        senderType: 'CLAWDBOT',
+        senderType: 'AI',
         senderName: sender,
         recipient: to,
         content: html,
@@ -277,7 +277,7 @@ export function wrapPreviewHtml(options: {
  */
 export function wrapMessageHtml(message: string, senderName?: string): string {
   const htmlMessage = message.replace(/\n/g, '<br>')
-  const signoff = senderName && senderName !== 'clawdbot'
+  const signoff = senderName && senderName !== 'system'
     ? `<p style="margin-top:24px;color:#64748b;">— ${senderName}<br>Bright Automations</p>`
     : `<p style="margin-top:24px;color:#64748b;">— Bright Automations</p>`
   return wrapHtml(`${htmlMessage}${signoff}`)

@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     ]
     const optionalEnvVars = [
       'SERPAPI_KEY', 'SERPER_API_KEY',
-      'RESEND_API_KEY', 'CLAWDBOT_API_KEY',
+      'RESEND_API_KEY',
     ]
     for (const key of requiredEnvVars) {
       results.push({
@@ -244,7 +244,7 @@ export async function POST(request: NextRequest) {
     try {
       const t = Date.now()
       const aiMessages = await prisma.message.findMany({
-        where: { senderType: 'CLAWDBOT', createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+        where: { senderType: 'AI', createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
         take: 10,
         orderBy: { createdAt: 'desc' },
       })

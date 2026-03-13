@@ -26,7 +26,7 @@ export interface SendSMSOptions {
   message: string
   leadId?: string
   clientId?: string
-  sender?: string // 'clawdbot', 'andrew', etc.
+  sender?: string // 'system', 'andrew', etc.
   trigger?: string // What caused this message
 }
 

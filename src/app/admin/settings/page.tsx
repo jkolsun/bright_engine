@@ -3,7 +3,7 @@
 import { Card } from '@/components/ui/card'
 import {
   Building, MessageSquare, Target, Users, Key, Activity, Loader2,
-  Radio, Bot,
+  Radio,
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import React, { useState, useEffect, Suspense } from 'react'
@@ -31,15 +31,6 @@ const QueuesTab = dynamic(() => import('./_tabs/QueuesTab'), {
     <div className="flex items-center justify-center py-20 text-gray-500 dark:text-gray-400 gap-2">
       <Loader2 size={20} className="animate-spin" />
       <span>Loading queue status…</span>
-    </div>
-  ),
-})
-
-const ClawdBotTab = dynamic(() => import('./_tabs/ClawdBotTab'), {
-  loading: () => (
-    <div className="flex items-center justify-center py-20 text-gray-500 dark:text-gray-400 gap-2">
-      <Loader2 size={20} className="animate-spin" />
-      <span>Loading ClawdBot monitor…</span>
     </div>
   ),
 })
@@ -81,7 +72,7 @@ const ClawdBotTab = dynamic(() => import('./_tabs/ClawdBotTab'), {
 // Each key is unique to its purpose and only stored in the Settings table.
 
 // ── Types ──
-type TabId = 'company' | 'communication' | 'targets' | 'team' | 'api' | 'diagnostics' | 'dialer' | 'queues' | 'clawdbot'
+type TabId = 'company' | 'communication' | 'targets' | 'team' | 'api' | 'diagnostics' | 'dialer' | 'queues'
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode; separator?: boolean }[] = [
   // ── Configuration ──
@@ -94,7 +85,6 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode; separator?: boole
   // ── Monitoring ──
   { id: 'dialer', label: 'Dialer', icon: <Radio size={16} />, separator: true },
   { id: 'queues', label: 'Queues', icon: <Activity size={16} /> },
-  { id: 'clawdbot', label: 'ClawdBot', icon: <Bot size={16} /> },
 ]
 
 const VALID_TAB_IDS = new Set<string>(TABS.map(t => t.id))
@@ -170,7 +160,6 @@ function SettingsInner() {
       {activeTab === 'diagnostics' && <DiagnosticsTab />}
       {activeTab === 'dialer' && <DialerTab />}
       {activeTab === 'queues' && <QueuesTab />}
-      {activeTab === 'clawdbot' && <ClawdBotTab />}
     </div>
   )
 }

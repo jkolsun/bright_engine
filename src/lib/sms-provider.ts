@@ -18,7 +18,7 @@ export interface SMSSendOptions {
   message: string
   leadId?: string
   clientId?: string
-  sender?: string       // 'clawdbot', 'andrew', etc.
+  sender?: string       // 'system', 'andrew', etc.
   trigger?: string      // What caused this message: 'close_engine_first_message', 'nudge', etc.
   aiGenerated?: boolean
   aiDelaySeconds?: number
@@ -119,8 +119,8 @@ export async function sendSMSViaProvider(options: SMSSendOptions): Promise<SMSSe
         clientId: options.clientId || null,
         direction: 'OUTBOUND',
         channel: 'SMS',
-        senderType: options.aiGenerated ? 'CLAWDBOT' : (options.sender === 'admin' ? 'ADMIN' : 'SYSTEM'),
-        senderName: options.sender || 'clawdbot',
+        senderType: options.aiGenerated ? 'AI' : (options.sender === 'admin' ? 'ADMIN' : 'SYSTEM'),
+        senderName: options.sender || 'system',
         recipient: options.to,
         content: options.message,
         trigger: options.trigger || null,
@@ -144,8 +144,8 @@ export async function sendSMSViaProvider(options: SMSSendOptions): Promise<SMSSe
         clientId: options.clientId || null,
         direction: 'OUTBOUND',
         channel: 'SMS',
-        senderType: options.aiGenerated ? 'CLAWDBOT' : 'SYSTEM',
-        senderName: options.sender || 'clawdbot',
+        senderType: options.aiGenerated ? 'AI' : 'SYSTEM',
+        senderName: options.sender || 'system',
         recipient: options.to,
         content: options.message,
         trigger: options.trigger || null,

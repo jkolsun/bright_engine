@@ -243,18 +243,6 @@ Complete helper library:
 5. Contact form
 6. All engagement tracked → hot lead alert fires to Andrew
 
-### **Clawdbot (AI Assistant)**
-1. Polls `/api/leads/hot` every 15 min
-2. Sees new hot lead → sends initial SMS
-3. Qualifies via 3 questions
-4. Collects info (logo, photos, services)
-5. Builds site from template
-6. Sends draft for review
-7. Client approves → sends Stripe link
-8. Payment received → triggers post-launch sequence
-9. Day 30 → hands off to Andrew for upsell
-10. Monitors churn → triggers win-back if cancelled
-
 ---
 
 ## 🔄 Complete Workflows Implemented
@@ -265,7 +253,7 @@ Complete helper library:
 3. ✅ System personalizes via Serper
 4. ✅ Prospect clicks preview
 5. ✅ Preview analytics tracked → hot lead alert
-6. ✅ Andrew/Clawdbot texts prospect
+6. ✅ Andrew texts prospect
 7. ✅ Qualification via SMS (3 questions)
 8. ✅ Info collection
 9. ✅ Site built from template
@@ -343,7 +331,7 @@ With this system, you can:
 - **MRR: $3,000-6,000**
 
 **Month 7-12**: Automation + upsells (100-300 clients)
-- Clawdbot handles all qualification
+- System handles all qualification
 - 30-40% upsell penetration
 - Annual plan conversions
 - **MRR: $12,000-25,000**
@@ -437,7 +425,7 @@ With this system, you can:
 
 ---
 
-Built by: Jared + Clawdbot  
+Built by: Jared  
 Date: February 12, 2026  
 Time: 2 hours  
 Lines of code: ~5,000  

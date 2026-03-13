@@ -191,7 +191,7 @@ export async function DELETE(
       prisma.referral.deleteMany({ where: { referrerClientId: clientId } }),
       prisma.clientAnalytics.deleteMany({ where: { clientId } }),
       prisma.editRequest.deleteMany({ where: { clientId } }),
-      prisma.clawdbotActivity.deleteMany({ where: { clientId } }),
+      prisma.activityLog.deleteMany({ where: { clientId } }),
       prisma.client.update({
         where: { id: clientId },
         data: { deletedAt: new Date() }

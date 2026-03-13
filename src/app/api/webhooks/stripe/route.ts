@@ -371,7 +371,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     console.error('[Stripe] Admin SMS notification failed:', err)
   }
 
-  // ── Step 9: Dispatch webhook to Clawdbot ──
+  // ── Step 9: Dispatch webhook ──
   try {
     await dispatchWebhook(WebhookEvents.PAYMENT_RECEIVED(
       lead.id,
@@ -423,7 +423,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         trigger: 'welcome_after_payment',
         aiGenerated: false,
         conversationType: 'post_client',
-        sender: 'clawdbot',
+        sender: 'system',
       })
       console.log(`[Stripe Webhook] Welcome SMS sent to ${lead.phone}`)
     }
