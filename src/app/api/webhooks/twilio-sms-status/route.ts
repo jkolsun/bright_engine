@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest } from 'next/server'
 import { verifyTwilioSignature } from '@/lib/twilio-verify'
 import { prisma } from '@/lib/db'
+import { pushToMessages } from '@/lib/messages-v2-events'
 
 const getPublicUrl = () =>
   process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || 'https://preview.brightautomations.org'
@@ -100,6 +101,12 @@ export async function POST(request: NextRequest) {
           },
         })
       }
+    }
+
+    // Push delivery status update to Messages V2
+    const updatedLeadId = message?.leadId || campaignMessage?.leadId
+    if (updatedLeadId) {
+      try { pushToMessages({ type: 'LEAD_UPDATE', data: { leadId: updatedLeadId, twilioStatus: messageStatus, twilioSid: messageSid }, timestamp: new Date().toISOString() }) } catch {}
     }
 
     return new Response('OK', { status: 200 })

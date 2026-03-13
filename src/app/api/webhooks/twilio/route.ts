@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getSMSProvider } from '@/lib/sms-provider'
+import { pushToMessages } from '@/lib/messages-v2-events'
 
 export const dynamic = 'force-dynamic'
 
@@ -339,6 +340,9 @@ export async function POST(request: NextRequest) {
         })
         console.log(`[Twilio] Auto-DNC: Lead ${lead.id} sent STOP keyword`)
 
+        // Push LEAD_UPDATE for DNC to Messages V2
+        try { pushToMessages({ type: 'LEAD_UPDATE', data: { leadId: lead.id, dncAt: new Date().toISOString(), companyName: lead.companyName }, timestamp: new Date().toISOString() }) } catch {}
+
         // ── SMS Campaign STOP handling ──
         try {
           const activeCampaignLeads = await prisma.smsCampaignLead.findMany({
@@ -503,6 +507,8 @@ export async function POST(request: NextRequest) {
               }
               pushToRep(repId, sseEvent)
               pushToAllAdmins(sseEvent)
+              // Also push to Messages V2
+              pushToMessages({ type: 'HOT_LEAD', data: { leadId: lead.id, companyName: lead.companyName, phone: lead.phone, campaignName: dripCampaignLead.campaign.name }, timestamp: new Date().toISOString() })
             } catch (sseErr) {
               console.warn('[SMS-CAMPAIGN] SSE push failed:', sseErr)
             }
@@ -644,6 +650,12 @@ export async function POST(request: NextRequest) {
       } catch (err) {
         console.error('[Twilio] Post-client processing failed:', err)
       }
+    }
+
+    // Push NEW_MESSAGE to Messages V2 for real-time updates
+    const inboundLeadId = lead?.id || client?.leadId
+    if (inboundLeadId) {
+      try { pushToMessages({ type: 'NEW_MESSAGE', data: { leadId: inboundLeadId, direction: 'INBOUND', content: body?.substring(0, 200), from }, timestamp: new Date().toISOString() }) } catch {}
     }
 
     // Respond with empty TwiML (no auto-reply)

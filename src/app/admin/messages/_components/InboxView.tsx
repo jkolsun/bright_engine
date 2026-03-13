@@ -192,11 +192,19 @@ export default function InboxView(props: InboxViewProps) {
             </Card>
           ) : (
             <div className="space-y-2">
-              {(filteredConvs as any[]).map((conv: any) => (
+              {(filteredConvs as any[]).map((conv: any) => {
+                const eng = conv.engagement
+                const hasCtaClick = eng?.ctaClickCount > 0
+                const hasCallClick = eng?.callClickCount > 0
+                const hasReturnVisit = eng?.returnVisitCount > 0
+                const isHotEngagement = hasCtaClick || hasCallClick
+
+                return (
                 <Card
                   key={conv.id}
                   className={`p-4 cursor-pointer hover:shadow-md transition-all ${
                     conv.pendingActionCount > 0 ? 'border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/30' :
+                    isHotEngagement ? 'border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-950/20' :
                     conv.stage === 'STALLED' ? 'border-red-200 dark:border-red-800 bg-red-50/30 dark:bg-red-950/20' :
                     'border-gray-200 dark:border-slate-700'
                   }`}
@@ -204,7 +212,7 @@ export default function InboxView(props: InboxViewProps) {
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-gray-900 dark:text-gray-100 truncate">{conv.lead?.companyName || 'Unknown'}</span>
                         <EntryPointBadge entryPoint={conv.entryPoint} />
                         <StageBadge stage={conv.stage} />
@@ -213,12 +221,35 @@ export default function InboxView(props: InboxViewProps) {
                             Action needed
                           </span>
                         )}
+                        {hasCtaClick && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400">
+                            CTA Clicked{eng.ctaClickCount > 1 ? ` x${eng.ctaClickCount}` : ''}
+                          </span>
+                        )}
+                        {hasCallClick && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400">
+                            Called
+                          </span>
+                        )}
+                        {hasReturnVisit && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400">
+                            Return Visit
+                          </span>
+                        )}
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                         {conv.lead?.firstName} {conv.lead?.lastName || ''}
                         {conv.lead?.phone && <span className="ml-2">{conv.lead.phone}</span>}
                       </div>
-                      {conv.lastMessage && (
+                      {/* Engagement summary line */}
+                      {eng && (eng.previewViewCount > 0 || hasCtaClick) && (
+                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-3">
+                          {eng.previewViewCount > 0 && <span>{eng.previewViewCount} preview view{eng.previewViewCount !== 1 ? 's' : ''}</span>}
+                          {hasCtaClick && eng.lastCtaClick && <span>Last click {timeSince(eng.lastCtaClick)}</span>}
+                          {hasReturnVisit && <span>{eng.returnVisitCount} return visit{eng.returnVisitCount !== 1 ? 's' : ''}</span>}
+                        </div>
+                      )}
+                      {conv.lastMessage ? (
                         <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 truncate">
                           {conv.lastMessage.direction === 'OUTBOUND' && (
                             <span className="text-gray-400 dark:text-gray-500">
@@ -227,17 +258,24 @@ export default function InboxView(props: InboxViewProps) {
                           )}
                           {conv.lastMessage.content?.substring(0, 100)}{(conv.lastMessage.content?.length || 0) > 100 && '...'}
                         </div>
+                      ) : hasCtaClick && (
+                        <div className="text-sm text-green-600 dark:text-green-400 mt-1 font-medium">
+                          Lead clicked "Get Started" — no message sent yet
+                        </div>
                       )}
                     </div>
                     <div className="flex flex-col items-end gap-1 ml-3">
-                      {conv.lastMessage?.createdAt && (
+                      {conv.lastMessage?.createdAt ? (
                         <span className="text-xs text-gray-400 dark:text-gray-500">{timeSince(conv.lastMessage.createdAt)}</span>
-                      )}
+                      ) : eng?.lastCtaClick ? (
+                        <span className="text-xs text-green-500">{timeSince(eng.lastCtaClick)}</span>
+                      ) : null}
                       <span className="text-xs text-gray-400 dark:text-gray-500">{conv.autonomyLevel.replace('_', ' ')}</span>
                     </div>
                   </div>
                 </Card>
-              ))}
+                )
+              })}
             </div>
           )}
         </>

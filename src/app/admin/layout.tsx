@@ -97,6 +97,7 @@ function AdminLayoutInner({
     { href: '/admin/clients', icon: UserCircle, label: 'Clients' },
     { href: '/admin/finance', icon: DollarSign, label: 'Finance' },
     { href: '/admin/messages', icon: MessageSquare, label: 'Messages' },
+    { href: '/admin/messages-v2', icon: MessageSquare, label: 'Messages V2' },
     { href: '/admin/campaigns', icon: Send, label: 'Campaigns' },
     { href: '/admin/social-enrichment', icon: Users2, label: 'Social Enrichment' },
     { href: '/admin/social', icon: Share2, label: 'Social Outreach' },

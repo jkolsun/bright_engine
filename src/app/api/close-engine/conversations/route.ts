@@ -39,22 +39,46 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // For each conversation, get the last message and pending action count
+    // For each conversation, get the last message, pending actions, and engagement data
     const enriched = await Promise.all(
       conversations.map(async (conv) => {
-        const lastMessage = await prisma.message.findFirst({
-          where: { leadId: conv.leadId },
-          orderBy: { createdAt: 'desc' },
-        })
+        const [lastMessage, pendingActionCount, engagementEvents] = await Promise.all([
+          prisma.message.findFirst({
+            where: { leadId: conv.leadId },
+            orderBy: { createdAt: 'desc' },
+          }),
+          prisma.pendingAction.count({
+            where: { conversationId: conv.id, status: 'PENDING' },
+          }),
+          prisma.leadEvent.findMany({
+            where: {
+              leadId: conv.leadId,
+              eventType: { in: ['PREVIEW_CTA_CLICKED', 'PREVIEW_VIEWED', 'PREVIEW_CALL_CLICKED', 'PREVIEW_RETURN_VISIT'] },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+            select: { eventType: true, createdAt: true, metadata: true },
+          }),
+        ])
 
-        const pendingActionCount = await prisma.pendingAction.count({
-          where: { conversationId: conv.id, status: 'PENDING' },
-        })
+        const ctaClicks = engagementEvents.filter(e => e.eventType === 'PREVIEW_CTA_CLICKED')
+        const previewViews = engagementEvents.filter(e => e.eventType === 'PREVIEW_VIEWED')
+        const callClicks = engagementEvents.filter(e => e.eventType === 'PREVIEW_CALL_CLICKED')
+        const returnVisits = engagementEvents.filter(e => e.eventType === 'PREVIEW_RETURN_VISIT')
 
         return {
           ...conv,
           lastMessage,
           pendingActionCount,
+          engagement: {
+            ctaClickCount: ctaClicks.length,
+            lastCtaClick: ctaClicks[0]?.createdAt || null,
+            previewViewCount: previewViews.length,
+            lastPreviewView: previewViews[0]?.createdAt || null,
+            callClickCount: callClicks.length,
+            returnVisitCount: returnVisits.length,
+            recentEvents: engagementEvents.slice(0, 5),
+          },
         }
       })
     )

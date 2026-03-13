@@ -65,8 +65,9 @@ export async function triggerCloseEngine(options: {
   entryPoint: string
   repId?: string
   reEngagement?: boolean
+  skipFirstMessage?: boolean
 }): Promise<{ success: boolean; conversationId?: string; error?: string }> {
-  const { leadId, entryPoint, repId, reEngagement } = options
+  const { leadId, entryPoint, repId, reEngagement, skipFirstMessage } = options
 
   try {
     // 0. Atomic dedup: only one entry point can win the race
@@ -99,8 +100,10 @@ export async function triggerCloseEngine(options: {
         data: { closeEngineTriggeredAt: new Date() },
       })
       if (dedup.count === 0) {
-        console.log(`[CloseEngine] Dedup: already triggered for lead ${leadId}, skipping`)
-        return { success: true, conversationId: undefined }
+        // Already triggered — return the existing conversation so it shows in inbox
+        const existingConv = await prisma.closeEngineConversation.findUnique({ where: { leadId } })
+        console.log(`[CloseEngine] Dedup: already triggered for lead ${leadId}, returning existing conv ${existingConv?.id}`)
+        return { success: true, conversationId: existingConv?.id }
       }
     }
 
@@ -201,8 +204,13 @@ export async function triggerCloseEngine(options: {
     })
 
     // 7. Kick off first message (dynamic import to avoid circular dep)
-    const { processCloseEngineFirstMessage } = await import('./close-engine-processor')
-    await processCloseEngineFirstMessage(conversation.id)
+    // Skip automated message if rep is already on the phone (CTA click during active call)
+    if (!skipFirstMessage) {
+      const { processCloseEngineFirstMessage } = await import('./close-engine-processor')
+      await processCloseEngineFirstMessage(conversation.id)
+    } else {
+      console.log(`[CloseEngine] Skipping first message for ${conversation.id} (rep on active call)`)
+    }
 
     return { success: true, conversationId: conversation.id }
   } catch (error) {

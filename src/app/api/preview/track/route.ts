@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { calculateEngagementScore } from '@/lib/engagement-scoring'
 import { dispatchWebhook, WebhookEvents } from '@/lib/webhook-dispatcher'
 import { pushToRep, pushToAllAdmins } from '@/lib/dialer-events'
+import { pushToMessages } from '@/lib/messages-v2-events'
 
 export const dynamic = 'force-dynamic'
 
@@ -123,6 +124,9 @@ export async function POST(request: NextRequest) {
         actor: 'client',
       }
     })
+
+    // Push preview event to Messages V2
+    try { pushToMessages({ type: 'PREVIEW_CLICK', data: { leadId: lead.id, eventType, event }, timestamp: new Date().toISOString() }) } catch {}
 
     // Bug 7: If there's an active dialer call for this lead, push SSE + update call flags
     let activeCall: { id: string; repId: string } | null = null

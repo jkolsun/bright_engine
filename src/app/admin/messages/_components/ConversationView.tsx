@@ -123,12 +123,96 @@ export default function ConversationView(props: ConversationViewProps) {
           </Card>
         ))}
 
+        {/* Engagement Activity Bar */}
+        {selectedCloseConv.engagement && (selectedCloseConv.engagement.ctaClickCount > 0 || selectedCloseConv.engagement.previewViewCount > 0) && (
+          <Card className="p-4 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 border-green-200 dark:border-green-800">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                Lead Engagement
+              </h3>
+              {selectedCloseConv.lead?.previewUrl && (
+                <a href={selectedCloseConv.lead.previewUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-teal-600 hover:underline">
+                  View Preview Site
+                </a>
+              )}
+            </div>
+            <div className="flex items-center gap-6 mt-2">
+              {selectedCloseConv.engagement.ctaClickCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                    <span className="text-green-600 dark:text-green-400 text-sm font-bold">{selectedCloseConv.engagement.ctaClickCount}</span>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-green-700 dark:text-green-400">CTA Click{selectedCloseConv.engagement.ctaClickCount !== 1 ? 's' : ''}</div>
+                    {selectedCloseConv.engagement.lastCtaClick && (
+                      <div className="text-[10px] text-gray-500 dark:text-gray-400">Last: {new Date(selectedCloseConv.engagement.lastCtaClick).toLocaleString()}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {selectedCloseConv.engagement.previewViewCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                    <span className="text-blue-600 dark:text-blue-400 text-sm font-bold">{selectedCloseConv.engagement.previewViewCount}</span>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-blue-700 dark:text-blue-400">Preview View{selectedCloseConv.engagement.previewViewCount !== 1 ? 's' : ''}</div>
+                    {selectedCloseConv.engagement.lastPreviewView && (
+                      <div className="text-[10px] text-gray-500 dark:text-gray-400">Last: {new Date(selectedCloseConv.engagement.lastPreviewView).toLocaleString()}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {selectedCloseConv.engagement.callClickCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
+                    <span className="text-purple-600 dark:text-purple-400 text-sm font-bold">{selectedCloseConv.engagement.callClickCount}</span>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-purple-700 dark:text-purple-400">Call Click{selectedCloseConv.engagement.callClickCount !== 1 ? 's' : ''}</div>
+                  </div>
+                </div>
+              )}
+              {selectedCloseConv.engagement.returnVisitCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                    <span className="text-amber-600 dark:text-amber-400 text-sm font-bold">{selectedCloseConv.engagement.returnVisitCount}</span>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-amber-700 dark:text-amber-400">Return Visit{selectedCloseConv.engagement.returnVisitCount !== 1 ? 's' : ''}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Recent engagement timeline */}
+            {selectedCloseConv.engagement.recentEvents?.length > 0 && (
+              <div className="mt-3 pt-2 border-t border-green-200/50 dark:border-green-800/50">
+                <div className="flex flex-wrap gap-2">
+                  {selectedCloseConv.engagement.recentEvents.map((evt: any, i: number) => (
+                    <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-white/60 dark:bg-slate-800/60 text-gray-600 dark:text-gray-400 border border-gray-200/50 dark:border-slate-700/50">
+                      {evt.eventType === 'PREVIEW_CTA_CLICKED' ? 'CTA Click' :
+                       evt.eventType === 'PREVIEW_VIEWED' ? 'View' :
+                       evt.eventType === 'PREVIEW_CALL_CLICKED' ? 'Call' :
+                       evt.eventType === 'PREVIEW_RETURN_VISIT' ? 'Return' : evt.eventType}
+                      {' '}{new Date(evt.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+        )}
+
         {/* Messages + Build Status Sidebar */}
         <div className="flex gap-4">
         <Card className="p-6 flex-1 min-w-0">
           <div className="space-y-4 max-h-[60vh] overflow-y-auto">
             {detailMessages.length === 0 ? (
-              <div className="text-center py-12 text-gray-500 dark:text-gray-400">No messages in this conversation yet.</div>
+              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                {selectedCloseConv.engagement?.ctaClickCount > 0
+                  ? 'Lead clicked CTA but no messages sent yet. Send a message below to engage!'
+                  : 'No messages in this conversation yet.'}
+              </div>
             ) : (
               detailMessages.map((msg: any) => {
                 const isOutbound = msg.direction === 'OUTBOUND'

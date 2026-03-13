@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { pushToRep, pushToAllAdmins } from '@/lib/dialer-events'
 import { calculateEngagementScore } from '@/lib/engagement-scoring'
+import { pushToMessages } from '@/lib/messages-v2-events'
 
 export const dynamic = 'force-dynamic'
 
@@ -74,42 +75,43 @@ export async function POST(request: NextRequest) {
     let scoreResult: Awaited<ReturnType<typeof calculateEngagementScore>> | null = null
     try { scoreResult = await calculateEngagementScore(lead.id) } catch (e) { console.warn('[Preview CTA] Score calc failed:', e) }
 
-    // Only promote status, send admin email, and trigger Close Engine
-    // for organic engagement (Bug A fix). During active calls, the rep told the lead to click.
-    if (!activeCall) {
-      // If score crossed to HOT, set status to HOT_LEAD
-      if (scoreResult?.priorityChanged && scoreResult.newPriority === 'HOT') {
-        await prisma.lead.update({
-          where: { id: lead.id },
-          data: { status: 'HOT_LEAD' },
-        })
-      }
+    // Always promote status + notify on CTA click (organic OR during call)
+    if (scoreResult?.priorityChanged && scoreResult.newPriority === 'HOT') {
+      await prisma.lead.update({
+        where: { id: lead.id },
+        data: { status: 'HOT_LEAD' },
+      })
+    }
 
-      // Send urgent email notification to admin via Resend
-      try {
-        const { sendEmail } = await import('@/lib/resend')
-        await sendEmail({
-          to: process.env.ADMIN_EMAIL || 'andrew@brightautomations.net',
-          subject: `Hot Lead: ${lead.companyName} clicked CTA`,
-          html: `<p><strong>${lead.firstName}</strong> at <strong>${lead.companyName}</strong> clicked "Get Started" on their preview site.</p>
-                 <p>Phone: ${lead.phone} | Email: ${lead.email || 'N/A'}</p>
-                 <p><a href="${process.env.BASE_URL || 'https://app.brightautomations.net'}/admin/messages">View conversation</a></p>`,
-          trigger: 'hot_lead_admin_notification',
-        })
-      } catch (emailErr) {
-        console.error('[Preview CTA] Admin email notification failed:', emailErr)
-      }
+    // Send urgent email notification to admin via Resend
+    try {
+      const { sendEmail } = await import('@/lib/resend')
+      await sendEmail({
+        to: process.env.ADMIN_EMAIL || 'andrew@brightautomations.net',
+        subject: `${activeCall ? '📞 ' : ''}Hot Lead: ${lead.companyName} clicked CTA`,
+        html: `<p><strong>${lead.firstName}</strong> at <strong>${lead.companyName}</strong> clicked "Get Started" on their preview site.${activeCall ? ' <strong>(During active call)</strong>' : ''}</p>
+               <p>Phone: ${lead.phone} | Email: ${lead.email || 'N/A'}</p>
+               <p><a href="${process.env.BASE_URL || 'https://app.brightautomations.net'}/admin/messages?leadId=${lead.id}">View conversation</a></p>`,
+        trigger: 'hot_lead_admin_notification',
+      })
+    } catch (emailErr) {
+      console.error('[Preview CTA] Admin email notification failed:', emailErr)
+    }
 
-      // Trigger Close Engine (atomic guard inside prevents double-fire)
-      try {
-        const { triggerCloseEngine } = await import('@/lib/close-engine')
-        await triggerCloseEngine({
-          leadId: lead.id,
-          entryPoint: 'PREVIEW_CTA',
-        })
-      } catch (err) {
-        console.error('[Preview CTA] Close Engine trigger failed:', err)
-      }
+    // Push CTA click to Messages V2
+    try { pushToMessages({ type: 'PREVIEW_CLICK', data: { leadId: lead.id, eventType: 'PREVIEW_CTA_CLICKED' }, timestamp: new Date().toISOString() }) } catch {}
+
+    // Always trigger Close Engine so the lead appears in the Messages inbox.
+    // During active calls, skip the automated first message (rep is already talking to them).
+    try {
+      const { triggerCloseEngine } = await import('@/lib/close-engine')
+      await triggerCloseEngine({
+        leadId: lead.id,
+        entryPoint: 'PREVIEW_CTA',
+        skipFirstMessage: !!activeCall,
+      })
+    } catch (err) {
+      console.error('[Preview CTA] Close Engine trigger failed:', err)
     }
 
     // ── SMS Campaign CTA Click Tracking ──

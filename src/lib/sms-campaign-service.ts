@@ -12,6 +12,7 @@
 import { prisma } from '@/lib/db'
 import { sendSMSViaProvider } from '@/lib/sms-provider'
 import { getTwilioClient } from '@/lib/twilio'
+import { pushToMessages } from '@/lib/messages-v2-events'
 import type {
   SmsCampaign,
   SmsCampaignLead,
@@ -316,6 +317,9 @@ export async function sendColdTextToLead(
     }),
   ])
 
+  // Push NEW_MESSAGE to Messages V2
+  try { pushToMessages({ type: 'NEW_MESSAGE', data: { leadId: lead.id, direction: 'OUTBOUND', content: content.substring(0, 200), trigger: 'sms_campaign_cold_text' }, timestamp: new Date().toISOString() }) } catch {}
+
   return { success: true, sid: result.sid }
 }
 
@@ -530,6 +534,9 @@ export async function processDripStep(
     where: { id: campaignLead.leadId },
     data: { smsFunnelStage: 'DRIP_ACTIVE' },
   })
+
+  // Push drip message to Messages V2
+  try { pushToMessages({ type: 'NEW_MESSAGE', data: { leadId: campaignLead.leadId, direction: 'OUTBOUND', content: content.substring(0, 200), trigger: `sms_campaign_drip_${step}` }, timestamp: new Date().toISOString() }) } catch {}
 
   // Create lead event
   await prisma.leadEvent.create({

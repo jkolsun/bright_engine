@@ -25,6 +25,7 @@ import {
 } from './close-engine-prompts'
 import { getAnthropicClient, calculateApiCost } from './anthropic'
 import { isConversationEnder, getSmartChatSettings } from './message-batcher'
+import { pushToMessages } from './messages-v2-events'
 
 // ============================================
 // sendCloseEngineMessage() — SMS with email fallback
@@ -76,6 +77,8 @@ export async function sendCloseEngineMessage(options: CloseEngineMessageOptions)
   })
 
   if (smsResult.success) {
+    // Push NEW_MESSAGE to Messages V2 for real-time updates
+    try { pushToMessages({ type: 'NEW_MESSAGE', data: { leadId, direction: 'OUTBOUND', content: message.substring(0, 200), trigger }, timestamp: new Date().toISOString() }) } catch {}
     return { success: true, channel: 'SMS', fallbackUsed: false }
   }
 
@@ -651,6 +654,8 @@ export async function processCloseEngineInbound(
   // 4. Handle stage transition (skip PAYMENT_SENT — sendPaymentLink handles that)
   if (claudeResponse.nextStage && claudeResponse.nextStage !== CONVERSATION_STAGES.PAYMENT_SENT) {
     await transitionStage(conversationId, claudeResponse.nextStage)
+    // Push stage change to Messages V2
+    try { pushToMessages({ type: 'LEAD_UPDATE', data: { leadId: lead.id, stage: claudeResponse.nextStage, conversationId }, timestamp: new Date().toISOString() }) } catch {}
   }
 
   // 5. Handle readyToBuild — kick off the build pipeline immediately
