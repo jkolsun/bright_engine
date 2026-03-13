@@ -77,6 +77,7 @@ export default function EscalationRules(_props: EscalationRulesProps) {
                       min={1}
                       className="w-16 h-7 text-xs"
                       value={trigger.threshold}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => {
                         const updated = [...aiHandler.escalationTriggers]
                         updated[idx] = { ...updated[idx], threshold: parseInt(e.target.value || '1') }

@@ -479,12 +479,12 @@ function RepEditForm({ rep, onSave, onBack }: { rep: any; onSave: (data: any) =>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Commission Rate (%)</label>
-              <Input type="number" min="0" max="100" step="5" value={commissionRate} onChange={e => setCommissionRate(e.target.value)} className="rounded-lg" />
+              <Input type="number" min="0" max="100" step="5" value={commissionRate} onFocus={(e) => e.target.select()} onChange={e => setCommissionRate(e.target.value)} className="rounded-lg" />
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Standard: 50%. Top performers: 60%.</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1">Daily Lead Cap</label>
-              <Input type="number" min="1" max="100" value={dailyLeadCap} onChange={e => setDailyLeadCap(e.target.value)} className="rounded-lg" />
+              <Input type="number" min="1" max="100" value={dailyLeadCap} onFocus={(e) => e.target.select()} onChange={e => setDailyLeadCap(e.target.value)} className="rounded-lg" />
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Max leads assigned per day</p>
             </div>
           </div>

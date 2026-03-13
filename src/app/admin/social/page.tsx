@@ -565,17 +565,17 @@ function CreateCampaignModal({ onClose, onCreated }: { onClose: () => void; onCr
       <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="text-xs text-gray-500 block mb-1">DM 2 Click Delay (days)</label>
-          <input type="number" value={dm2ClickDelay} onChange={e => setDm2ClickDelay(+e.target.value)} min={1}
+          <input type="number" value={dm2ClickDelay} onFocus={(e) => e.target.select()} onChange={e => setDm2ClickDelay(+e.target.value)} min={1}
             className="w-full border dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-800 dark:text-gray-100" />
         </div>
         <div>
           <label className="text-xs text-gray-500 block mb-1">DM 2 No-Click Delay (days)</label>
-          <input type="number" value={dm2NoClickDelay} onChange={e => setDm2NoClickDelay(+e.target.value)} min={1}
+          <input type="number" value={dm2NoClickDelay} onFocus={(e) => e.target.select()} onChange={e => setDm2NoClickDelay(+e.target.value)} min={1}
             className="w-full border dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-800 dark:text-gray-100" />
         </div>
         <div>
           <label className="text-xs text-gray-500 block mb-1">DM 3 Delay (days)</label>
-          <input type="number" value={dm3Delay} onChange={e => setDm3Delay(+e.target.value)} min={1}
+          <input type="number" value={dm3Delay} onFocus={(e) => e.target.select()} onChange={e => setDm3Delay(+e.target.value)} min={1}
             className="w-full border dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-800 dark:text-gray-100" />
         </div>
       </div>
@@ -770,18 +770,21 @@ function SettingsTab() {
             <div>
               <label className="text-xs text-gray-500 block mb-1">Daily Limit</label>
               <input type="number" value={settings.instagram.dailyLimit}
+                onFocus={(e) => e.target.select()}
                 onChange={e => setSettings({ ...settings, instagram: { ...settings.instagram, dailyLimit: +e.target.value } })}
                 className="w-full border dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-800 dark:text-gray-100" />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1">Send From (hour)</label>
               <input type="number" value={settings.instagram.sendWindowStart} min={0} max={23}
+                onFocus={(e) => e.target.select()}
                 onChange={e => setSettings({ ...settings, instagram: { ...settings.instagram, sendWindowStart: +e.target.value } })}
                 className="w-full border dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-800 dark:text-gray-100" />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1">Send Until (hour)</label>
               <input type="number" value={settings.instagram.sendWindowEnd} min={0} max={23}
+                onFocus={(e) => e.target.select()}
                 onChange={e => setSettings({ ...settings, instagram: { ...settings.instagram, sendWindowEnd: +e.target.value } })}
                 className="w-full border dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-800 dark:text-gray-100" />
             </div>
@@ -825,18 +828,21 @@ function SettingsTab() {
             <div>
               <label className="text-xs text-gray-500 block mb-1">Daily Limit</label>
               <input type="number" value={settings.linkedin.dailyLimit}
+                onFocus={(e) => e.target.select()}
                 onChange={e => setSettings({ ...settings, linkedin: { ...settings.linkedin, dailyLimit: +e.target.value } })}
                 className="w-full border dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-800 dark:text-gray-100" />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1">Send From (hour)</label>
               <input type="number" value={settings.linkedin.sendWindowStart} min={0} max={23}
+                onFocus={(e) => e.target.select()}
                 onChange={e => setSettings({ ...settings, linkedin: { ...settings.linkedin, sendWindowStart: +e.target.value } })}
                 className="w-full border dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-800 dark:text-gray-100" />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1">Send Until (hour)</label>
               <input type="number" value={settings.linkedin.sendWindowEnd} min={0} max={23}
+                onFocus={(e) => e.target.select()}
                 onChange={e => setSettings({ ...settings, linkedin: { ...settings.linkedin, sendWindowEnd: +e.target.value } })}
                 className="w-full border dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-800 dark:text-gray-100" />
             </div>

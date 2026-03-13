@@ -32,6 +32,7 @@ export default function TargetsTab() {
               type="number"
               min={0}
               value={targets.dailyDials}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => setTargets({ ...targets, dailyDials: parseInt(e.target.value) || 0 })}
             />
           </div>
@@ -41,6 +42,7 @@ export default function TargetsTab() {
               type="number"
               min={0}
               value={targets.dailyConversations}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => setTargets({ ...targets, dailyConversations: parseInt(e.target.value) || 0 })}
             />
           </div>
@@ -50,6 +52,7 @@ export default function TargetsTab() {
               type="number"
               min={0}
               value={targets.dailyCloses}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => setTargets({ ...targets, dailyCloses: parseInt(e.target.value) || 0 })}
             />
           </div>
@@ -59,6 +62,7 @@ export default function TargetsTab() {
               type="number"
               min={0}
               value={targets.dailyLeadCap}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => setTargets({ ...targets, dailyLeadCap: parseInt(e.target.value) || 0 })}
             />
             <p className="text-xs text-gray-400 mt-1">Max new leads per rep</p>
@@ -72,6 +76,7 @@ export default function TargetsTab() {
             max={30}
             className="w-32"
             value={targets.minAutoDialDelay}
+            onFocus={(e) => e.target.select()}
             onChange={(e) => setTargets({ ...targets, minAutoDialDelay: parseInt(e.target.value) || 0 })}
           />
           <p className="text-xs text-gray-400 mt-1">Reps can set their own delay but can&apos;t go below this value</p>
@@ -98,6 +103,7 @@ export default function TargetsTab() {
               step={1000}
               className="w-40"
               value={targets.monthlyRevenueTarget}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => setTargets({ ...targets, monthlyRevenueTarget: parseInt(e.target.value) || 0 })}
             />
           </div>

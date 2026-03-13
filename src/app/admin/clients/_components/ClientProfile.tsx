@@ -354,6 +354,7 @@ export default function ClientProfile({ client, onBack, onUpdate, onDelete, onDe
                     min="0"
                     step="0.01"
                     value={commissionInput}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => { setCommissionInput(e.target.value); setCommissionError('') }}
                     placeholder="Leave blank for no commission"
                   />

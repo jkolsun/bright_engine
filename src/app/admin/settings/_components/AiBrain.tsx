@@ -180,9 +180,9 @@ export default function AiBrain(_props: AiBrainProps) {
         <FieldLabel>Response Delay Range</FieldLabel>
         <p className="text-xs text-gray-500 mb-2">How long the AI waits before responding (makes it feel natural).</p>
         <div className="flex items-center gap-3">
-          <Input type="number" min={0} max={120} className="h-9 w-20 text-sm" value={aiControls.delayMin} onChange={(e) => setAiControls(prev => ({ ...prev, delayMin: parseInt(e.target.value || '0') }))} />
+          <Input type="number" min={0} max={120} className="h-9 w-20 text-sm" value={aiControls.delayMin} onFocus={(e) => e.target.select()} onChange={(e) => setAiControls(prev => ({ ...prev, delayMin: parseInt(e.target.value || '0') }))} />
           <span className="text-sm text-gray-500">to</span>
-          <Input type="number" min={0} max={300} className="h-9 w-20 text-sm" value={aiControls.delayMax} onChange={(e) => setAiControls(prev => ({ ...prev, delayMax: parseInt(e.target.value || '0') }))} />
+          <Input type="number" min={0} max={300} className="h-9 w-20 text-sm" value={aiControls.delayMax} onFocus={(e) => e.target.select()} onChange={(e) => setAiControls(prev => ({ ...prev, delayMax: parseInt(e.target.value || '0') }))} />
           <span className="text-sm text-gray-500">seconds</span>
         </div>
       </div>
@@ -201,6 +201,7 @@ export default function AiBrain(_props: AiBrainProps) {
             step={1}
             className="h-9 w-24 text-sm"
             value={smartChat.batchWindowMs / 1000}
+            onFocus={(e) => e.target.select()}
             onChange={(e) => setSmartChat(prev => ({ ...prev, batchWindowMs: Math.round(parseFloat(e.target.value || '0') * 1000) }))}
           />
           <span className="text-sm text-gray-500">seconds</span>

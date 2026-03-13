@@ -1148,6 +1148,7 @@ export default function ScraperTab() {
                     <input
                       type="number"
                       value={icpFormMinReviews}
+                      onFocus={(e) => e.target.select()}
                       onChange={e => setIcpFormMinReviews(parseInt(e.target.value) || 0)}
                       className="w-24 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                     />
@@ -1158,6 +1159,7 @@ export default function ScraperTab() {
                       type="number"
                       step="0.1"
                       value={icpFormMinRating}
+                      onFocus={(e) => e.target.select()}
                       onChange={e => setIcpFormMinRating(parseFloat(e.target.value) || 0)}
                       className="w-24 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                     />
@@ -1275,6 +1277,7 @@ export default function ScraperTab() {
                 <input
                   type="number"
                   value={minReviews}
+                  onFocus={(e) => e.target.select()}
                   onChange={e => setMinReviews(parseInt(e.target.value) || 0)}
                   className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                   min={0}
@@ -1285,6 +1288,7 @@ export default function ScraperTab() {
                 <input
                   type="number"
                   value={minRating}
+                  onFocus={(e) => e.target.select()}
                   onChange={e => setMinRating(parseFloat(e.target.value) || 0)}
                   className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                   min={0}
@@ -1297,6 +1301,7 @@ export default function ScraperTab() {
                 <input
                   type="number"
                   value={targetLeads}
+                  onFocus={(e) => e.target.select()}
                   onChange={e => setTargetLeads(parseInt(e.target.value) || 100)}
                   className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                   min={10}
@@ -1344,6 +1349,7 @@ export default function ScraperTab() {
                   <input
                     type="number"
                     value={minCategories}
+                    onFocus={(e) => e.target.select()}
                     onChange={e => setMinCategories(parseInt(e.target.value) || 0)}
                     className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                     min={0}
@@ -1354,6 +1360,7 @@ export default function ScraperTab() {
                   <input
                     type="number"
                     value={maxDistance}
+                    onFocus={(e) => e.target.select()}
                     onChange={e => setMaxDistance(parseInt(e.target.value) || 0)}
                     className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:bg-slate-800 dark:text-gray-100"
                     min={0}

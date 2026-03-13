@@ -39,13 +39,13 @@ export default function ClientsPage() {
   const [overviewStats, setOverviewStats] = useState<any>({ stats: {}, alerts: {} })
 
   // Dynamic pricing from DB
-  const [pricing, setPricing] = useState<{ siteBuildFee: number; monthlyHosting: number; firstMonthTotal: number }>({ siteBuildFee: 0, monthlyHosting: 99, firstMonthTotal: 99 })
+  const [pricing, setPricing] = useState<{ siteBuildFee: number; monthlyHosting: number; firstMonthTotal: number }>({ siteBuildFee: 0, monthlyHosting: 100, firstMonthTotal: 100 })
 
   // Form data
   const [formData, setFormData] = useState({
     companyName: '', contactName: '', phone: '', email: '',
     siteUrl: '', location: '', industry: 'GENERAL_CONTRACTING',
-    monthlyRevenue: 99, plan: 'base', siteBuildFee: 0,
+    monthlyRevenue: 100, plan: 'base', siteBuildFee: 0,
     chargeSiteBuildFee: true, tags: [] as string[], notes: '',
     clientTrack: 'COLD_SMS' as 'COLD_SMS' | 'MEETING_CLOSE',
     repName: '',
@@ -290,7 +290,7 @@ export default function ClientsPage() {
                           ...prev,
                           clientTrack: track,
                           repName: track === 'COLD_SMS' ? '' : prev.repName,
-                          monthlyRevenue: track === 'MEETING_CLOSE' ? 99 : pricing.monthlyHosting,
+                          monthlyRevenue: pricing.monthlyHosting,
                         }))
                       }} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-800 dark:text-gray-100">
                         <option value="COLD_SMS">Cold SMS (Default)</option>
@@ -355,14 +355,14 @@ export default function ClientsPage() {
                         <label className="text-sm font-medium">Build Fee</label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                          <input type="number" value={formData.siteBuildFee} onChange={(e) => setFormData(prev => ({ ...prev, siteBuildFee: parseInt(e.target.value) || 0 }))} placeholder="0" className="w-full pl-7 pr-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-800 dark:text-gray-100" />
+                          <input type="text" inputMode="numeric" value={formData.siteBuildFee} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); setFormData(prev => ({ ...prev, siteBuildFee: v === '' ? 0 : parseInt(v) })) }} onFocus={(e) => e.target.select()} placeholder="0" className="w-full pl-7 pr-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-800 dark:text-gray-100" />
                         </div>
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Monthly Hosting</label>
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                          <input type="number" value={formData.monthlyRevenue} onChange={(e) => setFormData(prev => ({ ...prev, monthlyRevenue: parseInt(e.target.value) || 0 }))} placeholder="99" className="w-full pl-7 pr-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-800 dark:text-gray-100" />
+                          <input type="text" inputMode="numeric" value={formData.monthlyRevenue} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); setFormData(prev => ({ ...prev, monthlyRevenue: v === '' ? 0 : parseInt(v) })) }} onFocus={(e) => e.target.select()} placeholder="100" className="w-full pl-7 pr-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-800 dark:text-gray-100" />
                         </div>
                         <p className="text-xs text-gray-400">/mo after first month</p>
                       </div>

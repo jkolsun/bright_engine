@@ -20,17 +20,17 @@ export interface PricingConfig {
 const DEFAULT_PRICING: PricingConfig = {
   coreProductId: '',
   name: 'Website + Hosting',
-  month1Price: 99,
-  recurringPrice: 99,
+  month1Price: 100,
+  recurringPrice: 100,
   annualPrice: null,
   stripeLink: '',
   stripeLinkAnnual: null,
-  pitchOneLiner: 'Free install, $99/mo hosting',
-  previewBannerText: '$99/mo — free install',
-  repCloseScript: "The install is free \u2014 we build your site, get it on your own domain, everything. It's just $99/month for hosting, security updates, and support. No contracts, cancel anytime.",
+  pitchOneLiner: 'Free install, $100/mo hosting',
+  previewBannerText: '$100/mo — free install',
+  repCloseScript: "The install is free \u2014 we build your site, get it on your own domain, everything. It's just $100/month for hosting, security updates, and support. No contracts, cancel anytime.",
   siteBuildFee: 0,
-  monthlyHosting: 99,
-  firstMonthTotal: 99,
+  monthlyHosting: 100,
+  firstMonthTotal: 100,
 }
 
 let cachedConfig: PricingConfig | null = null

@@ -1612,6 +1612,7 @@ function CampaignSettingsTab() {
               min={0}
               max={23}
               value={settings.sendWindowStart}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => updateField('sendWindowStart', parseInt(e.target.value) || 0)}
               className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             />
@@ -1625,6 +1626,7 @@ function CampaignSettingsTab() {
               min={0}
               max={23}
               value={settings.sendWindowEnd}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => updateField('sendWindowEnd', parseInt(e.target.value) || 0)}
               className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             />
@@ -1664,6 +1666,7 @@ function CampaignSettingsTab() {
               type="number"
               min={1}
               value={settings.dailyLimit}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => updateField('dailyLimit', parseInt(e.target.value) || 1)}
               className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             />
@@ -1676,6 +1679,7 @@ function CampaignSettingsTab() {
               type="number"
               min={1}
               value={settings.messagesPerMinute}
+              onFocus={(e) => e.target.select()}
               onChange={(e) => updateField('messagesPerMinute', parseInt(e.target.value) || 1)}
               className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 w-full bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             />
@@ -1765,6 +1769,7 @@ function DripEditor({
             type="number"
             min={0}
             value={dayOffset}
+            onFocus={(e) => e.target.select()}
             onChange={(e) => onOffsetChange(parseInt(e.target.value) || 0)}
             className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-16 text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-center"
           />

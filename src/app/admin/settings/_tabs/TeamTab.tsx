@@ -950,6 +950,7 @@ function CommissionsSection() {
                     max="100"
                     step="5"
                     value={(rates[rep.id] || 0.5) * 100}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => {
                       setRates((prev) => ({
                         ...prev,
@@ -1387,6 +1388,7 @@ function PerRepTargetsSection() {
                         min={0}
                         className="h-8 text-sm"
                         value={getRepTarget(rep.id, 'dailyDials')}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => setRepTarget(rep.id, 'dailyDials', parseInt(e.target.value) || 0)}
                       />
                     </div>
@@ -1397,6 +1399,7 @@ function PerRepTargetsSection() {
                         min={0}
                         className="h-8 text-sm"
                         value={getRepTarget(rep.id, 'dailyConversations')}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => setRepTarget(rep.id, 'dailyConversations', parseInt(e.target.value) || 0)}
                       />
                     </div>
@@ -1407,6 +1410,7 @@ function PerRepTargetsSection() {
                         min={0}
                         className="h-8 text-sm"
                         value={getRepTarget(rep.id, 'dailyCloses')}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => setRepTarget(rep.id, 'dailyCloses', parseInt(e.target.value) || 0)}
                       />
                     </div>
@@ -1417,6 +1421,7 @@ function PerRepTargetsSection() {
                         min={0}
                         className="h-8 text-sm"
                         value={getRepTarget(rep.id, 'dailyLeadCap')}
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => setRepTarget(rep.id, 'dailyLeadCap', parseInt(e.target.value) || 0)}
                       />
                     </div>

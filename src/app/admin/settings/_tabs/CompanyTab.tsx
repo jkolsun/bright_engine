@@ -314,6 +314,7 @@ export default function CompanyTab() {
             max={90}
             className="w-32"
             value={companyInfo.previewExpirationDays}
+            onFocus={(e) => e.target.select()}
             onChange={(e) => setCompanyInfo({ ...companyInfo, previewExpirationDays: parseInt(e.target.value) || 14 })}
           />
           <p className="text-xs text-gray-400 mt-1">How many days before a preview link expires</p>
@@ -392,7 +393,7 @@ export default function CompanyTab() {
               </div>
               <div>
                 <FieldLabel>Price ($)</FieldLabel>
-                <Input type="number" min={0} placeholder="0" value={newProduct.price} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} />
+                <Input type="number" min={0} placeholder="0" value={newProduct.price} onFocus={(e) => e.target.select()} onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })} />
               </div>
               <div>
                 <FieldLabel>Type</FieldLabel>
@@ -422,11 +423,11 @@ export default function CompanyTab() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <FieldLabel>First Month Price ($)</FieldLabel>
-                    <Input type="number" min={0} value={newProduct.month1Price} onChange={(e) => setNewProduct({ ...newProduct, month1Price: e.target.value })} />
+                    <Input type="number" min={0} value={newProduct.month1Price} onFocus={(e) => e.target.select()} onChange={(e) => setNewProduct({ ...newProduct, month1Price: e.target.value })} />
                   </div>
                   <div>
                     <FieldLabel>Recurring Price ($/mo)</FieldLabel>
-                    <Input type="number" min={0} value={newProduct.recurringPrice} onChange={(e) => setNewProduct({ ...newProduct, recurringPrice: e.target.value })} />
+                    <Input type="number" min={0} value={newProduct.recurringPrice} onFocus={(e) => e.target.select()} onChange={(e) => setNewProduct({ ...newProduct, recurringPrice: e.target.value })} />
                   </div>
                 </div>
                 <div>
@@ -462,11 +463,11 @@ export default function CompanyTab() {
                 </div>
                 <div>
                   <FieldLabel>Min Client Age (days)</FieldLabel>
-                  <Input type="number" min={0} value={newProduct.minClientAgeDays} onChange={(e) => setNewProduct({ ...newProduct, minClientAgeDays: e.target.value })} />
+                  <Input type="number" min={0} value={newProduct.minClientAgeDays} onFocus={(e) => e.target.select()} onChange={(e) => setNewProduct({ ...newProduct, minClientAgeDays: e.target.value })} />
                 </div>
                 <div>
                   <FieldLabel>Max Pitches</FieldLabel>
-                  <Input type="number" min={1} value={newProduct.maxPitchesPerClient} onChange={(e) => setNewProduct({ ...newProduct, maxPitchesPerClient: e.target.value })} />
+                  <Input type="number" min={1} value={newProduct.maxPitchesPerClient} onFocus={(e) => e.target.select()} onChange={(e) => setNewProduct({ ...newProduct, maxPitchesPerClient: e.target.value })} />
                 </div>
                 <div>
                   <FieldLabel>Pitch Channel</FieldLabel>
@@ -675,11 +676,11 @@ export default function CompanyTab() {
                           </div>
                           <div>
                             <label className="text-xs text-gray-500 block mb-1">Min Age (days) <FieldInfo text="Don't pitch this product until the client has been active for this many days." /></label>
-                            <Input type="number" min={0} className="h-8 text-sm" value={editingProductData?.minClientAgeDays || ''} onChange={(e) => setEditingProductData({ ...editingProductData, minClientAgeDays: parseInt(e.target.value) || null })} />
+                            <Input type="number" min={0} className="h-8 text-sm" value={editingProductData?.minClientAgeDays || ''} onFocus={(e) => e.target.select()} onChange={(e) => setEditingProductData({ ...editingProductData, minClientAgeDays: parseInt(e.target.value) || null })} />
                           </div>
                           <div>
                             <label className="text-xs text-gray-500 block mb-1">Max Pitches <FieldInfo text="Stop pitching after this many tries per client." /></label>
-                            <Input type="number" min={1} className="h-8 text-sm" value={editingProductData?.maxPitchesPerClient || 3} onChange={(e) => setEditingProductData({ ...editingProductData, maxPitchesPerClient: parseInt(e.target.value) || 3 })} />
+                            <Input type="number" min={1} className="h-8 text-sm" value={editingProductData?.maxPitchesPerClient || 3} onFocus={(e) => e.target.select()} onChange={(e) => setEditingProductData({ ...editingProductData, maxPitchesPerClient: parseInt(e.target.value) || 3 })} />
                           </div>
                           <div>
                             <label className="text-xs text-gray-500 block mb-1">Channel <FieldInfo text="How the AI delivers the pitch: SMS, Email, or Both." /></label>
@@ -691,7 +692,7 @@ export default function CompanyTab() {
                           </div>
                           <div>
                             <label className="text-xs text-gray-500 block mb-1">Sort Order</label>
-                            <Input type="number" min={0} className="h-8 text-sm" value={editingProductData?.sortOrder || 0} onChange={(e) => setEditingProductData({ ...editingProductData, sortOrder: parseInt(e.target.value) || 0 })} />
+                            <Input type="number" min={0} className="h-8 text-sm" value={editingProductData?.sortOrder || 0} onFocus={(e) => e.target.select()} onChange={(e) => setEditingProductData({ ...editingProductData, sortOrder: parseInt(e.target.value) || 0 })} />
                           </div>
                         </div>
                       )}

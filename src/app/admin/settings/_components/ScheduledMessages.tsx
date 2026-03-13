@@ -252,7 +252,7 @@ export default function ScheduledMessages(_props: ScheduledMessagesProps) {
                       {msg?.delayHours !== undefined && (
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-500">Delay:</span>
-                          <Input type="number" min={1} className="w-16 h-7 text-xs" value={msg.delayHours} onChange={(e) => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], delayHours: parseInt(e.target.value || '0') } }))} />
+                          <Input type="number" min={1} className="w-16 h-7 text-xs" value={msg.delayHours} onFocus={(e) => e.target.select()} onChange={(e) => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], delayHours: parseInt(e.target.value || '0') } }))} />
                           <span className="text-xs text-gray-500">hours</span>
                         </div>
                       )}
@@ -288,6 +288,7 @@ export default function ScheduledMessages(_props: ScheduledMessagesProps) {
                   placeholder="Day"
                   className="w-20 h-8 text-sm"
                   value={newDay}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => setNewDay(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addUrgencyDay()}
                 />
@@ -330,6 +331,7 @@ export default function ScheduledMessages(_props: ScheduledMessagesProps) {
                     step={0.05}
                     className="w-24"
                     value={sequences.safetyBuffer}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setSequences({ ...sequences, safetyBuffer: parseFloat(e.target.value) || 0.85 })}
                   />
                   <span className="text-sm text-gray-500">({Math.round(sequences.safetyBuffer * 100)}% of daily limit)</span>
@@ -384,7 +386,7 @@ export default function ScheduledMessages(_props: ScheduledMessagesProps) {
                       {msg?.delayHours !== undefined && (
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-500">Delay:</span>
-                          <Input type="number" min={1} className="w-16 h-7 text-xs" value={msg.delayHours} onChange={(e) => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], delayHours: parseInt(e.target.value || '0') } }))} />
+                          <Input type="number" min={1} className="w-16 h-7 text-xs" value={msg.delayHours} onFocus={(e) => e.target.select()} onChange={(e) => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], delayHours: parseInt(e.target.value || '0') } }))} />
                           <span className="text-xs text-gray-500">hours</span>
                         </div>
                       )}
@@ -420,7 +422,7 @@ export default function ScheduledMessages(_props: ScheduledMessagesProps) {
                       {msg?.delayHours !== undefined && (
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-500">Delay:</span>
-                          <Input type="number" min={1} className="w-16 h-7 text-xs" value={msg.delayHours} onChange={(e) => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], delayHours: parseInt(e.target.value || '0') } }))} />
+                          <Input type="number" min={1} className="w-16 h-7 text-xs" value={msg.delayHours} onFocus={(e) => e.target.select()} onChange={(e) => setAutomatedMessages(prev => ({ ...prev, [m.key]: { ...prev[m.key], delayHours: parseInt(e.target.value || '0') } }))} />
                           <span className="text-xs text-gray-500">hours</span>
                         </div>
                       )}
@@ -485,6 +487,7 @@ export default function ScheduledMessages(_props: ScheduledMessagesProps) {
                   placeholder="Day"
                   className="w-20 h-8 text-sm"
                   value={newClientDay}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => setNewClientDay(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addClientDay()}
                 />
