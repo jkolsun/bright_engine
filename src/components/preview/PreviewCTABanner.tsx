@@ -5,10 +5,10 @@ import { useState, useEffect } from 'react'
 export default function PreviewCTABanner({ previewId }: { previewId: string }) {
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [bannerPrice, setBannerPrice] = useState<number>(99)
+  const [monthlyPrice, setMonthlyPrice] = useState(100)
 
   useEffect(() => {
-    fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => { if (d?.firstMonthTotal) setBannerPrice(d.firstMonthTotal) }).catch(err => console.warn('[PreviewCTA] Pricing fetch failed:', err))
+    fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => { if (d?.monthlyHosting) setMonthlyPrice(d.monthlyHosting) }).catch(err => console.warn('[PreviewCTA] Pricing fetch failed:', err))
   }, [previewId])
 
   const handleClick = async () => {
@@ -45,7 +45,7 @@ export default function PreviewCTABanner({ previewId }: { previewId: string }) {
       ) : (
         <div className="flex flex-col items-center gap-2 py-3 px-6">
           <span className="text-sm sm:text-base font-semibold text-center">
-            Get This Site Live &mdash; ${bannerPrice}
+            Get This Site Live &mdash; <span className="text-green-300 font-bold">FREE Install</span> <span className="text-white/60 text-xs font-normal">then ${monthlyPrice}/mo</span>
           </span>
           <button
             onClick={handleClick}

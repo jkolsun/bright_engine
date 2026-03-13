@@ -6,12 +6,11 @@ import type { TemplateVariant } from '../config/template-types'
 
 export default function DisclaimerBanner({ variant, companyName }: { variant: TemplateVariant; companyName: string }) {
   const [visible, setVisible] = useState(true)
-  const [bannerText, setBannerText] = useState('$99/mo — free install')
+  const [monthlyPrice, setMonthlyPrice] = useState(100)
 
   useEffect(() => {
     fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => {
-      if (d?.previewBannerText) setBannerText(d.previewBannerText)
-      else if (d?.firstMonthTotal) setBannerText(`$${d.firstMonthTotal} to get started`)
+      if (d?.monthlyHosting) setMonthlyPrice(d.monthlyHosting)
     }).catch(err => console.warn('[DisclaimerBanner] Pricing fetch failed:', err))
   }, [])
 
@@ -40,8 +39,10 @@ export default function DisclaimerBanner({ variant, companyName }: { variant: Te
             This is a personalized preview of what we can build for your business.
             Our dev team will work directly with you to customize every detail.
           </p>
-          <p className="text-gray-900 font-bold text-lg mb-5">
-            {bannerText} <span className="text-gray-400 font-normal text-sm">• Expires in 7 days</span>
+          <p className="mb-5">
+            <span className="text-green-600 font-bold text-2xl">FREE Install</span>
+            <br />
+            <span className="text-gray-400 text-sm">then ${monthlyPrice}/mo hosting &middot; cancel anytime &middot; expires in 7 days</span>
           </p>
 
           <button
