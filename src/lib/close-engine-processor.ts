@@ -427,16 +427,8 @@ export async function processCloseEngineInbound(
       claudeResponse.nextStage = normalizeNextStage(claudeResponse.nextStage)
     }
 
-    // Post-process: intercept Stripe/payment URLs — AI must NEVER send these directly
-    if (claudeResponse.replyText && containsPaymentUrl(claudeResponse.replyText)) {
-      console.warn(`[CloseEngine] BLOCKED: AI tried to send payment URL directly for ${lead.companyName}`)
-      // Strip the URL from the message
-      claudeResponse.replyText = stripPaymentUrls(claudeResponse.replyText)
-      // Force payment link flow through approval
-      if (claudeResponse.nextStage !== CONVERSATION_STAGES.PAYMENT_SENT) {
-        claudeResponse.nextStage = CONVERSATION_STAGES.PAYMENT_SENT
-      }
-    }
+    // TEARDOWN: Stripe/payment URL interception removed. Was: blocked AI from sending payment URLs directly.
+    // Setting Engine spec will replace with meeting-booking logic.
 
     // Post-process: replace any literal {formUrl} the AI may have output
     // Use SmartChat settings formBaseUrl (same source as close-engine-prompts) for consistency
@@ -582,74 +574,14 @@ export async function processCloseEngineInbound(
     }
   }
 
-  // 3.5 Safety net: detect client acceptance in PREVIEW_SENT/EDIT_LOOP when Claude didn't trigger payment
-  if (
-    !claudeResponse.nextStage &&
-    ['PREVIEW_SENT', 'EDIT_LOOP'].includes(context.conversation.stage) &&
-    isClientAcceptance(inboundMessage)
-  ) {
-    console.log(`[CloseEngine] Client acceptance detected for ${lead.companyName} — forcing PAYMENT_SENT`)
-    claudeResponse.nextStage = CONVERSATION_STAGES.PAYMENT_SENT
-  }
+  // TEARDOWN: Safety net for PREVIEW_SENT/EDIT_LOOP acceptance detection removed.
+  // Was: detected client acceptance and forced PAYMENT_SENT stage transition.
 
-  // 3.55 EDIT_LOOP: if Claude detected an edit request, create EditRequest and route to handler
-  if (
-    context.conversation.stage === 'EDIT_LOOP' &&
-    claudeResponse.extractedData &&
-    (claudeResponse.extractedData as Record<string, unknown>).editRequest
-  ) {
-    try {
-      const editDescription = String((claudeResponse.extractedData as Record<string, unknown>).editRequest)
-      // Look up client by leadId since context.lead doesn't include relations
-      const clientForEdit = await prisma.client.findFirst({
-        where: { leadId: lead.id },
-        select: { id: true },
-      })
-      const clientId = clientForEdit?.id || ''
-      if (!clientId) {
-        console.warn(`[CloseEngine] EDIT_LOOP: No client found for lead ${lead.id} — skipping EditRequest`)
-        return
-      }
-      const editReq = await prisma.editRequest.create({
-        data: {
-          client: { connect: { id: clientId } },
-          lead: { connect: { id: lead.id } },
-          requestText: inboundMessage,
-          requestChannel: 'SMS',
-          aiInterpretation: editDescription,
-          complexityTier: 'medium',
-          status: 'new',
-        },
-      })
-      const { handleEditRequest } = await import('./edit-request-handler')
-      handleEditRequest({
-        clientId,
-        editRequestId: editReq.id,
-        instruction: editDescription,
-        complexity: 'medium',
-      }).catch(err => console.error('[CloseEngine] Edit handler failed:', err))
-      console.log(`[CloseEngine] EDIT_LOOP: Created EditRequest ${editReq.id} for ${lead.companyName}`)
-    } catch (err) {
-      console.error('[CloseEngine] Failed to create EditRequest in EDIT_LOOP:', err)
-    }
-  }
+  // TEARDOWN: EDIT_LOOP edit request handling removed.
+  // Was: created EditRequest records and routed to edit-request-handler.
 
-  // 3.6 Safety net: if stage is PENDING_APPROVAL (or any invalid payment-adjacent stage
-  // from a previous hallucination) but no pending PAYMENT_LINK approval exists,
-  // re-trigger the payment flow.
-  const paymentAdjacentStages = ['PENDING_APPROVAL', 'PAYMENT_PENDING', 'PENDING_PAYMENT', 'AWAITING_PAYMENT']
-  if (
-    paymentAdjacentStages.includes(context.conversation.stage) &&
-    !claudeResponse.nextStage
-  ) {
-    const pendingApproval = await prisma.approval.findFirst({
-      where: { leadId: lead.id, gate: 'PAYMENT_LINK', status: 'PENDING' },
-    })
-    if (!pendingApproval) {
-      console.log(`[CloseEngine] Stage "${context.conversation.stage}" but no pending PAYMENT_LINK approval for ${lead.companyName} — re-triggering payment flow`)
-      claudeResponse.nextStage = CONVERSATION_STAGES.PAYMENT_SENT
-    }
-  }
+  // TEARDOWN: PENDING_APPROVAL safety net removed.
+  // Was: re-triggered payment flow when no pending PAYMENT_LINK approval existed.
 
   // 4. Handle stage transition (skip PAYMENT_SENT — sendPaymentLink handles that)
   if (claudeResponse.nextStage && claudeResponse.nextStage !== CONVERSATION_STAGES.PAYMENT_SENT) {
@@ -750,74 +682,9 @@ export async function processCloseEngineInbound(
     promptSnippet: systemPrompt.slice(0, 200) + '...',
   }
 
-  // 9. Handle payment link flow separately from normal messages
-  if (claudeResponse.nextStage === CONVERSATION_STAGES.PAYMENT_SENT) {
-    // PAYMENT LINK FLOW — two separate actions:
-    // Action 1: Send the AI's conversational reply (e.g. "Awesome, getting the payment link ready")
-    const replyAutonomy = await checkAutonomy(conversationId, 'SEND_MESSAGE')
-
-    if (replyAutonomy.requiresApproval) {
-      // MANUAL mode — approval needed even for the reply
-      await prisma.approval.create({
-        data: {
-          gate: 'SEND_MESSAGE',
-          title: `AI Response — ${lead.companyName}`,
-          description: `AI response before payment link for ${lead.companyName}. Approve to send.`,
-          draftContent: claudeResponse.replyText,
-          leadId: lead.id,
-          requestedBy: 'system',
-          status: 'PENDING',
-          priority: 'NORMAL',
-          metadata: { conversationId, phone: lead.phone },
-        },
-      })
-    } else {
-      // FULL_AUTO or SEMI_AUTO — schedule conversational reply via BullMQ (serverless-safe)
-      const { addDelayedMessageJob } = await import('@/worker/queue')
-      await addDelayedMessageJob({
-        type: 'close-engine-message',
-        options: {
-          to: lead.phone,
-          toEmail: lead.email || undefined,
-          message: claudeResponse.replyText,
-          leadId: lead.id,
-          trigger: `close_engine_${context.conversation.stage.toLowerCase()}`,
-          aiDelaySeconds: delay,
-          conversationType: 'pre_client',
-          emailSubject: `${lead.companyName} — next steps`,
-          aiDecisionLog,
-        },
-      }, delay * 1000)
-
-      // Schedule payment link AFTER the conversational reply (NEW-C9 fix)
-      // Client receives context message first, then payment link 10s later
-      await addDelayedMessageJob({
-        type: 'payment-link',
-        conversationId,
-      }, (delay + 10) * 1000)
-    }
-
-    // MANUAL mode: payment link goes through approval immediately (admin controls timing)
-    if (replyAutonomy.requiresApproval) {
-      try {
-        const { sendPaymentLink } = await import('./close-engine-payment')
-        await sendPaymentLink(conversationId)
-      } catch (err) {
-        console.error('[CloseEngine] Failed to process payment link:', err)
-      }
-    }
-
-    // Track question if applicable, then return
-    if (claudeResponse.questionAsked) {
-      const asked = (context.conversation.questionsAsked as string[]) || []
-      asked.push(claudeResponse.questionAsked)
-      await prisma.closeEngineConversation.update({
-        where: { id: conversationId },
-        data: { questionsAsked: asked },
-      })
-    }
-    return
-  }
+  // TEARDOWN: Payment link flow (section 9) removed.
+  // Was: handled PAYMENT_SENT stage with conversational reply + scheduled Stripe payment link.
+  // Setting Engine spec will replace with meeting-booking logic.
 
   // NORMAL MESSAGE FLOW
   const autonomy = await checkAutonomy(conversationId, 'SEND_MESSAGE')
@@ -890,7 +757,7 @@ export async function processCloseEngineInbound(
  *
  * Stage-aware: In PREVIEW_SENT, EDIT_LOOP, PENDING_APPROVAL, PAYMENT_SENT
  * stages, acceptance signals ("looks good", "perfect", "let's do it") ALWAYS
- * get a response — they trigger the payment flow.
+ * get a response.
  *
  * Respects the conversationEnderEnabled setting — if toggled OFF, always responds.
  * The AI can still send proactive/scheduled messages later.
@@ -934,7 +801,7 @@ export async function shouldAIRespond(
  * Smart AI delay — adapts based on conversation tempo.
  * Active back-and-forth: 4-12s (feels like a real person typing)
  * First messages / cold leads: 30-60s (doesn't feel robotic)
- * Payment links: 15-45s (fast but not instant)
+ * TEARDOWN: Payment link delays removed.
  *
  * @param messageLength - Length of the AI response
  * @param messageType - Type of message being sent
@@ -955,7 +822,7 @@ export function calculateDelay(messageLength: number, messageType: string, recen
   const base =
     messageType === 'first_message_cta' ? 15  // CTA click = high intent
     : messageType === 'first_message' ? 45    // First contact — not too eager
-    : messageType === 'payment_link' ? 20     // Payment = business, be prompt
+    // TEARDOWN: payment_link delay removed
     : messageType === 'acknowledgment' ? 8    // Quick ack
     : messageType === 'detailed' ? 25         // Thoughtful response
     : 15                                      // Default
@@ -1076,8 +943,8 @@ const ACCEPTANCE_PHRASES = [
   'let\'s do it', 'lets do it', 'let\'s go', 'lets go',
   'i\'ll take it', 'ill take it', 'i want it',
   'sign me up', 'ready to go', 'let\'s move forward', 'lets move forward',
-  'send the link', 'send me the link', 'send payment', 'how do i pay',
-  'ready to pay', 'take my money', 'shut up and take my money',
+  'send the link', 'send me the link', 'book a call', 'schedule a meeting',
+  'book a meeting', 'set up a call', 'when can we meet',
   'i\'m in', 'im in', 'i\'m ready', 'im ready',
   'perfect', 'great', 'awesome', 'go ahead', 'approved', 'approve it',
   'make it live', 'go live', 'launch it', 'publish it',
@@ -1094,24 +961,17 @@ function isClientAcceptance(message: string): boolean {
 // Payment URL Detection + Stripping
 // ============================================
 
-const PAYMENT_URL_PATTERNS = [
-  /https?:\/\/buy\.stripe\.com\S*/gi,
-  /https?:\/\/checkout\.stripe\.com\S*/gi,
-  /https?:\/\/[^\s]*stripe\.com\/[^\s]*pay[^\s]*/gi,
-  /https?:\/\/[^\s]*\.stripe\.com\S*/gi,
-]
+// TEARDOWN: Payment URL patterns and Stripe references removed.
+// Was: detected and stripped Stripe payment URLs from AI responses.
 
-export function containsPaymentUrl(text: string): boolean {
-  return PAYMENT_URL_PATTERNS.some(pattern => pattern.test(text))
+export function containsPaymentUrl(_text: string): boolean {
+  // TEARDOWN: Always returns false — no payment URLs to detect.
+  return false
 }
 
 export function stripPaymentUrls(text: string): string {
-  let cleaned = text
-  for (const pattern of PAYMENT_URL_PATTERNS) {
-    cleaned = cleaned.replace(pattern, '')
-  }
-  // Clean up leftover whitespace and empty lines
-  return cleaned.replace(/\n\s*\n/g, '\n').replace(/\s{2,}/g, ' ').trim()
+  // TEARDOWN: No-op — no payment URLs to strip.
+  return text
 }
 
 // ============================================

@@ -47,7 +47,7 @@ export async function calculateRecommendation(
   leadId: string
 ): Promise<RecommendationResult> {
   // Load current call + lead data in parallel
-  const [call, lead, previousCalls, upsellTags, callbacks] = await Promise.all([
+  const [call, lead, previousCalls, callbacks] = await Promise.all([
     prisma.dialerCall.findUnique({
       where: { id: callId },
       select: {
@@ -69,10 +69,6 @@ export async function calculateRecommendation(
       orderBy: { startedAt: 'desc' },
       take: 10,
     }),
-    prisma.upsellTag.findMany({
-      where: { leadId, removedAt: null },
-      select: { id: true },
-    }),
     prisma.callbackSchedule.findMany({
       where: { leadId, status: 'COMPLETED' },
       select: { id: true },
@@ -93,7 +89,7 @@ export async function calculateRecommendation(
   const signals: Record<string, boolean | number> = {
     ctaClicked: !!call.ctaClickedDuringCall,
     previewOpenedLongCall: !!call.previewOpenedDuringCall && callDurationSec > 120,
-    upsellsTagged: upsellTags.length > 0,
+    upsellsTagged: false,
     previewSentNotOpenedLong: !!call.previewSentDuringCall && !call.previewOpenedDuringCall && callDurationSec > 60,
     previousCallback: callbacks.length > 0,
     previousNotInterested: previousCalls.some((c) => c.dispositionResult === 'NOT_INTERESTED'),

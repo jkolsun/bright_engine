@@ -20,17 +20,17 @@ export interface PricingConfig {
 const DEFAULT_PRICING: PricingConfig = {
   coreProductId: '',
   name: 'Website + Hosting',
-  month1Price: 100,
-  recurringPrice: 100,
+  month1Price: 99.95,
+  recurringPrice: 99.95,
   annualPrice: null,
   stripeLink: '',
   stripeLinkAnnual: null,
-  pitchOneLiner: 'Free install, $100/mo hosting',
-  previewBannerText: '$100/mo — free install',
-  repCloseScript: "The install is free \u2014 we build your site, get it on your own domain, everything. It's just $100/month for hosting, security updates, and support. No contracts, cancel anytime.",
+  pitchOneLiner: 'Free install, $99.95/mo hosting',
+  previewBannerText: '$99.95/mo — free install',
+  repCloseScript: "The install is free \u2014 we build your site, get it on your own domain, everything. It's just $99.95/month for hosting, security updates, and support. No contracts, cancel anytime.",
   siteBuildFee: 0,
-  monthlyHosting: 100,
-  firstMonthTotal: 100,
+  monthlyHosting: 99.95,
+  firstMonthTotal: 99.95,
 }
 
 let cachedConfig: PricingConfig | null = null
@@ -46,7 +46,8 @@ export async function getPricingConfig(options?: { forceRefresh?: boolean }): Pr
   if (!options?.forceRefresh && cachedConfig && (now - cacheTime) < CACHE_TTL) return cachedConfig
 
   try {
-    const coreProduct = await prisma.upsellProduct.findFirst({
+    // TEARDOWN: UpsellProduct model removed. Gracefully fall back to defaults.
+    const coreProduct = await (prisma as any).upsellProduct.findFirst({
       where: { isCore: true, active: true },
       orderBy: { sortOrder: 'asc' },
     })
@@ -71,10 +72,13 @@ export async function getPricingConfig(options?: { forceRefresh?: boolean }): Pr
       return cachedConfig
     }
   } catch (e) {
-    console.warn('[Pricing] DB lookup failed, using defaults:', e)
+    // TEARDOWN: UpsellProduct model removed, cache the default to avoid repeated warnings
+    console.warn('[Pricing] DB lookup failed, using defaults')
+    cachedConfig = DEFAULT_PRICING
+    cacheTime = now
   }
 
-  return DEFAULT_PRICING
+  return cachedConfig || DEFAULT_PRICING
 }
 
 /**

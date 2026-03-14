@@ -42,10 +42,9 @@ export async function POST(request: NextRequest) {
 
     // Transaction: clean up non-FK orphan tables, then delete clients (cascades the rest)
     const orphanWhere = { clientId: { in: idsToDelete } }
-    const [,,, result] = await prisma.$transaction([
+    const [,, result] = await prisma.$transaction([
       prisma.approval.deleteMany({ where: orphanWhere }),
       prisma.channelDecision.deleteMany({ where: orphanWhere }),
-      prisma.upsellPitch.deleteMany({ where: orphanWhere }),
       prisma.client.deleteMany({ where }),
     ])
 
@@ -85,7 +84,6 @@ export async function DELETE(request: NextRequest) {
     await prisma.$transaction([
       prisma.approval.deleteMany({ where: { clientId } }),
       prisma.channelDecision.deleteMany({ where: { clientId } }),
-      prisma.upsellPitch.deleteMany({ where: { clientId } }),
       prisma.client.delete({ where: { id: clientId } }),
     ])
 

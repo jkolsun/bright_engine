@@ -46,10 +46,6 @@ export async function calculateEngagementScore(
           ctaClickedDuringCall: true,
         },
       },
-      upsellTags: {
-        where: { removedAt: null },
-        select: { id: true },
-      },
     },
   })
 
@@ -165,7 +161,6 @@ export async function calculateEngagementScore(
   // Score 5: Call Engagement (max 20 points) — NEW for dialer
   let callEngagementScore = 0
   const dialerCalls = (lead as any).dialerCalls || []
-  const upsellTags = (lead as any).upsellTags || []
 
   // Connected calls: 0→0, 1→5, 2+→8
   const connectedCalls = dialerCalls.filter((c: any) => c.connectedAt).length
@@ -181,9 +176,6 @@ export async function calculateEngagementScore(
   else if (dispositions.includes('WILL_LOOK_LATER')) callEngagementScore = Math.min(20, callEngagementScore + 5)
   else if (dispositions.includes('NOT_INTERESTED')) callEngagementScore = Math.max(0, callEngagementScore - 5)
   else if (dispositions.includes('DNC')) callEngagementScore = 0
-
-  // Upsell tags bonus
-  if (upsellTags.length > 0) callEngagementScore = Math.min(20, callEngagementScore + 5)
 
   // Preview opened/CTA clicked during call bonus
   if (dialerCalls.some((c: any) => c.previewOpenedDuringCall)) callEngagementScore = Math.min(20, callEngagementScore + 3)

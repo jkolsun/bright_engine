@@ -1,3 +1,7 @@
+> **TEARDOWN NOTE (March 2026):** This document predates the pipeline redesign.
+> Urgency sequences, upsells, old pricing ($199/$149), and Close Engine closing behavior
+> have been removed. See SPEC_Teardown for details.
+
 # Bright Automations Platform
 
 Complete operations platform for Bright Automations website business.

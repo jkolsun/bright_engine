@@ -194,7 +194,7 @@ export default function ClientsPage() {
     return matchesSearch && matchesStatus && matchesTag
   })
 
-  // BUG K.1: Use API-computed MRR (includes upsells) with local fallback
+  // BUG K.1: Use API-computed MRR with local fallback
   const localMRR = clients.filter(c => c.hostingStatus === 'ACTIVE').reduce((sum, c) => sum + (c.monthlyRevenue || 0), 0)
   const stats = {
     total: clients.length,

@@ -20,7 +20,7 @@ const DEFAULT_DRIP_TEMPLATES = [
   { body: "Thanks for chatting {firstName}! Here's your website again: {previewUrl} — Let me know if you want any changes.", dayOffset: 0 },
   { body: "Hey {firstName}, quick question — are you getting enough calls from Google right now? Most {industry} businesses in {city} are leaving money on the table without a website.", dayOffset: 2 },
   { body: "Just wanted to share — we helped a {industry} company in {state} go from 0 to 15+ calls/month within 60 days of launching their site. Happy to do the same for {companyName}.", dayOffset: 5 },
-  { body: "{firstName}, your custom website for {companyName} is still ready to go. First month is free — just $199 to get set up. Want me to send over the details?", dayOffset: 8 },
+  { body: "{firstName}, your custom website for {companyName} is still ready to go. Just $99.95/mo, no setup fee, cancel anytime. Want me to send over the details?", dayOffset: 8 },
   { body: "Last check-in {firstName} — I'll keep your website saved for a bit longer in case you change your mind. Just reply here anytime. Have a great week!", dayOffset: 12 },
 ]
 

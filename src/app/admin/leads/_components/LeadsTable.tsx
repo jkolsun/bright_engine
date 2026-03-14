@@ -676,7 +676,6 @@ export default function LeadsTable({
                                 const ld = expandedLeadData[lead.id]
                                 if (!ld) return <p className="text-sm text-gray-400 italic">Loading...</p>
                                 const calls = ld.dialerCalls || []
-                                const upsellCount = ld.upsellTags?.length || 0
                                 const nextCallback = ld.callbackSchedules?.find((cb: any) => cb.status !== 'COMPLETED')
                                 return (
                                   <div className="space-y-2">
@@ -701,9 +700,6 @@ export default function LeadsTable({
                                           </div>
                                         ))}
                                       </div>
-                                    )}
-                                    {upsellCount > 0 && (
-                                      <p className="text-xs text-teal-600 font-medium pt-1">{upsellCount} upsell{upsellCount !== 1 ? 's' : ''} tagged</p>
                                     )}
                                     {nextCallback && (
                                       <p className="text-xs text-blue-600 font-medium">Callback: {new Date(nextCallback.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {nextCallback.rep?.name || ''}</p>

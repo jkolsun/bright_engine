@@ -61,7 +61,8 @@ export async function getPaymentLinkDynamic(
 ): Promise<string> {
   // 1. Check Products table
   try {
-    const product = await prisma.upsellProduct.findFirst({
+    // TEARDOWN: UpsellProduct model removed. This lookup will fail gracefully.
+    const product = await (prisma as any).upsellProduct.findFirst({
       where: {
         active: true,
         deletedAt: null,
@@ -114,7 +115,8 @@ export async function getAllPaymentLinks(): Promise<Array<{
   id: string; name: string; url: string; price: number; recurring: boolean; isCore: boolean
 }>> {
   try {
-    const products = await prisma.upsellProduct.findMany({
+    // TEARDOWN: UpsellProduct model removed. This lookup will fail gracefully.
+    const products = await (prisma as any).upsellProduct.findMany({
       where: { active: true, deletedAt: null, stripeLink: { not: null } },
       orderBy: [{ isCore: 'desc' }, { sortOrder: 'asc' }],
     })

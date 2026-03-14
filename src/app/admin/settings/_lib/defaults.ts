@@ -29,19 +29,13 @@ export const DEFAULT_CLIENT_SEQUENCES = {
   touchpointGuidance: {
     7: 'Check-in + quick win. Use their site stats to show early traction. Suggest one actionable thing (Google Business Profile, share link on social) based on what their data is missing.',
     14: 'Performance report. Share real numbers (visits, forms, calls). If traffic is low, suggest how to drive it. If traffic is good, celebrate it.',
-    30: 'Month milestone + first upsell. Use their actual data to recommend ONE upsell that would help the most: low traffic \u2192 SEO, no reviews \u2192 Review Widget.',
+    30: 'Month milestone. Use their actual data to highlight progress and suggest one improvement based on what their data is missing.',
     60: 'Growth opportunity. Compare current stats to first month. Identify the biggest growth lever based on data.',
-    90: 'Quarterly review + strategic upsell. Full quarter review. Use data to pitch the upsell that makes the most sense for their situation.',
-    180: 'Half-year check. Share cumulative stats. Suggest a refresh or seasonal update. If they haven\'t purchased any upsells, make a tailored pitch.',
-    365: 'Anniversary + expansion. Total year stats. Ask about goals for next year. Suggest premium plan based on what data says they need most.',
+    90: 'Quarterly review. Full quarter review. Use data to identify what is working and what could improve.',
+    180: 'Half-year check. Share cumulative stats. Suggest a refresh or seasonal update based on their data.',
+    365: 'Anniversary. Total year stats. Ask about goals for next year. Suggest improvements based on what data says they need most.',
   } as Record<number, string>,
   touchpointTemplates: {} as Record<number, string>,
-  upsellProducts: [
-    { name: 'Google Business Profile', price: '$49 one-time', key: 'GBP' },
-    { name: 'Review Widget', price: '$69/mo', key: 'REVIEW_WIDGET' },
-    { name: 'SEO Package', price: '$59/mo', key: 'SEO' },
-    { name: 'Social Media Management', price: '$99/mo', key: 'SOCIAL' },
-  ],
   enabled: true,
 }
 
@@ -130,14 +124,14 @@ export const AUTO_MSG_META = [
   { key: 'touchpoint_day_7', label: 'Day 7 \u2014 First Week Stats', desc: 'First week check-in.', vars: ['firstName', 'companyName'], cat: 'post_client' as const },
   { key: 'touchpoint_day_14', label: 'Day 14 \u2014 Two Week Check-in', desc: 'Two week check-in.', vars: ['firstName', 'companyName'], cat: 'post_client' as const },
   { key: 'touchpoint_day_21', label: 'Day 21 \u2014 Lead Check', desc: "Check if they're getting leads.", vars: ['firstName', 'companyName'], cat: 'post_client' as const },
-  { key: 'touchpoint_day_28', label: 'Day 28 \u2014 Month Review', desc: 'Andrew takes over for upsell conversation.', vars: ['firstName', 'companyName'], cat: 'post_client' as const },
+  { key: 'touchpoint_day_28', label: 'Day 28 \u2014 Month Review', desc: 'One-month check-in and review.', vars: ['firstName', 'companyName'], cat: 'post_client' as const },
   { key: 'winback_day_7', label: 'Win-Back Day 7', desc: '7 days after hosting cancellation.', vars: ['companyName'], cat: 'winback' as const },
   { key: 'winback_day_14', label: 'Win-Back Day 14', desc: '14 days after hosting cancellation.', vars: ['companyName'], cat: 'winback' as const },
   { key: 'winback_day_30', label: 'Win-Back Day 30', desc: 'Final notice 30 days after cancellation.', vars: ['companyName'], cat: 'winback' as const },
   { key: 'meeting_close_touch_1', label: 'Touch 1 — Site Live (30min)', desc: '30 minutes after site is marked live.', vars: ['firstName', 'companyName', 'siteUrl'], cat: 'meeting_close' as const },
   { key: 'meeting_close_touch_2', label: 'Touch 2 — Week Check-in (7d)', desc: '7 days after site is marked live.', vars: ['firstName', 'companyName', 'siteUrl'], cat: 'meeting_close' as const },
   { key: 'meeting_close_touch_3', label: 'Touch 3 — Two Week Check-in (14d)', desc: '14 days after site is marked live.', vars: ['firstName', 'companyName', 'siteUrl'], cat: 'meeting_close' as const },
-  { key: 'meeting_close_touch_4', label: 'Touch 4 — Month Review + Upsell (28d)', desc: '28 days after site marked live. Also creates upsell notification.', vars: ['firstName', 'companyName', 'siteUrl'], cat: 'meeting_close' as const },
+  { key: 'meeting_close_touch_4', label: 'Touch 4 — Month Review (28d)', desc: '28 days after site marked live.', vars: ['firstName', 'companyName', 'siteUrl'], cat: 'meeting_close' as const },
 ]
 
 export const DEFAULT_AI_CONTROLS = {

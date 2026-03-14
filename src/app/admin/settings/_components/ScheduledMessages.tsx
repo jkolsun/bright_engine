@@ -81,7 +81,6 @@ export default function ScheduledMessages(_props: ScheduledMessagesProps) {
         touchpointDays: s.client_sequences.touchpointDays || DEFAULT_CLIENT_SEQUENCES.touchpointDays,
         touchpointGuidance: { ...DEFAULT_CLIENT_SEQUENCES.touchpointGuidance, ...(s.client_sequences.touchpointGuidance || {}) },
         touchpointTemplates: { ...DEFAULT_CLIENT_SEQUENCES.touchpointTemplates, ...(s.client_sequences.touchpointTemplates || {}) },
-        upsellProducts: s.client_sequences.upsellProducts || DEFAULT_CLIENT_SEQUENCES.upsellProducts,
         enabled: s.client_sequences.enabled ?? true,
       })
     }
@@ -263,9 +262,9 @@ export default function ScheduledMessages(_props: ScheduledMessagesProps) {
             </div>
           </Card>
 
-          {/* Urgency Schedule */}
-          <Card className="p-6">
-            <SectionHeader title="Urgency Message Schedule" description="Days after preview creation when urgency texts are sent" />
+          {/* Urgency Schedule — TEARDOWN: Disabled. Worker no longer sends urgency texts. */}
+          <Card className="p-6 opacity-50 pointer-events-none">
+            <SectionHeader title="Urgency Message Schedule (DISABLED)" description="TEARDOWN: Urgency texts have been disabled. This section is inactive." />
 
             {/* Day pills */}
             <div className="flex flex-wrap gap-2 mb-4">
@@ -569,7 +568,7 @@ export default function ScheduledMessages(_props: ScheduledMessagesProps) {
             </div>
 
             <p className="text-xs text-gray-400 mt-3">
-              The AI uses each client&apos;s real data: page views, form submissions, calls, missed calls, bounce rate, traffic sources, active upsells, and days since launch.
+              The AI uses each client&apos;s real data: page views, form submissions, calls, missed calls, bounce rate, traffic sources, and days since launch.
             </p>
           </Card>
 
@@ -594,7 +593,7 @@ export default function ScheduledMessages(_props: ScheduledMessagesProps) {
                 These messages are <strong>template-based only</strong> (no AI fallback). They fire at fixed intervals after Mark Live: 30 min, 7 days, 14 days, 28 days.
               </p>
               <p className="text-xs text-blue-600 mt-1">
-                Touch 4 (Day 28) also creates an admin notification with upsell recommendations.
+                Touch 4 (Day 28) also creates an admin notification.
               </p>
             </div>
             <div className="space-y-4">

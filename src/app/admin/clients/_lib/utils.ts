@@ -20,7 +20,6 @@ export function getHealthScore(client: any) {
   }
   if (client._count?.editRequests > 0) score += 15
   if (client.analytics?.totalVisits > 0) score += 10
-  if (client.upsells && Array.isArray(client.upsells) && client.upsells.length > 0) score += 10
   if (client._count?.messages > 0) score += 15
   return Math.min(100, score)
 }

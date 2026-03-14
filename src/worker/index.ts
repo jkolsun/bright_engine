@@ -1324,11 +1324,11 @@ async function startWorkers() {
     })
 
     // Schedule recurring monitoring jobs
-    const { schedulePendingStateEscalation, scheduleNotificationCleanup, scheduleFailedWebhookRetry, scheduleUrgencyCheck, scheduleStaleEditReminder, scheduleDripCheck } = await import('./queue')
+    const { schedulePendingStateEscalation, scheduleNotificationCleanup, scheduleFailedWebhookRetry, scheduleStaleEditReminder, scheduleDripCheck } = await import('./queue')
     await schedulePendingStateEscalation()
     await scheduleNotificationCleanup()
     await scheduleFailedWebhookRetry()
-    await scheduleUrgencyCheck()
+    // TEARDOWN: scheduleUrgencyCheck() removed — urgency text system disabled
     await scheduleStaleEditReminder()
     await scheduleDripCheck()
 
@@ -1359,7 +1359,7 @@ async function startWorkers() {
     console.log('- Script worker (concurrency: 2)')
     console.log('- Distribution worker')
     console.log('- Sequence worker')
-    console.log('- Monitoring worker (+ pending state escalation every 2h, urgency check daily)')
+    console.log('- Monitoring worker (+ pending state escalation every 2h)')
     console.log('- SMS Campaign worker (+ drip check every 6h)')
 
     // Graceful shutdown
@@ -1497,16 +1497,9 @@ async function sendPostLaunchSMS(clientId: string, touchpointDay: number, settin
     console.error(`[Sequence] Day ${touchpointDay} SMS send failed:`, error)
   }
 
-  // Day 28: also notify for upsell conversation
+  // TEARDOWN: Upsell system removed — Day 28 notification disabled
   if (touchpointDay === 28) {
-    await prisma.notification.create({
-      data: {
-        type: 'DAILY_AUDIT',
-        title: 'Day 28 Upsell Ready',
-        message: `Client ${client.companyName} ready for upsell conversation`,
-        metadata: { clientId },
-      },
-    })
+    console.log(`[Sequence] Day 28 upsell notification skipped (upsells torn down) for client ${clientId}`)
   }
 }
 
@@ -1514,7 +1507,7 @@ async function sendPostLaunchSMS(clientId: string, touchpointDay: number, settin
  * Meeting-close SMS sender.
  * Reads from automated_messages settings (meeting_close_touch_1/2/3/4).
  * Same guards as sendPostLaunchSMS: hosting status, DNC, timezone, dedup.
- * No AI fallback — template only. Touch 4 creates upsell notification.
+ * No AI fallback — template only.
  */
 async function sendMeetingCloseSMS(clientId: string, touchNum: number, settingsKey: string) {
   const client = await prisma.client.findUnique({
@@ -1560,27 +1553,7 @@ async function sendMeetingCloseSMS(clientId: string, touchNum: number, settingsK
   })
   if (alreadySent) return
 
-  // Touch 4: create upsell notification regardless of whether SMS sends
-  if (touchNum === 4) {
-    try {
-      const { recommendUpsells } = await import('../lib/profit-systems')
-      const upsells = await recommendUpsells(clientId)
-      await prisma.notification.create({
-        data: {
-          type: 'DAILY_AUDIT',
-          title: 'Meeting Close — Day 28 Upsell Ready',
-          message: `Client ${client.companyName} ready for upsell conversation. ${upsells.length} product${upsells.length !== 1 ? 's' : ''} eligible.`,
-          metadata: {
-            clientId,
-            upsellCount: upsells.length,
-            upsells: upsells.slice(0, 3).map(u => ({ name: u.name, price: u.price })),
-          },
-        },
-      })
-    } catch (err) {
-      console.error(`[Sequence] Meeting-close touch 4 upsell notification failed:`, err)
-    }
-  }
+  // TEARDOWN: Touch 4 upsell notification removed. Was: recommendUpsells() from profit-systems.ts.
 
   // Load template from automated_messages
   let messageContent: string | null = null
@@ -2173,103 +2146,8 @@ async function runDailyAudit() {
 // ============================================
 
 async function runUrgencyCheck() {
-  const { generateUrgencyMessages, hasLeadViewedPreview } = await import('../lib/profit-systems')
-
-  // Find leads with previews that are NOT in terminal states and NOT paid
-  const leads = await prisma.lead.findMany({
-    where: {
-      previewUrl: { not: null },
-      status: { notIn: ['PAID', 'CLOSED_LOST', 'DO_NOT_CONTACT', 'IMPORT_STAGING'] },
-      dncAt: null,
-    },
-    select: {
-      id: true,
-      firstName: true,
-      companyName: true,
-      phone: true,
-      previewUrl: true,
-      previewExpiresAt: true,
-      buildCompletedAt: true,
-      createdAt: true,
-      timezone: true,
-      state: true,
-    },
-  })
-
-  let sent = 0
-  let skipped = 0
-
-  for (const lead of leads) {
-    try {
-      // Calculate days since preview was generated
-      const previewDate = lead.buildCompletedAt || lead.createdAt
-      const daysSincePreview = Math.floor(
-        (Date.now() - new Date(previewDate).getTime()) / (1000 * 60 * 60 * 24)
-      )
-
-      // Generate urgency message (returns null if not an urgency day)
-      const message = await generateUrgencyMessages(daysSincePreview, {
-        firstName: lead.firstName || undefined,
-        companyName: lead.companyName,
-        previewUrl: lead.previewUrl || undefined,
-        previewExpiresAt: lead.previewExpiresAt,
-        previewCreatedAt: previewDate,
-      })
-
-      if (!message) continue
-
-      // Dedup: check if we already sent this day's urgency for this lead
-      const trigger = `urgency_day_${daysSincePreview}`
-      const alreadySent = await prisma.message.findFirst({
-        where: { leadId: lead.id, trigger },
-      })
-      if (alreadySent) { skipped++; continue }
-
-      // Skip if lead has active Close Engine conversation
-      const activeConv = await prisma.closeEngineConversation.findUnique({
-        where: { leadId: lead.id },
-      })
-      if (activeConv && !['COMPLETED', 'CLOSED_LOST', 'STALLED'].includes(activeConv.stage)) {
-        skipped++
-        continue
-      }
-
-      // Preview view gate — only send urgency if they've actually seen the preview
-      const hasViewed = await hasLeadViewedPreview(lead.id)
-      if (!hasViewed) { skipped++; continue }
-
-      // Timezone check: only send 8 AM - 9 PM
-      if (!canSendMessage(lead.timezone || getTimezoneFromState(lead.state || '') || 'America/New_York')) {
-        skipped++
-        continue
-      }
-
-      // Preview expired — skip (link is dead)
-      if (lead.previewExpiresAt && new Date(lead.previewExpiresAt) < new Date()) {
-        skipped++
-        continue
-      }
-
-      // Send urgency SMS
-      const { sendSMSViaProvider } = await import('../lib/sms-provider')
-      await sendSMSViaProvider({
-        to: lead.phone,
-        message,
-        leadId: lead.id,
-        trigger,
-        aiGenerated: false,
-        conversationType: 'pre_client',
-        sender: 'system',
-      })
-      sent++
-    } catch (err) {
-      console.error(`[UrgencyCheck] Error processing lead ${lead.id}:`, err)
-    }
-  }
-
-  if (sent > 0 || skipped > 0) {
-    console.log(`[UrgencyCheck] Sent: ${sent}, Skipped: ${skipped}, Total leads checked: ${leads.length}`)
-  }
+  console.log('[URGENCY] Urgency check disabled — teardown complete');
+  return;
 }
 
 // ============================================

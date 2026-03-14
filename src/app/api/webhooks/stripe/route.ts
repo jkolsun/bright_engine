@@ -197,21 +197,22 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         await processRevenueCommission(upsellRevenue.id)
         console.log(`[Stripe Webhook] Upsell revenue ${upsellRevenue.id} created — $${amountDollars}`)
 
-        // Fix 3: Mark most recent pitched UpsellPitch as paid
+        // TEARDOWN: UpsellPitch model removed. This block will silently fail until cleanup.
         try {
-          const pitchedUpsell = await prisma.upsellPitch.findFirst({
+          const pitchedUpsell = await (prisma as any).upsellPitch.findFirst({
             where: { clientId: existingClient.id, status: 'pitched' },
             orderBy: { pitchedAt: 'desc' },
           })
           if (pitchedUpsell) {
-            await prisma.upsellPitch.update({
+            await (prisma as any).upsellPitch.update({
               where: { id: pitchedUpsell.id },
               data: { status: 'paid', paidAt: new Date() },
             })
             console.log(`[Stripe Webhook] UpsellPitch ${pitchedUpsell.id} marked paid`)
           }
         } catch (pitchErr) {
-          console.error('[Stripe Webhook] UpsellPitch paid update failed:', pitchErr)
+          // TEARDOWN: UpsellPitch model removed — expected to fail
+          console.warn('[Stripe Webhook] UpsellPitch paid update skipped (model removed):', (pitchErr as Error).message)
         }
       } catch (err: any) {
         if (err?.code === 'P2002') {
@@ -717,22 +718,23 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
     },
   })
 
-  // Fix 4: Reset UpsellPitch status to 'refunded' if one was marked paid
+  // TEARDOWN: UpsellPitch model removed. This block will silently fail until cleanup.
   if (revenue.clientId) {
     try {
-      const paidPitch = await prisma.upsellPitch.findFirst({
+      const paidPitch = await (prisma as any).upsellPitch.findFirst({
         where: { clientId: revenue.clientId, status: 'paid' },
         orderBy: { paidAt: 'desc' },
       })
       if (paidPitch) {
-        await prisma.upsellPitch.update({
+        await (prisma as any).upsellPitch.update({
           where: { id: paidPitch.id },
           data: { status: 'refunded' },
         })
         console.log(`[Stripe Webhook] UpsellPitch ${paidPitch.id} marked refunded`)
       }
     } catch (pitchErr) {
-      console.error('[Stripe Webhook] UpsellPitch refund update failed:', pitchErr)
+      // TEARDOWN: UpsellPitch model removed — expected to fail
+      console.warn('[Stripe Webhook] UpsellPitch refund update skipped (model removed):', (pitchErr as Error).message)
     }
   }
 }

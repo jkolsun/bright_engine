@@ -129,7 +129,7 @@ const DEFAULT_DRIP_TEMPLATES = {
   drip1Template: "Thanks for chatting {firstName}! Here's your website again: {previewUrl} \u2014 Let me know if you want any changes.",
   drip2Template: "Hey {firstName}, quick question \u2014 are you getting enough calls from Google right now? Most {industry} businesses in {city} are leaving money on the table without a website.",
   drip3Template: "Just wanted to share \u2014 we helped a {industry} company in {state} go from 0 to 15+ calls/month within 60 days of launching their site. Happy to do the same for {companyName}.",
-  drip4Template: "{firstName}, your custom website for {companyName} is still ready to go. First month is free \u2014 just $199 to get set up. Want me to send over the details?",
+  drip4Template: "{firstName}, your custom website for {companyName} is still ready to go. Just $99.95/mo, no setup fee, cancel anytime. Want me to send over the details?",
   drip5Template: "Last check-in {firstName} \u2014 I'll keep your website saved for a bit longer in case you change your mind. Just reply here anytime. Have a great week!",
 }
 

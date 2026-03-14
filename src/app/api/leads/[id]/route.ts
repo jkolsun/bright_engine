@@ -44,11 +44,6 @@ export async function GET(
           select: { id: true, type: true, value: true, label: true, addedAt: true },
           orderBy: { addedAt: 'desc' },
         },
-        upsellTags: {
-          where: { removedAt: null },
-          select: { id: true, productName: true, productPrice: true, taggedAt: true, addedByRepId: true },
-          orderBy: { taggedAt: 'desc' },
-        },
         dialerCalls: {
           select: {
             id: true, status: true, dispositionResult: true, notes: true,

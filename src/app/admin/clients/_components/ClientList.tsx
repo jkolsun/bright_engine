@@ -89,7 +89,6 @@ export default function ClientList({
         {selectedClients.size > 0 && (
           <div className="mt-3 pt-3 border-t flex items-center gap-3">
             <span className="text-sm text-gray-600 dark:text-gray-400">{selectedClients.size} selected</span>
-            <Button variant="outline" size="sm">Send Upsell</Button>
             <Button variant="outline" size="sm">Send Stat Report</Button>
             <Button variant="outline" size="sm">Change Tags</Button>
           </div>

@@ -251,18 +251,10 @@ export async function POST(request: NextRequest) {
       // Route reaction to AI with translated context
       const reactionContext = translateReactionForAI(reaction, body)
 
+      // TEARDOWN: Close Engine no longer triggers on inbound SMS reactions.
+      // The new pipeline replaces CE with a Setting Engine.
       if (reactionContext.shouldRoute && lead && !client) {
-        const { processCloseEngineInbound } = await import('@/lib/close-engine')
-        const activeConversation = await prisma.closeEngineConversation.findUnique({
-          where: { leadId: lead.id },
-        })
-        if (activeConversation && !['COMPLETED', 'CLOSED_LOST'].includes(activeConversation.stage)) {
-          try {
-            await processCloseEngineInbound(activeConversation.id, reactionContext.aiMessage)
-          } catch (err) {
-            console.error('[Twilio] Close Engine reaction processing failed:', err)
-          }
-        }
+        console.log(`[Twilio] Close Engine reaction trigger disabled — teardown. Lead ${lead?.id}.`)
       } else if (reactionContext.shouldRoute && client) {
         try {
           const { processPostClientInbound } = await import('@/lib/post-client-engine')
@@ -546,99 +538,36 @@ export async function POST(request: NextRequest) {
     }
 
     // ── CLOSE ENGINE HANDLER (with SmartChat message batching) ──
-    // Only run Close Engine if there's NO client record — if they've paid, Post-Client handles them.
-    // This prevents both AI engines from firing on the same inbound message.
+    // TEARDOWN: Close Engine no longer triggers on inbound SMS.
+    // The new pipeline replaces CE with a Setting Engine.
+    // All CE routing (active conversation + new SMS_REPLY trigger) is disabled.
+    // Message recording, opt-out handling, campaign tracking, etc. remain intact above.
     if (lead && !client) {
-      const { processCloseEngineInbound, triggerCloseEngine } = await import('@/lib/close-engine')
-      const { addToBatch } = await import('@/lib/message-batcher')
+      console.log(`[Twilio] Close Engine trigger disabled on inbound SMS — teardown. Lead ${lead.id} (${lead.companyName}).`)
 
-      // Check if lead has an active close conversation
+      // Admin notification — always alert when a lead texts back
       const activeConversation = await prisma.closeEngineConversation.findUnique({
         where: { leadId: lead.id },
       })
+      const isClosedLost = activeConversation?.stage === 'CLOSED_LOST'
+      const isCompleted = activeConversation?.stage === 'COMPLETED'
 
-      if (activeConversation && !['COMPLETED', 'CLOSED_LOST'].includes(activeConversation.stage)) {
-        // Route to Close Engine — use message batching to handle rapid-fire texts
-        console.log(`[Twilio] Routing inbound to Close Engine conversation ${activeConversation.id}`)
-        try {
-          const batched = await addToBatch(
-            activeConversation.id,
-            lead.id,
-            body,
-            publicMediaUrls || [],
-            processCloseEngineInbound,
-          )
-          if (!batched) {
-            // Batching disabled or not applicable — process immediately
-            await processCloseEngineInbound(activeConversation.id, body, publicMediaUrls)
-          }
-        } catch (err) {
-          console.error('[Twilio] Close Engine processing failed:', err)
-          // Don't fail the webhook
-        }
-      } else if (!client) {
-        // No active Close Engine conversation AND not a client.
-        // This lead is texting back — responding to our voicemail, preview link, or outreach.
-        //
-        // Trigger rules:
-        //   - No conversation at all → trigger (fresh lead engaging)
-        //   - CLOSED_LOST conversation → trigger (re-engagement opportunity)
-        //   - COMPLETED conversation → skip (already converted, may not have client record yet)
-        const isClosedLost = activeConversation?.stage === 'CLOSED_LOST'
-        const noConversation = !activeConversation
-        const isCompleted = activeConversation?.stage === 'COMPLETED'
+      const leadName = [lead.firstName, lead.lastName].filter(Boolean).join(' ') || lead.companyName
+      await prisma.notification.create({
+        data: {
+          type: 'HOT_LEAD',
+          title: isClosedLost ? 'Lost Lead Re-Engaged' : isCompleted ? 'Converted Lead Texted' : 'Lead Texted Back',
+          message: `${leadName} (${lead.companyName}) texted: "${body.substring(0, 80)}"`,
+          metadata: { leadId: lead.id, from, body: body.substring(0, 200), conversationStage: activeConversation?.stage || 'none' },
+        },
+      })
 
-        if (noConversation || isClosedLost) {
-          // Check for clearly negative responses — don't waste a CE conversation on "not interested"
-          if (isNegativeLeadResponse(body)) {
-            console.log(`[Twilio] Negative response from ${from} (${lead.companyName}): "${body.substring(0, 60)}" — skipping CE trigger`)
-
-            // Send a brief polite ack directly (no CE conversation needed)
-            try {
-              const { sendSMSViaProvider } = await import('@/lib/sms-provider')
-              await sendSMSViaProvider({
-                to: from,
-                message: 'No worries at all, have a great day!',
-                sender: 'system',
-                trigger: 'negative_lead_ack',
-                leadId: lead.id,
-              })
-            } catch (err) {
-              console.error('[Twilio] Failed to send negative ack:', err)
-            }
-          } else {
-            console.log(`[Twilio] Lead inbound from ${from} (${lead.companyName}), triggering pre-acquisition flow`)
-
-            try {
-              await triggerCloseEngine({
-                leadId: lead.id,
-                entryPoint: 'SMS_REPLY',
-                reEngagement: isClosedLost,
-              })
-            } catch (err) {
-              console.error('[Twilio] Close Engine trigger failed:', err)
-            }
-          }
-        }
-
-        // Admin notification — always alert when a lead texts back (even COMPLETED)
-        const leadName = [lead.firstName, lead.lastName].filter(Boolean).join(' ') || lead.companyName
-        await prisma.notification.create({
-          data: {
-            type: 'HOT_LEAD',
-            title: isClosedLost ? 'Lost Lead Re-Engaged' : isCompleted ? 'Converted Lead Texted' : 'Lead Texted Back',
-            message: `${leadName} (${lead.companyName}) texted: "${body.substring(0, 80)}"`,
-            metadata: { leadId: lead.id, from, body: body.substring(0, 200), conversationStage: activeConversation?.stage || 'none' },
-          },
-        })
-
-        // SMS alert to admin
-        try {
-          const { notifyAdmin } = await import('@/lib/notifications')
-          await notifyAdmin('hot_lead', 'Lead Texted Back', `${leadName} (${lead.companyName}): "${body.substring(0, 60)}"`)
-        } catch (err) {
-          console.error('[Twilio] Admin SMS notification failed:', err)
-        }
+      // SMS alert to admin
+      try {
+        const { notifyAdmin } = await import('@/lib/notifications')
+        await notifyAdmin('hot_lead', 'Lead Texted Back', `${leadName} (${lead.companyName}): "${body.substring(0, 60)}"`)
+      } catch (err) {
+        console.error('[Twilio] Admin SMS notification failed:', err)
       }
     }
 

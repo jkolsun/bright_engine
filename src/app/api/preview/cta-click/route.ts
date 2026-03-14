@@ -70,8 +70,7 @@ export async function POST(request: NextRequest) {
       console.warn('[Preview CTA] Dialer SSE push failed:', dialerErr)
     }
 
-    // CTA click = always HOT. Set status immediately (engagement scoring
-    // also runs inside triggerCloseEngine, so no need to recalculate here)
+    // CTA click = always HOT. Set status immediately.
     await prisma.lead.update({
       where: { id: lead.id },
       data: { status: 'HOT_LEAD', priority: 'HOT' },
@@ -93,20 +92,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Push CTA click to Messages V2
-    try { pushToMessages({ type: 'PREVIEW_CLICK', data: { leadId: lead.id, eventType: 'PREVIEW_CTA_CLICKED' }, timestamp: new Date().toISOString() }) } catch {}
+    try { pushToMessages({ type: 'PREVIEW_CLICK', data: { leadId: lead.id, eventType: 'PREVIEW_CTA_CLICKED' }, timestamp: new Date().toISOString() }) } catch (sseErr) { console.warn('[CTA_CLICK] SSE push failed:', sseErr) }
 
-    // Always trigger Close Engine so the lead appears in the Messages inbox.
-    // During active calls, skip the automated first message (rep is already talking to them).
-    try {
-      const { triggerCloseEngine } = await import('@/lib/close-engine')
-      await triggerCloseEngine({
-        leadId: lead.id,
-        entryPoint: 'PREVIEW_CTA',
-        skipFirstMessage: !!activeCall,
-      })
-    } catch (err) {
-      console.error('[Preview CTA] Close Engine trigger failed:', err)
-    }
+    // TEARDOWN: Close Engine no longer triggers on CTA click.
+    // Next spec will route CTA to Cal.com booking.
+    console.log(`[CTA_CLICK] Lead ${lead.id} clicked CTA. Close Engine trigger disabled.`)
 
     // ── SMS Campaign CTA Click Tracking ──
     // If this lead came from an SMS campaign, update funnel stage to CTA_CLICKED

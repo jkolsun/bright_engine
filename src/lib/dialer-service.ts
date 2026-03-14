@@ -768,15 +768,18 @@ export async function logDisposition(params: {
     }).catch(err => console.error('[DialerService] Webhook dispatch failed:', err))
   }
 
-  // 10. Trigger Close Engine for WANTS_TO_MOVE_FORWARD (Bug 8 dedup built into triggerCloseEngine)
+  // TEARDOWN: Close Engine trigger disabled — CE should not be triggered from the dialer.
+  // if (result === 'WANTS_TO_MOVE_FORWARD') {
+  //   triggerCloseEngine({
+  //     leadId: call.lead.id,
+  //     entryPoint: 'REP_CLOSE',
+  //     repId: call.repId,
+  //   }).catch((err) => {
+  //     console.error('[DialerService] Close engine trigger error:', err)
+  //   })
+  // }
   if (result === 'WANTS_TO_MOVE_FORWARD') {
-    triggerCloseEngine({
-      leadId: call.lead.id,
-      entryPoint: 'REP_CLOSE',
-      repId: call.repId,
-    }).catch((err) => {
-      console.error('[DialerService] Close engine trigger error:', err)
-    })
+    console.log('[DialerService] Close Engine trigger disabled — teardown. REP_CLOSE entry point skipped for lead:', call.lead.id)
   }
 
   // 11. Push SSE

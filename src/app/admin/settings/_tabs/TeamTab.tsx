@@ -994,7 +994,6 @@ function RepScriptsSection() {
   const [script, setScript] = useState('')
   const [sellingPoints, setSellingPoints] = useState('')
   const [objections, setObjections] = useState('')
-  const [upsells, setUpsells] = useState('')
 
   useEffect(() => {
     if (!settingsLoaded) return
@@ -1003,12 +1002,11 @@ function RepScriptsSection() {
       setScript(guide.script ?? '')
       setSellingPoints(guide.sellingPoints ?? '')
       setObjections(guide.objections ?? '')
-      setUpsells(guide.upsells ?? '')
     }
   }, [settingsLoaded, rawSettings.call_guide_content])
 
   const handleSave = () => {
-    saveSetting('call_guide_content', { script, sellingPoints, objections, upsells })
+    saveSetting('call_guide_content', { script, sellingPoints, objections })
   }
 
   return (
@@ -1029,7 +1027,7 @@ function RepScriptsSection() {
             value={sellingPoints}
             onChange={(e) => setSellingPoints(e.target.value)}
             className="w-full h-32 p-4 border rounded-lg font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="• Professional website built in 48 hours&#10;• No upfront cost — just $199/mo&#10;• We handle everything: hosting, updates, SEO"
+            placeholder="• Professional website built in 48 hours&#10;• Just $99.95/mo — no setup fee, no commitment&#10;• We handle everything: hosting, updates, SEO"
           />
         </div>
         <div>
@@ -1039,15 +1037,6 @@ function RepScriptsSection() {
             onChange={(e) => setObjections(e.target.value)}
             className="w-full h-32 p-4 border rounded-lg font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="&quot;I already have a website&quot; → Great! We can review it and show you where you're leaving money on the table...&#10;&#10;&quot;I'm not interested&quot; → Totally understand. Quick question — are you getting new customers from Google right now?"
-          />
-        </div>
-        <div>
-          <FieldLabel>Upsell Opportunities</FieldLabel>
-          <textarea
-            value={upsells}
-            onChange={(e) => setUpsells(e.target.value)}
-            className="w-full h-24 p-4 border rounded-lg font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="• Google Business Profile optimization&#10;• Monthly SEO package&#10;• Social media integration"
           />
         </div>
         <p className="text-xs text-gray-400">

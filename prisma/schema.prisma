@@ -58,7 +58,6 @@ model User {
   repTasks                 RepTask[]                 @relation("RepTasks")
   dialerCallsAsRep         DialerCall[]              @relation("RepDialerCalls")
   dialerSessionsNew        DialerSessionNew[]        @relation("RepDialerSessionsNew")
-  repUpsellTags            UpsellTag[]               @relation("RepUpsellTags")
   repCallbacks             CallbackSchedule[]        @relation("RepCallbacks")
   ownedLeads               Lead[]                    @relation("OwnedLeads")
 
@@ -165,7 +164,6 @@ model Lead {
   editRequests           EditRequest[]
   ownerRep               User?                    @relation("OwnedLeads", fields: [ownerRepId], references: [id])
   dialerCalls            DialerCall[]             @relation("DialerCalls")
-  upsellTags             UpsellTag[]              @relation("LeadUpsellTags")
   callbackSchedules      CallbackSchedule[]       @relation("LeadCallbacks")
   siteEditVersion        Int                      @default(0) @map("site_edit_version")
   selectedTemplate       String?                  @map("selected_template")
@@ -261,7 +259,6 @@ model Client {
   stripeCustomerId     String?            @unique @map("stripe_customer_id")
   stripeSubscriptionId String?            @unique @map("stripe_subscription_id")
   monthlyRevenue       Float              @default(99) @map("monthly_revenue")
-  upsells              Json?
   siteLiveDate         DateTime?          @map("site_live_date")
   lastInteraction      DateTime?          @map("last_interaction")
   nextTouchpoint       String?            @map("next_touchpoint")
@@ -737,58 +734,6 @@ model SequenceProgress {
   @@index([status])
   @@index([nextStepAt])
   @@map("sequence_progress")
-}
-
-model UpsellProduct {
-  id                  String        @id @default(cuid())
-  name                String
-  price               Float
-  recurring           Boolean       @default(true)
-  stripeLink          String?       @map("stripe_link")
-  active              Boolean       @default(true)
-  createdAt           DateTime      @default(now()) @map("created_at")
-  aiPitchInstructions String?       @map("ai_pitch_instructions")
-  aiProductSummary    String?       @map("ai_product_summary")
-  description         String?
-  eligibleIndustries  String[]      @default([]) @map("eligible_industries")
-  maxPitchesPerClient Int           @default(3) @map("max_pitches_per_client")
-  minClientAgeDays    Int?          @map("min_client_age_days")
-  pitchChannel        String        @default("sms") @map("pitch_channel")
-  sortOrder           Int           @default(0) @map("sort_order")
-  updatedAt           DateTime      @updatedAt @map("updated_at")
-  annualPrice         Float?        @map("annual_price")
-  isCore              Boolean       @default(false) @map("is_core")
-  month1Price         Float?        @map("month1_price")
-  pitchOneLiner       String?       @map("pitch_one_liner")
-  previewBannerText   String?       @map("preview_banner_text")
-  recurringPrice      Float?        @map("recurring_price")
-  repCloseScript      String?       @map("rep_close_script")
-  stripeLinkAnnual    String?       @map("stripe_link_annual")
-  deletedAt           DateTime?     @map("deleted_at")
-  repPitch            String?       @map("rep_pitch")
-  pitches             UpsellPitch[]
-  upsellTags          UpsellTag[]
-
-  @@map("upsell_products")
-}
-
-model UpsellPitch {
-  id           String        @id @default(cuid())
-  clientId     String        @map("client_id")
-  productId    String        @map("product_id")
-  status       String        @default("pitched")
-  pitchedAt    DateTime      @default(now()) @map("pitched_at")
-  openedAt     DateTime?     @map("opened_at")
-  clickedAt    DateTime?     @map("clicked_at")
-  paidAt       DateTime?     @map("paid_at")
-  pitchChannel String        @default("sms") @map("pitch_channel")
-  sequenceDay  Int?          @map("sequence_day")
-  product      UpsellProduct @relation(fields: [productId], references: [id])
-
-  @@index([clientId])
-  @@index([productId])
-  @@index([status])
-  @@map("upsell_pitches")
 }
 
 model Referral {
@@ -1372,7 +1317,6 @@ model DialerCall {
   lead                    Lead             @relation("DialerCalls", fields: [leadId], references: [id], onDelete: Cascade)
   rep                     User             @relation("RepDialerCalls", fields: [repId], references: [id])
   session                 DialerSessionNew? @relation(fields: [sessionId], references: [id])
-  upsellTags              UpsellTag[]
   callbackSchedules       CallbackSchedule[]
 
   @@index([repId, startedAt])
@@ -1418,27 +1362,6 @@ model DialerSessionNew {
 
   @@index([repId, isActive])
   @@map("dialer_sessions_new")
-}
-
-model UpsellTag {
-  id           String        @id @default(cuid())
-  leadId       String        @map("lead_id")
-  productId    String        @map("product_id")
-  addedByRepId String        @map("added_by_rep_id")
-  callId       String?       @map("call_id")
-  productName  String        @map("product_name")
-  productPrice Float         @map("product_price")
-  taggedAt     DateTime      @default(now()) @map("tagged_at")
-  removedAt    DateTime?     @map("removed_at")
-
-  lead         Lead          @relation("LeadUpsellTags", fields: [leadId], references: [id], onDelete: Cascade)
-  product      UpsellProduct @relation(fields: [productId], references: [id])
-  rep          User          @relation("RepUpsellTags", fields: [addedByRepId], references: [id])
-  call         DialerCall?   @relation(fields: [callId], references: [id])
-
-  @@index([leadId])
-  @@index([productId])
-  @@map("upsell_tags")
 }
 
 model CallbackSchedule {

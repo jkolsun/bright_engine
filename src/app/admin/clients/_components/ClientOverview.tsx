@@ -41,7 +41,7 @@ export default function ClientOverview({
       </div>
 
       {/* Needs Attention Alerts */}
-      {(overviewStats.alerts?.pastDuePayments > 0 || overviewStats.alerts?.pendingEdits > 0 || overviewStats.alerts?.upsellFollowups > 0 || overviewStats.alerts?.escalatedMessages > 0) && (
+      {(overviewStats.alerts?.pastDuePayments > 0 || overviewStats.alerts?.pendingEdits > 0 || overviewStats.alerts?.escalatedMessages > 0) && (
         <Card className="p-4 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30">
           <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
             <AlertTriangle size={16} className="text-amber-500" />
@@ -57,11 +57,6 @@ export default function ClientOverview({
               <a href="/admin/pipeline?tab=builds" className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 text-left hover:underline">
                 🟡 {overviewStats.alerts.pendingEdits} pending edits ({overviewStats.alerts.readyForReview || 0} ready for review)
               </a>
-            )}
-            {overviewStats.alerts?.upsellFollowups > 0 && (
-              <button className="flex items-center gap-2 text-green-700 dark:text-green-400 text-left">
-                🟢 {overviewStats.alerts.upsellFollowups} upsell replies to follow up
-              </button>
             )}
             {overviewStats.alerts?.escalatedMessages > 0 && (
               <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400">

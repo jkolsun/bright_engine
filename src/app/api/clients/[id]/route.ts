@@ -84,7 +84,7 @@ export async function PUT(
       'plan', 'industry', 'notes', 'tags',
       'aiAutoRespond', 'channelPreference', 'autonomyLevel', 'statReportFrequency',
       'nextTouchpoint', 'nextTouchpointDate', 'churnRiskScore', 'healthScore',
-      'upsells', 'source', 'repId',
+      'source', 'repId',
     ]
     const safeData: Record<string, unknown> = {}
     for (const key of ALLOWED_FIELDS) {
@@ -167,7 +167,6 @@ export async function DELETE(
       await prisma.$transaction([
         prisma.approval.deleteMany({ where: { clientId } }),
         prisma.channelDecision.deleteMany({ where: { clientId } }),
-        prisma.upsellPitch.deleteMany({ where: { clientId } }),
         prisma.client.delete({ where: { id: clientId } }),
       ])
 
@@ -181,7 +180,6 @@ export async function DELETE(
     await prisma.$transaction([
       prisma.approval.deleteMany({ where: { clientId } }),
       prisma.channelDecision.deleteMany({ where: { clientId } }),
-      prisma.upsellPitch.deleteMany({ where: { clientId } }),
       // Cascade-delete all FK-linked records so stats are cleared
       prisma.message.deleteMany({ where: { clientId } }),
       prisma.commission.deleteMany({ where: { clientId } }),

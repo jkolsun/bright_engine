@@ -768,28 +768,29 @@ export async function scheduleFailedWebhookRetry() {
   }
 }
 
-export async function scheduleUrgencyCheck() {
-  const queue = await getMonitoringQueue()
-  if (!queue || !isRedisAvailable) {
-    console.warn('Monitoring queue unavailable, skipping urgency check')
-    return null
-  }
-
-  try {
-    return await queue.add(
-      'urgency-check',
-      {},
-      {
-        repeat: {
-          every: 24 * 60 * 60 * 1000, // Once per day
-        },
-      }
-    )
-  } catch (err) {
-    console.warn('Failed to schedule urgency check:', err)
-    return null
-  }
-}
+// TEARDOWN: Urgency check disabled. Was: scheduling 'urgency-check' repeating job.
+// export async function scheduleUrgencyCheck() {
+//   const queue = await getMonitoringQueue()
+//   if (!queue || !isRedisAvailable) {
+//     console.warn('Monitoring queue unavailable, skipping urgency check')
+//     return null
+//   }
+//
+//   try {
+//     return await queue.add(
+//       'urgency-check',
+//       {},
+//       {
+//         repeat: {
+//           every: 24 * 60 * 60 * 1000, // Once per day
+//         },
+//       }
+//     )
+//   } catch (err) {
+//     console.warn('Failed to schedule urgency check:', err)
+//     return null
+//   }
+// }
 
 // Schedule stale edit reminder — finds forgotten edit requests sitting in review
 export async function scheduleStaleEditReminder() {

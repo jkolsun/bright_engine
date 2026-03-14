@@ -54,7 +54,7 @@ const QueuesTab = dynamic(() => import('./_tabs/QueuesTab'), {
 //   channel_routing     → Channel routing rules: SMS vs email logic (channel-router)
 //
 // SEQUENCES & RETENTION:
-//   client_sequences    → Client retention sequences (retention-messages, worker, upsell-products)
+//   client_sequences    → Client retention sequences (retention-messages, worker)
 //   onboarding_flow     → Onboarding flow config (onboarding)
 //
 // REP MANAGEMENT:

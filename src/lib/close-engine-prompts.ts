@@ -6,7 +6,6 @@
  */
 
 import type { ConversationContext } from './close-engine'
-import { getPricingConfig } from './pricing-config'
 import { prisma } from './db'
 
 // ============================================
@@ -171,72 +170,27 @@ RULES:
 - Maximum 3 more follow-up questions. Don't be annoying.`
   },
 
+  // TEARDOWN: Stage BUILDING gutted. Was: kept lead engaged while site was being built.
+  // Setting Engine spec will replace with meeting-booking logic.
   BUILDING: () =>
-    `The site is being built. Keep the lead engaged. Set expectations: "Building your site now — should have a preview ready within a few hours!"
-Don't ask any more questions. If they text, respond warmly and reassure them.`,
+    `This stage is temporarily disabled. Respond warmly if the lead texts.`,
 
-  PREVIEW_SENT: (ctx) => {
-    const previewUrl = ctx.previewUrl || `Preview link pending`
-    return `The client has received their site preview and is reviewing it.
-Preview URL: ${previewUrl}
-
-CRITICAL RULE — APPROVAL vs EDIT DETECTION:
-You must carefully distinguish between FULL approval and approval-with-changes:
-
-SET nextStage to "PAYMENT_SENT" ONLY when the client gives UNQUALIFIED approval — they are clearly satisfied and ready to move forward with NO remaining changes. Examples:
-- "Looks perfect, let's do it"
-- "Love it! How do I pay?"
-- "Ready to go live"
-- "Approved, let's move forward"
-- "I'll take it"
-- "It's great, no changes needed"
-
-SET nextStage to "EDIT_LOOP" when the client mentions ANY changes, tweaks, or improvements — even if they also say something positive. If there is a "but", "however", "could use", "maybe change", "I want", or ANY edit request, that means EDIT_LOOP. Examples:
-- "It looks good but I want different fonts" → EDIT_LOOP (has edit request)
-- "Love it, just change the header color" → EDIT_LOOP (has edit request)
-- "Pretty good, could use some work" → EDIT_LOOP (has edit request)
-- "Nice, but can you make the text bigger?" → EDIT_LOOP (has edit request)
-
-If they ask questions ("how long to go live?", "how much?") → answer directly. Don't change stage for questions.
-
-NEVER send a Stripe URL or payment link directly in your message. The system handles payment links separately.
-NEVER say "our team will reach out" or "we'll be in touch" when they truly approve — set nextStage to PAYMENT_SENT so the system creates the payment link.`
+  // TEARDOWN: Stage PREVIEW_SENT gutted. Was: handled preview review, approval vs edit detection, payment routing.
+  // Setting Engine spec will replace with meeting-booking logic.
+  PREVIEW_SENT: () => {
+    return `This stage is temporarily disabled. Respond warmly if the lead texts.`
   },
 
-  EDIT_LOOP: (ctx) => {
-    const editRounds = ctx.conversation.editRounds || 0
-    return `The lead requested changes. Collect their specific feedback. Acknowledge each request. Tell them you'll get it updated.
-
-CRITICAL: When they confirm the updated version looks good with NO further changes ("looks good now", "perfect", "love it", "approved", "no more changes") → set nextStage to "PAYMENT_SENT".
-But if they say it looks better AND request more changes ("better, but also change X") → stay in EDIT_LOOP.
-Only trigger PAYMENT_SENT when the client is fully satisfied with zero remaining edits.
-NEVER send a Stripe URL or payment link directly. The system handles that.
-
-Current edit round: ${editRounds}/3.`
+  // TEARDOWN: Stage EDIT_LOOP gutted. Was: collected edit feedback, routed to payment on approval.
+  // Setting Engine spec will replace with meeting-booking logic.
+  EDIT_LOOP: () => {
+    return `This stage is temporarily disabled. Respond warmly if the lead texts.`
   },
 
-  PAYMENT_SENT: (ctx, _qf, pf) => {
-    const lead = ctx.lead
-    const followUp = pf?.TEXT_3_PAYMENT_FOLLOWUP || ''
-    return `Payment link has been sent. Pricing: free install, {{monthlyHosting}}/month for hosting, no contracts, cancel anytime.
-
-If they reach out with questions, answer directly and honestly.
-
-If YOU are following up (they haven't responded):
-
-GOOD follow-ups (value-driven, gives them a reason to act):
-- Mention a specific benefit for their industry: "Most ${(lead.industry || 'local').replace(/_/g, ' ')} businesses start getting calls within the first week of going live"
-- Reference their specific preview: "Your ${lead.companyName} site turned out great — ready to flip the switch whenever you are"
-- Add social proof: "Just helped another ${lead.city || 'local'} business get set up last week"
-- Answer an unasked objection: "No contracts by the way — you can cancel the hosting anytime"
-
-BAD follow-ups (NEVER send these):
-- "Just checking in" / "following up" / "circling back"
-- "Any questions about getting your site live?" — too vague
-- "Is time the only thing holding you back?" — meaningless
-- "Don't want to miss your window" — fake urgency
-- Generic messages that give zero reason to respond
-${followUp ? `\nCustom follow-up style (adapt naturally): "${followUp}"` : ''}`
+  // TEARDOWN: Stage PAYMENT_SENT gutted. Was: handled payment link follow-ups and objection handling.
+  // Setting Engine spec will replace with meeting-booking logic.
+  PAYMENT_SENT: () => {
+    return `This stage is temporarily disabled. Respond warmly if the lead texts.`
   },
 
   STALLED: (ctx) => {
@@ -259,12 +213,10 @@ BAD follow-ups (NEVER send these):
 The lead is cold. Give them a REASON to re-engage, don't just ask if they're still interested.`
   },
 
-  PENDING_APPROVAL: (_ctx, _qf, pf) => {
-    const ack = pf?.TEXT_1_APPROVAL_ACK || ''
-    return `The lead approved their preview. A payment link approval has been created for admin review. The system will send the Stripe link once admin approves.
-${ack ? `\nApproval acknowledgment style (adapt naturally): "${ack}"` : ''}
-If the lead messages while waiting, let them know we're getting their payment link ready — it should be coming shortly.
-Do NOT send any payment URLs yourself. The system handles that.`
+  // TEARDOWN: Stage PENDING_APPROVAL gutted. Was: waited for admin payment link approval.
+  // Setting Engine spec will replace with meeting-booking logic.
+  PENDING_APPROVAL: () => {
+    return `This stage is temporarily disabled. Respond warmly if the lead texts.`
   },
 
   COMPLETED: () =>
@@ -329,11 +281,7 @@ function formatCallHistory(calls: Array<{ dispositionResult?: string | null; not
   return `\n[CALL HISTORY]\nRep calls to this lead:\n${lines.join('\n')}\n`
 }
 
-function formatUpsellTags(tags: Array<{ productName: string; productPrice: number }> | undefined): string {
-  if (!tags || tags.length === 0) return ''
-  const lines = tags.map(t => `- ${t.productName} ($${t.productPrice})`)
-  return `\n[UPSELLS DISCUSSED]\n${lines.join('\n')}\n`
-}
+// TEARDOWN: formatUpsellTags removed. Was: formatted upsell product names and prices.
 
 // ============================================
 // buildPreClientSystemPrompt()
@@ -342,8 +290,6 @@ function formatUpsellTags(tags: Array<{ productName: string; productPrice: numbe
 export async function buildPreClientSystemPrompt(context: ConversationContext): Promise<string> {
   const { conversation, lead, messages, collectedData, questionsAsked } = context
   const stage = conversation.stage
-  const pricingConfig = await getPricingConfig()
-
   // Load custom scenario overrides from settings
   const templates = await getScenarioTemplates()
   const customOverride = templates?.scenarios?.[stage]
@@ -363,8 +309,8 @@ export async function buildPreClientSystemPrompt(context: ConversationContext): 
     _formBaseUrl: formBaseUrl,
   }
 
-  // Payment flow templates
-  const paymentFlowTemplates = templates?.paymentFlow || {}
+  // TEARDOWN: Payment flow templates removed.
+  const paymentFlowTemplates: Record<string, string> = {}
 
   // Get stage-specific instructions (custom override takes priority)
   let stageInstructions: string
@@ -377,11 +323,6 @@ export async function buildPreClientSystemPrompt(context: ConversationContext): 
       : `Unknown stage: ${stage}. Respond helpfully and set escalate: true.`
   }
 
-  // Replace pricing placeholders in stage instructions
-  stageInstructions = stageInstructions
-    .replace(/\{\{siteBuildFee\}\}/g, `$${pricingConfig.siteBuildFee}`)
-    .replace(/\{\{monthlyHosting\}\}/g, `$${pricingConfig.monthlyHosting}`)
-
   // Load AI learning context from conversation outcomes
   let learningContext = ''
   try {
@@ -390,45 +331,7 @@ export async function buildPreClientSystemPrompt(context: ConversationContext): 
     if (ctx) learningContext = `\n${ctx}\n`
   } catch { /* learning system not critical */ }
 
-  return `[IDENTITY]
-You are a sales team member for Bright Automations, a company that builds professional websites for local businesses. You are communicating via SMS text message. Your tone is enthusiastic, professional, and friendly — like a helpful business consultant, not a pushy salesperson.
-
-[CORE RULES]
-- Send ONE question per message. Never ask multiple questions.
-- Maximum 2 SHORT sentences. Under 30 words total. No exceptions. This is SMS, not email.
-- No line breaks in SMS. Everything on one line.
-- Sound like a real text message, not a business email.
-- Never start with "Hi" or "Hello" — just jump in naturally.
-- Use first name ONLY if available — never use last names. If no first name exists, skip the name entirely and jump in naturally. Real texts don't say "Hello Mr. Smith."
-- Quick acknowledgment before next question ("Perfect!" "Love it!" "Got it!") — keep it to 1-2 words.
-- Be enthusiastic but never pushy or desperate.
-- NEVER mention AI, Claude, bots, automation, or that you're automated.
-- If asked who you are: "This is the Bright Automations team!"
-- If asked to speak to a human/person/manager: respond "Absolutely, let me connect you with our team lead" and set escalate: true
-- NEVER offer discounts or modify pricing.
-- NEVER make promises about specific timelines you can't guarantee.
-- NEVER abbreviate "Bright Automations" to "BA" — always use the full name or say "we"/"us"/"our team".
-- Always use the lead's FULL company name as stored. Never abbreviate it.
-
-[SMS FORMATTING RULES]
-- Never use dashes, bullet points, numbered lists, or colons in texts.
-- Never use em-dashes (\u2014) or semicolons.
-- Max 2 sentences per text. Keep it SHORT.
-- Write like you're texting a friend who owns a business, not writing an email.
-- Use their first name, not their company name.
-- Never start with "Hi there!" or "Hey there!" or "Hello!"
-- Never say "I'd be happy to" or "I'd love to" or "absolutely."
-- Don't use exclamation marks more than once per message.
-- If they ask a question, answer it directly.
-
-[iMESSAGE REACTIONS]
-Messages prefixed with [REACTION:] are iMessage tapback reactions, not typed text.
-- Like/Love on a question you asked = "Yes". Move forward. Do NOT say "was that a yes?"
-- Dislike = they disagree or are unhappy. Respond with empathy.
-- Question mark = they're confused. Clarify simply.
-- Emphasize = they're highlighting importance. Brief acknowledgment.
-- Love on a statement = they're excited. One short positive sentence max. Don't over-respond.
-- Keep reaction responses extra short (1 sentence). The lead tapped a button, not typed a message.
+  return `You are a meeting booking assistant for Bright Automations. Your ONLY job is to get the lead to book a meeting. Do not discuss pricing. Do not try to close deals. Do not pitch services. Just get them to book a meeting. PLACEHOLDER — Full Setting Engine prompt will replace this in the next spec.
 
 [CURRENT STAGE: ${stage}]
 ${stageInstructions}
@@ -453,7 +356,6 @@ ${formatCollectedData(collectedData)}
 Questions Already Asked:
 ${formatQuestionsAsked(questionsAsked)}
 ${formatCallHistory((lead as any).dialerCalls)}
-${formatUpsellTags((lead as any).upsellTags)}
 ${learningContext}
 [CONVERSATION HISTORY]
 ${formatMessages(messages)}
@@ -580,9 +482,9 @@ You are the account manager for Bright Automations. You manage the ongoing relat
 - Be helpful and responsive. This is a paying customer.
 - Handle edit requests: parse what they want changed and confirm you'll handle it.
 - If they mention cancelling, wanting to leave, or dissatisfaction: set escalate: true immediately.
-- Pitch upsells ONLY when naturally relevant, never forced.
+- TEARDOWN: Upsell pitching removed.
 - If they give positive feedback: thank them, ask for a Google review.
-- For billing questions: provide basic info ($${monthlyRevenue}/month hosting), escalate payment disputes.
+- For billing questions: provide basic info ($${monthlyRevenue}/month hosting), escalate billing disputes.
 - Keep messages professional but warm.
 - NEVER mention AI, Claude, bots, automation, or that you're automated.
 - If asked who you are: "This is the Bright Automations team!"
@@ -612,7 +514,7 @@ Plan: ${plan} | Monthly: $${monthlyRevenue}
 Site: ${siteUrl}
 Health Score: ${healthScore}/100
 Days Since Launch: ${daysSinceLaunch}
-Active Upsells: ${upsells.length > 0 ? upsells.join(', ') : 'None'}
+Active Add-ons: ${upsells.length > 0 ? upsells.join(', ') : 'None'}
 
 [CONVERSATION HISTORY]
 ${formatMessages(messages)}

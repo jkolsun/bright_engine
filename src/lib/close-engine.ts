@@ -69,6 +69,12 @@ export async function triggerCloseEngine(options: {
 }): Promise<{ success: boolean; conversationId?: string; error?: string }> {
   const { leadId, entryPoint, repId, reEngagement, skipFirstMessage } = options
 
+  // TEARDOWN: CTA trigger disabled — will route to Cal.com in next spec.
+  if (entryPoint === 'PREVIEW_CTA') {
+    console.log('[CLOSE_ENGINE] CTA trigger disabled — teardown. CTA will route to Cal.com in next spec.');
+    return { success: false, error: 'CTA trigger disabled — teardown' };
+  }
+
   try {
     // 0. Atomic dedup: only one entry point can win the race
     // For re-engagement (CLOSED_LOST), reset the flag atomically within a transaction
@@ -303,10 +309,6 @@ export async function getConversationContext(conversationId: string): Promise<Co
         select: { dispositionResult: true, notes: true, connectedAt: true, duration: true, startedAt: true },
         orderBy: { startedAt: 'desc' },
         take: 5,
-      },
-      upsellTags: {
-        where: { removedAt: null },
-        select: { productName: true, productPrice: true },
       },
     },
   })

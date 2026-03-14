@@ -8,7 +8,7 @@ import Link from 'next/link'
 import {
   ArrowLeft, Phone, Mail, MapPin, Calendar, TrendingUp, Eye, MousePointer,
   MessageSquare, Clock, CheckCircle, Send, ExternalLink, DollarSign, User,
-  Plus, Trash2, UserCheck, Package, RefreshCw
+  Plus, Trash2, UserCheck, RefreshCw
 } from 'lucide-react'
 import { useState, useEffect, useRef, useCallback } from 'react'
 
@@ -733,20 +733,6 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
               </Card>
             )}
 
-            {/* Upsell Tags */}
-            {lead.upsellTags && lead.upsellTags.length > 0 && (
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Upsell Tags</h3>
-                <div className="flex flex-wrap gap-2">
-                  {lead.upsellTags.map((tag: any) => (
-                    <span key={tag.id} className="inline-flex items-center gap-1 px-2.5 py-1 bg-teal-50 dark:bg-teal-950/30 text-teal-700 dark:text-teal-400 rounded-md text-xs font-medium">
-                      <Package size={12} /> {tag.productName} (${tag.productPrice})
-                    </span>
-                  ))}
-                </div>
-              </Card>
-            )}
-
             {/* Scheduled Callbacks */}
             {lead.callbackSchedules && lead.callbackSchedules.length > 0 && (
               <Card className="p-6">
@@ -773,29 +759,6 @@ export default function LeadDetailPage({ params }: LeadDetailPageProps) {
               </Card>
             )}
 
-            {/* Upsells Pitched (from events) */}
-            {lead.events?.some((e: any) => e.eventType === 'UPSELL_PITCHED' || e.eventType === 'UPSELL_LINK_SENT') && (
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Upsells Pitched</h3>
-                <div className="space-y-2">
-                  {lead.events.filter((e: any) => e.eventType === 'UPSELL_PITCHED' || e.eventType === 'UPSELL_LINK_SENT').map((e: any) => {
-                    const meta = typeof e.metadata === 'string' ? JSON.parse(e.metadata) : (e.metadata || {})
-                    return (
-                      <div key={e.id} className="p-3 bg-violet-50 dark:bg-violet-950/30 rounded-lg text-sm">
-                        <div className="flex items-center gap-2">
-                          <Package size={14} className="text-violet-600" />
-                          <span className="font-medium text-violet-800 dark:text-violet-400">{meta.productName || 'Unknown Product'}</span>
-                          {meta.productPrice && <span className="text-violet-600 dark:text-violet-400">${meta.productPrice}</span>}
-                        </div>
-                        <p className="text-xs text-violet-500 dark:text-violet-400 mt-1">
-                          {e.eventType === 'UPSELL_LINK_SENT' ? 'Link Sent' : 'Pitched'} on {new Date(e.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    )
-                  })}
-                </div>
-              </Card>
-            )}
           </div>
         </div>
       </div>
