@@ -46,6 +46,7 @@ interface CampaignLead {
   city: string
   state: string
   stage: string
+  pipelineStatus?: string
   lastActivityAt: string
   repName: string
 }
@@ -940,7 +941,7 @@ function CampaignDetailTab({
                     City/State
                   </th>
                   <th className="text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider px-6 py-3">
-                    Stage
+                    Pipeline
                   </th>
                   <th className="text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider px-6 py-3">
                     Last Activity
@@ -1330,7 +1331,23 @@ function LeadRow({
           {[lead.city, lead.state].filter(Boolean).join(', ') || '\u2014'}
         </td>
         <td className="px-6 py-3">
-          {stageInfo ? (
+          {lead.pipelineStatus ? (
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${({
+              NEW: 'bg-gray-100 text-gray-600',
+              COLD_SENT: 'bg-blue-100 text-blue-700',
+              WARM: 'bg-amber-100 text-amber-700',
+              CONTACTED: 'bg-teal-100 text-teal-700',
+              OPTED_IN: 'bg-purple-100 text-purple-700',
+              MEETING_BOOKED: 'bg-emerald-100 text-emerald-700',
+              CLOSED: 'bg-green-100 text-green-800',
+              COLD_NO_RESPONSE: 'bg-gray-100 text-gray-500',
+              NOT_INTERESTED: 'bg-red-100 text-red-600',
+              OPTED_OUT: 'bg-red-100 text-red-700',
+              EXHAUSTED: 'bg-gray-200 text-gray-400',
+            } as Record<string, string>)[lead.pipelineStatus] || 'bg-gray-100 text-gray-600'}`}>
+              {lead.pipelineStatus.replace(/_/g, ' ')}
+            </span>
+          ) : stageInfo ? (
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${stageInfo.bgColor} ${stageInfo.textColor}`}>
               {stageInfo.label}
             </span>

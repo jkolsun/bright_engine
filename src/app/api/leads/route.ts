@@ -109,6 +109,7 @@ export async function GET(request: NextRequest) {
           lastContactedAt: true,
           lastSmsCampaignId: true,
           smsFunnelStage: true,
+          pipelineStatus: true,
           instagramHandle: true,
           linkedinUrl: true,
           socialEnrichedAt: true,

@@ -480,7 +480,29 @@ export default function LeadsTable({
                               </div>
                               <div className="space-y-2 text-sm">
                                 <div className="flex justify-between">
-                                  <span className="text-gray-500">Status</span>
+                                  <span className="text-gray-500">Pipeline</span>
+                                  {(lead as any).pipelineStatus ? (
+                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${({
+                                      NEW: 'bg-gray-100 text-gray-600',
+                                      COLD_SENT: 'bg-blue-100 text-blue-700',
+                                      WARM: 'bg-amber-100 text-amber-700',
+                                      CONTACTED: 'bg-teal-100 text-teal-700',
+                                      OPTED_IN: 'bg-purple-100 text-purple-700',
+                                      MEETING_BOOKED: 'bg-emerald-100 text-emerald-700',
+                                      CLOSED: 'bg-green-100 text-green-800',
+                                      COLD_NO_RESPONSE: 'bg-gray-100 text-gray-500',
+                                      NOT_INTERESTED: 'bg-red-100 text-red-600',
+                                      OPTED_OUT: 'bg-red-100 text-red-700',
+                                      EXHAUSTED: 'bg-gray-200 text-gray-400',
+                                    } as Record<string, string>)[(lead as any).pipelineStatus] || 'bg-gray-100 text-gray-600'}`}>
+                                      {(lead as any).pipelineStatus.replace(/_/g, ' ')}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400 text-xs">—</span>
+                                  )}
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Legacy Status</span>
                                   <Badge variant={lead.status === 'PAID' ? 'default' : 'secondary'} className="text-xs">{lead.status?.replace(/_/g, ' ') || '—'}</Badge>
                                 </div>
                                 <div className="flex justify-between">

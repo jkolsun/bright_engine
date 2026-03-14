@@ -48,12 +48,6 @@ export async function addRepTask(options: RepTaskOptions) {
       }
     })
 
-    // Also assign the lead to this rep if not already assigned
-    await prisma.lead.update({
-      where: { id: options.leadId },
-      data: { assignedToId: repId }
-    })
-
     return task
   } catch (error) {
     console.error('Add rep task error:', error)

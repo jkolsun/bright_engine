@@ -52,6 +52,7 @@ export async function GET(
               previewUrl: true,
               email: true,
               status: true,
+              pipelineStatus: true,
             },
           },
         },
@@ -99,6 +100,7 @@ export async function GET(
       city: cl.lead.city || '',
       state: cl.lead.state || '',
       stage: cl.funnelStage,
+      pipelineStatus: (cl.lead as any).pipelineStatus || 'NEW',
       lastActivityAt: cl.updatedAt.toISOString(),
       repName: cl.assignedRepId ? (repMap[cl.assignedRepId] || '') : '',
     }))
