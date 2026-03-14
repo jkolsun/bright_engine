@@ -99,10 +99,7 @@ export async function processPostClientInbound(
     ? Math.floor((Date.now() - client.siteLiveDate.getTime()) / (1000 * 60 * 60 * 24))
     : 0
 
-  // Build prompt
-  const upsells = client.upsells
-    ? (Array.isArray(client.upsells) ? client.upsells as string[] : [])
-    : []
+  // TEARDOWN: client.upsells removed from schema
 
   // Load admin's custom onboarding instructions from Settings > Post-AQ
   const flowSettings = client.onboardingStep > 0 && client.onboardingStep < 7
@@ -116,7 +113,6 @@ export async function processPostClientInbound(
     siteUrl: client.siteUrl || undefined,
     healthScore: client.healthScore,
     daysSinceLaunch,
-    upsells,
     messages: messages.map(m => ({ direction: m.direction, content: m.content })),
     onboardingStep: client.onboardingStep,
     onboardingData: {

@@ -65,7 +65,6 @@ interface ClientData {
   plan: string
   monthlyRevenue: number
   siteLiveDate: Date | null
-  upsells: any
   analytics: {
     totalVisits: number
     uniqueVisitors: number
@@ -103,8 +102,7 @@ export async function generateRetentionMessage(
   const guidance = customGuidance || DEFAULT_TOUCHPOINT_GUIDANCE[touchpointDay]?.angle || 'Check in on their site performance and suggest one improvement.'
   const goal = DEFAULT_TOUCHPOINT_GUIDANCE[touchpointDay]?.goal || 'Check-in'
 
-  // Get existing upsells so we don't pitch what they already have
-  const activeUpsells = Array.isArray(client.upsells) ? (client.upsells as any[]).map(u => u.key || u.name) : []
+  // TEARDOWN: client.upsells removed from schema, upsell pitching disabled
 
   // Build context prompt with real data
   const parts: string[] = []
@@ -128,24 +126,6 @@ export async function generateRetentionMessage(
   } else {
     parts.push(`\n--- SITE STATS ---`)
     parts.push(`No analytics data yet — site may be too new or tracking not set up.`)
-  }
-
-  if (activeUpsells.length > 0) {
-    parts.push(`\nALREADY HAS: ${activeUpsells.join(', ')}`)
-  }
-
-  // Available upsells from settings
-  const settings = await prisma.settings.findFirst({ where: { key: 'client_sequences' } })
-  const upsellProducts = settings?.value
-    ? (typeof settings.value === 'string' ? JSON.parse(settings.value) : settings.value)?.upsellProducts || []
-    : []
-
-  const availableUpsells = upsellProducts.filter((p: any) => !activeUpsells.includes(p.key))
-  if (availableUpsells.length > 0) {
-    parts.push(`\nAVAILABLE UPSELLS (only pitch if data supports it):`)
-    for (const u of availableUpsells) {
-      parts.push(`  - ${u.name}: ${u.price}`)
-    }
   }
 
   parts.push(`\nGUIDANCE: ${guidance}`)

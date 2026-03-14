@@ -441,7 +441,6 @@ export function buildPostClientSystemPrompt(context: {
   siteUrl?: string
   healthScore?: number
   daysSinceLaunch?: number
-  upsells?: string[]
   messages: Array<{ direction: string; content: string }>
   onboardingStep?: number
   onboardingData?: Record<string, unknown>
@@ -454,7 +453,6 @@ export function buildPostClientSystemPrompt(context: {
     siteUrl = 'N/A',
     healthScore = 100,
     daysSinceLaunch = 0,
-    upsells = [],
     messages,
     onboardingStep,
     onboardingData,
@@ -514,7 +512,7 @@ Plan: ${plan} | Monthly: $${monthlyRevenue}
 Site: ${siteUrl}
 Health Score: ${healthScore}/100
 Days Since Launch: ${daysSinceLaunch}
-Active Add-ons: ${upsells.length > 0 ? upsells.join(', ') : 'None'}
+
 
 [CONVERSATION HISTORY]
 ${formatMessages(messages)}
