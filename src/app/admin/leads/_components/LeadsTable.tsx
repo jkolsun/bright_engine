@@ -177,6 +177,7 @@ export default function LeadsTable({
               <th className="text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Personalization</th>
               <th className="text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Notes</th>
               <th className="text-center p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Build</th>
+              <th className="text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Pipeline</th>
               {/* Sticky right: Assigned To, Status, Actions */}
               <th className="sticky right-[200px] z-20 bg-gray-50 dark:bg-slate-800/50 text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-l border-gray-200 shadow-[-2px_0_4px_rgba(0,0,0,0.06)]">Assigned To</th>
               <th className="sticky right-[100px] z-20 bg-gray-50 dark:bg-slate-800/50 text-left p-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Status</th>
@@ -316,6 +317,27 @@ export default function LeadsTable({
                     {/* Build Pipeline Dots */}
                     <td className="p-3 text-center">
                       <BuildDotsInline step={lead.buildStep} completed={!!lead.buildCompletedAt} error={lead.buildError} />
+                    </td>
+                    <td className="p-3 whitespace-nowrap">
+                      {(lead as any).pipelineStatus ? (
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                          ({
+                            NEW: 'bg-gray-100 text-gray-600',
+                            COLD_SENT: 'bg-blue-100 text-blue-700',
+                            WARM: 'bg-amber-100 text-amber-700',
+                            CONTACTED: 'bg-teal-100 text-teal-700',
+                            OPTED_IN: 'bg-purple-100 text-purple-700',
+                            MEETING_BOOKED: 'bg-emerald-100 text-emerald-700',
+                            CLOSED: 'bg-green-100 text-green-800',
+                            COLD_NO_RESPONSE: 'bg-gray-100 text-gray-500',
+                            NOT_INTERESTED: 'bg-red-100 text-red-600',
+                            OPTED_OUT: 'bg-red-100 text-red-700',
+                            EXHAUSTED: 'bg-gray-200 text-gray-400',
+                          } as Record<string, string>)[(lead as any).pipelineStatus] || 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {(lead as any).pipelineStatus.replace(/_/g, ' ')}
+                        </span>
+                      ) : <span className="text-gray-300 text-xs">&mdash;</span>}
                     </td>
                     {/* Sticky right: Assigned To */}
                     <td className={`sticky right-[200px] z-10 ${rowBg} p-3 whitespace-nowrap border-l border-gray-100 dark:border-slate-800 shadow-[-2px_0_4px_rgba(0,0,0,0.06)]`}>

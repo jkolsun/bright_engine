@@ -113,6 +113,32 @@ export async function GET(request: NextRequest) {
       where: { hostingStatus: 'ACTIVE', deletedAt: null, monthlyRevenue: { gt: 0 } },
     })
 
+    // Pipeline status metrics (try/catch for pre-migration safety)
+    let meetingsBooked = 0
+    let meetingsThisWeek = 0
+    let pipelineStatusCounts: Record<string, number> = {}
+    try {
+      meetingsBooked = await prisma.lead.count({ where: { pipelineStatus: 'MEETING_BOOKED' as any } })
+
+      const now2 = new Date()
+      const dayOfWeek = now2.getDay()
+      const mondayOfThisWeek = new Date(now2)
+      mondayOfThisWeek.setDate(now2.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
+      mondayOfThisWeek.setHours(0, 0, 0, 0)
+
+      meetingsThisWeek = await prisma.lead.count({
+        where: { pipelineStatus: 'MEETING_BOOKED' as any, meetingBookedAt: { gte: mondayOfThisWeek } },
+      })
+
+      const psCounts = await (prisma.lead as any).groupBy({ by: ['pipelineStatus'], _count: true })
+      pipelineStatusCounts = (psCounts || []).reduce((acc: Record<string, number>, item: any) => {
+        if (item.pipelineStatus) acc[item.pipelineStatus] = item._count
+        return acc
+      }, {} as Record<string, number>)
+    } catch (err) {
+      console.warn('[Dashboard] pipelineStatus queries failed (migration may not have run):', err)
+    }
+
     return NextResponse.json({
       // Flat keys that the dashboard expects
       totalLeads,
@@ -124,6 +150,8 @@ export async function GET(request: NextRequest) {
       todayRevenue: todayStats.revenue,
       previewViews,
       previewClicks,
+      meetingsBooked,
+      meetingsThisWeek,
       // Keep nested data for other consumers
       pipeline,
       today: todayStats,
@@ -135,6 +163,7 @@ export async function GET(request: NextRequest) {
       todayHot,
       todayPaid,
       pipelineDetailed: Object.fromEntries(pipelineCounts.map(p => [p.status, p._count._all])),
+      pipelineStatusCounts,
     })
   } catch (error) {
     console.error('Dashboard stats error:', error)

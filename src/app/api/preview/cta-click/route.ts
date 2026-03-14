@@ -22,6 +22,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     }
 
+    const { getBookingLink } = await import('@/lib/booking-service')
+    const bookingUrl = await getBookingLink(lead)
+
     // Always log the click event (include selected template if provided)
     await prisma.leadEvent.create({
       data: {
@@ -75,6 +78,18 @@ export async function POST(request: NextRequest) {
       where: { id: lead.id },
       data: { status: 'HOT_LEAD', priority: 'HOT' },
     })
+
+    // Update pipeline fields (SchemaV2 — may not exist yet)
+    try {
+      const updateData: any = { ctaClicked: true }
+      if (['NEW', 'COLD_SENT'].includes((lead as any).pipelineStatus)) {
+        updateData.pipelineStatus = 'WARM'
+      }
+      await prisma.lead.update({ where: { id: lead.id }, data: updateData })
+    } catch (pipelineErr) {
+      // SchemaV2 migration may not have run yet — safe to skip
+      console.warn('[CTA_CLICK] Pipeline field update skipped:', (pipelineErr as Error).message)
+    }
 
     // Send urgent email notification to admin via Resend
     try {
@@ -177,7 +192,7 @@ export async function POST(request: NextRequest) {
       console.error('[SMS-CTA] Error processing SMS campaign CTA click:', smsErr)
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, bookingUrl })
   } catch (error) {
     console.error('[Preview CTA] Error:', error)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

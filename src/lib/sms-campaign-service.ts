@@ -235,7 +235,7 @@ export async function sendColdTextToLead(
   }
 
   // Personalize message
-  const content = personalizeTemplate(campaign.templateBody, lead)
+  const content = await personalizeTemplate(campaign.templateBody, lead)
 
   // Build status callback URL
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL
@@ -302,7 +302,7 @@ export async function sendColdTextToLead(
     }),
     prisma.lead.update({
       where: { id: lead.id },
-      data: { smsFunnelStage: 'TEXTED' },
+      data: { smsFunnelStage: 'TEXTED', pipelineStatus: 'COLD_SENT' as any },
     }),
     prisma.smsCampaign.update({
       where: { id: campaign.id },
@@ -327,20 +327,33 @@ export async function sendColdTextToLead(
 // 6. personalizeTemplate
 // ---------------------------------------------------------------------------
 
-export function personalizeTemplate(template: string, lead: Lead): string {
+export async function personalizeTemplate(template: string, lead: Lead): Promise<string> {
   const humanizedIndustry = lead.industry
     ? lead.industry
         .replace(/_/g, ' ')
         .replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     : ''
 
-  return template
+  let result = template
     .replace(/\{companyName\}/g, lead.companyName || '')
     .replace(/\{firstName\}/g, lead.firstName || '')
     .replace(/\{city\}/g, lead.city || '')
     .replace(/\{state\}/g, lead.state || '')
     .replace(/\{industry\}/g, humanizedIndustry)
     .replace(/\{previewUrl\}/g, lead.previewUrl || '')
+
+  // Booking link replacement
+  let bookingUrl = ''
+  try {
+    const setting = await prisma.settings.findUnique({ where: { key: 'booking_url' } })
+    bookingUrl = (setting?.value as string) || process.env.BOOKING_URL || ''
+  } catch {
+    bookingUrl = process.env.BOOKING_URL || ''
+  }
+  result = result.replace(/\{bookingLink\}/g, bookingUrl)
+  result = result.replace(/\{calLink\}/g, bookingUrl)
+
+  return result
 }
 
 // ---------------------------------------------------------------------------
@@ -477,7 +490,7 @@ export async function processDripStep(
   }
 
   // Personalize and send
-  const content = personalizeTemplate(template.template, campaignLead.lead)
+  const content = await personalizeTemplate(template.template, campaignLead.lead)
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL
   const statusCallback = baseUrl
     ? `${baseUrl}/api/webhooks/twilio-sms-status`
@@ -598,7 +611,7 @@ export async function markOptedIn(campaignLeadId: string, method: string): Promi
     }),
     prisma.lead.update({
       where: { id: campaignLead.leadId },
-      data: { smsFunnelStage: 'OPTED_IN' },
+      data: { smsFunnelStage: 'OPTED_IN', pipelineStatus: 'OPTED_IN' as any, dripActive: true },
     }),
     prisma.smsCampaign.update({
       where: { id: campaignLead.campaignId },

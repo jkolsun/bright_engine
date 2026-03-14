@@ -251,10 +251,18 @@ export async function POST(request: NextRequest) {
       // Route reaction to AI with translated context
       const reactionContext = translateReactionForAI(reaction, body)
 
-      // TEARDOWN: Close Engine no longer triggers on inbound SMS reactions.
-      // The new pipeline replaces CE with a Setting Engine.
       if (reactionContext.shouldRoute && lead && !client) {
-        console.log(`[Twilio] Close Engine reaction trigger disabled — teardown. Lead ${lead?.id}.`)
+        const activeConversation = await prisma.closeEngineConversation.findUnique({
+          where: { leadId: lead.id },
+        })
+        if (activeConversation && !['COMPLETED', 'CLOSED_LOST'].includes(activeConversation.stage)) {
+          try {
+            const { processCloseEngineInbound } = await import('@/lib/close-engine-processor')
+            await processCloseEngineInbound(activeConversation.id, reactionContext.aiMessage)
+          } catch (err) {
+            console.error('[Twilio] Setting Engine reaction processing failed:', err)
+          }
+        }
       } else if (reactionContext.shouldRoute && client) {
         try {
           const { processPostClientInbound } = await import('@/lib/post-client-engine')
@@ -320,7 +328,7 @@ export async function POST(request: NextRequest) {
       if (lead) {
         await prisma.lead.update({
           where: { id: lead.id },
-          data: { dncAt: new Date(), status: 'DO_NOT_CONTACT', dncReason: 'STOP keyword received', dncAddedBy: 'system' },
+          data: { dncAt: new Date(), status: 'DO_NOT_CONTACT', pipelineStatus: 'OPTED_OUT' as any, dncReason: 'STOP keyword received', dncAddedBy: 'system' },
         })
         await prisma.notification.create({
           data: {
@@ -386,6 +394,45 @@ export async function POST(request: NextRequest) {
         '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
         { headers: { 'Content-Type': 'text/xml' } }
       )
+    }
+
+    // ── NEGATIVE REPLY DETECTION ──
+    if (lead && !client) {
+      const isNegative = isNegativeLeadResponse(body)
+      if (isNegative) {
+        console.log(`[Twilio] Negative reply from lead ${lead.id}: "${body.substring(0, 50)}"`)
+        await prisma.lead.update({
+          where: { id: lead.id },
+          data: {
+            pipelineStatus: 'OPTED_OUT' as any,
+            dncAt: new Date(),
+            dncReason: 'Negative reply: ' + body.substring(0, 100),
+            dncAddedBy: 'system',
+            status: 'DO_NOT_CONTACT',
+          },
+        })
+        // Stop active drips
+        try {
+          const activeCampaignLeads = await prisma.smsCampaignLead.findMany({
+            where: { leadId: lead.id, funnelStage: { notIn: ['OPTED_OUT', 'ARCHIVED', 'CLOSED'] } },
+            select: { id: true, campaignId: true },
+          })
+          for (const cl of activeCampaignLeads) {
+            await prisma.smsCampaignLead.update({
+              where: { id: cl.id },
+              data: { funnelStage: 'OPTED_OUT', archivedAt: new Date(), archiveReason: 'negative_reply' },
+            })
+            await prisma.smsCampaign.update({
+              where: { id: cl.campaignId },
+              data: { optOutCount: { increment: 1 } },
+            })
+          }
+        } catch (err) { console.error('[Twilio] Negative reply campaign cleanup error:', err) }
+        // Push SSE
+        try { pushToMessages({ type: 'LEAD_UPDATE', data: { leadId: lead.id, dncAt: new Date().toISOString() }, timestamp: new Date().toISOString() }) } catch {}
+        // Return TwiML — skip further processing
+        return new NextResponse('<?xml version="1.0" encoding="UTF-8"?><Response></Response>', { headers: { 'Content-Type': 'text/xml' } })
+      }
     }
 
     // Check for escalation triggers
@@ -464,7 +511,11 @@ export async function POST(request: NextRequest) {
 
           await prisma.lead.update({
             where: { id: lead.id },
-            data: { smsFunnelStage: 'HOT', priority: 'HOT' },
+            data: {
+              smsFunnelStage: 'HOT',
+              priority: 'HOT',
+              ...((lead as any).pipelineStatus === 'COLD_SENT' || (lead as any).pipelineStatus === 'NEW' ? { pipelineStatus: 'WARM' as any } : {}),
+            },
           })
 
           // Create RepTask
@@ -537,26 +588,49 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── CLOSE ENGINE HANDLER (with SmartChat message batching) ──
-    // TEARDOWN: Close Engine no longer triggers on inbound SMS.
-    // The new pipeline replaces CE with a Setting Engine.
-    // All CE routing (active conversation + new SMS_REPLY trigger) is disabled.
-    // Message recording, opt-out handling, campaign tracking, etc. remain intact above.
+    // ── SETTING ENGINE HANDLER ──
     if (lead && !client) {
-      console.log(`[Twilio] Close Engine trigger disabled on inbound SMS — teardown. Lead ${lead.id} (${lead.companyName}).`)
-
-      // Admin notification — always alert when a lead texts back
       const activeConversation = await prisma.closeEngineConversation.findUnique({
         where: { leadId: lead.id },
       })
-      const isClosedLost = activeConversation?.stage === 'CLOSED_LOST'
-      const isCompleted = activeConversation?.stage === 'COMPLETED'
 
+      if (activeConversation && !['COMPLETED', 'CLOSED_LOST'].includes(activeConversation.stage)) {
+        // Route to existing Setting Engine conversation
+        console.log(`[Twilio] Routing inbound to Setting Engine conversation ${activeConversation.id}`)
+        try {
+          const { processCloseEngineInbound } = await import('@/lib/close-engine-processor')
+          await processCloseEngineInbound(activeConversation.id, body, publicMediaUrls)
+        } catch (err) {
+          console.error('[Twilio] Setting Engine processing failed:', err)
+        }
+      }
+      // Only trigger NEW Setting Engine conversation if lead is OPTED_IN and no active conversation
+      else if (!activeConversation && (lead as any).pipelineStatus === 'OPTED_IN') {
+        console.log(`[Twilio] OPTED_IN lead ${lead.id} replied — triggering Setting Engine`)
+        try {
+          const { triggerCloseEngine } = await import('@/lib/close-engine')
+          await triggerCloseEngine({ leadId: lead.id, entryPoint: 'SMS_REPLY' })
+        } catch (err) {
+          console.error('[Twilio] Setting Engine trigger failed:', err)
+        }
+      }
+      // Re-engagement: CLOSED_LOST lead texts back → trigger Setting Engine
+      else if (activeConversation?.stage === 'CLOSED_LOST') {
+        console.log(`[Twilio] CLOSED_LOST lead ${lead.id} re-engaged — triggering Setting Engine`)
+        try {
+          const { triggerCloseEngine } = await import('@/lib/close-engine')
+          await triggerCloseEngine({ leadId: lead.id, entryPoint: 'SMS_REPLY' })
+        } catch (err) {
+          console.error('[Twilio] Setting Engine re-engagement failed:', err)
+        }
+      }
+
+      // Admin notification — always alert when a lead texts back
       const leadName = [lead.firstName, lead.lastName].filter(Boolean).join(' ') || lead.companyName
       await prisma.notification.create({
         data: {
           type: 'HOT_LEAD',
-          title: isClosedLost ? 'Lost Lead Re-Engaged' : isCompleted ? 'Converted Lead Texted' : 'Lead Texted Back',
+          title: activeConversation?.stage === 'CLOSED_LOST' ? 'Lost Lead Re-Engaged' : 'Lead Texted Back',
           message: `${leadName} (${lead.companyName}) texted: "${body.substring(0, 80)}"`,
           metadata: { leadId: lead.id, from, body: body.substring(0, 200), conversationStage: activeConversation?.stage || 'none' },
         },

@@ -1,7 +1,21 @@
 'use client'
 import { useState } from 'react'
 import type { QueueLead } from '@/types/dialer'
-import { Building, Phone, Mail, MapPin, Pencil, Check, X } from 'lucide-react'
+import { Building, Phone, Mail, MapPin, Pencil, Check, X, CalendarDays } from 'lucide-react'
+
+const PIPELINE_STATUS_COLORS: Record<string, string> = {
+  NEW: 'bg-gray-100 text-gray-600',
+  COLD_SENT: 'bg-blue-100 text-blue-700',
+  WARM: 'bg-amber-100 text-amber-700',
+  CONTACTED: 'bg-teal-100 text-teal-700',
+  OPTED_IN: 'bg-purple-100 text-purple-700',
+  MEETING_BOOKED: 'bg-emerald-100 text-emerald-700',
+  CLOSED: 'bg-green-100 text-green-800',
+  COLD_NO_RESPONSE: 'bg-gray-100 text-gray-500',
+  NOT_INTERESTED: 'bg-red-100 text-red-600',
+  OPTED_OUT: 'bg-red-100 text-red-700',
+  EXHAUSTED: 'bg-gray-200 text-gray-400',
+}
 import { useDialer } from './DialerProvider'
 
 const normalizePhone = (input: string): string | null => {
@@ -155,6 +169,11 @@ export function LeadInfo({ lead }: { lead: QueueLead }) {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{lead.firstName || lead.contactName || ''} {lead.lastName || ''}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {lead.pipelineStatus && (
+            <span className={`px-3 py-1 text-[11px] font-semibold rounded-full tracking-wide ${PIPELINE_STATUS_COLORS[lead.pipelineStatus] || 'bg-gray-100 text-gray-600'}`}>
+              {lead.pipelineStatus.replace(/_/g, ' ')}
+            </span>
+          )}
           <span className={`px-3 py-1 text-[11px] font-semibold rounded-full tracking-wide ${
             lead.priority === 'HOT' ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400' :
             lead.priority === 'WARM' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' :
@@ -175,6 +194,14 @@ export function LeadInfo({ lead }: { lead: QueueLead }) {
           )}
         </div>
       </div>
+      {(lead as any).meetingBookedAt && (
+        <div className="flex items-center gap-1.5 mt-2">
+          <CalendarDays className="w-3.5 h-3.5 text-emerald-600" />
+          <span className="text-xs text-emerald-600 font-medium">
+            Meeting: {new Date((lead as any).meetingBookedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          </span>
+        </div>
+      )}
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
       <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 mt-4 text-sm">
         {renderField('phone', <Phone className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />, lead.phone)}

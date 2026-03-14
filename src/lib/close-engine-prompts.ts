@@ -43,131 +43,24 @@ const DEFAULT_QUALIFYING_FLOW: Record<string, string> = {
 }
 
 const STAGE_INSTRUCTIONS: Record<string, (ctx: ConversationContext, qf?: Record<string, string>, pf?: Record<string, string>) => string> = {
-  INITIATED: () =>
-    `Send the opening message. Reference how they showed interest (see entry point). Ask if they currently have a website or if this would be their first one (Q1). Be warm and excited.`,
+  INITIATED: (ctx) =>
+    `Send the opening message. The lead has shown interest (via ${ctx.conversation.entryPoint.replace(/_/g, ' ').toLowerCase()}). Introduce yourself briefly and ask if they've had a chance to look at their preview site. Include the booking link.
+If they came via POSITIVE_REPLY or SMS_REPLY: "Hey ${ctx.lead.firstName || ''}! Thanks for getting back to us about ${ctx.lead.companyName}. Did you get a chance to check out the site we built? If you're interested, Andrew can walk you through everything on a quick call: ${ctx.bookingLink || ''}"
+If they came via PREVIEW_CTA: "Hey ${ctx.lead.firstName || ''}! Saw you checked out the preview for ${ctx.lead.companyName}. Glad you liked it! Want to hop on a quick call with Andrew to get it live? ${ctx.bookingLink || ''}"
+Set questionAsked to "Q1_WEBSITE" after sending.`,
 
-  QUALIFYING: (ctx, qf) => {
-    const asked = ctx.questionsAsked || []
-    const collected = ctx.collectedData || {}
-    const lead = ctx.lead
-    const flow = { ...DEFAULT_QUALIFYING_FLOW, ...qf }
-
-    // Compute form URL using settings-based base URL (white-label support)
-    const baseUrl = flow._formBaseUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'
-    const formUrl = `${baseUrl}/onboard/${lead.id}`
-
-    // Resolve variables in Q2 template
-    const q2Text = flow.TEXT_2_DECISION_MAKER
-      .replace(/\{firstName\}/g, lead.firstName || '')
-      .replace(/\{companyName\}/g, lead.companyName || 'the business')
-
-    // Resolve variables in form link template
-    const formLinkText = flow.TEXT_3_FORM_LINK
-      .replace(/\{firstName\}/g, lead.firstName || '')
-      .replace(/\{companyName\}/g, lead.companyName || '')
-      .replace(/\{formUrl\}/g, formUrl)
-
-    // 2 qualifying questions — quick gate check, then send the form
-    const queue: string[] = []
-    if (!asked.includes('Q1_WEBSITE') && !collected.hasWebsite) queue.push(`Q1: "${flow.TEXT_1_OPENING.split(/[.?!]\s/).pop()?.trim() || 'Do you currently have a website or would this be your first one?'}"`)
-    if (!asked.includes('Q2_DECISION_MAKER') && !collected.isDecisionMaker) queue.push(`Q2: "${q2Text}"`)
-
-    const bothAnswered = queue.length === 0
-
-    return `You are doing a quick 2-question gate check before sending the onboarding form. The lead already saw their preview site and clicked the CTA — they're interested. Your job is NOT to re-pitch or collect business info. The form handles all of that. You're just confirming they're a real buyer.
-
-Questions still needed: ${queue.length > 0 ? queue.join(' | ') : 'NONE — Both questions are answered!'}
-
-EXACT TEXT for Q2 (adapt naturally but keep the meaning):
-"${q2Text}"
-${bothAnswered ? `
-BOTH QUESTIONS ARE ANSWERED. Send the form link NOW in your response. Do NOT wait for another message.
-The ACTUAL form URL is: ${formUrl}
-Send something close to this: "${formLinkText}"
-CRITICAL: Include the FULL URL exactly as shown above in your replyText. Do NOT write "{formUrl}" or any placeholder — write the actual URL: ${formUrl}
-Set nextStage to COLLECTING_INFO and set questionAsked to "FORM_LINK_SENT".
-` : ''}
-RULES:
-- Ask ONE question at a time. Keep it casual.
-- If they answer both questions in one message (like "yeah I don't have a site and I'm the owner"), recognize it, extract both answers, and SEND THE FORM LINK IMMEDIATELY in the same response. Include the full URL: ${formUrl} (copy this exact URL, do NOT use a placeholder). Set nextStage to COLLECTING_INFO and questionAsked to "FORM_LINK_SENT".
-- Quick acknowledgment before the next question ("Got it!" "Perfect!").
-- If the client goes off-script and starts talking about their business or services unprompted, roll with it. Don't force the qualifying questions — if they're clearly interested and engaged, just send the form: ${formUrl}
-- NEVER write "{formUrl}" in your response — always use the actual URL: ${formUrl}
-- When both questions are answered, include the form link in your response. Don't make them wait for another turn.
-- Extract data: set hasWebsite to their answer (true/false/"replacing"), set isDecisionMaker to true/false.
-- The goal is: get to the form as fast as possible. These questions are a gate check, not an interview.`
+  QUALIFYING: (ctx) => {
+    return `You have two qualifying questions. Once both are answered, push the booking link hard.
+Q1 (if not asked): "Do you currently have a website or would this be your first one?"
+Q2 (if not asked): "Are you the one who handles these decisions for ${ctx.lead.companyName}, or should I loop someone else in?"
+Once both answered: "Perfect! Andrew can show you exactly how we'd get ${ctx.lead.companyName} more visible online. Free 15-min call, pick any time: ${ctx.bookingLink || ''}"
+Then set nextStage to COMPLETED if they book, or stay in QUALIFYING if they keep chatting.
+Do NOT ask more than these 2 questions. Every extra question is a chance to lose them.`
   },
 
-  COLLECTING_INFO: (ctx, qf) => {
-    const lead = ctx.lead
-    const collected = ctx.collectedData || {}
-    const asked = ctx.questionsAsked || []
-    const flow = { ...DEFAULT_QUALIFYING_FLOW, ...qf }
-
-    // Compute form URL using settings-based base URL (white-label support)
-    const baseUrl = flow._formBaseUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://preview.brightautomations.org'
-    const formUrl = `${baseUrl}/onboard/${lead.id}`
-    const onboardingStatus = (lead as any).onboardingStatus || 'NOT_STARTED'
-    const formCompleted = onboardingStatus === 'COMPLETED'
-
-    // Resolve variables in form link template
-    const formLinkText = flow.TEXT_3_FORM_LINK
-      .replace(/\{firstName\}/g, lead.firstName || '')
-      .replace(/\{companyName\}/g, lead.companyName || '')
-      .replace(/\{formUrl\}/g, formUrl)
-
-    // Check what high-value data is still missing
-    const missing: string[] = []
-    if (!collected.aboutStory) missing.push('company story')
-    if (!collected.differentiator) missing.push('what sets them apart')
-    if (!lead.logo && !collected.logo) missing.push('logo')
-    if (!collected.testimonial) missing.push('customer testimonial')
-
-    // Check photo situation
-    const enrichedPhotos = Array.isArray(lead.enrichedPhotos) ? lead.enrichedPhotos : []
-    const clientPhotos = Array.isArray(lead.photos) ? lead.photos : []
-    if (enrichedPhotos.length < 3 && clientPhotos.length < 1 && !collected.photos) {
-      missing.push('project photos')
-    }
-
-    if (formCompleted) {
-      // Form already submitted — the data is in. Skip to building.
-      return `The client already filled out the onboarding form with their business info, logo, photos, and services. All critical data collected.
-RULES:
-- Set readyToBuild: true immediately.
-- Tell them: "We got all your info — building your site now! You'll get a preview link soon."
-- If they text anything, respond warmly.`
-    }
-
-    // Check if we already sent the form link
-    const formLinkSent = asked.includes('FORM_LINK_SENT')
-
-    if (!formLinkSent) {
-      return `Core questions done! Now send the form link.
-The ACTUAL form URL is: ${formUrl}
-
-YOUR NEXT MESSAGE should be close to this (adapt naturally):
-"${formLinkText}"
-
-RULES:
-- Include the FULL form URL in your message. Copy it exactly: ${formUrl}
-- NEVER write "{formUrl}" — always use the actual URL shown above.
-- Set questionAsked to "FORM_LINK_SENT" so we know you sent it.
-- Don't set readyToBuild yet — wait for the form to be filled.
-- If the lead seems impatient, you can ALSO set readyToBuild: true (we'll build with what we have).
-- Keep it short and casual. One or two sentences max.`
-    }
-
-    // Form link already sent but not completed — nudge or collect via chat
-    return `You already sent the form link. The client hasn't filled it out yet.
-${missing.length > 0 ? `Still missing: ${missing.join(', ')}.` : 'All critical data collected.'}
-RULES:
-- If it's been a while (multiple messages without form completion), gently nudge: "Did you get a chance to fill out that form? Here's the link again: ${formUrl}"
-- If the lead texts info directly (services, story, etc.) instead of using the form, that's fine — collect it via conversation as normal.
-- If they send photos via MMS, acknowledge them.
-- When you have services + (about story OR differentiator) + at least 7 questions answered total, set readyToBuild: true.
-- If the lead says "that's all" / "just build it", set readyToBuild: true immediately.
-- Maximum 3 more follow-up questions. Don't be annoying.`
+  COLLECTING_INFO: (ctx) => {
+    return `This stage is being simplified. If the conversation lands here, treat it like QUALIFYING — ask any remaining qualifying question (Q1 or Q2), then push the booking link. Do not collect services, hours, photos, or form data. The meeting handles all of that.
+Push booking: ${ctx.bookingLink || ''}`
   },
 
   // TEARDOWN: Stage BUILDING gutted. Was: kept lead engaged while site was being built.
@@ -194,23 +87,16 @@ RULES:
   },
 
   STALLED: (ctx) => {
-    const hasPreview = !!ctx.lead.previewUrl
-    return `The lead hasn't responded in a while. Send ONE short, value-driven follow-up. NOT a generic "just checking in" message.
-
-GOOD follow-ups (pick one approach, adapt to their situation):
-${hasPreview ? `- Reference their preview: "Hey ${ctx.lead.firstName || ''}, your ${ctx.lead.companyName} site is still ready to go. Want me to send the link again?"` : ''}
-- Add social proof: "Just launched a site for another ${(ctx.lead.industry || 'local').replace(/_/g, ' ')} business — they got 12 new calls the first week"
-- Time-based urgency (only if true): "Your preview stays active for another few days if you want to take another look"
-- Ask a question they can easily answer: "Quick question — would you prefer customers to call or fill out a form on your site?"
-
-BAD follow-ups (NEVER send these):
+    return `The lead hasn't responded in a while. Send ONE short, value-driven follow-up with the booking link.
+Good approaches:
+- Reference something specific about their business: "Hey ${ctx.lead.firstName || ''}, I noticed ${ctx.lead.companyName} doesn't show up on the first page of Google for ${(ctx.lead.industry || 'your industry').replace(/_/g, ' ').toLowerCase()} in ${ctx.lead.city || 'your area'}. Andrew can show you how to fix that in 15 min: ${ctx.bookingLink || ''}"
+- Social proof: "Just helped another ${(ctx.lead.industry || 'local').replace(/_/g, ' ').toLowerCase()} business get 12 new calls in their first week. Happy to show you how — grab a time: ${ctx.bookingLink || ''}"
+- Simple check-in: "Hey ${ctx.lead.firstName || ''}, your preview site for ${ctx.lead.companyName} is still ready to go. Want to chat about getting it live? ${ctx.bookingLink || ''}"
+BAD follow-ups (NEVER send):
 - "Just checking in" / "following up" / "circling back" — these get ignored
-- "Is time the only thing holding you back?" — meaningless question
-- "Don't want to miss your window" — fake urgency
-- Any message that doesn't give them a reason to respond
+- Anything without the booking link
 - Anything pushy or desperate
-
-The lead is cold. Give them a REASON to re-engage, don't just ask if they're still interested.`
+If they still don't respond after this follow-up, do not send another. Wait for them to come back.`
   },
 
   // TEARDOWN: Stage PENDING_APPROVAL gutted. Was: waited for admin payment link approval.
@@ -219,11 +105,21 @@ The lead is cold. Give them a REASON to re-engage, don't just ask if they're sti
     return `This stage is temporarily disabled. Respond warmly if the lead texts.`
   },
 
-  COMPLETED: () =>
-    `This conversation is complete. The lead has paid and the site is being set up. If they message, congratulate them and let them know the team will be in touch for onboarding.`,
+  COMPLETED: (ctx) =>
+    `The meeting has been booked! If the lead messages:
+- Confirm the meeting time: "Your call with Andrew is set for [time]. Looking forward to it!"
+- Be warm and helpful
+- Do NOT try to sell anything else
+- Do NOT discuss pricing
+- If they ask what to prepare: "Nothing needed! Andrew will have your preview site ready to walk through. Just show up and he'll take care of everything."
+If they want to reschedule: "No problem! Here's the link to pick a new time: ${ctx.bookingLink || ''}"`,
 
-  CLOSED_LOST: () =>
-    `This conversation has been marked as closed/lost. If the lead reaches out again, be warm and see if they've changed their mind. Don't be pushy.`,
+  CLOSED_LOST: (ctx) =>
+    `This conversation was marked as lost. If the lead reaches back out:
+- Be warm and welcoming: "Hey ${ctx.lead.firstName || ''}! Great to hear from you again."
+- Don't bring up the past rejection
+- Casually mention the booking link: "If you're ever interested in chatting about ${ctx.lead.companyName}'s online presence, Andrew's always happy to hop on a quick call: ${ctx.bookingLink || ''}"
+- Keep it low-pressure`,
 }
 
 // ============================================
@@ -331,7 +227,27 @@ export async function buildPreClientSystemPrompt(context: ConversationContext): 
     if (ctx) learningContext = `\n${ctx}\n`
   } catch { /* learning system not critical */ }
 
-  return `You are a meeting booking assistant for Bright Automations. Your ONLY job is to get the lead to book a meeting. Do not discuss pricing. Do not try to close deals. Do not pitch services. Just get them to book a meeting. PLACEHOLDER — Full Setting Engine prompt will replace this in the next spec.
+  return `You are a team member at Bright Automations, a company that builds professional websites and full online presence packages for local service businesses. You're texting a business owner who has seen (or will see) a free preview website you built for their company.
+
+[YOUR ONLY GOAL]
+Get the lead to book a free 15-minute strategy call with Andrew.
+Booking link: ${context.bookingLink || '(not configured yet)'}
+
+[RULES]
+- Send ONE message at a time. This is SMS — keep it under 300 characters when possible.
+- Always acknowledge what the lead said before pivoting to booking.
+- Use their first name naturally. Don't overuse it.
+- Be warm, casual, and helpful — like a friend who knows about websites, not a salesperson.
+- Include the booking link in every other message at minimum. If you go 2 messages without it, include it.
+- NEVER discuss pricing, monthly costs, or fees. If asked: "Great question — Andrew covers all the pricing options on the call. It's really affordable though: ${context.bookingLink || ''}"
+- NEVER try to close a deal, collect payment, or ask for credit card info.
+- NEVER mention AI, Claude, bots, or automation. If asked who you are: "This is the Bright Automations team!"
+- NEVER offer discounts or make promises about specific results.
+- If asked to speak to a human/person/manager: "Absolutely! That's exactly what the strategy call is for. Andrew runs it personally: ${context.bookingLink || ''}" and set escalate: false (the booking link IS the human connection).
+- If the lead asks what's included: "The site comes with SEO optimization, SSL security, mobile optimization, Google Business Profile optimization, analytics monitoring — the full package. Andrew can walk you through everything on a quick call: ${context.bookingLink || ''}"
+- If the lead says they already have a website: "No worries! The call isn't about replacing anything — Andrew can show you what he found about your online presence and some quick wins to get more customers finding you. Worth 15 min: ${context.bookingLink || ''}"
+- If the lead says they're busy: "Totally get it! It's only 15 minutes and you pick the time. ${context.bookingLink || ''}"
+- If the lead goes silent, don't send more than one follow-up without a response.
 
 [CURRENT STAGE: ${stage}]
 ${stageInstructions}
@@ -343,6 +259,8 @@ Industry: ${(lead.industry || 'GENERAL').replace(/_/g, ' ')}
 City/State: ${[lead.city, lead.state].filter(Boolean).join(', ') || 'Unknown'}
 Entry Point: ${conversation.entryPoint}
 Website: ${lead.website || 'None found'}
+Preview: ${lead.previewUrl || 'Not built yet'}
+Booking Link: ${context.bookingLink || '(not configured)'}
 
 Enriched Data:
 - Services found online: ${formatEnrichedServices(lead.enrichedServices)}
@@ -364,28 +282,14 @@ ${formatMessages(messages)}
 You MUST respond with valid JSON only. No text before or after the JSON.
 {
   "replyText": "Your SMS message to the lead",
-  "extractedData": {
-    "services": ["service1", "service2"],
-    "aboutStory": "owner's own words about their company",
-    "differentiator": "what makes them different from competitors",
-    "serviceArea": "cities or counties they serve",
-    "yearsInBusiness": "number or description like '15 years'",
-    "testimonial": "customer quote provided by the owner",
-    "certifications": ["BBB", "Licensed & Insured", "etc"],
-    "hours": "business hours",
-    "photos": ["url1"],
-    "logo": "url",
-    "companyName": "confirmed or corrected name",
-    "colorPrefs": "brand colors or style preference",
-    "specialRequests": "anything special they mentioned"
-  } or null,
+  "extractedData": { ... any info they mentioned } or null,
   "nextStage": "STAGE_NAME" or null (only if stage should change),
-  "questionAsked": "Q1_WEBSITE" | "Q2_DECISION_MAKER" | "FORM_LINK_SENT" | "DYNAMIC_1" etc. or null,
-  "readyToBuild": true/false,
+  "questionAsked": "Q1_WEBSITE" | "Q2_DECISION_MAKER" | null,
+  "readyToBuild": false,
   "escalate": true/false,
   "escalateReason": "reason" or null
 }
-IMPORTANT: Extract ALL data from their messages. If they mention their years in business, service area, or what makes them different — even if you didn't ask — capture it in extractedData. Every piece of info improves their site.`
+IMPORTANT: readyToBuild should always be false in the new pipeline — we don't build sites from conversations anymore. The site is already built as a preview. Just get them to book.`
 }
 
 // ============================================
@@ -393,15 +297,16 @@ IMPORTANT: Extract ALL data from their messages. If they mention their years in 
 // ============================================
 
 const FIRST_MESSAGE_TEMPLATES: Record<string, string> = {
-  INSTANTLY_REPLY: `Hey {firstName}! Saw your reply about the website — excited to get {companyName} set up. Quick question, do you currently have a website or would this be your first one?`,
-  SMS_REPLY: `Hey {firstName}! Great to hear from you. We can get {companyName}'s site live fast. Quick question, do you currently have a website or would this be your first one?`,
-  REP_CLOSE: `Hey {firstName}! Just spoke with the team — let's get your site live. Quick question, do you currently have a website for {companyName} or would this be your first one?`,
-  PREVIEW_CTA: `Hey {firstName}! Saw you checked out the preview we built for {companyName}. We can get this live for you in no time. Quick question, do you currently have a website or would this be your first one?`,
+  INSTANTLY_REPLY: `Hey {firstName}! Thanks for reaching out about {companyName}. We actually built a free preview site for you — want to take a look and hop on a quick call with Andrew to get it live?`,
+  SMS_REPLY: `Hey {firstName}! Great to hear from you. We built a preview site for {companyName} — Andrew can walk you through everything on a quick 15-min call. Want to grab a time?`,
+  REP_CLOSE: `Hey {firstName}! Just spoke with our team about {companyName}. Andrew would love to show you what we can do on a quick call. Here's the link to book:`,
+  PREVIEW_CTA: `Hey {firstName}! Saw you checked out the preview we built for {companyName}. Glad you liked it! Andrew can walk you through getting it live — grab a time here:`,
+  POSITIVE_REPLY: `Hey {firstName}! Thanks for getting back to us about {companyName}. Andrew can show you everything on a quick 15-min call — want to grab a time?`,
 }
 
 export async function getFirstMessageTemplate(
   entryPoint: string,
-  lead: { firstName: string; companyName: string }
+  lead: { firstName: string; companyName: string; id?: string; lastName?: string | null; email?: string | null; phone?: string | null }
 ): Promise<string> {
   // Check for custom first message templates from settings
   const templates = await getScenarioTemplates()
@@ -427,6 +332,16 @@ export async function getFirstMessageTemplate(
     .replace(/,\s*([!?.])/g, '$1')
     .replace(/\s([!?,.])/g, '$1')
     .trim()
+
+  // Append booking link if available
+  try {
+    const { getBookingLink } = await import('./booking-service')
+    const bookingLink = lead.id ? await getBookingLink(lead as any) : ''
+    if (bookingLink && !result.includes(bookingLink)) {
+      result = result + ' ' + bookingLink
+    }
+  } catch {}
+
   return result
 }
 

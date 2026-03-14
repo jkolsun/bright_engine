@@ -71,6 +71,8 @@ export async function GET(request: NextRequest) {
         wrongNumbers: true,
         disconnected: true,
         dnc: true,
+        verbalOptIn: true,
+        meetingBooked: true,
       },
     })
 
@@ -91,6 +93,8 @@ export async function GET(request: NextRequest) {
       wrongNumbers: agg._sum.wrongNumbers ?? 0,
       disconnected: agg._sum.disconnected ?? 0,
       dnc: agg._sum.dnc ?? 0,
+      verbalOptIn: (agg._sum as any).verbalOptIn ?? 0,
+      meetingBooked: (agg._sum as any).meetingBooked ?? 0,
     }
 
     // Simple coaching tip for weekly stats

@@ -284,10 +284,24 @@ export async function POST(request: NextRequest) {
             })
 
             // Update Lead
-            await prisma.lead.update({
-              where: { id: lead.id },
-              data: { smsFunnelStage: 'CLICKED', priority: 'HOT' },
-            })
+            try {
+              await prisma.lead.update({
+                where: { id: lead.id },
+                data: {
+                  smsFunnelStage: 'CLICKED',
+                  priority: 'HOT',
+                  previewClicked: true,
+                  ...((lead as any).pipelineStatus === 'COLD_SENT' || (lead as any).pipelineStatus === 'NEW' ? { pipelineStatus: 'WARM' as any } : {}),
+                },
+              })
+            } catch (pipeErr) {
+              // Fallback if pipelineStatus fields don't exist yet
+              await prisma.lead.update({
+                where: { id: lead.id },
+                data: { smsFunnelStage: 'CLICKED', priority: 'HOT' },
+              })
+              console.warn('[Preview Track] pipelineStatus update failed (migration may not have run):', pipeErr)
+            }
 
             // Increment SmsCampaign click count
             await prisma.smsCampaign.update({

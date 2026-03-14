@@ -93,8 +93,10 @@ export function DispositionTree() {
         NO_ANSWER: 'noAnswers',
         WRONG_NUMBER: 'wrongNumberCount',
         DISCONNECTED: 'disconnectedCount',
+        VERBAL_OPT_IN: 'verbalOptInCount',
+        MEETING_BOOKED: 'meetingBookedCount',
       }
-      const INTERESTED_RESULTS = ['WANTS_TO_MOVE_FORWARD', 'CALLBACK', 'INTERESTED_VERBAL', 'WANTS_CHANGES']
+      const INTERESTED_RESULTS = ['WANTS_TO_MOVE_FORWARD', 'CALLBACK', 'INTERESTED_VERBAL', 'WANTS_CHANGES', 'VERBAL_OPT_IN', 'MEETING_BOOKED']
       const NOT_INTERESTED_RESULTS = ['NOT_INTERESTED', 'DNC']
 
       // Increment specific disposition field (NOT_INTERESTED uses notInterestedCount as its
@@ -183,8 +185,10 @@ export function DispositionTree() {
           NO_ANSWER: 'noAnswers',
           WRONG_NUMBER: 'wrongNumberCount',
           DISCONNECTED: 'disconnectedCount',
+          VERBAL_OPT_IN: 'verbalOptInCount',
+          MEETING_BOOKED: 'meetingBookedCount',
         }
-        const INTERESTED_RESULTS = ['WANTS_TO_MOVE_FORWARD', 'CALLBACK', 'INTERESTED_VERBAL', 'WANTS_CHANGES']
+        const INTERESTED_RESULTS = ['WANTS_TO_MOVE_FORWARD', 'CALLBACK', 'INTERESTED_VERBAL', 'WANTS_CHANGES', 'VERBAL_OPT_IN', 'MEETING_BOOKED']
         const NOT_INTERESTED_RESULTS = ['NOT_INTERESTED', 'DNC']
 
         // Decrement old
@@ -396,6 +400,38 @@ export function DispositionTree() {
             >
               Wants to Move Forward
               <span className="block text-xs font-normal text-green-600 mt-0.5">Ready to buy — triggers payment link flow</span>
+            </button>
+
+            {/* Verbal Opt-In */}
+            <button
+              onClick={() => handleL2('VERBAL_OPT_IN')}
+              disabled={submitting}
+              className={`w-full px-3 py-2.5 rounded-xl border-2 transition-all duration-150 font-semibold text-sm text-left disabled:opacity-50 active:scale-[0.97] ${
+                lastClicked === 'VERBAL_OPT_IN'
+                  ? 'border-purple-400 bg-purple-200 text-purple-900 scale-[1.02] ring-2 ring-purple-300 ring-offset-1 shadow-md'
+                  : queuedDisposition?.result === 'VERBAL_OPT_IN'
+                    ? 'border-purple-400 bg-purple-100 text-purple-800 ring-1 ring-purple-300'
+                    : 'border-purple-300 bg-purple-50 text-purple-800 hover:bg-purple-100'
+              }`}
+            >
+              Verbal Opt-In
+              <span className="block text-xs font-normal text-purple-600 mt-0.5">Agreed to receive texts — starts drip</span>
+            </button>
+
+            {/* Meeting Booked */}
+            <button
+              onClick={() => handleL2('MEETING_BOOKED')}
+              disabled={submitting}
+              className={`w-full px-3 py-2.5 rounded-xl border-2 transition-all duration-150 font-semibold text-sm text-left disabled:opacity-50 active:scale-[0.97] ${
+                lastClicked === 'MEETING_BOOKED'
+                  ? 'border-emerald-400 bg-emerald-200 text-emerald-900 scale-[1.02] ring-2 ring-emerald-300 ring-offset-1 shadow-md'
+                  : queuedDisposition?.result === 'MEETING_BOOKED'
+                    ? 'border-emerald-400 bg-emerald-100 text-emerald-800 ring-1 ring-emerald-300'
+                    : 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+              }`}
+            >
+              Meeting Booked
+              <span className="block text-xs font-normal text-emerald-600 mt-0.5">Booked on calendar — all contact stops</span>
             </button>
 
             {/* Callback */}

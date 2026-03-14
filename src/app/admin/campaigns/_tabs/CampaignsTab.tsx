@@ -76,6 +76,7 @@ interface CampaignSettings {
   dailyLimit: number
   messagesPerMinute: number
   smsFromNumber: string
+  bookingUrl: string
 }
 
 interface FunnelStage {
@@ -1430,6 +1431,7 @@ function CampaignSettingsTab() {
     dailyLimit: 500,
     messagesPerMinute: 10,
     smsFromNumber: '',
+    bookingUrl: '',
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -1576,6 +1578,21 @@ function CampaignSettingsTab() {
             <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{previewText}</p>
           </div>
         )}
+      </div>
+
+      {/* Booking URL */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">Booking Page URL</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          Cal.com, Calendly, or any booking page URL. Used in drip texts and CTA redirects. Merge tag: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{'{bookingLink}'}</code>
+        </p>
+        <input
+          type="text"
+          value={settings.bookingUrl}
+          onChange={(e) => updateField('bookingUrl', e.target.value)}
+          placeholder="https://cal.com/your-page or https://calendly.com/your-page"
+          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
       </div>
 
       {/* Drip Sequence */}

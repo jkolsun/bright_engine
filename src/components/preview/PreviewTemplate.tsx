@@ -160,11 +160,20 @@ export default function PreviewTemplate({ lead, websiteCopy }: { lead: any; webs
   }, [activeIndex, allVariants, typedLead.previewId])
 
   const onCTAClick = useCallback(async () => {
-    await fetch('/api/preview/track', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ previewId: typedLead.previewId, event: 'cta_click' }),
-    })
+    try {
+      const res = await fetch('/api/preview/cta-click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ previewId: typedLead.previewId, selectedTemplate: (window as any).__brightSelectedTemplate }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.bookingUrl) {
+          window.open(data.bookingUrl, '_blank')
+          return
+        }
+      }
+    } catch {}
   }, [typedLead.previewId])
 
   const onCallClick = useCallback(async () => {

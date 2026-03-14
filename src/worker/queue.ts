@@ -816,6 +816,29 @@ export async function scheduleStaleEditReminder() {
   }
 }
 
+export async function scheduleColdTextTimeoutCheck() {
+  const queue = await getMonitoringQueue()
+  if (!queue || !isRedisAvailable) {
+    console.warn('Monitoring queue unavailable, skipping cold text timeout check')
+    return null
+  }
+
+  try {
+    return await queue.add(
+      'cold-text-timeout-check',
+      {},
+      {
+        repeat: {
+          every: 6 * 60 * 60 * 1000, // Every 6 hours
+        },
+      }
+    )
+  } catch (err) {
+    console.warn('Failed to schedule cold text timeout check:', err)
+    return null
+  }
+}
+
 export async function addImportProcessingJob(data: {
   jobId: string
   leadIds: string[]

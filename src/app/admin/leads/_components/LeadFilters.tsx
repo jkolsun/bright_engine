@@ -11,6 +11,8 @@ export interface LeadFiltersProps {
   onRepFilterChange: (value: string) => void
   contactedFilter: string
   onContactedFilterChange: (value: string) => void
+  pipelineFilter?: string
+  onPipelineFilterChange?: (value: string) => void
   activeReps: any[]
 }
 
@@ -21,6 +23,8 @@ export default function LeadFilters({
   onRepFilterChange,
   contactedFilter,
   onContactedFilterChange,
+  pipelineFilter,
+  onPipelineFilterChange,
   activeReps,
 }: LeadFiltersProps) {
   return (
@@ -58,6 +62,26 @@ export default function LeadFilters({
           <option value="30days">Last 30 Days</option>
           <option value="never">Never Contacted</option>
         </select>
+        {onPipelineFilterChange && (
+          <select
+            value={pipelineFilter || 'all'}
+            onChange={(e) => onPipelineFilterChange(e.target.value)}
+            className="h-10 px-3 rounded-md border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Pipeline</option>
+            <option value="NEW">New</option>
+            <option value="COLD_SENT">Cold Sent</option>
+            <option value="WARM">Warm</option>
+            <option value="CONTACTED">Contacted</option>
+            <option value="OPTED_IN">Opted In</option>
+            <option value="MEETING_BOOKED">Meeting Booked</option>
+            <option value="CLOSED">Closed</option>
+            <option value="COLD_NO_RESPONSE">Cold No Response</option>
+            <option value="NOT_INTERESTED">Not Interested</option>
+            <option value="OPTED_OUT">Opted Out</option>
+            <option value="EXHAUSTED">Exhausted</option>
+          </select>
+        )}
       </div>
     </Card>
   )

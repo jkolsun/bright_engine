@@ -32,6 +32,7 @@ export const ENTRY_POINTS = {
   SMS_REPLY: 'SMS_REPLY',
   REP_CLOSE: 'REP_CLOSE',
   PREVIEW_CTA: 'PREVIEW_CTA',
+  POSITIVE_REPLY: 'POSITIVE_REPLY',
 } as const
 
 export const AUTONOMY_LEVELS = {
@@ -54,6 +55,7 @@ export interface ConversationContext {
   collectedData: Record<string, unknown> | null
   questionsAsked: string[] | null
   previewUrl: string | null
+  bookingLink: string
 }
 
 // ============================================
@@ -232,13 +234,13 @@ export async function triggerCloseEngine(options: {
 // Valid stage transitions — reject anything not in this map
 const VALID_TRANSITIONS: Record<string, string[]> = {
   INITIATED: ['QUALIFYING'],
-  QUALIFYING: ['COLLECTING_INFO', 'BUILDING', 'STALLED'],
-  COLLECTING_INFO: ['BUILDING', 'STALLED'],
-  BUILDING: ['PREVIEW_SENT', 'STALLED'],
-  PREVIEW_SENT: ['EDIT_LOOP', 'PENDING_APPROVAL', 'PAYMENT_SENT', 'STALLED'],
-  EDIT_LOOP: ['PREVIEW_SENT', 'PENDING_APPROVAL', 'PAYMENT_SENT', 'STALLED'],
-  PENDING_APPROVAL: ['PAYMENT_SENT', 'STALLED'],
-  PAYMENT_SENT: ['COMPLETED', 'STALLED'],
+  QUALIFYING: ['COLLECTING_INFO', 'COMPLETED', 'STALLED'],
+  COLLECTING_INFO: ['QUALIFYING', 'COMPLETED', 'STALLED'],
+  BUILDING: ['STALLED'],
+  PREVIEW_SENT: ['STALLED'],
+  EDIT_LOOP: ['STALLED'],
+  PENDING_APPROVAL: ['STALLED'],
+  PAYMENT_SENT: ['STALLED'],
   STALLED: ['QUALIFYING', 'CLOSED_LOST'],
 }
 
@@ -324,6 +326,14 @@ export async function getConversationContext(conversationId: string): Promise<Co
     take: 20,
   })
 
+  let bookingLink = ''
+  try {
+    const { getBookingLink } = await import('./booking-service')
+    bookingLink = await getBookingLink(lead)
+  } catch (err) {
+    console.warn('[CloseEngine] Failed to get booking link:', err)
+  }
+
   return {
     conversation,
     lead,
@@ -331,6 +341,7 @@ export async function getConversationContext(conversationId: string): Promise<Co
     collectedData: conversation.collectedData as Record<string, unknown> | null,
     questionsAsked: conversation.questionsAsked as string[] | null,
     previewUrl: lead.previewUrl,
+    bookingLink,
   }
 }
 

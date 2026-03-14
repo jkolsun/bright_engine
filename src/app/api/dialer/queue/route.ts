@@ -28,6 +28,7 @@ const BASE_SELECT = {
   phone: true, secondaryPhone: true, email: true, status: true, priority: true,
   city: true, state: true, industry: true, ownerRepId: true,
   previewId: true, previewUrl: true,
+  pipelineStatus: true, meetingBookedAt: true, previewClicked: true, ctaClicked: true, dripActive: true,
   _count: { select: { dialerCalls: true } },
 }
 

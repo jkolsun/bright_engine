@@ -48,12 +48,26 @@ const DISPOSITION_STATUS_MAP: Record<string, string> = {
   // WILL_LOOK_LATER, NO_ANSWER, VOICEMAIL — no status change (keep current status)
 }
 
+// Pipeline status mapping for dispositions
+const PIPELINE_STATUS_MAP: Record<string, string> = {
+  INTERESTED_VERBAL: 'CONTACTED',
+  CALLBACK: 'CONTACTED',
+  WANTS_CHANGES: 'CONTACTED',
+  WILL_LOOK_LATER: 'CONTACTED',
+  NOT_INTERESTED: 'NOT_INTERESTED',
+  DNC: 'OPTED_OUT',
+  WRONG_NUMBER: 'NOT_INTERESTED',
+  DISCONNECTED: 'NOT_INTERESTED',
+}
+
 // Dispositions indicating the lead is interested
 const INTERESTED_DISPOSITIONS = [
   'WANTS_TO_MOVE_FORWARD',
   'CALLBACK',
   'INTERESTED_VERBAL',
   'WANTS_CHANGES',
+  'VERBAL_OPT_IN',
+  'MEETING_BOOKED',
 ]
 
 // Dispositions that count as a conversation (connected + talked)
@@ -65,10 +79,12 @@ const CONVERSATION_DISPOSITIONS = [
   'WANTS_CHANGES',
   'WILL_LOOK_LATER',
   'DNC',
+  'VERBAL_OPT_IN',
+  'MEETING_BOOKED',
 ]
 
 // Dispositions that count as a close
-const CLOSE_DISPOSITIONS = ['WANTS_TO_MOVE_FORWARD']
+const CLOSE_DISPOSITIONS = ['WANTS_TO_MOVE_FORWARD', 'MEETING_BOOKED']
 
 // ============================================
 // Session Management
@@ -660,6 +676,8 @@ export async function logDisposition(params: {
       DNC: 'dncCount',
       WRONG_NUMBER: 'wrongNumberCount',
       DISCONNECTED: 'disconnectedCount',
+      VERBAL_OPT_IN: 'verbalOptInCount',
+      MEETING_BOOKED: 'meetingBookedCount',
     }
 
     const sessionUpdate: Record<string, unknown> = {}
@@ -707,6 +725,8 @@ export async function logDisposition(params: {
     NO_ANSWER: 'noAnswers',
     WRONG_NUMBER: 'wrongNumbers',
     DISCONNECTED: 'disconnected',
+    VERBAL_OPT_IN: 'verbalOptIn',
+    MEETING_BOOKED: 'meetingBooked',
   }
   const repActivityField = REP_ACTIVITY_DISPOSITION_FIELD[result]
   await upsertRepActivityIncremental(call.repId, {
@@ -768,18 +788,95 @@ export async function logDisposition(params: {
     }).catch(err => console.error('[DialerService] Webhook dispatch failed:', err))
   }
 
-  // TEARDOWN: Close Engine trigger disabled — CE should not be triggered from the dialer.
-  // if (result === 'WANTS_TO_MOVE_FORWARD') {
-  //   triggerCloseEngine({
-  //     leadId: call.lead.id,
-  //     entryPoint: 'REP_CLOSE',
-  //     repId: call.repId,
-  //   }).catch((err) => {
-  //     console.error('[DialerService] Close engine trigger error:', err)
-  //   })
-  // }
+  // 10. Pipeline status update
+  const newPipelineStatus = PIPELINE_STATUS_MAP[result]
+  if (newPipelineStatus) {
+    try {
+      await prisma.lead.update({
+        where: { id: call.lead.id },
+        data: { pipelineStatus: newPipelineStatus as any },
+      })
+    } catch (err) {
+      console.warn('[DialerService] pipelineStatus update failed (field may not exist yet):', err)
+    }
+  }
+
+  // 10a. 3 no-answer call parking
+  if (result === 'NO_ANSWER') {
+    try {
+      const noAnswerCount = await prisma.dialerCall.count({
+        where: { leadId: call.lead.id, dispositionResult: 'NO_ANSWER' },
+      })
+      if (noAnswerCount >= 3) {
+        await prisma.lead.update({
+          where: { id: call.lead.id },
+          data: { pipelineStatus: 'COLD_NO_RESPONSE' as any },
+        })
+        console.log(`[DialerService] Lead ${call.lead.id} parked after ${noAnswerCount} no-answer calls`)
+      }
+    } catch {}
+  }
+
+  // 10b. VERBAL_OPT_IN: trigger drip sequence start
+  if (result === 'VERBAL_OPT_IN') {
+    try {
+      await prisma.lead.update({
+        where: { id: call.lead.id },
+        data: { pipelineStatus: 'OPTED_IN' as any, dripActive: true },
+      })
+      const campaignLead = await prisma.smsCampaignLead.findFirst({
+        where: { leadId: call.lead.id, funnelStage: { notIn: ['OPTED_OUT', 'ARCHIVED', 'CLOSED'] } },
+      })
+      if (campaignLead) {
+        const { markOptedIn } = await import('./sms-campaign-service')
+        await markOptedIn(campaignLead.id, 'verbal_on_call')
+      }
+    } catch (err) {
+      console.error('[DialerService] VERBAL_OPT_IN handling failed:', err)
+    }
+  }
+
+  // 10c. MEETING_BOOKED: stop all drips, set meeting booked
+  if (result === 'MEETING_BOOKED') {
+    try {
+      await prisma.lead.update({
+        where: { id: call.lead.id },
+        data: {
+          pipelineStatus: 'MEETING_BOOKED' as any,
+          meetingBookedAt: new Date(),
+          dripActive: false,
+        },
+      })
+      await prisma.smsCampaignLead.updateMany({
+        where: { leadId: call.lead.id, funnelStage: { notIn: ['OPTED_OUT', 'ARCHIVED', 'CLOSED'] } },
+        data: { funnelStage: 'CLOSED', archivedAt: new Date(), archiveReason: 'meeting_booked_by_rep' },
+      })
+      await prisma.leadEvent.create({
+        data: { leadId: call.lead.id, eventType: 'MEETING_BOOKED', metadata: { source: 'rep_disposition', repId: call.repId } },
+      })
+    } catch (err) {
+      console.error('[DialerService] MEETING_BOOKED handling failed:', err)
+    }
+  }
+
+  // 10d. WANTS_TO_MOVE_FORWARD backward compatibility (maps to OPTED_IN)
   if (result === 'WANTS_TO_MOVE_FORWARD') {
-    console.log('[DialerService] Close Engine trigger disabled — teardown. REP_CLOSE entry point skipped for lead:', call.lead.id)
+    console.log('[DialerService] WANTS_TO_MOVE_FORWARD mapped to OPTED_IN for lead:', call.lead.id)
+    try {
+      await prisma.lead.update({
+        where: { id: call.lead.id },
+        data: { pipelineStatus: 'OPTED_IN' as any, dripActive: true },
+      })
+      const campaignLead = await prisma.smsCampaignLead.findFirst({
+        where: { leadId: call.lead.id, funnelStage: { notIn: ['OPTED_OUT', 'ARCHIVED', 'CLOSED'] } },
+      })
+      if (campaignLead) {
+        const { markOptedIn } = await import('./sms-campaign-service')
+        await markOptedIn(campaignLead.id, 'verbal_on_call')
+      }
+    } catch (err) {
+      console.error('[DialerService] WANTS_TO_MOVE_FORWARD opt-in handling failed:', err)
+    }
   }
 
   // 11. Push SSE

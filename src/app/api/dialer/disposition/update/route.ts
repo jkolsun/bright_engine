@@ -9,6 +9,7 @@ const VALID_DISPOSITIONS = [
   'WANTS_TO_MOVE_FORWARD', 'NOT_INTERESTED', 'CALLBACK', 'INTERESTED_VERBAL',
   'WANTS_CHANGES', 'WILL_LOOK_LATER', 'DNC', 'NO_ANSWER', 'VOICEMAIL',
   'WRONG_NUMBER', 'DISCONNECTED',
+  'VERBAL_OPT_IN', 'MEETING_BOOKED',
 ]
 
 const SESSION_DISPOSITION_FIELD: Record<string, string> = {
@@ -20,6 +21,8 @@ const SESSION_DISPOSITION_FIELD: Record<string, string> = {
   DNC: 'dncCount',
   WRONG_NUMBER: 'wrongNumberCount',
   DISCONNECTED: 'disconnectedCount',
+  VERBAL_OPT_IN: 'verbalOptInCount',
+  MEETING_BOOKED: 'meetingBookedCount',
 }
 
 const DISPOSITION_STATUS_MAP: Record<string, string> = {
@@ -31,9 +34,11 @@ const DISPOSITION_STATUS_MAP: Record<string, string> = {
   WANTS_CHANGES: 'QUALIFIED',
   WRONG_NUMBER: 'CLOSED_LOST',
   DISCONNECTED: 'CLOSED_LOST',
+  VERBAL_OPT_IN: 'QUALIFIED',
+  MEETING_BOOKED: 'QUALIFIED',
 }
 
-const INTERESTED_RESULTS = ['WANTS_TO_MOVE_FORWARD', 'CALLBACK', 'INTERESTED_VERBAL', 'WANTS_CHANGES']
+const INTERESTED_RESULTS = ['WANTS_TO_MOVE_FORWARD', 'CALLBACK', 'INTERESTED_VERBAL', 'WANTS_CHANGES', 'VERBAL_OPT_IN', 'MEETING_BOOKED']
 const NOT_INTERESTED_RESULTS = ['NOT_INTERESTED', 'DNC']
 
 function buildSessionStatChanges(oldResult: string, newResult: string): Record<string, { increment: number }> {

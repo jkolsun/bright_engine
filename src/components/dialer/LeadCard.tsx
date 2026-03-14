@@ -7,8 +7,7 @@ import { LiveFeed } from './LiveFeed'
 import { PreviewButton } from './PreviewButton'
 import { DispositionTree } from './DispositionTree'
 import { CallNotes } from './CallNotes'
-import { UpsellTags } from './UpsellTags'
-import { Phone, Search, Plus, Link, UserPlus } from 'lucide-react'
+import { Phone, Search, Plus, Link, UserPlus, CalendarDays } from 'lucide-react'
 
 const DISPOSITION_COLORS: Record<string, string> = {
   WANTS_TO_MOVE_FORWARD: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400',
@@ -20,6 +19,22 @@ const DISPOSITION_COLORS: Record<string, string> = {
   NO_ANSWER: 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400',
   DNC: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400',
   WRONG_NUMBER: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400',
+  VERBAL_OPT_IN: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-400',
+  MEETING_BOOKED: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400',
+}
+
+const PIPELINE_STATUS_COLORS: Record<string, string> = {
+  NEW: 'bg-gray-100 text-gray-600',
+  COLD_SENT: 'bg-blue-100 text-blue-700',
+  WARM: 'bg-amber-100 text-amber-700',
+  CONTACTED: 'bg-teal-100 text-teal-700',
+  OPTED_IN: 'bg-purple-100 text-purple-700',
+  MEETING_BOOKED: 'bg-emerald-100 text-emerald-700',
+  CLOSED: 'bg-green-100 text-green-800',
+  COLD_NO_RESPONSE: 'bg-gray-100 text-gray-500',
+  NOT_INTERESTED: 'bg-red-100 text-red-600',
+  OPTED_OUT: 'bg-red-100 text-red-700',
+  EXHAUSTED: 'bg-gray-200 text-gray-400',
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -248,6 +263,36 @@ const getFunnelStageColor = (stage: string): string => {
   }
 }
 
+function BookMeetingButton({ leadId }: { leadId: string }) {
+  const [loading, setLoading] = useState(false)
+
+  const handleClick = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/booking/link?leadId=${leadId}`)
+      const data = await res.json()
+      if (data.url) {
+        window.open(data.url, '_blank')
+      }
+    } catch (err) {
+      console.error('[LeadCard] Book meeting failed:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={loading}
+      className="flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 text-white rounded-xl font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+    >
+      <CalendarDays className="w-4 h-4" />
+      {loading ? 'Loading...' : 'Book Meeting'}
+    </button>
+  )
+}
+
 export function LeadCard() {
   const { queue, currentCall, manualDialState, isViewingRecentLead, recentCallId, showRecentLeadBanner } = useDialer()
   const lead = queue.selectedLead
@@ -406,9 +451,18 @@ export function LeadCard() {
           </div>
         )}
 
+        {/* Meeting booked banner */}
+        {(lead as any).meetingBookedAt && (
+          <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 rounded-xl p-3">
+            <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">
+              Meeting booked: {new Date((lead as any).meetingBookedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-4">
           <PreviewButton lead={lead} />
-          <UpsellTags leadId={lead.id} />
+          {lead.previewUrl && <BookMeetingButton leadId={lead.id} />}
         </div>
 
         {/* Notes — ALWAYS visible (before, during, after call) */}

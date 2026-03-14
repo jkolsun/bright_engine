@@ -13,15 +13,16 @@ const SMS_SETTING_KEYS: Record<string, unknown> = {
   sms_daily_limit: 200,
   sms_from_number: '',
   sms_throttle_per_minute: 10,
+  booking_url: '',
 }
 
 // Default drip templates used when none are configured
 const DEFAULT_DRIP_TEMPLATES = [
-  { body: "Thanks for chatting {firstName}! Here's your website again: {previewUrl} — Let me know if you want any changes.", dayOffset: 0 },
-  { body: "Hey {firstName}, quick question — are you getting enough calls from Google right now? Most {industry} businesses in {city} are leaving money on the table without a website.", dayOffset: 2 },
-  { body: "Just wanted to share — we helped a {industry} company in {state} go from 0 to 15+ calls/month within 60 days of launching their site. Happy to do the same for {companyName}.", dayOffset: 5 },
-  { body: "{firstName}, your custom website for {companyName} is still ready to go. Just $99.95/mo, no setup fee, cancel anytime. Want me to send over the details?", dayOffset: 8 },
-  { body: "Last check-in {firstName} — I'll keep your website saved for a bit longer in case you change your mind. Just reply here anytime. Have a great week!", dayOffset: 12 },
+  { body: "Hey {firstName}, great chatting with our team! Here's your link to book a free strategy call with Andrew: {bookingLink}. He'll walk you through everything we can do for {companyName}.", dayOffset: 1 },
+  { body: "Hey {firstName}, other {industry} businesses in {state} are already getting more customers online. Let's get {companyName} set up too: {bookingLink}", dayOffset: 3 },
+  { body: "Hi {firstName}, your custom site is ready to go — just need 15 min to finalize the plan with you: {bookingLink}", dayOffset: 7 },
+  { body: "Hey {firstName}, last few spots this week for free strategy calls. Grab yours here: {bookingLink}", dayOffset: 10 },
+  { body: "Hi {firstName}, last check-in about your website for {companyName}. Link's always open if you want to chat: {bookingLink}. No pressure either way!", dayOffset: 14 },
 ]
 
 /**
@@ -39,21 +40,22 @@ function dbToUiSettings(dbSettings: Record<string, unknown>): Record<string, unk
   return {
     coldTextTemplate: dbSettings.sms_cold_template || '',
     drip1Template: dripTemplates[0]?.body || '',
-    drip1DayOffset: dripTemplates[0]?.dayOffset ?? 0,
+    drip1DayOffset: dripTemplates[0]?.dayOffset ?? 1,
     drip2Template: dripTemplates[1]?.body || '',
-    drip2DayOffset: dripTemplates[1]?.dayOffset ?? 2,
+    drip2DayOffset: dripTemplates[1]?.dayOffset ?? 3,
     drip3Template: dripTemplates[2]?.body || '',
-    drip3DayOffset: dripTemplates[2]?.dayOffset ?? 5,
+    drip3DayOffset: dripTemplates[2]?.dayOffset ?? 7,
     drip4Template: dripTemplates[3]?.body || '',
-    drip4DayOffset: dripTemplates[3]?.dayOffset ?? 8,
+    drip4DayOffset: dripTemplates[3]?.dayOffset ?? 10,
     drip5Template: dripTemplates[4]?.body || '',
-    drip5DayOffset: dripTemplates[4]?.dayOffset ?? 12,
+    drip5DayOffset: dripTemplates[4]?.dayOffset ?? 14,
     sendWindowStart: sendWindow.startHour ?? 9,
     sendWindowEnd: sendWindow.endHour ?? 11,
     sendDays: capitalizedDays,
     dailyLimit: dbSettings.sms_daily_limit ?? 200,
     messagesPerMinute: dbSettings.sms_throttle_per_minute ?? 10,
     smsFromNumber: dbSettings.sms_from_number || '',
+    bookingUrl: dbSettings.booking_url || '',
   }
 }
 
@@ -79,11 +81,15 @@ function uiToDbSettings(uiSettings: Record<string, unknown>): Record<string, unk
     result.sms_throttle_per_minute = uiSettings.messagesPerMinute
   }
 
+  if ('bookingUrl' in uiSettings) {
+    result.booking_url = uiSettings.bookingUrl
+  }
+
   // Compose drip templates array from individual fields
   if ('drip1Template' in uiSettings) {
     result.sms_drip_templates = [1, 2, 3, 4, 5].map(n => ({
       body: (uiSettings[`drip${n}Template`] as string) || '',
-      dayOffset: (uiSettings[`drip${n}DayOffset`] as number) ?? (n === 1 ? 0 : n === 2 ? 2 : n === 3 ? 5 : n === 4 ? 8 : 12),
+      dayOffset: (uiSettings[`drip${n}DayOffset`] as number) ?? (n === 1 ? 1 : n === 2 ? 3 : n === 3 ? 7 : n === 4 ? 10 : 14),
     }))
   }
 

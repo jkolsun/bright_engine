@@ -993,6 +993,29 @@ async function startWorkers() {
             await staleEditReminder()
             break
 
+          case 'cold-text-timeout-check': {
+            console.log('[PIPELINE] Running cold text timeout check')
+            const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000) // 72 hours
+            const staleCampaignLeads = await prisma.smsCampaignLead.findMany({
+              where: { funnelStage: 'TEXTED', coldTextSentAt: { lt: cutoff } },
+              select: { leadId: true },
+              take: 500,
+            })
+            const staleLeadIds = [...new Set(staleCampaignLeads.map(cl => cl.leadId))]
+            if (staleLeadIds.length > 0) {
+              try {
+                await prisma.lead.updateMany({
+                  where: { id: { in: staleLeadIds }, pipelineStatus: 'COLD_SENT' as any },
+                  data: { pipelineStatus: 'COLD_NO_RESPONSE' as any },
+                })
+                console.log(`[PIPELINE] Moved ${staleLeadIds.length} leads to COLD_NO_RESPONSE`)
+              } catch (err) {
+                console.warn('[PIPELINE] cold-text-timeout-check failed (migration may not have run):', err)
+              }
+            }
+            break
+          }
+
           default:
             console.log(`Unknown monitoring job: ${job.name}`)
         }
@@ -1260,8 +1283,11 @@ async function startWorkers() {
           })
           await prisma.lead.update({
             where: { id: cl.leadId },
+            data: { smsFunnelStage: 'ARCHIVED', pipelineStatus: 'EXHAUSTED' as any, dripActive: false as any },
+          }).catch(() => prisma.lead.update({
+            where: { id: cl.leadId },
             data: { smsFunnelStage: 'ARCHIVED' },
-          })
+          }))
         }
 
         console.log(`[SMS-CAMPAIGN] Archived ${staleDripLeads.length} stale drip leads`)
@@ -1324,13 +1350,14 @@ async function startWorkers() {
     })
 
     // Schedule recurring monitoring jobs
-    const { schedulePendingStateEscalation, scheduleNotificationCleanup, scheduleFailedWebhookRetry, scheduleStaleEditReminder, scheduleDripCheck } = await import('./queue')
+    const { schedulePendingStateEscalation, scheduleNotificationCleanup, scheduleFailedWebhookRetry, scheduleStaleEditReminder, scheduleDripCheck, scheduleColdTextTimeoutCheck } = await import('./queue')
     await schedulePendingStateEscalation()
     await scheduleNotificationCleanup()
     await scheduleFailedWebhookRetry()
     // TEARDOWN: scheduleUrgencyCheck() removed — urgency text system disabled
     await scheduleStaleEditReminder()
     await scheduleDripCheck()
+    await scheduleColdTextTimeoutCheck()
 
     // BUG 9.5: Worker health check endpoint
     const healthPort = parseInt(process.env.WORKER_HEALTH_PORT || '3001', 10)

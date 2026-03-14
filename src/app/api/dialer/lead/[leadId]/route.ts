@@ -36,6 +36,11 @@ export async function GET(
         ownerRepId: true,
         previewId: true,
         previewUrl: true,
+        pipelineStatus: true,
+        meetingBookedAt: true,
+        previewClicked: true,
+        ctaClicked: true,
+        dripActive: true,
         _count: { select: { dialerCalls: true } },
       },
     })

@@ -184,6 +184,20 @@ model Lead {
   smsFunnelStage         SmsFunnelStage?          @map("sms_funnel_stage")
   smsOptedOutAt          DateTime?                @map("sms_opted_out_at")
   lastSmsCampaignId      String?                  @map("last_sms_campaign_id")
+
+  // Pipeline V2 fields
+  pipelineStatus         PipelineStatus           @default(NEW) @map("pipeline_status")
+  previewClicked         Boolean                  @default(false) @map("preview_clicked")
+  ctaClicked             Boolean                  @default(false) @map("cta_clicked")
+  dripActive             Boolean                  @default(false) @map("drip_active")
+  meetingConfirmed       Boolean                  @default(false) @map("meeting_confirmed")
+  noShow                 Boolean                  @default(false) @map("no_show")
+  rebookActive           Boolean                  @default(false) @map("rebook_active")
+  ptRepSourced           Boolean                  @default(false) @map("pt_rep_sourced")
+  meetingBookedAt        DateTime?                @map("meeting_booked_at")
+  meetingUrl             String?                  @map("meeting_url")
+  bookingId              String?                  @map("booking_id")
+
   siteVersions           SiteVersion[]
   smsCampaignLeads       SmsCampaignLead[]
   smsCampaignMessages    SmsCampaignMessage[]
@@ -212,6 +226,7 @@ model Lead {
   @@index([emailEnrichmentSource])
   @@index([smsFunnelStage])
   @@index([lastSmsCampaignId])
+  @@index([pipelineStatus])
   @@index([secondaryPhone])
   @@map("leads")
 }
@@ -421,6 +436,8 @@ model RepActivity {
   wrongNumbers       Int    @default(0) @map("wrong_numbers")
   disconnected       Int    @default(0)
   dnc                Int    @default(0)
+  verbalOptIn        Int    @default(0) @map("verbal_opt_in")
+  meetingBooked      Int    @default(0) @map("meeting_booked")
 
   @@unique([repId, date])
   @@index([repId])
@@ -1008,6 +1025,20 @@ enum LeadPriority {
   COLD
 }
 
+enum PipelineStatus {
+  NEW
+  COLD_SENT
+  WARM
+  CONTACTED
+  OPTED_IN
+  MEETING_BOOKED
+  CLOSED
+  COLD_NO_RESPONSE
+  NOT_INTERESTED
+  OPTED_OUT
+  EXHAUSTED
+}
+
 enum EventType {
   STAGE_CHANGE
   EMAIL_SENT
@@ -1055,6 +1086,14 @@ enum EventType {
   SMS_OPT_OUT
   SMS_DRIP_SENT
   SMS_DRIP_REPLY
+  MEETING_BOOKED
+  MEETING_CONFIRMED
+  MEETING_NO_SHOW
+  MEETING_CANCELLED
+  MEETING_COMPLETED
+  REBOOK_STARTED
+  REBOOK_EXHAUSTED
+  PIPELINE_STATUS_CHANGE
 }
 
 enum HostingStatus {
@@ -1356,6 +1395,8 @@ model DialerSessionNew {
   dncCount                 Int          @default(0) @map("dnc_count")
   wrongNumberCount         Int          @default(0) @map("wrong_number_count")
   disconnectedCount        Int          @default(0) @map("disconnected_count")
+  verbalOptInCount         Int          @default(0) @map("verbal_opt_in_count")
+  meetingBookedCount       Int          @default(0) @map("meeting_booked_count")
 
   rep                User         @relation("RepDialerSessionsNew", fields: [repId], references: [id])
   calls              DialerCall[]

@@ -51,6 +51,8 @@ export interface DialerSession {
   dncCount: number
   wrongNumberCount: number
   disconnectedCount: number
+  verbalOptInCount: number
+  meetingBookedCount: number
 }
 
 export interface QueueLead {
@@ -70,6 +72,11 @@ export interface QueueLead {
   ownerRepId?: string
   previewId?: string
   previewUrl?: string
+  pipelineStatus?: string
+  meetingBookedAt?: string
+  previewClicked?: boolean
+  ctaClicked?: boolean
+  dripActive?: boolean
   _count?: { dialerCalls: number }
   smsCampaignLead?: {
     id: string
@@ -160,3 +167,5 @@ export type DispositionOutcome =
   | 'VOICEMAIL'
   | 'WRONG_NUMBER'
   | 'DISCONNECTED'
+  | 'VERBAL_OPT_IN'
+  | 'MEETING_BOOKED'

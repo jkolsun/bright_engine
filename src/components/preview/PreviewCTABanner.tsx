@@ -1,15 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 export default function PreviewCTABanner({ previewId }: { previewId: string }) {
   const [submitted, setSubmitted] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [monthlyPrice, setMonthlyPrice] = useState(100)
-
-  useEffect(() => {
-    fetch('/api/settings/pricing').then(r => r.ok ? r.json() : null).then(d => { if (d?.monthlyHosting) setMonthlyPrice(d.monthlyHosting) }).catch(err => console.warn('[PreviewCTA] Pricing fetch failed:', err))
-  }, [previewId])
+  const [confirmationMsg, setConfirmationMsg] = useState('')
 
   const handleClick = async () => {
     if (loading || submitted) return
@@ -22,6 +18,14 @@ export default function PreviewCTABanner({ previewId }: { previewId: string }) {
         body: JSON.stringify({ previewId, selectedTemplate }),
       })
       if (res.ok) {
+        const data = await res.json()
+        const bookingUrl = data.bookingUrl
+        if (bookingUrl) {
+          window.open(bookingUrl, '_blank')
+          setConfirmationMsg('Opening your booking page...')
+        } else {
+          setConfirmationMsg('Thank you! Our team will reach out shortly.')
+        }
         setSubmitted(true)
       }
     } catch {
@@ -39,20 +43,20 @@ export default function PreviewCTABanner({ previewId }: { previewId: string }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
           <span className="text-sm sm:text-base font-medium">
-            Thank you for your interest! A team member will reach out shortly.
+            {confirmationMsg}
           </span>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-2 py-3 px-6">
           <span className="text-sm sm:text-base font-semibold text-center">
-            Get This Site Live &mdash; <span className="text-green-300 font-bold">FREE Install</span> <span className="text-white/60 text-xs font-normal">then ${monthlyPrice}/mo</span>
+            Like Your Free Preview? Book a Strategy Call
           </span>
           <button
             onClick={handleClick}
             disabled={loading}
             className="bg-white text-[#0D7377] font-semibold text-sm px-8 py-2.5 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-70 whitespace-nowrap"
           >
-            {loading ? 'Sending...' : 'Get Started'}
+            {loading ? 'Sending...' : 'Book Free Call'}
           </button>
         </div>
       )}

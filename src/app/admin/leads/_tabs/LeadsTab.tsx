@@ -73,6 +73,7 @@ function LeadsPageInner() {
   // Filters
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [pipelineFilter, setPipelineFilter] = useState<string>('all')
   const [repFilter, setRepFilter] = useState<string>('all')
   const [contactedFilter, setContactedFilter] = useState('all')
 
@@ -503,6 +504,7 @@ function LeadsPageInner() {
       lead.email?.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesStatus = statusFilter === 'all' || lead.status === statusFilter
+    const matchesPipeline = pipelineFilter === 'all' || (lead as any).pipelineStatus === pipelineFilter
 
     const matchesRep = repFilter === 'all'
       ? true
@@ -534,7 +536,7 @@ function LeadsPageInner() {
       return true
     })()
 
-    return matchesSearch && matchesStatus && matchesRep && matchesContacted
+    return matchesSearch && matchesStatus && matchesPipeline && matchesRep && matchesContacted
   })
 
   const totalPages = Math.ceil(filteredLeads.length / LEADS_PER_PAGE)
@@ -547,6 +549,12 @@ function LeadsPageInner() {
     hot: folderFilteredLeads.filter(l => l.status === 'HOT_LEAD').length,
     qualified: folderFilteredLeads.filter(l => l.status === 'QUALIFIED').length,
     building: folderFilteredLeads.filter(l => l.status === 'BUILDING').length,
+  }
+
+  const pipelineStats = {
+    warm: folderFilteredLeads.filter(l => (l as any).pipelineStatus === 'WARM').length,
+    optedIn: folderFilteredLeads.filter(l => (l as any).pipelineStatus === 'OPTED_IN').length,
+    meetingBooked: folderFilteredLeads.filter(l => (l as any).pipelineStatus === 'MEETING_BOOKED').length,
   }
 
   const activeReps = reps.filter(r => r.status === 'ACTIVE')
@@ -731,6 +739,13 @@ function LeadsPageInner() {
         <StatCard label="Building" value={stats.building} variant="warning" onClick={() => { setStatusFilter('BUILDING'); setSelectedLeads(new Set()); setCurrentPage(0) }} active={statusFilter === 'BUILDING'} />
       </div>
 
+      {/* Pipeline Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard label="Warm" value={pipelineStats.warm} variant="warning" />
+        <StatCard label="Opted In" value={pipelineStats.optedIn} variant="default" />
+        <StatCard label="Meetings Booked" value={pipelineStats.meetingBooked} variant="success" />
+      </div>
+
       {/* Search & Filters */}
       <LeadFilters
         searchTerm={searchTerm}
@@ -739,6 +754,8 @@ function LeadsPageInner() {
         onRepFilterChange={(v) => { setRepFilter(v); setSelectedLeads(new Set()); setCurrentPage(0) }}
         contactedFilter={contactedFilter}
         onContactedFilterChange={(v) => { setContactedFilter(v); setSelectedLeads(new Set()); setCurrentPage(0) }}
+        pipelineFilter={pipelineFilter}
+        onPipelineFilterChange={(v) => { setPipelineFilter(v); setSelectedLeads(new Set()); setCurrentPage(0) }}
         activeReps={activeReps}
       />
 
