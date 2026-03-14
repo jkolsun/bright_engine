@@ -21,8 +21,8 @@ export default function PreviewCTABanner({ previewId }: { previewId: string }) {
         const data = await res.json()
         const bookingUrl = data.bookingUrl
         if (bookingUrl) {
-          window.open(bookingUrl, '_blank')
-          setConfirmationMsg('Opening your booking page...')
+          window.location.href = bookingUrl
+          setConfirmationMsg('Redirecting to booking page...')
         } else {
           setConfirmationMsg('Thank you! Our team will reach out shortly.')
         }

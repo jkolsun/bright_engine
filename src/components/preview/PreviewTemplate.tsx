@@ -169,7 +169,7 @@ export default function PreviewTemplate({ lead, websiteCopy }: { lead: any; webs
       if (res.ok) {
         const data = await res.json()
         if (data.bookingUrl) {
-          window.open(data.bookingUrl, '_blank')
+          window.location.href = data.bookingUrl
           return
         }
       }
