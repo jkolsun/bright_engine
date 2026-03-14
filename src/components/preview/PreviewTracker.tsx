@@ -4,18 +4,22 @@ import { useEffect } from 'react'
 
 export default function PreviewTracker({ previewId }: { previewId: string }) {
   useEffect(() => {
-    let startTime = Date.now()
+    const startTime = Date.now()
     let maxScrollDepth = 0
 
-    // Track page view
-    fetch('/api/preview/track', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        previewId,
-        event: 'page_view',
+    // Fire page_view once per session (sessionStorage dedup prevents refresh double-counts)
+    const sessionKey = `pv_${previewId}`
+    if (!sessionStorage.getItem(sessionKey)) {
+      sessionStorage.setItem(sessionKey, '1')
+      fetch('/api/preview/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          previewId,
+          event: 'page_view',
+        })
       })
-    })
+    }
 
     // Track scroll depth
     const handleScroll = () => {
@@ -28,28 +32,19 @@ export default function PreviewTracker({ previewId }: { previewId: string }) {
 
     window.addEventListener('scroll', handleScroll, { passive: true })
 
-    // Track time on page and scroll depth when leaving
+    // On exit: send a single page_exit beacon with duration + scroll depth
+    // This UPDATES the existing page_view event instead of creating new ones
     const handleBeforeUnload = () => {
       const timeOnPage = Math.floor((Date.now() - startTime) / 1000)
 
-      if (timeOnPage > 5) {
+      if (timeOnPage > 3 || maxScrollDepth > 0) {
         navigator.sendBeacon(
           '/api/preview/track',
           JSON.stringify({
             previewId,
-            event: 'time_on_page',
+            event: 'page_exit',
             duration: timeOnPage,
-          })
-        )
-      }
-
-      if (maxScrollDepth > 0) {
-        navigator.sendBeacon(
-          '/api/preview/track',
-          JSON.stringify({
-            previewId,
-            event: 'scroll_depth',
-            metadata: { depth: maxScrollDepth },
+            metadata: { scrollDepth: maxScrollDepth },
           })
         )
       }

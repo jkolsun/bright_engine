@@ -8,11 +8,22 @@ export const dynamic = 'force-dynamic'
  * POST /api/bootstrap/admin
  * Create admin user (one-time setup)
  * Body: { email, name, password }
- * 
- * Safety: Check if admin already exists. Refuse to overwrite.
+ * Headers: { x-bootstrap-secret: BOOTSTRAP_SECRET }
+ *
+ * Safety: Requires BOOTSTRAP_SECRET header + checks if admin already exists.
  */
 export async function POST(request: NextRequest) {
   try {
+    // Require bootstrap secret to prevent unauthorized admin creation
+    const bootstrapSecret = process.env.BOOTSTRAP_SECRET
+    const providedSecret = request.headers.get('x-bootstrap-secret')
+    if (!bootstrapSecret || providedSecret !== bootstrapSecret) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
+      )
+    }
+
     const { email, name, password } = await request.json()
 
     if (!email || !name || !password) {

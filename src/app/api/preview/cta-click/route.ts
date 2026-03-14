@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { pushToRep, pushToAllAdmins } from '@/lib/dialer-events'
-import { calculateEngagementScore } from '@/lib/engagement-scoring'
 import { pushToMessages } from '@/lib/messages-v2-events'
 
 export const dynamic = 'force-dynamic'
@@ -71,17 +70,12 @@ export async function POST(request: NextRequest) {
       console.warn('[Preview CTA] Dialer SSE push failed:', dialerErr)
     }
 
-    // Recalculate engagement score (persists score + derives priority)
-    let scoreResult: Awaited<ReturnType<typeof calculateEngagementScore>> | null = null
-    try { scoreResult = await calculateEngagementScore(lead.id) } catch (e) { console.warn('[Preview CTA] Score calc failed:', e) }
-
-    // Always promote status + notify on CTA click (organic OR during call)
-    if (scoreResult?.priorityChanged && scoreResult.newPriority === 'HOT') {
-      await prisma.lead.update({
-        where: { id: lead.id },
-        data: { status: 'HOT_LEAD' },
-      })
-    }
+    // CTA click = always HOT. Set status immediately (engagement scoring
+    // also runs inside triggerCloseEngine, so no need to recalculate here)
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: { status: 'HOT_LEAD', priority: 'HOT' },
+    })
 
     // Send urgent email notification to admin via Resend
     try {

@@ -118,11 +118,26 @@ export async function GET(
     timeline.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
 
     // Aggregate preview engagement from events
+    // Each PREVIEW_VIEWED = one real page visit (deduped server-side, 5-min window)
+    const viewEvents = events.filter(e => e.eventType === 'PREVIEW_VIEWED')
     const previewEngagement = {
       ctaClicks: events.filter(e => e.eventType === 'PREVIEW_CTA_CLICKED').length,
-      pageViews: events.filter(e => e.eventType === 'PREVIEW_VIEWED').length,
+      pageViews: viewEvents.length,
       callClicks: events.filter(e => e.eventType === 'PREVIEW_CALL_CLICKED').length,
       returnVisits: events.filter(e => e.eventType === 'PREVIEW_RETURN_VISIT').length,
+      // Enriched data from page_exit events (duration + scroll depth from most recent visit)
+      lastViewDuration: (() => {
+        const lastView = viewEvents[viewEvents.length - 1]
+        const meta = lastView?.metadata as Record<string, unknown> | null
+        return meta?.duration ? Number(meta.duration) : null
+      })(),
+      lastScrollDepth: (() => {
+        const lastView = viewEvents[viewEvents.length - 1]
+        const meta = lastView?.metadata as Record<string, unknown> | null
+        return meta?.scrollDepth ? Number(meta.scrollDepth) : null
+      })(),
+      firstViewedAt: viewEvents[0]?.createdAt?.toISOString() || null,
+      lastViewedAt: viewEvents[viewEvents.length - 1]?.createdAt?.toISOString() || null,
     }
 
     return NextResponse.json({

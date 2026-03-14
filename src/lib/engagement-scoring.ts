@@ -106,19 +106,17 @@ export async function calculateEngagementScore(
   }
 
   // Score 1: Preview Engagement (max 20 points)
+  // Weight by action type: CTA/call clicks are high-intent, views are baseline
   let previewEngagementScore = 0
-  const previewEvents = lead.events.filter((e) =>
-    [
-      'PREVIEW_VIEWED',
-      'PREVIEW_CTA_CLICKED',
-      'PREVIEW_CALL_CLICKED',
-      'PREVIEW_RETURN_VISIT',
-    ].includes(e.eventType)
-  )
+  const ctaClicks = lead.events.filter((e) => e.eventType === 'PREVIEW_CTA_CLICKED').length
+  const callClicks = lead.events.filter((e) => e.eventType === 'PREVIEW_CALL_CLICKED').length
+  const pageViews = lead.events.filter((e) => e.eventType === 'PREVIEW_VIEWED').length
+  const returnVisits = lead.events.filter((e) => e.eventType === 'PREVIEW_RETURN_VISIT').length
 
-  if (previewEvents.length > 0) {
-    previewEngagementScore = Math.min(20, previewEvents.length * 4)
-  }
+  // CTA/call clicks are strong signals (8pts each), views/returns are softer (3pts each)
+  previewEngagementScore = Math.min(20,
+    (ctaClicks * 8) + (callClicks * 8) + (returnVisits * 4) + (pageViews * 3)
+  )
 
   // Score 2: Email/Outbound Response (max 20 points)
   let emailEngagementScore = 0

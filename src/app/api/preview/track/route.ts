@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { EventType } from '@prisma/client'
 import { calculateEngagementScore } from '@/lib/engagement-scoring'
 import { dispatchWebhook, WebhookEvents } from '@/lib/webhook-dispatcher'
 import { pushToRep, pushToAllAdmins } from '@/lib/dialer-events'
@@ -8,7 +9,7 @@ import { pushToMessages } from '@/lib/messages-v2-events'
 export const dynamic = 'force-dynamic'
 
 // BUG NEW-L8: Bot user-agent detection — filter out crawlers/bots from analytics
-const BOT_UA_REGEX = /bot|crawl|spider|slurp|mediapartners|facebookexternalhit|bingpreview|linkedinbot|twitterbot|whatsapp|telegram|preview|headless|phantom|puppeteer|lighthouse|pagespeed|gtmetrix|pingdom|uptimerobot|t-mobile|tmobile|verizon|att\.net|sprint|vodafone|linkpreview/i
+const BOT_UA_REGEX = /bot|crawl|spider|slurp|mediapartners|facebookexternalhit|bingpreview|linkedinbot|twitterbot|whatsapp|telegram|preview|headless|phantom|puppeteer|lighthouse|pagespeed|gtmetrix|pingdom|uptimerobot|t-mobile|tmobile|verizon|att\.net|sprint|vodafone|linkpreview|slackbot|discordbot|viber|line\/|pinterest|applebot|siri|duckduckbot|ia_archiver|embedly|quora|outbrain|redditbot|skypeuripreview/i
 
 // In-memory rate limiter: max 100 events per IP per hour
 const ipCounts = new Map<string, { count: number; resetAt: number }>()
@@ -27,7 +28,11 @@ function isRateLimited(ip: string): boolean {
 }
 
 // Known valid event types
-const VALID_EVENTS = ['page_view', 'time_on_page', 'cta_click', 'call_click', 'contact_form', 'return_visit', 'scroll_depth', 'template_switch']
+const VALID_EVENTS = ['page_view', 'page_exit', 'time_on_page', 'cta_click', 'call_click', 'contact_form', 'return_visit', 'scroll_depth', 'template_switch']
+
+// Server-side dedup: track last page_view per lead (5-min window)
+const lastPageView = new Map<string, number>()
+const PAGE_VIEW_DEDUP_MS = 5 * 60 * 1000 // 5 minutes
 
 // POST /api/preview/track - Track preview analytics events
 export async function POST(request: NextRequest) {
@@ -87,15 +92,47 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Map event types
-    const eventTypeMap: Record<string, any> = {
+    // Map event types — only page_view creates a PREVIEW_VIEWED record (1 per real visit)
+    // page_exit enriches the existing record with duration + scroll depth
+    // time_on_page and scroll_depth are legacy client events — treated as page_exit
+    const eventTypeMap: Record<string, EventType> = {
       'page_view': 'PREVIEW_VIEWED',
-      'time_on_page': 'PREVIEW_VIEWED',
       'cta_click': 'PREVIEW_CTA_CLICKED',
       'call_click': 'PREVIEW_CALL_CLICKED',
       'contact_form': 'PREVIEW_CTA_CLICKED',
       'return_visit': 'PREVIEW_RETURN_VISIT',
-      'scroll_depth': 'PREVIEW_VIEWED',
+    }
+
+    // page_exit / time_on_page / scroll_depth: UPDATE existing event, don't create new one
+    if (event === 'page_exit' || event === 'time_on_page' || event === 'scroll_depth') {
+      try {
+        // Find the most recent PREVIEW_VIEWED for this lead (within last 30 min)
+        const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000)
+        const recentView = await prisma.leadEvent.findFirst({
+          where: {
+            leadId: lead.id,
+            eventType: 'PREVIEW_VIEWED',
+            createdAt: { gte: thirtyMinAgo },
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+
+        if (recentView) {
+          const existingMeta = (recentView.metadata as Record<string, unknown>) || {}
+          await prisma.leadEvent.update({
+            where: { id: recentView.id },
+            data: {
+              metadata: {
+                ...existingMeta,
+                ...(duration && { duration }),
+                ...(metadata?.scrollDepth != null && { scrollDepth: metadata.scrollDepth }),
+                ...(metadata?.depth != null && { scrollDepth: metadata.depth }),
+              },
+            },
+          })
+        }
+      } catch (e) { console.warn('[Preview Track] page_exit update failed:', e) }
+      return NextResponse.json({ success: true })
     }
 
     const eventType = eventTypeMap[event]
@@ -105,6 +142,24 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid event type' },
         { status: 400 }
       )
+    }
+
+    // Server-side dedup: skip page_view if we recorded one for this lead in last 5 min
+    if (event === 'page_view') {
+      const lastTime = lastPageView.get(lead.id)
+      const now = Date.now()
+      if (lastTime && (now - lastTime) < PAGE_VIEW_DEDUP_MS) {
+        return NextResponse.json({ success: true, deduped: true })
+      }
+      lastPageView.set(lead.id, now)
+
+      // Prevent memory leak: clean old entries periodically
+      if (lastPageView.size > 10000) {
+        const cutoff = now - PAGE_VIEW_DEDUP_MS
+        for (const [key, time] of lastPageView) {
+          if (time < cutoff) lastPageView.delete(key)
+        }
+      }
     }
 
     // Create event (BUG R.1: include UTM/referrer for source attribution)
